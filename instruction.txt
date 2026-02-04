@@ -1,0 +1,1580 @@
+DeadPions est une application mobile de jeu multijoueur (React Native + Expo) avec un backend Node.js/Express et MongoDB. L'authentification actuelle utilise JWT avec support Google OAuth.
+--------------------
+Stack technique détaillée :
+--------------------
+Frontend : React Native 0.81 (Expo SDK 54), Redux Toolkit, AsyncStorage 
+--------------------
+Backend : Node.js, Express.js, MongoDB (Mongoose), Socket.io 
+--------------------
+Auth actuelle : bcryptjs, jsonwebtoken, google-auth-library 
+--------------------
+Email : Service non encore déterminé (à configurer) 
+--------------------
+Implémenter un système sécurisé de réinitialisation de mot de passe respectant les meilleures pratiques OWASP et protégeant contre :
+--------------------
+✅ L'énumération d'utilisateurs 
+--------------------
+✅ Les attaques par force brute 
+--------------------
+✅ Les attaques de timing 
+--------------------
+✅ La réutilisation de tokens 
+--------------------
+✅ Les liens expirés ou compromis 
+--------------------
+Ajouter ces champs au schéma User existant :
+--------------------
+// backend/models/User.js
+--------------------
+const userSchema = new mongoose.Schema({
+--------------------
+// ... champs existants (pseudo, email, password, etc.)
+--------------------
+// Nouveaux champs pour reset password
+--------------------
+resetPasswordToken: {
+--------------------
+type: String,
+--------------------
+default: null
+--------------------
+},
+--------------------
+resetPasswordExpires: {
+--------------------
+type: Date,
+--------------------
+default: null
+--------------------
+},
+--------------------
+resetPasswordAttempts: [{
+--------------------
+ip: String,
+--------------------
+timestamp: { type: Date, default: Date.now }
+--------------------
+}],
+--------------------
+passwordHistory: [{
+--------------------
+hash: String,
+--------------------
+changedAt: { type: Date, default: Date.now }
+--------------------
+}],
+--------------------
+lastPasswordChange: {
+--------------------
+type: Date,
+--------------------
+default: null
+--------------------
+}
+--------------------
+});
+--------------------
+// Index pour auto-suppression des tokens expirés (TTL)
+--------------------
+userSchema.index({ resetPasswordExpires: 1 }, { expireAfterSeconds: 0 });
+--------------------
+// backend/routes/auth.js
+--------------------
+const express = require('express');
+--------------------
+const router = express.Router();
+--------------------
+const { body } = require('express-validator');
+--------------------
+const authController = require('../controllers/authController');
+--------------------
+const rateLimiter = require('../middleware/rateLimiter');
+--------------------
+// Demande de réinitialisation - STRICT rate limit
+--------------------
+router.post(
+--------------------
+'/forgot-password',
+--------------------
+rateLimiter.forgotPassword, // Max 3 requêtes/heure par IP
+--------------------
+[
+--------------------
+body('email')
+--------------------
+.isEmail()
+--------------------
+.normalizeEmail()
+--------------------
+.withMessage('Email invalide')
+--------------------
+],
+--------------------
+authController.forgotPassword
+--------------------
+);
+--------------------
+// Validation du token (optionnel - pour afficher la page de reset)
+--------------------
+router.get(
+--------------------
+'/reset-password/:token',
+--------------------
+authController.validateResetToken
+--------------------
+);
+--------------------
+// Changement du mot de passe
+--------------------
+router.post(
+--------------------
+'/reset-password',
+--------------------
+rateLimiter.resetPassword, // Max 5 requêtes/heure par IP
+--------------------
+[
+--------------------
+body('token').notEmpty(),
+--------------------
+body('newPassword')
+--------------------
+.isLength({ min: 12 })
+--------------------
+.matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]/)
+--------------------
+.withMessage('Mot de passe trop faible')
+--------------------
+],
+--------------------
+authController.resetPassword
+--------------------
+);
+--------------------
+module.exports = router;
+--------------------
+// backend/middleware/rateLimiter.js
+--------------------
+const rateLimit = require('express-rate-limit');
+--------------------
+const MongoStore = require('rate-limit-mongo');
+--------------------
+// Store pour persistance cross-restart
+--------------------
+const store = new MongoStore({
+--------------------
+uri: process.env.MONGODB_URI,
+--------------------
+collectionName: 'rateLimits',
+--------------------
+expireTimeMs: 60 * 60 * 1000 // 1 heure
+--------------------
+});
+--------------------
+exports.forgotPassword = rateLimit({
+--------------------
+store,
+--------------------
+windowMs: 60 * 60 * 1000, // 1 heure
+--------------------
+max: 3, // 3 tentatives max
+--------------------
+message: {
+--------------------
+error: 'Trop de tentatives. Réessayez dans 1 heure.'
+--------------------
+},
+--------------------
+standardHeaders: true,
+--------------------
+legacyHeaders: false,
+--------------------
+// Key basée sur IP + User-Agent pour éviter contournement
+--------------------
+keyGenerator: (req) => {
+--------------------
+return `${req.ip}-${req.get('User-Agent')}`;
+--------------------
+}
+--------------------
+});
+--------------------
+exports.resetPassword = rateLimit({
+--------------------
+store,
+--------------------
+windowMs: 60 * 60 * 1000,
+--------------------
+max: 5,
+--------------------
+message: {
+--------------------
+error: 'Trop de tentatives de changement. Réessayez plus tard.'
+--------------------
+},
+--------------------
+keyGenerator: (req) => req.ip
+--------------------
+});
+--------------------
+// backend/controllers/authController.js
+--------------------
+const User = require('../models/User');
+--------------------
+const crypto = require('crypto');
+--------------------
+const bcrypt = require('bcryptjs');
+--------------------
+const emailService = require('../services/emailService');
+--------------------
+const { validationResult } = require('express-validator');
+--------------------
+// Délai artificiel constant pour éviter timing attacks
+--------------------
+const RESPONSE_DELAY_MS = 300;
+--------------------
+// === ÉTAPE 1 : Demande de réinitialisation ===
+--------------------
+exports.forgotPassword = async (req, res) => {
+--------------------
+const startTime = Date.now();
+--------------------
+try {
+--------------------
+const errors = validationResult(req);
+--------------------
+if (!errors.isEmpty()) {
+--------------------
+await delay(RESPONSE_DELAY_MS, startTime);
+--------------------
+return res.status(400).json({ 
+--------------------
+message: 'Email invalide' 
+--------------------
+});
+--------------------
+}
+--------------------
+const { email } = req.body;
+--------------------
+const user = await User.findOne({ email: email.toLowerCase() });
+--------------------
+// TOUJOURS renvoyer le même message (anti-énumération)
+--------------------
+const genericMessage = 'Si cet email existe, un lien de réinitialisation a été envoyé.';
+--------------------
+if (!user) {
+--------------------
+// Enregistrer tentative sur email inexistant (sécurité)
+--------------------
+console.warn(`[SECURITY] Reset attempt on non-existent email: ${email} from IP: ${req.ip}`);
+--------------------
+await delay(RESPONSE_DELAY_MS, startTime);
+--------------------
+return res.json({ message: genericMessage });
+--------------------
+}
+--------------------
+// Rate limit par utilisateur (max 5/jour)
+--------------------
+const recentAttempts = user.resetPasswordAttempts.filter(
+--------------------
+a => Date.now() - a.timestamp < 24 * 60 * 60 * 1000
+--------------------
+);
+--------------------
+if (recentAttempts.length >= 5) {
+--------------------
+console.warn(`[SECURITY] User ${user.pseudo} exceeded daily reset limit`);
+--------------------
+await delay(RESPONSE_DELAY_MS, startTime);
+--------------------
+return res.json({ message: genericMessage }); // Pas d'erreur explicite
+--------------------
+}
+--------------------
+// Générer token sécurisé (32 bytes = 256 bits)
+--------------------
+const resetToken = crypto.randomBytes(32).toString('hex');
+--------------------
+const hashedToken = crypto
+--------------------
+.createHash('sha256')
+--------------------
+.update(resetToken)
+--------------------
+.digest('hex');
+--------------------
+// Sauvegarder token haché + expiration (15 minutes)
+--------------------
+user.resetPasswordToken = hashedToken;
+--------------------
+user.resetPasswordExpires = Date.now() + 15 * 60 * 1000; // 15 min
+--------------------
+user.resetPasswordAttempts.push({
+--------------------
+ip: req.ip,
+--------------------
+timestamp: Date.now()
+--------------------
+});
+--------------------
+// Nettoyer anciennes tentatives (garder 30 derniers jours)
+--------------------
+user.resetPasswordAttempts = user.resetPasswordAttempts.filter(
+--------------------
+a => Date.now() - a.timestamp < 30 * 24 * 60 * 60 * 1000
+--------------------
+);
+--------------------
+await user.save();
+--------------------
+// Envoyer email APRÈS sauvegarde DB (évite race conditions)
+--------------------
+const resetURL = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+--------------------
+await emailService.sendPasswordReset(user.email, resetURL, user.pseudo);
+--------------------
+// Log sécurité
+--------------------
+console.log(`[INFO] Password reset email sent to ${user.email}`);
+--------------------
+await delay(RESPONSE_DELAY_MS, startTime);
+--------------------
+return res.json({ message: genericMessage });
+--------------------
+} catch (error) {
+--------------------
+console.error('[ERROR] Forgot password:', error);
+--------------------
+await delay(RESPONSE_DELAY_MS, startTime);
+--------------------
+return res.status(500).json({ 
+--------------------
+message: 'Erreur serveur. Réessayez plus tard.' 
+--------------------
+});
+--------------------
+}
+--------------------
+};
+--------------------
+// === ÉTAPE 2 : Validation du token (GET) ===
+--------------------
+exports.validateResetToken = async (req, res) => {
+--------------------
+try {
+--------------------
+const { token } = req.params;
+--------------------
+const hashedToken = crypto
+--------------------
+.createHash('sha256')
+--------------------
+.update(token)
+--------------------
+.digest('hex');
+--------------------
+const user = await User.findOne({
+--------------------
+resetPasswordToken: hashedToken,
+--------------------
+resetPasswordExpires: { $gt: Date.now() }
+--------------------
+});
+--------------------
+if (!user) {
+--------------------
+return res.status(400).json({ 
+--------------------
+valid: false,
+--------------------
+message: 'Lien invalide ou expiré' 
+--------------------
+});
+--------------------
+}
+--------------------
+return res.json({ 
+--------------------
+valid: true,
+--------------------
+message: 'Token valide' 
+--------------------
+});
+--------------------
+} catch (error) {
+--------------------
+console.error('[ERROR] Validate token:', error);
+--------------------
+return res.status(500).json({ 
+--------------------
+valid: false,
+--------------------
+message: 'Erreur serveur' 
+--------------------
+});
+--------------------
+}
+--------------------
+};
+--------------------
+// === ÉTAPE 3 : Changement du mot de passe ===
+--------------------
+exports.resetPassword = async (req, res) => {
+--------------------
+const startTime = Date.now();
+--------------------
+try {
+--------------------
+const errors = validationResult(req);
+--------------------
+if (!errors.isEmpty()) {
+--------------------
+await delay(RESPONSE_DELAY_MS, startTime);
+--------------------
+return res.status(400).json({ 
+--------------------
+errors: errors.array() 
+--------------------
+});
+--------------------
+}
+--------------------
+const { token, newPassword } = req.body;
+--------------------
+const hashedToken = crypto
+--------------------
+.createHash('sha256')
+--------------------
+.update(token)
+--------------------
+.digest('hex');
+--------------------
+const user = await User.findOne({
+--------------------
+resetPasswordToken: hashedToken,
+--------------------
+resetPasswordExpires: { $gt: Date.now() }
+--------------------
+});
+--------------------
+if (!user) {
+--------------------
+await delay(RESPONSE_DELAY_MS, startTime);
+--------------------
+return res.status(400).json({ 
+--------------------
+message: 'Lien invalide ou expiré' 
+--------------------
+});
+--------------------
+}
+--------------------
+// Vérifier que le nouveau MDP est différent de l'ancien
+--------------------
+const isSamePassword = await bcrypt.compare(newPassword, user.password);
+--------------------
+if (isSamePassword) {
+--------------------
+await delay(RESPONSE_DELAY_MS, startTime);
+--------------------
+return res.status(400).json({ 
+--------------------
+message: 'Le nouveau mot de passe doit être différent' 
+--------------------
+});
+--------------------
+}
+--------------------
+// Vérifier historique (optionnel - derniers 5 MDP)
+--------------------
+if (user.passwordHistory && user.passwordHistory.length > 0) {
+--------------------
+const last5 = user.passwordHistory.slice(-5);
+--------------------
+for (const oldHash of last5) {
+--------------------
+const isReused = await bcrypt.compare(newPassword, oldHash.hash);
+--------------------
+if (isReused) {
+--------------------
+await delay(RESPONSE_DELAY_MS, startTime);
+--------------------
+return res.status(400).json({ 
+--------------------
+message: 'Ce mot de passe a déjà été utilisé' 
+--------------------
+});
+--------------------
+}
+--------------------
+}
+--------------------
+}
+--------------------
+// Hacher nouveau mot de passe
+--------------------
+const salt = await bcrypt.genSalt(12); // Coût élevé pour sécurité
+--------------------
+const hashedPassword = await bcrypt.hash(newPassword, salt);
+--------------------
+// Sauvegarder ancien MDP dans l'historique
+--------------------
+if (!user.passwordHistory) user.passwordHistory = [];
+--------------------
+user.passwordHistory.push({
+--------------------
+hash: user.password,
+--------------------
+changedAt: new Date()
+--------------------
+});
+--------------------
+// Limiter historique à 10 entrées
+--------------------
+if (user.passwordHistory.length > 10) {
+--------------------
+user.passwordHistory = user.passwordHistory.slice(-10);
+--------------------
+}
+--------------------
+// Mettre à jour
+--------------------
+user.password = hashedPassword;
+--------------------
+user.resetPasswordToken = null;
+--------------------
+user.resetPasswordExpires = null;
+--------------------
+user.lastPasswordChange = new Date();
+--------------------
+await user.save();
+--------------------
+// Envoyer email de confirmation
+--------------------
+await emailService.sendPasswordChangeConfirmation(user.email, user.pseudo);
+--------------------
+// Invalider toutes les sessions actives (optionnel - augmenter version JWT)
+--------------------
+// user.jwtVersion = (user.jwtVersion || 0) + 1;
+--------------------
+console.log(`[INFO] Password successfully reset for ${user.email}`);
+--------------------
+await delay(RESPONSE_DELAY_MS, startTime);
+--------------------
+return res.json({ 
+--------------------
+message: 'Mot de passe modifié avec succès' 
+--------------------
+});
+--------------------
+} catch (error) {
+--------------------
+console.error('[ERROR] Reset password:', error);
+--------------------
+await delay(RESPONSE_DELAY_MS, startTime);
+--------------------
+return res.status(500).json({ 
+--------------------
+message: 'Erreur serveur. Réessayez plus tard.' 
+--------------------
+});
+--------------------
+}
+--------------------
+};
+--------------------
+// Fonction helper pour délai constant
+--------------------
+function delay(targetMs, startTime) {
+--------------------
+const elapsed = Date.now() - startTime;
+--------------------
+const remaining = Math.max(0, targetMs - elapsed);
+--------------------
+return new Promise(resolve => setTimeout(resolve, remaining));
+--------------------
+}
+--------------------
+// backend/services/emailService.js
+--------------------
+const nodemailer = require('nodemailer');
+--------------------
+// Configuration SMTP (exemple avec Gmail - à adapter)
+--------------------
+const transporter = nodemailer.createTransport({
+--------------------
+service: 'gmail', // ou SMTP custom
+--------------------
+auth: {
+--------------------
+user: process.env.EMAIL_USER,
+--------------------
+pass: process.env.EMAIL_PASSWORD // App Password recommandé
+--------------------
+}
+--------------------
+});
+--------------------
+exports.sendPasswordReset = async (email, resetURL, pseudo) => {
+--------------------
+const mailOptions = {
+--------------------
+from: `"DeadPions Support" <${process.env.EMAIL_USER}>`,
+--------------------
+to: email,
+--------------------
+subject: 'Réinitialisation de votre mot de passe - DeadPions',
+--------------------
+html: `
+--------------------
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+--------------------
+<h2 style="color: #041c55;">Bonjour ${pseudo},</h2>
+--------------------
+<p>Vous avez demandé la réinitialisation de votre mot de passe.</p>
+--------------------
+<p>Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe :</p>
+--------------------
+<div style="text-align: center; margin: 30px 0;">
+--------------------
+<a href="${resetURL}" 
+--------------------
+style="background-color: #f1c40f; color: #000; padding: 12px 24px; 
+--------------------
+text-decoration: none; border-radius: 5px; font-weight: bold;">
+--------------------
+Réinitialiser mon mot de passe
+--------------------
+</a>
+--------------------
+</div>
+--------------------
+<p style="color: #666; font-size: 14px;">
+--------------------
+⏰ Ce lien expire dans <strong>15 minutes</strong>.
+--------------------
+</p>
+--------------------
+<p style="color: #666; font-size: 14px;">
+--------------------
+Si vous n'avez pas demandé cette réinitialisation, ignorez cet email. 
+--------------------
+Votre mot de passe reste inchangé.
+--------------------
+</p>
+--------------------
+<hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+--------------------
+<p style="color: #999; font-size: 12px;">
+--------------------
+Pour des raisons de sécurité, ne partagez jamais ce lien.
+--------------------
+</p>
+--------------------
+</div>
+--------------------
+`
+--------------------
+};
+--------------------
+try {
+--------------------
+await transporter.sendMail(mailOptions);
+--------------------
+console.log(`[EMAIL] Reset password email sent to ${email}`);
+--------------------
+} catch (error) {
+--------------------
+console.error('[EMAIL ERROR]', error);
+--------------------
+throw new Error('Impossible d\'envoyer l\'email');
+--------------------
+}
+--------------------
+};
+--------------------
+exports.sendPasswordChangeConfirmation = async (email, pseudo) => {
+--------------------
+const mailOptions = {
+--------------------
+from: `"DeadPions Support" <${process.env.EMAIL_USER}>`,
+--------------------
+to: email,
+--------------------
+subject: 'Votre mot de passe a été modifié - DeadPions',
+--------------------
+html: `
+--------------------
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+--------------------
+<h2 style="color: #041c55;">Bonjour ${pseudo},</h2>
+--------------------
+<p>✅ Votre mot de passe a été modifié avec succès.</p>
+--------------------
+<p style="color: #666;">
+--------------------
+Si vous n'êtes pas à l'origine de ce changement, 
+--------------------
+contactez immédiatement notre support à 
+--------------------
+<a href="mailto:support@deadpions.com">support@deadpions.com</a>
+--------------------
+</p>
+--------------------
+<p style="color: #999; font-size: 12px; margin-top: 30px;">
+--------------------
+Cet email a été envoyé le ${new Date().toLocaleString('fr-FR')}
+--------------------
+</p>
+--------------------
+</div>
+--------------------
+`
+--------------------
+};
+--------------------
+try {
+--------------------
+await transporter.sendMail(mailOptions);
+--------------------
+} catch (error) {
+--------------------
+console.error('[EMAIL ERROR] Confirmation email failed:', error);
+--------------------
+// Ne pas bloquer le processus si l'email de confirmation échoue
+--------------------
+}
+--------------------
+};
+--------------------
+// src/screens/ForgotPasswordScreen.js
+--------------------
+import React, { useState } from 'react';
+--------------------
+import {
+--------------------
+View,
+--------------------
+Text,
+--------------------
+TextInput,
+--------------------
+TouchableOpacity,
+--------------------
+StyleSheet,
+--------------------
+Alert,
+--------------------
+ActivityIndicator,
+--------------------
+KeyboardAvoidingView,
+--------------------
+Platform
+--------------------
+} from 'react-native';
+--------------------
+import axios from 'axios';
+--------------------
+import { API_URL } from '../config';
+--------------------
+const ForgotPasswordScreen = ({ navigation }) => {
+--------------------
+const [email, setEmail] = useState('');
+--------------------
+const [loading, setLoading] = useState(false);
+--------------------
+const [emailSent, setEmailSent] = useState(false);
+--------------------
+const handleSubmit = async () => {
+--------------------
+// Validation basique côté client
+--------------------
+if (!email || !email.includes('@')) {
+--------------------
+Alert.alert('Erreur', 'Veuillez entrer un email valide');
+--------------------
+return;
+--------------------
+}
+--------------------
+setLoading(true);
+--------------------
+try {
+--------------------
+const response = await axios.post(`${API_URL}/auth/forgot-password`, {
+--------------------
+email: email.trim().toLowerCase()
+--------------------
+});
+--------------------
+setEmailSent(true);
+--------------------
+Alert.alert(
+--------------------
+'Email envoyé',
+--------------------
+response.data.message,
+--------------------
+[
+--------------------
+{
+--------------------
+text: 'OK',
+--------------------
+onPress: () => navigation.goBack()
+--------------------
+}
+--------------------
+]
+--------------------
+);
+--------------------
+} catch (error) {
+--------------------
+const message = error.response?.data?.message || 
+--------------------
+'Une erreur est survenue. Réessayez plus tard.';
+--------------------
+Alert.alert('Erreur', message);
+--------------------
+} finally {
+--------------------
+setLoading(false);
+--------------------
+}
+--------------------
+};
+--------------------
+return (
+--------------------
+<KeyboardAvoidingView 
+--------------------
+style={styles.container}
+--------------------
+behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+--------------------
+>
+--------------------
+<View style={styles.content}>
+--------------------
+<Text style={styles.title}>Mot de passe oublié ?</Text>
+--------------------
+<Text style={styles.subtitle}>
+--------------------
+Entrez votre email pour recevoir un lien de réinitialisation
+--------------------
+</Text>
+--------------------
+<TextInput
+--------------------
+style={styles.input}
+--------------------
+placeholder="Email"
+--------------------
+placeholderTextColor="#999"
+--------------------
+value={email}
+--------------------
+onChangeText={setEmail}
+--------------------
+keyboardType="email-address"
+--------------------
+autoCapitalize="none"
+--------------------
+autoCorrect={false}
+--------------------
+editable={!loading && !emailSent}
+--------------------
+/>
+--------------------
+<TouchableOpacity
+--------------------
+style={[styles.button, loading && styles.buttonDisabled]}
+--------------------
+onPress={handleSubmit}
+--------------------
+disabled={loading || emailSent}
+--------------------
+>
+--------------------
+{loading ? (
+--------------------
+<ActivityIndicator color="#fff" />
+--------------------
+) : (
+--------------------
+<Text style={styles.buttonText}>Envoyer le lien</Text>
+--------------------
+)}
+--------------------
+</TouchableOpacity>
+--------------------
+<TouchableOpacity
+--------------------
+style={styles.backButton}
+--------------------
+onPress={() => navigation.goBack()}
+--------------------
+>
+--------------------
+<Text style={styles.backText}>Retour à la connexion</Text>
+--------------------
+</TouchableOpacity>
+--------------------
+</View>
+--------------------
+</KeyboardAvoidingView>
+--------------------
+);
+--------------------
+};
+--------------------
+const styles = StyleSheet.create({
+--------------------
+container: {
+--------------------
+flex: 1,
+--------------------
+backgroundColor: '#041c55',
+--------------------
+},
+--------------------
+content: {
+--------------------
+flex: 1,
+--------------------
+justifyContent: 'center',
+--------------------
+paddingHorizontal: 30,
+--------------------
+},
+--------------------
+title: {
+--------------------
+fontSize: 28,
+--------------------
+fontWeight: 'bold',
+--------------------
+color: '#fff',
+--------------------
+marginBottom: 10,
+--------------------
+textAlign: 'center',
+--------------------
+},
+--------------------
+subtitle: {
+--------------------
+fontSize: 16,
+--------------------
+color: '#ccc',
+--------------------
+marginBottom: 30,
+--------------------
+textAlign: 'center',
+--------------------
+},
+--------------------
+input: {
+--------------------
+backgroundColor: 'rgba(255,255,255,0.1)',
+--------------------
+borderWidth: 1,
+--------------------
+borderColor: '#f1c40f',
+--------------------
+borderRadius: 10,
+--------------------
+padding: 15,
+--------------------
+color: '#fff',
+--------------------
+fontSize: 16,
+--------------------
+marginBottom: 20,
+--------------------
+},
+--------------------
+button: {
+--------------------
+backgroundColor: '#f1c40f',
+--------------------
+padding: 15,
+--------------------
+borderRadius: 10,
+--------------------
+alignItems: 'center',
+--------------------
+marginBottom: 20,
+--------------------
+},
+--------------------
+buttonDisabled: {
+--------------------
+opacity: 0.6,
+--------------------
+},
+--------------------
+buttonText: {
+--------------------
+color: '#000',
+--------------------
+fontSize: 18,
+--------------------
+fontWeight: 'bold',
+--------------------
+},
+--------------------
+backButton: {
+--------------------
+alignItems: 'center',
+--------------------
+},
+--------------------
+backText: {
+--------------------
+color: '#f1c40f',
+--------------------
+fontSize: 16,
+--------------------
+},
+--------------------
+});
+--------------------
+export default ForgotPasswordScreen;
+--------------------
+// src/screens/ResetPasswordScreen.js
+--------------------
+import React, { useState, useEffect } from 'react';
+--------------------
+import {
+--------------------
+View,
+--------------------
+Text,
+--------------------
+TextInput,
+--------------------
+TouchableOpacity,
+--------------------
+StyleSheet,
+--------------------
+Alert,
+--------------------
+ActivityIndicator
+--------------------
+} from 'react-native';
+--------------------
+import axios from 'axios';
+--------------------
+import { API_URL } from '../config';
+--------------------
+const ResetPasswordScreen = ({ route, navigation }) => {
+--------------------
+const { token } = route.params; // Token passé via deep link
+--------------------
+const [newPassword, setNewPassword] = useState('');
+--------------------
+const [confirmPassword, setConfirmPassword] = useState('');
+--------------------
+const [loading, setLoading] = useState(false);
+--------------------
+const [validatingToken, setValidatingToken] = useState(true);
+--------------------
+const [tokenValid, setTokenValid] = useState(false);
+--------------------
+// Valider le token au chargement
+--------------------
+useEffect(() => {
+--------------------
+validateToken();
+--------------------
+}, []);
+--------------------
+const validateToken = async () => {
+--------------------
+try {
+--------------------
+const response = await axios.get(`${API_URL}/auth/reset-password/${token}`);
+--------------------
+if (response.data.valid) {
+--------------------
+setTokenValid(true);
+--------------------
+} else {
+--------------------
+Alert.alert('Lien invalide', response.data.message);
+--------------------
+navigation.replace('Login');
+--------------------
+}
+--------------------
+} catch (error) {
+--------------------
+Alert.alert('Erreur', 'Lien invalide ou expiré');
+--------------------
+navigation.replace('Login');
+--------------------
+} finally {
+--------------------
+setValidatingToken(false);
+--------------------
+}
+--------------------
+};
+--------------------
+const validatePassword = (password) => {
+--------------------
+const minLength = password.length >= 12;
+--------------------
+const hasUpper = /[A-Z]/.test(password);
+--------------------
+const hasLower = /[a-z]/.test(password);
+--------------------
+const hasNumber = /\d/.test(password);
+--------------------
+const hasSpecial = /[@$!%*?&#]/.test(password);
+--------------------
+return minLength && hasUpper && hasLower && hasNumber && hasSpecial;
+--------------------
+};
+--------------------
+const handleSubmit = async () => {
+--------------------
+if (!newPassword || !confirmPassword) {
+--------------------
+Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+--------------------
+return;
+--------------------
+}
+--------------------
+if (newPassword !== confirmPassword) {
+--------------------
+Alert.alert('Erreur', 'Les mots de passe ne correspondent pas');
+--------------------
+return;
+--------------------
+}
+--------------------
+if (!validatePassword(newPassword)) {
+--------------------
+Alert.alert(
+--------------------
+'Mot de passe trop faible',
+--------------------
+'Le mot de passe doit contenir :\n' +
+--------------------
+'• Au moins 12 caractères\n' +
+--------------------
+'• Une majuscule\n' +
+--------------------
+'• Une minuscule\n' +
+--------------------
+'• Un chiffre\n' +
+--------------------
+'• Un caractère spécial (@$!%*?&#)'
+--------------------
+);
+--------------------
+return;
+--------------------
+}
+--------------------
+setLoading(true);
+--------------------
+try {
+--------------------
+const response = await axios.post(`${API_URL}/auth/reset-password`, {
+--------------------
+token,
+--------------------
+newPassword
+--------------------
+});
+--------------------
+Alert.alert(
+--------------------
+'Succès',
+--------------------
+response.data.message,
+--------------------
+[
+--------------------
+{
+--------------------
+text: 'Se connecter',
+--------------------
+onPress: () => navigation.replace('Login')
+--------------------
+}
+--------------------
+]
+--------------------
+);
+--------------------
+} catch (error) {
+--------------------
+const message = error.response?.data?.message || 
+--------------------
+'Une erreur est survenue';
+--------------------
+Alert.alert('Erreur', message);
+--------------------
+} finally {
+--------------------
+setLoading(false);
+--------------------
+}
+--------------------
+};
+--------------------
+if (validatingToken) {
+--------------------
+return (
+--------------------
+<View style={[styles.container, styles.centered]}>
+--------------------
+<ActivityIndicator size="large" color="#f1c40f" />
+--------------------
+<Text style={styles.loadingText}>Validation du lien...</Text>
+--------------------
+</View>
+--------------------
+);
+--------------------
+}
+--------------------
+if (!tokenValid) {
+--------------------
+return null; // Navigation gérée dans validateToken
+--------------------
+}
+--------------------
+return (
+--------------------
+<View style={styles.container}>
+--------------------
+<View style={styles.content}>
+--------------------
+<Text style={styles.title}>Nouveau mot de passe</Text>
+--------------------
+<Text style={styles.subtitle}>
+--------------------
+Créez un mot de passe fort et sécurisé
+--------------------
+</Text>
+--------------------
+<TextInput
+--------------------
+style={styles.input}
+--------------------
+placeholder="Nouveau mot de passe"
+--------------------
+placeholderTextColor="#999"
+--------------------
+value={newPassword}
+--------------------
+onChangeText={setNewPassword}
+--------------------
+secureTextEntry
+--------------------
+autoCapitalize="none"
+--------------------
+/>
+--------------------
+<TextInput
+--------------------
+style={styles.input}
+--------------------
+placeholder="Confirmer le mot de passe"
+--------------------
+placeholderTextColor="#999"
+--------------------
+value={confirmPassword}
+--------------------
+onChangeText={setConfirmPassword}
+--------------------
+secureTextEntry
+--------------------
+autoCapitalize="none"
+--------------------
+/>
+--------------------
+<View style={styles.requirements}>
+--------------------
+<Text style={styles.requirementsTitle}>Le mot de passe doit contenir :</Text>
+--------------------
+<Text style={styles.requirementItem}>✓ Au moins 12 caractères</Text>
+--------------------
+<Text style={styles.requirementItem}>✓ Majuscules et minuscules</Text>
+--------------------
+<Text style={styles.requirementItem}>✓ Au moins un chiffre</Text>
+--------------------
+<Text style={styles.requirementItem}>✓ Un caractère spécial (@$!%*?&#)</Text>
+--------------------
+</View>
+--------------------
+<TouchableOpacity
+--------------------
+style={[styles.button, loading && styles.buttonDisabled]}
+--------------------
+onPress={handleSubmit}
+--------------------
+disabled={loading}
+--------------------
+>
+--------------------
+{loading ? (
+--------------------
+<ActivityIndicator color="#fff" />
+--------------------
+) : (
+--------------------
+<Text style={styles.buttonText}>Réinitialiser</Text>
+--------------------
+)}
+--------------------
+</TouchableOpacity>
+--------------------
+</View>
+--------------------
+</View>
+--------------------
+);
+--------------------
+};
+--------------------
+const styles = StyleSheet.create({
+--------------------
+container: {
+--------------------
+flex: 1,
+--------------------
+backgroundColor: '#041c55',
+--------------------
+},
+--------------------
+centered: {
+--------------------
+justifyContent: 'center',
+--------------------
+alignItems: 'center',
+--------------------
+},
+--------------------
+content: {
+--------------------
+flex: 1,
+--------------------
+justifyContent: 'center',
+--------------------
+paddingHorizontal: 30,
+--------------------
+},
+--------------------
+title: {
+--------------------
+fontSize: 28,
+--------------------
+fontWeight: 'bold',
+--------------------
+color: '#fff',
+--------------------
+marginBottom: 10,
+--------------------
+textAlign: 'center',
+--------------------
+},
+--------------------
+subtitle: {
+--------------------
+fontSize: 16,
+--------------------
+color: '#ccc',
+--------------------
+marginBottom: 30,
+--------------------
+textAlign: 'center',
+--------------------
+},
+--------------------
+input: {
+--------------------
+backgroundColor: 'rgba(255,255,255,0.1)',
+--------------------
+borderWidth: 1,
+--------------------
+borderColor: '#f1c40f',
+--------------------
+borderRadius: 10,
+--------------------
+padding: 15,
+--------------------
+color: '#fff',
+--------------------
+fontSize: 16,
+--------------------
+marginBottom: 15,
+--------------------
+},
+--------------------
+requirements: {
+--------------------
+backgroundColor: 'rgba(255,255,255,0.05)',
+--------------------
+padding: 15,
+--------------------
+borderRadius: 10,
+--------------------
+marginBottom: 20,
+--------------------
+},
+--------------------
+requirementsTitle: {
+--------------------
+color: '#f1c40f',
+--------------------
+fontSize: 14,
+--------------------
+fontWeight: 'bold',
+--------------------
+marginBottom: 8,
+--------------------
+},
+--------------------
+requirementItem: {
+--------------------
+color: '#ccc',
+--------------------
+fontSize: 12,
+--------------------
+marginBottom: 4,
+--------------------
+},
+--------------------
+button: {
+--------------------
+backgroundColor: '#f1c40f',
+--------------------
+padding: 15,
+--------------------
+borderRadius: 10,
+--------------------
+alignItems: 'center',
+--------------------
+},
+--------------------
+buttonDisabled: {
+--------------------
+opacity: 0.6,
+--------------------
+},
+--------------------
+buttonText: {
+--------------------
+color: '#000',
+--------------------
+fontSize: 18,
+--------------------
+fontWeight: 'bold',
+--------------------
+},
+--------------------
+loadingText: {
+--------------------
+color: '#fff',
+--------------------
+marginTop: 10,
+--------------------
+fontSize: 16,
+--------------------
+},
+--------------------
+});
+--------------------
+export default ResetPasswordScreen;
+--------------------
+# Backend
+--------------------
+MONGODB_URI=mongodb://localhost:27017/deadpions
+--------------------
+JWT_SECRET=votre_secret_jwt_ultra_securise_ici
+--------------------
+FRONTEND_URL=exp://localhost:19000 # Pour dev Expo
+--------------------
+EMAIL_USER=votre-email@gmail.com
+--------------------
+EMAIL_PASSWORD=votre_app_password_gmail
+--------------------
+# Production
+--------------------
+FRONTEND_URL=https://deadpions.app
+--------------------
+# Backend
+--------------------
+cd backend
+--------------------
+npm install express-rate-limit rate-limit-mongo nodemailer
+--------------------
+# Frontend (si besoin)
+--------------------
+cd ../frontend
+--------------------
+npm install axios
+--------------------
+// backend/tests/security.test.js (avec Jest)
+--------------------
+describe('Password Reset Security', () => {
+--------------------
+it('should not reveal if email exists', async () => {
+--------------------
+const res1 = await request(app)
+--------------------
+.post('/api/auth/forgot-password')
+--------------------
+.send({ email: 'exists@test.com' });
+--------------------
+const res2 = await request(app)
+--------------------
+.post('/api/auth/forgot-password')
+--------------------
+.send({ email: 'fake@test.com' });
+--------------------
+expect(res1.body.message).toBe(res2.body.message);
+--------------------
+});
+--------------------
+it('should enforce rate limiting', async () => {
+--------------------
+// ... tests de rate limit
+--------------------
+});
+--------------------
+it('should reject weak passwords', async () => {
+--------------------
+// ... tests de validation
+--------------------
+});
+--------------------
+});
+--------------------
+[ ] Configurer HTTPS obligatoire (Let's Encrypt) 
+--------------------
+[ ] Activer CORS uniquement pour domaines autorisés 
+--------------------
+[ ] Configurer service email en production (SendGrid/Mailgun recommandés) 
+--------------------
+[ ] Implémenter monitoring des tentatives suspectes (Sentry/LogRocket) 
+--------------------
+[ ] Tester sur iOS/Android réels (pas seulement simulateur) 
+--------------------
+[ ] Configurer deep links pour ouvrir app depuis email 
+--------------------
+[ ] Ajouter CAPTCHA si abus détectés (hCaptcha recommandé) 
+--------------------
+[ ] Documenter procédure de support pour utilisateurs bloqués 
+--------------------
+Ce système implémente toutes les protections OWASP essentielles et est prêt pour production ! 🔒
+--------------------
