@@ -24,7 +24,7 @@ const { width, height } = Dimensions.get('window');
 
 // Configuration du plateau
 const COLS = 18; // A à R
-const ROWS = 30; // 1 à 30
+const ROWS = 28; // 1 à 28
 const PADDING_LEFT = 35; // Espace pour les numéros
 const PADDING_TOP = 35; // Espace pour les lettres
 const PADDING_RIGHT = 35;
@@ -214,6 +214,14 @@ const GameScreen = ({ navigation, route }) => {
   const token = useSelector(state => state.auth.token);
   const { isSoundEnabled, isMusicEnabled } = useSelector(state => state.settings || {});
   const [board, setBoard] = useState([]); // Array of { row, col, player }
+  
+  // Pre-selection state
+  const [selectedCell, setSelectedCell] = useState(null); // { row, col }
+
+  // Clear selection when turn changes or game ends
+  useEffect(() => {
+      setSelectedCell(null);
+  }, [currentPlayer, gameOver, mode]);
   
   // Modal state for player profile
   const [selectedProfile, setSelectedProfile] = useState(null);
@@ -1949,6 +1957,15 @@ const GameScreen = ({ navigation, route }) => {
         // Vérifier si la case est occupée
         if (board.some(s => s.row === row && s.col === col)) return;
 
+        // --- PRE-SELECTION SYSTEM ---
+        // Si c'est le premier clic ou un clic sur une autre case -> Sélectionner (Ghost Stone)
+        if (!selectedCell || selectedCell.row !== row || selectedCell.col !== col) {
+            setSelectedCell({ row, col });
+            return;
+        }
+        // Si c'est le deuxième clic sur la même case -> Confirmer
+        setSelectedCell(null);
+
         // Jouer le coup
         playSound(currentPlayer);
         
@@ -1986,6 +2003,15 @@ const GameScreen = ({ navigation, route }) => {
 
     // Check if cell is occupied
     if (board.some(s => s.row === row && s.col === col)) return;
+
+    // --- PRE-SELECTION SYSTEM ---
+    // Si c'est le premier clic ou un clic sur une autre case -> Sélectionner (Ghost Stone)
+    if (!selectedCell || selectedCell.row !== row || selectedCell.col !== col) {
+        setSelectedCell({ row, col });
+        return;
+    }
+    // Si c'est le deuxième clic sur la même case -> Confirmer
+    setSelectedCell(null);
 
     playSound(currentPlayer);
 
@@ -2854,11 +2880,13 @@ const GameScreen = ({ navigation, route }) => {
                     height={(ROWS - 1) * CELL_SIZE + 20} 
                     fill="rgba(255, 255, 255, 1)" // Couleur bois clair
                     rx="5"
+                    onPress={() => setSelectedCell(null)} // Click background to cancel selection
                 />
 
                 {/* Lignes verticales et Lettres (A-R) */}
                 {Array.from({ length: COLS }).map((_, i) => {
                     const x = PADDING_LEFT + i * CELL_SIZE;
+                    const isRedCol = [0, 6, 12].includes(i);
                     return (
                         <React.Fragment key={`v-${i}`}>
                             <SvgText
@@ -2866,7 +2894,7 @@ const GameScreen = ({ navigation, route }) => {
                                 y={PADDING_TOP - 2}
                                 fontSize="10"
                                 fontWeight="bold"
-                                fill="#000000ff"
+                                fill={isRedCol ? "red" : "#000000ff"}
                                 textAnchor="middle"
                             >
                                 {LETTERS[i]}
@@ -2876,7 +2904,7 @@ const GameScreen = ({ navigation, route }) => {
                                 y={PADDING_TOP + (ROWS - 1) * CELL_SIZE + 9}
                                 fontSize="10"
                                 fontWeight="bold"
-                                fill="#000000ff"
+                                fill={isRedCol ? "red" : "#000000ff"}
                                 textAnchor="middle"
                             >
                                 {LETTERS[i]}
@@ -2886,8 +2914,8 @@ const GameScreen = ({ navigation, route }) => {
                                 y1={PADDING_TOP}
                                 x2={x}
                                 y2={PADDING_TOP + (ROWS - 1) * CELL_SIZE}
-                                stroke="#8B4513"
-                                strokeWidth="1"
+                                stroke={isRedCol ? "red" : "#8B4513"}
+                                strokeWidth={isRedCol ? "1.4" : "1"}
                             />
                         </React.Fragment>
                     );
@@ -2896,6 +2924,7 @@ const GameScreen = ({ navigation, route }) => {
                 {/* Lignes horizontales et Numéros (1-30) */}
                 {Array.from({ length: ROWS }).map((_, i) => {
                     const y = PADDING_TOP + i * CELL_SIZE;
+                    const isRedRow = [0, 6, 12, 18, 24].includes(i);
                     return (
                         <React.Fragment key={`h-${i}`}>
                             <SvgText
@@ -2903,7 +2932,7 @@ const GameScreen = ({ navigation, route }) => {
                                 y={y + 3}
                                 fontSize="10"
                                 fontWeight="bold"
-                                fill="#fff"
+                                fill={isRedRow ? "red" : "#fff"}
                                 textAnchor="end"
                             >
                                 {i + 1}
@@ -2913,7 +2942,7 @@ const GameScreen = ({ navigation, route }) => {
                                 y={y + 3}
                                 fontSize="10"
                                 fontWeight="bold"
-                                fill="#fff"
+                                fill={isRedRow ? "red" : "#fff"}
                                 textAnchor="start"
                             >
                                 {i + 1}
@@ -2923,8 +2952,8 @@ const GameScreen = ({ navigation, route }) => {
                                 y1={y}
                                 x2={PADDING_LEFT + (COLS - 1) * CELL_SIZE}
                                 y2={y}
-                                stroke="#8B4513"
-                                strokeWidth="1"
+                                stroke={isRedRow ? "red" : "#8B4513"}
+                                strokeWidth={isRedRow ? "1.4" : "1"}
                             />
                         </React.Fragment>
                     );
@@ -2990,6 +3019,82 @@ const GameScreen = ({ navigation, route }) => {
                     );
                   }
                 })}
+
+                {/* Guides de visée (Crosshair) lors de la pré-sélection */}
+                {selectedCell && (
+                    <React.Fragment>
+                        {/* Ligne Horizontale du guide */}
+                        <Line
+                            x1={PADDING_LEFT}
+                            y1={PADDING_TOP + selectedCell.row * CELL_SIZE}
+                            x2={PADDING_LEFT + (COLS - 1) * CELL_SIZE}
+                            y2={PADDING_TOP + selectedCell.row * CELL_SIZE}
+                            stroke="#FFD700" // Or/Jaune pour la visibilité
+                            strokeWidth="2"
+                            strokeDasharray="5, 5" // Pointillés
+                            opacity={0.8}
+                        />
+                        {/* Ligne Verticale du guide */}
+                        <Line
+                            x1={PADDING_LEFT + selectedCell.col * CELL_SIZE}
+                            y1={PADDING_TOP}
+                            x2={PADDING_LEFT + selectedCell.col * CELL_SIZE}
+                            y2={PADDING_TOP + (ROWS - 1) * CELL_SIZE}
+                            stroke="#FFD700"
+                            strokeWidth="2"
+                            strokeDasharray="5, 5" // Pointillés
+                            opacity={0.8}
+                        />
+                    </React.Fragment>
+                )}
+
+                {/* Ghost Stone (Pre-selection) */}
+                {selectedCell && !board.some(s => s.row === selectedCell.row && s.col === selectedCell.col) && (
+                    (() => {
+                        const cx = PADDING_LEFT + selectedCell.col * CELL_SIZE;
+                        const cy = PADDING_TOP + selectedCell.row * CELL_SIZE;
+                        const r = (CELL_SIZE / 2) * 0.6;
+                        
+                        if (currentPlayer === 'black') {
+                             return (
+                                 <Circle
+                                     cx={cx}
+                                     cy={cy}
+                                     r={r}
+                                     fill="#FF0000"
+                                     stroke="#8B0000"
+                                     strokeWidth="1"
+                                     opacity={0.5}
+                                     onPress={() => handlePress(selectedCell.row, selectedCell.col)}
+                                 />
+                             );
+                        } else {
+                             const crossSize = r * 0.8;
+                             return (
+                                 <React.Fragment>
+                                     <Line
+                                         x1={cx - crossSize} y1={cy - crossSize}
+                                         x2={cx + crossSize} y2={cy + crossSize}
+                                         stroke="#0000FF"
+                                         strokeWidth="2"
+                                         strokeLinecap="round"
+                                         opacity={0.5}
+                                         onPress={() => handlePress(selectedCell.row, selectedCell.col)}
+                                     />
+                                     <Line
+                                         x1={cx + crossSize} y1={cy - crossSize}
+                                         x2={cx - crossSize} y2={cy + crossSize}
+                                         stroke="#0000FF"
+                                         strokeWidth="2"
+                                         strokeLinecap="round"
+                                         opacity={0.5}
+                                         onPress={() => handlePress(selectedCell.row, selectedCell.col)}
+                                     />
+                                 </React.Fragment>
+                             );
+                        }
+                    })()
+                )}
 
                 {/* Highlight Winning Line */}
                 {winningLine && winningLine.length > 0 && (() => {
