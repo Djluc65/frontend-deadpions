@@ -1,6 +1,7 @@
 import React, { useState, memo, useEffect } from 'react';
 import { View, Text, Modal, Pressable, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { playButtonSound } from '../../utils/soundManager';
 import { BET_OPTIONS, ONLINE_TIME_OPTIONS } from '../../utils/constants';
 
 const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
@@ -93,8 +94,23 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
   const niveaux = [
     { id: 'facile', titre: 'Facile', emoji: '🟢', description: 'Parfait pour débuter' },
     { id: 'moyen', titre: 'Moyen', emoji: '🟡', description: 'Challenge équilibré' },
-    { id: 'difficile', titre: 'Difficile', emoji: '🔴', description: 'Pour les experts' }
+    { id: 'difficile', titre: 'Difficile', emoji: '🔴', description: 'Pour les experts', locked: !user?.isPremium }
   ];
+
+  const handleLevelSelect = (level) => {
+    if (level.locked) {
+        Alert.alert(
+            "Fonctionnalité Premium", 
+            "L'IA Expert est réservée aux membres DeadPions+. Abonnez-vous pour débloquer le coach stratégique !",
+            [
+                { text: "Annuler", style: "cancel" },
+                { text: "Voir l'offre", onPress: () => navigation.navigate('Shop') }
+            ]
+        );
+        return;
+    }
+    setAiDifficulte(level.id);
+  };
 
   if (!visible) return null;
 
@@ -106,7 +122,7 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
         onRequestClose={onClose}
     >
         <Pressable style={styles.modalOverlay} onPress={onClose}>
-            <Pressable style={[styles.friendsModalContent, { maxHeight: '90%', backgroundColor: '#020f2e', borderColor: '#f1c40f', borderWidth: 1 }]} onPress={() => {}}>
+            <Pressable style={[styles.friendsModalContent, { maxHeight: '90%', backgroundColor: '#041c55', borderColor: '#f1c40f', borderWidth: 1 }]} onPress={() => {}}>
                 <ScrollView contentContainerStyle={{ alignItems: 'center', width: '100%' }} style={{ width: '100%' }}>
                     {step === 1 ? (
                         <>
@@ -117,13 +133,13 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
                             <View style={styles.optionsRow}>
                                 <TouchableOpacity 
                                     style={[styles.friendsOptionButton, aiMode === 'simple' && styles.friendsOptionButtonActive]}
-                                    onPress={() => setAiMode('simple')}
+                                    onPress={() => { playButtonSound(); setAiMode('simple'); }}
                                 >
                                     <Text style={[styles.friendsOptionText, aiMode === 'simple' && styles.friendsOptionTextActive]}>Simple</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity 
                                     style={[styles.friendsOptionButton, aiMode === 'tournament' && styles.friendsOptionButtonActive]}
-                                    onPress={() => setAiMode('tournament')}
+                                    onPress={() => { playButtonSound(); setAiMode('tournament'); }}
                                 >
                                     <Text style={[styles.friendsOptionText, aiMode === 'tournament' && styles.friendsOptionTextActive]}>Tournoi</Text>
                                 </TouchableOpacity>
@@ -136,10 +152,10 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
                                         {[2, 4, 6, 8, 10].map(num => (
                                             <TouchableOpacity 
                                                 key={num} 
-                                                style={[styles.friendsOptionButton, aiSeriesLength === num && styles.friendsOptionButtonActive]}
-                                                onPress={() => setAiSeriesLength(num)}
+                                                style={[styles.numberOptionButton, aiSeriesLength === num && styles.friendsOptionButtonActive]}
+                                                onPress={() => { playButtonSound(); setAiSeriesLength(num); }}
                                             >
-                                                <Text style={[styles.friendsOptionText, aiSeriesLength === num && styles.friendsOptionTextActive]}>{num}</Text>
+                                                <Text style={[styles.friendsOptionText, aiSeriesLength === num && styles.friendsOptionTextActive, { fontSize: 16 }]}>{num}</Text>
                                             </TouchableOpacity>
                                         ))}
                                     </View>
@@ -159,7 +175,7 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
 
                                         return (
                                             <>
-                                                <TouchableOpacity onPress={() => canGoPrev && setAiBet(effectiveBets[currentIndex - 1])} disabled={!canGoPrev} style={{ padding: 10, opacity: !canGoPrev ? 0.3 : 1 }}>
+                                                <TouchableOpacity onPress={() => { playButtonSound(); canGoPrev && setAiBet(effectiveBets[currentIndex - 1]); }} disabled={!canGoPrev} style={{ padding: 10, opacity: !canGoPrev ? 0.3 : 1 }}>
                                                     <Ionicons name="remove-circle" size={40} color="#f1c40f" />
                                                 </TouchableOpacity>
                                                 <View style={{ 
@@ -174,7 +190,7 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
                                                 }}>
                                                     <Text style={{ color: '#f1c40f', fontSize: 22, fontWeight: 'bold' }}>{aiBet.toLocaleString()}</Text>
                                                 </View>
-                                                <TouchableOpacity onPress={() => canGoNext && setAiBet(effectiveBets[currentIndex + 1])} disabled={!canGoNext} style={{ padding: 10, opacity: !canGoNext ? 0.3 : 1 }}>
+                                                <TouchableOpacity onPress={() => { playButtonSound(); canGoNext && setAiBet(effectiveBets[currentIndex + 1]); }} disabled={!canGoNext} style={{ padding: 10, opacity: !canGoNext ? 0.3 : 1 }}>
                                                     <Ionicons name="add-circle" size={40} color="#f1c40f" />
                                                 </TouchableOpacity>
                                             </>
@@ -190,7 +206,7 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
                                     <TouchableOpacity 
                                         key={opt.label} 
                                         style={[styles.friendsOptionButton, aiTimeControl === opt.value && styles.friendsOptionButtonActive]}
-                                        onPress={() => setAiTimeControl(opt.value)}
+                                        onPress={() => { playButtonSound(); setAiTimeControl(opt.value); }}
                                     >
                                         <Text style={[styles.friendsOptionText, aiTimeControl === opt.value && styles.friendsOptionTextActive]}>
                                             {opt.label}
@@ -199,30 +215,18 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
                                 ))}
                             </View>
 
-                            <TouchableOpacity 
-                                style={[styles.friendsCloseButton, { backgroundColor: '#f1c40f', width: '100%', borderRadius: 15, paddingVertical: 15, marginTop: 20 }]}
-                                onPress={() => setStep(2)}
-                            >
-                                <Text style={[styles.friendsCloseButtonText, { color: '#000', fontWeight: 'bold', fontSize: 18 }]}>Suivant</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity 
-                                style={{ marginTop: 15, padding: 10 }}
-                                onPress={onClose}
-                            >
-                                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 16 }}>Annuler</Text>
-                            </TouchableOpacity>
+                            <View style={styles.modalButtons}>
+                                <TouchableOpacity style={styles.modalButtonCancel} onPress={() => { playButtonSound(); onClose(); }}>
+                                    <Text style={styles.modalButtonText}>Annuler</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.modalButtonConfirm} onPress={() => { playButtonSound(); setStep(2); }}>
+                                    <Text style={styles.modalButtonText}>Suivant</Text>
+                                </TouchableOpacity>
+                            </View>
                         </>
                     ) : (
                         <>
                             <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: 30, justifyContent: 'center', position: 'relative' }}>
-                                <TouchableOpacity 
-                                    onPress={() => setStep(1)}
-                                    style={{ position: 'absolute', left: 0, padding: 10, zIndex: 10 }}
-                                    hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-                                >
-                                    <Ionicons name="arrow-back" size={28} color="#f1c40f" />
-                                </TouchableOpacity>
                                 <Text style={[styles.friendsModalTitle, { color: '#f1c40f', textShadowColor: 'rgba(241, 196, 15, 0.5)', textShadowRadius: 10, marginBottom: 0 }]}>Configuration IA</Text>
                             </View>
                             
@@ -242,12 +246,13 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
                                                 borderRadius: 20,
                                                 borderWidth: 2,
                                                 borderColor: aiDifficulte === niveau.id ? '#f1c40f' : 'rgba(255,255,255,0.1)',
+                                                opacity: niveau.locked ? 0.7 : 1
                                             }
                                         ]}
-                                        onPress={() => setAiDifficulte(niveau.id)}
+                                        onPress={() => { playButtonSound(); handleLevelSelect(niveau); }}
                                     >
                                         <Text style={{ fontSize: 24, marginRight: 15 }}>{niveau.emoji}</Text>
-                                        <View>
+                                        <View style={{ flex: 1 }}>
                                             <Text style={{ 
                                                 fontSize: 18, 
                                                 fontWeight: 'bold', 
@@ -259,6 +264,9 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
                                                 {niveau.description}
                                             </Text>
                                         </View>
+                                        {niveau.locked && (
+                                            <Ionicons name="lock-closed" size={24} color="#f1c40f" />
+                                        )}
                                     </TouchableOpacity>
                                 ))}
                             </View>
@@ -279,7 +287,7 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
                                                 borderWidth: 1,
                                                 borderColor: aiPremierJoueur === opt ? '#f1c40f' : 'rgba(255,255,255,0.1)'
                                             }} 
-                                            onPress={() => setAiPremierJoueur(opt)}
+                                            onPress={() => { playButtonSound(); setAiPremierJoueur(opt); }}
                                         >
                                             <Text style={{ 
                                                 fontSize: 14, 
@@ -313,7 +321,7 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
                                                 borderWidth: 1,
                                                 borderColor: aiCouleurJoueur === opt.id ? '#f1c40f' : 'rgba(255,255,255,0.1)'
                                             }} 
-                                            onPress={() => setAiCouleurJoueur(opt.id)}
+                                            onPress={() => { playButtonSound(); setAiCouleurJoueur(opt.id); }}
                                         >
                                             <Text style={{ fontSize: 20, marginBottom: 5 }}>{opt.icon}</Text>
                                             <Text style={{ 
@@ -328,19 +336,14 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
                                 </View>
                             </View>
 
-                            <TouchableOpacity 
-                                style={[styles.friendsCloseButton, { backgroundColor: '#f1c40f', width: '100%', borderRadius: 15, paddingVertical: 10 }]}
-                                onPress={handleStartGame}
-                            >
-                                <Text style={[styles.friendsCloseButtonText, { color: '#000', fontWeight: 'bold', fontSize: 18 }]}>Jouer</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity 
-                                style={{ marginTop: 15, padding: 10 }}
-                                onPress={() => setStep(1)}
-                            >
-                                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 16 }}>Retour</Text>
-                            </TouchableOpacity>
+                            <View style={styles.modalButtons}>
+                                <TouchableOpacity style={styles.modalButtonCancel} onPress={() => { playButtonSound(); setStep(1); }}>
+                                    <Text style={styles.modalButtonText}>Retour</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.modalButtonConfirm} onPress={() => { playButtonSound(); handleStartGame(); }}>
+                                    <Text style={styles.modalButtonText}>JOUER</Text>
+                                </TouchableOpacity>
+                            </View>
                         </>
                     )}
                 </ScrollView>
@@ -429,6 +432,51 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  numberOptionButton: {
+    minWidth: 40,
+    width: 45,
+    height: 45,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 20,
+  },
+  modalButtonCancel: {
+    flex: 1,
+    backgroundColor: '#e74c3c',
+    padding: 15,
+    borderRadius: 15,
+    marginRight: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#c0392b',
+  },
+  modalButtonConfirm: {
+    flex: 1,
+    backgroundColor: '#2ecc71',
+    padding: 15,
+    borderRadius: 15,
+    marginLeft: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#27ae60',
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+    textTransform: 'uppercase',
   },
 });
 

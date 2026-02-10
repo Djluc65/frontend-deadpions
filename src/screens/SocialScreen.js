@@ -23,6 +23,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { API_URL } from '../config';
 import socket from '../services/socket';
 import { setNotificationsCount } from '../redux/slices/socialSlice';
+import { getAvatarSource } from '../utils/avatarUtils';
 
 const SocialScreen = ({ navigation }) => {
   // --- STATE ---
@@ -49,6 +50,7 @@ const SocialScreen = ({ navigation }) => {
   const [inviteMode, setInviteMode] = useState('simple');
   const [inviteSeriesLength, setInviteSeriesLength] = useState(2);
   const [incomingInvite, setIncomingInvite] = useState(null);
+  const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
 
 
   // Redux
@@ -58,12 +60,9 @@ const SocialScreen = ({ navigation }) => {
 
   // --- HELPER ---
   const getAvatarUri = (avatarPath) => {
-    if (!avatarPath) return { uri: 'https://i.pravatar.cc/150' };
-    if (avatarPath.startsWith('http')) return { uri: avatarPath };
-    
-    const baseUrl = API_URL.replace('/api', '');
-    const safePath = avatarPath.startsWith('/') ? avatarPath : `/${avatarPath}`;
-    return { uri: `${baseUrl}${safePath}` };
+    const source = getAvatarSource(avatarPath);
+    if (source) return source;
+    return { uri: 'https://i.pravatar.cc/150' };
   };
 
   const getStatusInfo = (isOnline, lastSeen) => {
@@ -256,6 +255,11 @@ const SocialScreen = ({ navigation }) => {
       }
       socket.emit('join_user_room', user._id);
 
+      const handleConnect = () => {
+          console.log('Socket reconnected, re-joining user room:', user._id);
+          socket.emit('join_user_room', user._id);
+      };
+
       const handleFriendRequest = () => {
         fetchData();
         Alert.alert("Notification", "Nouvelle demande d'ami reçue !");
@@ -264,12 +268,52 @@ const SocialScreen = ({ navigation }) => {
       const handleReceiveMessage = (message) => {
         if (message && message._id && message.sender) {
             socket.emit('message_delivered', { messageId: message._id, senderId: message.sender });
+            
+            // Optimistic Update
+            setChats(prevChats => {
+                const chatIndex = prevChats.findIndex(c => c.friendId === message.sender);
+                
+                // If chat exists, update it
+                if (chatIndex !== -1) {
+                    const updatedChats = [...prevChats];
+                    const chat = updatedChats[chatIndex];
+                    
+                    // Remove from current position
+                    updatedChats.splice(chatIndex, 1);
+                    
+                    // Add to top with updated info
+                    updatedChats.unshift({
+                        ...chat,
+                        lastMessage: message.content,
+                        timestamp: formatHeureRecente(new Date().toISOString()),
+                        unread: (chat.unread || 0) + 1,
+                        lastRead: '' // New message is not read by me yet (obviously)
+                    });
+                    
+                    return updatedChats;
+                }
+                
+                // If chat doesn't exist (new friend), we need to fetch details
+                fetchData();
+                return prevChats;
+            });
+        } else {
+            fetchData();
         }
-        fetchData();
       };
       
-      const handleMessagesRead = () => {
-        fetchData();
+      const handleMessagesRead = ({ readerId }) => {
+        // Optimistic Update: Mark last message as read if I am the sender
+        setChats(prevChats => {
+            return prevChats.map(chat => {
+                if (chat.friendId === readerId) {
+                    return { ...chat, lastRead: 'Lu' };
+                }
+                return chat;
+            });
+        });
+        // We can still fetch to be sure, or skip it
+        // fetchData(); 
       };
 
       const handleStatusUpdate = ({ userId, isOnline }) => {
@@ -291,11 +335,18 @@ const SocialScreen = ({ navigation }) => {
       };
 
       const handleInvitationError = (msg) => {
+          setIsWaitingForResponse(false);
           Alert.alert("Erreur", msg);
+      };
+
+      const handleInvitationDeclined = (data) => {
+          setIsWaitingForResponse(false);
+          Alert.alert("Refusé", `${data.recipientPseudo || 'L\'adversaire'} a refusé l'invitation.`);
       };
 
       const handleGameStart = (data) => {
           setIncomingInvite(null);
+          setIsWaitingForResponse(false);
           navigation.navigate('Game', { 
             mode: 'online',
             gameId: data.gameId,
@@ -315,7 +366,9 @@ const SocialScreen = ({ navigation }) => {
       socket.on('friend_status_updated', handleStatusUpdate);
       socket.on('game_invitation', handleGameInvitation);
       socket.on('invitation_error', handleInvitationError);
+      socket.on('invitation_declined', handleInvitationDeclined);
       socket.on('game_start', handleGameStart);
+      socket.on('connect', handleConnect);
 
       return () => {
         socket.off('friend_request_received', handleFriendRequest);
@@ -324,11 +377,9 @@ const SocialScreen = ({ navigation }) => {
         socket.off('friend_status_updated', handleStatusUpdate);
         socket.off('game_invitation', handleGameInvitation);
         socket.off('invitation_error', handleInvitationError);
+        socket.off('invitation_declined', handleInvitationDeclined);
         socket.off('game_start', handleGameStart);
-        // Do not disconnect here if we want socket to persist across tabs, 
-        // but since this is the only screen using it, we might disconnect or leave it.
-        // For now, let's keep it connected but maybe leave room? 
-        // socket.disconnect(); 
+        socket.off('connect', handleConnect);
       };
     }
   }, [user, token, fetchData]);
@@ -516,7 +567,7 @@ const SocialScreen = ({ navigation }) => {
           seriesLength: inviteMode === 'tournament' ? inviteSeriesLength : 1
       });
       setInviteConfigVisible(false);
-      Alert.alert("Invitation envoyée", "En attente de la réponse...");
+      setIsWaitingForResponse(true);
   };
 
   const handleAcceptInvite = () => {
@@ -622,7 +673,7 @@ const SocialScreen = ({ navigation }) => {
   const renderDiscussions = () => (
     <FlatList
       data={filteredChats}
-      keyExtractor={item => item.id}
+      keyExtractor={item => item.id.toString()}
       contentContainerStyle={styles.listContent}
       refreshing={loading}
       onRefresh={fetchData}
@@ -657,10 +708,10 @@ const SocialScreen = ({ navigation }) => {
 
   const renderFriends = () => (
     <FlatList
-      data={filteredFriends}
-      extraData={tick}
-      keyExtractor={item => item.id}
-      contentContainerStyle={styles.listContent}
+        data={filteredFriends}
+        extraData={tick}
+        keyExtractor={item => item.id.toString()}
+        contentContainerStyle={styles.listContent}
       refreshing={loading}
       onRefresh={fetchData}
       keyboardDismissMode="on-drag"
@@ -914,6 +965,31 @@ const SocialScreen = ({ navigation }) => {
                   </TouchableOpacity>
                 </View>
                 </ScrollView>
+              </View>
+            </View>
+          </Modal>
+
+          {/* Waiting For Response Modal */}
+          <Modal
+            visible={isWaitingForResponse}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => setIsWaitingForResponse(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <ActivityIndicator size="large" color="#041c55" style={{ marginBottom: 20 }} />
+                <Text style={styles.modalTitle}>En attente de l'adversaire...</Text>
+                <Text style={{ textAlign: 'center', marginBottom: 20, color: '#666' }}>
+                  La partie commencera dès que {selectedFriend?.name || 'l\'ami'} acceptera l'invitation.
+                </Text>
+                
+                <TouchableOpacity 
+                    style={styles.modalButtonCancel} 
+                    onPress={() => setIsWaitingForResponse(false)}
+                >
+                  <Text style={styles.modalButtonText}>Annuler</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </Modal>

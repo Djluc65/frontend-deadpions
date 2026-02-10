@@ -48,12 +48,17 @@ const scanPatterns = (boardArray, map, joueur) => {
     if (stone.player !== joueur) continue;
 
     for (const [dr, dc] of directions) {
-      // 5 Alignés
+      // 5 Alignés (EXACTEMENT 5)
       if (checkLine(map, stone.row, stone.col, dr, dc, joueur, 5)) {
-          const key = `5-${stone.row}-${stone.col}-${dr}-${dc}`;
-          if (!visited.has(key)) {
-              menaces.cinq.push({ row: stone.row, col: stone.col });
-              visited.add(key);
+          const before = getCell(map, stone.row - dr, stone.col - dc);
+          const after = getCell(map, stone.row + dr*5, stone.col + dc*5);
+
+          if (before !== joueur && after !== joueur) {
+              const key = `5-${stone.row}-${stone.col}-${dr}-${dc}`;
+              if (!visited.has(key)) {
+                  menaces.cinq.push({ row: stone.row, col: stone.col });
+                  visited.add(key);
+              }
           }
       }
       
@@ -166,11 +171,72 @@ const checkMenaceDeux = (map, r, c, dr, dc, player, menaces, visited) => {
     }
 };
 
+// --- HEURISTIQUES DÉFENSIVES (Encerclement & Pression) ---
+
+const calculerPression = (map, adversaire) => {
+  const pression = new Map();
+
+  for (const [key, player] of map.entries()) {
+    if (player !== adversaire) continue;
+    const [r, c] = key.split(',').map(Number);
+
+    for (let dr = -3; dr <= 3; dr++) {
+      for (let dc = -3; dc <= 3; dc++) {
+        const dist = Math.abs(dr) + Math.abs(dc);
+        if (dist === 0 || dist > 4) continue;
+
+        const poids = 
+          dist === 1 ? 80 : 
+          dist === 2 ? 50 : 
+          dist === 3 ? 30 : 
+          15;
+
+        const k = `${r+dr},${c+dc}`;
+        // On ne met de la pression que sur les cases vides (vérifié implicitement par l'utilisation)
+        // Mais ici on remplit la map pour toutes les coordonnées
+        pression.set(k, (pression.get(k) || 0) + poids);
+      }
+    }
+  }
+  return pression;
+};
+
+const estEncercle = (map, r, c) => {
+  let bloqs = 0;
+  for (const [dr, dc] of [[0,1],[1,0],[1,1],[1,-1]]) {
+    if (getCell(map, r+dr, c+dc) !== null && 
+        getCell(map, r-dr, c-dc) !== null) {
+      bloqs++;
+    }
+  }
+  return bloqs >= 3;
+};
+
+const checkLiaisonAdverse = (map, coup, adversaire) => {
+  let connexions = 0;
+  for (const [dr, dc] of [[0,1],[1,0],[1,1],[1,-1]]) {
+    let count = 0;
+    // Vérifie devant
+    for (let i = 1; i <= 4; i++) {
+      if (getCell(map, coup.row + dr*i, coup.col + dc*i) === adversaire) count++;
+    }
+    if (count >= 2) connexions++;
+    
+    // Vérifie derrière (optionnel mais logique pour "liaison") - Le snippet utilisateur ne le faisait pas
+    // On reste fidèle au snippet pour l'instant pour éviter de trop pénaliser
+  }
+  return connexions > 0;
+};
+
 // --- LOGIQUE DE DÉCISION v3.1 ---
 
 export const calculerCoupIA = (board, difficulte, currentPlayer) => {
   const map = createBoardMap(board);
   const adversaire = currentPlayer === 'black' ? 'white' : 'black';
+  
+  // Détection du Mode Défense
+  const pionsAdverses = board.filter(p => p.player === adversaire);
+  const modeDefense = pionsAdverses.length >= 1;
 
   // 1. VICTOIRE IMMÉDIATE
   const mesMenaces = scanPatterns(board, map, currentPlayer);
@@ -187,22 +253,22 @@ export const calculerCoupIA = (board, difficulte, currentPlayer) => {
   if (mesMenaces.trois_brise.length > 0) return mesMenaces.trois_brise[0].coup;
 
   // 4. DÉFENSE CRITIQUE (Bloquer 3 ouvert)
-  // v3.1: Avant de bloquer bêtement, vérifie si on peut contre-attaquer (faire un 4)
   const coupsDefense = [];
   if (menacesAdverses.trois_ouvert.length > 0) coupsDefense.push(menacesAdverses.trois_ouvert[0].coup);
   if (menacesAdverses.trois_brise.length > 0) coupsDefense.push(menacesAdverses.trois_brise[0].coup);
 
   if (coupsDefense.length > 0) {
-      // Vérifier si on a une contre-attaque de niveau "Quatre" (déjà vérifié en 1)
-      // Si on peut créer un 4 qui force l'adversaire à répondre, on gagne du temps
-      // (Complexe à implémenter sans récursion profonde, on reste sur la défense safe)
       return coupsDefense[0];
   }
 
   // 5. MINIMAX + HEURISTIQUES v3.1
-  const candidats = obtenirCoupsPertinents(board, map);
   
-  let profondeur = 2;
+  // Calcul de la Heatmap (Pression) une seule fois
+  const pressionMap = calculerPression(map, adversaire);
+
+  const candidats = obtenirCoupsPertinents(board, map, modeDefense, adversaire);
+  
+  let profondeur = 3;
   if (difficulte === 'difficile') profondeur = 4;
   if (difficulte === 'moyen') profondeur = 3;
   if (difficulte === 'facile') profondeur = 1;
@@ -210,40 +276,53 @@ export const calculerCoupIA = (board, difficulte, currentPlayer) => {
   // Optimisation : Limiter les candidats pour la profondeur
   const topCandidats = candidats.slice(0, 15);
 
-  const meilleur = minimax(board, map, profondeur, currentPlayer, -Infinity, Infinity, true, topCandidats);
+  const meilleur = minimax(board, map, profondeur, currentPlayer, -Infinity, Infinity, true, topCandidats, pressionMap);
   return meilleur.coup || candidats[0];
 };
 
-const minimax = (boardArray, map, profondeur, joueur, alpha, beta, maximisant, candidats) => {
+const minimax = (boardArray, map, profondeur, joueur, alpha, beta, maximisant, candidats, pressionMap) => {
   if (profondeur === 0) {
-      return { score: evaluerPosition(boardArray, map, joueur), coup: null };
+      return { score: evaluerPosition(boardArray, map, joueur, pressionMap), coup: null };
   }
 
   let meilleurCoup = null;
   let meilleurScore = maximisant ? -Infinity : Infinity;
 
-  const coups = candidats || obtenirCoupsPertinents(boardArray, map).slice(0, 10);
+  // Pour les appels récursifs, on recalcule les coups pertinents
+  // Note: On pourrait passer modeDefense ici aussi, mais le filtrage initial suffit souvent pour orienter l'arbre
+  const adversaire = joueur === 'black' ? 'white' : 'black';
+  const coups = candidats || obtenirCoupsPertinents(boardArray, map, false, adversaire).slice(0, 10);
 
   for (const coup of coups) {
       const key = `${coup.row},${coup.col}`;
       map.set(key, maximisant ? joueur : (joueur==='black'?'white':'black'));
       const newStone = { row: coup.row, col: coup.col, player: map.get(key) };
       boardArray.push(newStone);
-
-      const res = minimax(boardArray, map, profondeur - 1, joueur, alpha, beta, !maximisant, null);
       
+      // Pénalité Anti-Connexion (appliquée au score du coup si c'est l'IA qui joue)
+      let penalty = 0;
+      if (maximisant) {
+        if (checkLiaisonAdverse(map, coup, adversaire)) {
+           penalty = -20000;
+        }
+      }
+
+      const res = minimax(boardArray, map, profondeur - 1, joueur, alpha, beta, !maximisant, null, pressionMap);
+      
+      const scoreFinal = res.score + penalty;
+
       boardArray.pop();
       map.delete(key);
 
       if (maximisant) {
-          if (res.score > meilleurScore) {
-              meilleurScore = res.score;
+          if (scoreFinal > meilleurScore) {
+              meilleurScore = scoreFinal;
               meilleurCoup = coup;
           }
           alpha = Math.max(alpha, meilleurScore);
       } else {
-          if (res.score < meilleurScore) {
-              meilleurScore = res.score;
+          if (scoreFinal < meilleurScore) {
+              meilleurScore = scoreFinal;
               meilleurCoup = coup;
           }
           beta = Math.min(beta, meilleurScore);
@@ -254,7 +333,7 @@ const minimax = (boardArray, map, profondeur, joueur, alpha, beta, maximisant, c
   return { score: meilleurScore, coup: meilleurCoup };
 };
 
-const evaluerPosition = (boardArray, map, joueur) => {
+const evaluerPosition = (boardArray, map, joueur, pressionMap) => {
     const adversaire = joueur === 'black' ? 'white' : 'black';
     const menacesIA = scanPatterns(boardArray, map, joueur);
     const menacesAdv = scanPatterns(boardArray, map, adversaire);
@@ -277,23 +356,35 @@ const evaluerPosition = (boardArray, map, joueur) => {
     // 2. Défense (Pénalités augmentées)
     score -= menacesAdv.quatre_direct.length * 200000; 
     score -= menacesAdv.quatre_brise.length * 150000;
-    score -= menacesAdv.trois_ouvert.length * 25000; // Priorité absolue défense 3
+    score -= menacesAdv.trois_ouvert.length * 25000; 
     score -= menacesAdv.trois_brise.length * 15000;
     score -= menacesAdv.deux_ouvert.length * 2000;
 
-    // 3. Détection de Fourches (Bonus implicite via accumulation de scores)
-    // Si un coup crée DEUX "trois_ouvert", le score sera +20000, ce qui est très fort.
-    // Idem pour l'adversaire (-50000), ce qui force le blocage.
+    // 3. Pression (Heatmap)
+    // On ajoute le score de pression pour chaque pion de l'IA placé sur une zone chaude
+    if (pressionMap) {
+        for (const stone of boardArray) {
+            if (stone.player === joueur) {
+                const k = `${stone.row},${stone.col}`;
+                score += (pressionMap.get(k) || 0);
+            }
+        }
+    }
 
-    // 4. Construction de Réseau (Jeu positionnel)
-    // On encourage les pierres connectées (proximité)
-    // Ce bonus est léger mais guide le début de partie
-    // (Déjà géré implicitement par la recherche de patterns 2-ouverts)
+    // 4. Encerclement (Caging)
+    // On vérifie si l'adversaire est encerclé
+    for (const stone of boardArray) {
+        if (stone.player === adversaire) {
+            if (estEncercle(map, stone.row, stone.col)) {
+                score += 15000;
+            }
+        }
+    }
 
     return score;
 };
 
-const obtenirCoupsPertinents = (boardArray, map) => {
+const obtenirCoupsPertinents = (boardArray, map, modeDefense = false, adversaire = null) => {
     const coups = new Set();
     
     if (boardArray.length === 0) return [{row: 15, col: 9}];
@@ -311,10 +402,6 @@ const obtenirCoupsPertinents = (boardArray, map) => {
             }
         }
     }
-    
-    // Convertir et trier (Heuristique simple: proximité du centre ou des pions adverses ?)
-    // Ici on retourne tout, le tri se fait dans le minimax via l'ordre d'exploration
-    // Pour v3.1, on pourrait trier par proximité du dernier coup adverse
     
     return Array.from(coups).map(s => {
         const [r, c] = s.split(',').map(Number);

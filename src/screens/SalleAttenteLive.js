@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground, Image, Alert, Modal, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground, Image, Alert, Modal, FlatList, ActivityIndicator, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
 import { socket } from '../utils/socket';
 import { API_URL } from '../config';
+import { playButtonSound } from '../utils/soundManager';
+import { getAvatarSource as getBaseAvatarSource } from '../utils/avatarUtils';
 
 /**
  * Écran de la salle d'attente pour les jeux en direct.
@@ -11,14 +13,18 @@ import { API_URL } from '../config';
  */
 const SalleAttenteLive = ({ route, navigation }) => {
   // Récupération de la configuration de la salle passée via la navigation
-  const { configSalle } = route.params;
+  const params = route.params || {};
+  const [configSalle, setConfigSalle] = useState(params.configSalle || null);
+  const roomId = params.roomId || (configSalle ? configSalle.id : null);
+
   const user = useSelector(state => state.auth.user);
   const token = useSelector(state => state.auth.token);
   
   // --- États locaux ---
-  const [spectateurs, setSpectateurs] = useState(Array.isArray(configSalle.spectateurs) ? configSalle.spectateurs : []); // Liste des spectateurs présents
+  const [spectateurs, setSpectateurs] = useState(configSalle && Array.isArray(configSalle.spectateurs) ? configSalle.spectateurs : []); // Liste des spectateurs présents
   const [isCreator, setIsCreator] = useState(false); // Vérifie si l'utilisateur est le créateur de la salle
   const [opponent, setOpponent] = useState(null); // Joueur adverse (Blanc)
+  const [loading, setLoading] = useState(!configSalle);
   
   // Invitation State
   const [inviteModalVisible, setInviteModalVisible] = useState(false);
@@ -26,18 +32,12 @@ const SalleAttenteLive = ({ route, navigation }) => {
   const [loadingFriends, setLoadingFriends] = useState(false);
 
   const getAvatarSource = (avatar) => {
-    if (!avatar) return null;
-    if (avatar.startsWith('http')) return { uri: avatar };
-    if (avatar.startsWith('/uploads')) {
-        const baseUrl = API_URL.replace('/api', '');
-        return { uri: `${baseUrl}${avatar}` };
-    }
-    return { uri: avatar };
+    return getBaseAvatarSource(avatar);
   };
 
   // Vérification des droits du créateur au chargement
   useEffect(() => {
-    if (user && configSalle.createur) {
+    if (user && configSalle && configSalle.createur) {
         const creatorId = configSalle.createur._id || configSalle.createur.id;
         const userId = user._id || user.id;
         setIsCreator(creatorId.toString() === userId.toString());
@@ -46,18 +46,20 @@ const SalleAttenteLive = ({ route, navigation }) => {
 
   // Connexion au salon socket et écoute du démarrage
   useEffect(() => {
-      if (configSalle.id) {
+      if (roomId) {
           // Rejoindre la salle socket pour recevoir les événements (game_start, etc.)
-          socket.emit('join_live_room', { gameId: configSalle.id });
+          socket.emit('join_live_room', { gameId: roomId });
 
           const handleGameStart = (data) => {
               console.log('Game start received in waiting room:', data);
+              if (!configSalle && !data.roomConfig) return; 
+
               navigation.replace('Game', {
                   mode: 'live',
-                  gameId: configSalle.id,
-                  roomConfig: configSalle,
+                  gameId: roomId,
+                  roomConfig: configSalle || data.roomConfig,
                   players: data.players,
-                  timeControl: configSalle.parametres.tempsParCoup,
+                  timeControl: (configSalle || data.roomConfig).parametres.tempsParCoup,
                   currentTurn: data.currentTurn,
                   tournamentSettings: data.tournamentSettings
               });
@@ -77,6 +79,12 @@ const SalleAttenteLive = ({ route, navigation }) => {
 
           const handleLiveRoomJoined = (data) => {
               console.log('Live room joined data:', data);
+              
+              if (!configSalle && data.config) {
+                  setConfigSalle(data.config);
+                  setLoading(false);
+              }
+
               if (data.players && data.players.white) {
                   setOpponent(data.players.white);
               }
@@ -120,7 +128,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
               socket.off('error', handleError);
           };
       }
-  }, [configSalle.id, navigation]);
+  }, [roomId, navigation, configSalle]);
 
   const handleStopLive = () => {
       Alert.alert(
@@ -132,7 +140,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
                   text: "Arrêter", 
                   style: "destructive", 
                   onPress: () => {
-                      socket.emit('stop_live_room', { gameId: configSalle.id });
+                      socket.emit('stop_live_room', { gameId: roomId });
                       navigation.navigate('Home');
                   }
               }
@@ -150,7 +158,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
                   text: "Quitter", 
                   style: "destructive", 
                   onPress: () => {
-                      // socket.emit('quit_waiting_room', { gameId: configSalle.id }); // Assuming this exists or just disconnect handling
+                      // socket.emit('quit_waiting_room', { gameId: roomId }); // Assuming this exists or just disconnect handling
                       navigation.navigate('Home');
                   }
               }
@@ -178,15 +186,33 @@ const SalleAttenteLive = ({ route, navigation }) => {
     }
     // Emit event to start the game on backend
     socket.emit('start_live_game', {
-        gameId: configSalle.id
+        gameId: roomId
     });
   };
 
   /**
    * Permet de partager le lien ou l'ID de la salle.
    */
-  const handleShare = () => {
-    Alert.alert('Partager', 'Lien de la salle copié !');
+  const handleShare = async () => {
+    try {
+        const result = await Share.share({
+            message: `Rejoins ma partie sur DeadPions ! 🎲\nClique ici : deadpions://live/${roomId}`,
+            url: `deadpions://live/${roomId}`, // iOS support
+            title: 'Invitation DeadPions'
+        });
+        
+        if (result.action === Share.sharedAction) {
+            if (result.activityType) {
+                // shared with activity type of result.activityType
+            } else {
+                // shared
+            }
+        } else if (result.action === Share.dismissedAction) {
+            // dismissed
+        }
+    } catch (error) {
+        Alert.alert(error.message);
+    }
   };
 
   // --- Invitation Functions ---
@@ -225,12 +251,24 @@ const SalleAttenteLive = ({ route, navigation }) => {
           recipientId: friendId,
           betAmount: configSalle.parametres.betAmount,
           timeControl: configSalle.parametres.tempsParCoup,
-          gameId: configSalle.id,
+          gameId: roomId,
           mode: 'live'
       });
       Alert.alert('Succès', 'Invitation envoyée !');
       setInviteModalVisible(false);
   };
+
+  if (loading || !configSalle) {
+      return (
+          <ImageBackground 
+            source={require('../../assets/images/Background2-4.png')} 
+            style={[styles.background, { justifyContent: 'center', alignItems: 'center' }]}
+          >
+              <ActivityIndicator size="large" color="#f1c40f" />
+              <Text style={{ color: '#fff', marginTop: 20 }}>Chargement de la salle...</Text>
+          </ImageBackground>
+      );
+  }
 
   return (
     <ImageBackground 
@@ -239,7 +277,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
     >
       <View style={styles.header}>
         <TouchableOpacity 
-          onPress={() => navigation.goBack()} 
+          onPress={() => { playButtonSound(); handleBackPress(); }} 
           style={styles.backButton}
         >
           <Ionicons name="arrow-back" size={28} color="#fff" />
@@ -251,7 +289,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
                 <Text style={styles.liveText}>EN ATTENTE</Text>
             </View>
         </View>
-        <TouchableOpacity onPress={handleShare} style={styles.shareButton}>
+        <TouchableOpacity onPress={() => { playButtonSound(); handleShare(); }} style={styles.shareButton}>
             <Ionicons name="share-social-outline" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -305,7 +343,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
                     ) : (
                         <View style={styles.waitingOpponent}>
                             {isCreator ? (
-                                <TouchableOpacity onPress={handleOpenInviteModal} style={styles.inviteButton}>
+                                <TouchableOpacity onPress={() => { playButtonSound(); handleOpenInviteModal(); }} style={styles.inviteButton}>
                                     <View style={[styles.avatarImage, styles.avatarPlaceholder, { borderColor: '#10b981', borderStyle: 'solid', borderWidth: 2 }]}>
                                         <Ionicons name="add" size={32} color="#10b981" />
                                     </View>
@@ -442,7 +480,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
                                 </View>
                                 <TouchableOpacity 
                                     style={styles.inviteAction}
-                                    onPress={() => handleSendInvite(item.id)}
+                                    onPress={() => { playButtonSound(); handleSendInvite(item.id); }}
                                 >
                                     <Text style={styles.inviteActionText}>Inviter</Text>
                                 </TouchableOpacity>

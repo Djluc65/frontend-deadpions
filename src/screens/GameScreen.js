@@ -2,9 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, Dimensions, Alert, ScrollView, Animated, Image, Modal, Keyboard, Platform, Share, ActivityIndicator, FlatList } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
+import { Audio, Video } from 'expo-av';
 import { useSelector, useDispatch } from 'react-redux';
-import Svg, { Line, Circle, Text as SvgText, Rect, Defs, LinearGradient, Stop, Path } from 'react-native-svg';
+import Svg, { Line, Circle, Text as SvgText, Rect, Defs, LinearGradient, RadialGradient, Stop, Path, G } from 'react-native-svg';
 import { PinchGestureHandler, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { API_URL } from '../config';
 import { calculerCoupIA } from '../utils/IAEngine';
@@ -13,12 +13,17 @@ import { updateUser } from '../redux/slices/authSlice';
 import { setPlayers, updatePlayerCoins, setSpectators } from '../redux/slices/gameSlice';
 import { toggleSound } from '../redux/slices/settingsSlice';
 import { AudioController } from '../utils/AudioController';
+import { playButtonSound } from '../utils/soundManager';
+import { getAvatarSource } from '../utils/avatarUtils';
+import { getEmojiSource } from '../utils/emojis';
 import ProfilIA from './ProfilIA';
 import ChatEnLigne from '../components/ChatEnLigne';
 import VoiceChat from '../components/VoiceChat';
 import LiveChatOverlay from '../components/LiveChatOverlay';
 import CoinsFeedback from '../components/CoinsFeedback';
 import PlayerProfileCard from '../components/PlayerProfileCard';
+import CustomAlert from '../components/CustomAlert';
+import VersusAnimation from '../components/VersusAnimation';
 
 const { width, height } = Dimensions.get('window');
 
@@ -72,6 +77,55 @@ const getCouleurChrono = (tempsRestant, tempsTotal) => {
     return '#ef4444'; // Rouge
 };
 
+const AnimatedG = Animated.createAnimatedComponent(G);
+
+const Pawn = ({ color, x, y, r, opacity = 1, onPress }) => {
+    const scale = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        Animated.spring(scale, {
+            toValue: 1,
+            friction: 6,
+            tension: 40,
+            useNativeDriver: true,
+        }).start();
+    }, []);
+
+    if (color === 'black') {
+        return (
+            <AnimatedG 
+                style={{ transform: [{ translateX: x }, { translateY: y }, { scale }] }}
+                opacity={opacity}
+                onPress={onPress}
+            >
+                {/* Shadow */}
+                <Circle cx={0} cy={2} r={r} fill="black" opacity={0.2} />
+                {/* Main Body */}
+                <Circle cx={0} cy={0} r={r} fill="url(#redGradient)" stroke="#500000" strokeWidth={1} />
+                {/* Shine/Highlight */}
+                <Circle cx={-r*0.3} cy={-r*0.3} r={r*0.4} fill="white" opacity={0.3} />
+            </AnimatedG>
+        );
+    } else {
+        const s = r * 0.9; 
+        return (
+            <AnimatedG 
+                style={{ transform: [{ translateX: x }, { translateY: y }, { scale }] }}
+                opacity={opacity}
+                onPress={onPress}
+            >
+                {/* Shadow */}
+                <Line x1={-s} y1={-s+2} x2={s} y2={s+2} stroke="black" strokeWidth={4} strokeLinecap="round" opacity={0.2} />
+                <Line x1={s} y1={-s+2} x2={-s} y2={s+2} stroke="black" strokeWidth={4} strokeLinecap="round" opacity={0.2} />
+                
+                {/* Body */}
+                <Line x1={-s} y1={-s} x2={s} y2={s} stroke="url(#blueGradient)" strokeWidth={4} strokeLinecap="round" />
+                <Line x1={s} y1={-s} x2={-s} y2={s} stroke="url(#blueGradient)" strokeWidth={4} strokeLinecap="round" />
+            </AnimatedG>
+        );
+    }
+};
+
 const GameScreen = ({ navigation, route }) => {
   const params = route.params || {};
   const configIA = params.configIA || {};
@@ -123,6 +177,28 @@ const GameScreen = ({ navigation, route }) => {
       mode === 'online' ? route.params?.opponent?.coins : 
       ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite) ? playersData?.white?.coins : playersData?.black?.coins
   );
+
+  // Custom Alert State
+  const [customAlert, setCustomAlert] = useState({ visible: false, title: '', message: '', buttons: [] });
+
+  // Versus Animation State
+  const [showVersusAnim, setShowVersusAnim] = useState(false);
+  const hasShownVersus = useRef(false);
+
+  // Trigger animation for Local/AI/Online modes
+  useEffect(() => {
+    // For live mode, only show if opponent is present (not waiting)
+    const isLiveWaiting = mode === 'live' && !params.players?.white;
+    
+    if ((mode === 'local' || mode === 'ai' || mode === 'online' || mode === 'online_custom' || (mode === 'live' && !isLiveWaiting)) && !hasShownVersus.current) {
+        setShowVersusAnim(true);
+        hasShownVersus.current = true;
+    }
+  }, [mode, params.players]);
+
+  const showAlert = (title, message, buttons = []) => {
+      setCustomAlert({ visible: true, title, message, buttons });
+  };
 
   // Define players early to avoid ReferenceError in useEffect
   const player1 = {
@@ -255,6 +331,34 @@ const GameScreen = ({ navigation, route }) => {
          }
     }
   }, [user, mode, params.gameId]);
+
+  // Handle game start/reload logic
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleGameStart = (data) => {
+        if (data.gameId && data.gameId !== params.gameId) {
+             console.log('New Game ID detected, reloading screen...');
+             isRematching.current = true;
+             AudioController.setRematchMode(true);
+             navigation.replace('Game', {
+                 ...params, 
+                 gameId: data.gameId,
+                 players: data.players,
+                 betAmount: data.betAmount,
+                 timeControl: data.timeControl,
+                 tournamentSettings: data.tournamentSettings,
+                 currentTurn: data.currentTurn
+             });
+             return;
+        }
+    };
+
+    socket.on('game_start', handleGameStart);
+    return () => {
+        socket.off('game_start', handleGameStart);
+    };
+  }, [params.gameId, navigation]);
 
   useEffect(() => {
       if (bubbles.player2) {
@@ -477,10 +581,12 @@ const GameScreen = ({ navigation, route }) => {
     };
 
     const handleGameStart = (data) => {
-        console.log('Game start received in GameScreen:', data);
+        // console.log('Game start received in GameScreen:', data);
 
         if (data.gameId && data.gameId !== params.gameId) {
              console.log('New Game ID detected, reloading screen...');
+             isRematching.current = true;
+             AudioController.setRematchMode(true);
              navigation.replace('Game', {
                  ...params, 
                  gameId: data.gameId,
@@ -496,6 +602,13 @@ const GameScreen = ({ navigation, route }) => {
         if (data.players && JSON.stringify(data.players) !== JSON.stringify(playersDataRef.current)) {
             setPlayersData(data.players);
         }
+
+        // Trigger Versus Animation for Online/Live
+        if (!hasShownVersus.current && (mode === 'online' || mode === 'live')) {
+            setShowVersusAnim(true);
+            hasShownVersus.current = true;
+        }
+
         if (data.currentTurn) {
             setCurrentPlayer(data.currentTurn);
         }
@@ -659,13 +772,16 @@ const GameScreen = ({ navigation, route }) => {
 
     const handleRoundOver = (data) => {
         setTimeout(() => {
-             Alert.alert(
+             showAlert(
                 `Match ${data.nextGameNumber - 1} terminé`,
                 `${data.winner === 'black' ? (params.players?.black?.pseudo || 'Joueur 1') : (params.players?.white?.pseudo || 'Joueur 2')} gagne ! \nScore: ${data.score.black} - ${data.score.white}`,
                 [
                     { 
                         text: "Match Suivant", 
                         onPress: () => {
+                            playButtonSound();
+                            isRematching.current = true;
+                            AudioController.setRematchMode(true);
                             setBoard([]);
                             setTournamentScore(data.score);
                             setTournamentGameNumber(data.nextGameNumber);
@@ -681,8 +797,7 @@ const GameScreen = ({ navigation, route }) => {
                             });
                         }
                     }
-                ],
-                { cancelable: false }
+                ]
              );
         }, 500);
     };
@@ -744,13 +859,13 @@ const GameScreen = ({ navigation, route }) => {
     };
 
     const handleLiveRoomClosed = () => {
-        Alert.alert("Live terminé", "Le créateur a fermé le live.", [
-            { text: "OK", onPress: () => navigation.navigate('Home') }
+        showAlert("Live terminé", "Le créateur a fermé le live.", [
+            { text: "OK", onPress: () => navigation.navigate('Home'), style: 'cancel' }
         ]);
     };
 
     const handleOpponentLeftLive = () => {
-        Alert.alert(
+        showAlert(
             "Adversaire parti",
             "Votre adversaire a quitté la partie. Le live reste actif.",
             [
@@ -858,14 +973,14 @@ const GameScreen = ({ navigation, route }) => {
   // --- BACKGROUND MUSIC ---
   useEffect(() => {
     // Stop Home music and play Game music
-    AudioController.stopHomeMusic();
+    AudioController.notifyGameEnter();
     AudioController.playGameMusic(isMusicEnabled);
 
     return () => {
-      // Stop Game music
-      AudioController.stopGameMusic();
-      // Only play Home music if NOT rematching
+      AudioController.notifyGameExit();
       if (!isRematching.current) {
+          // Stop Game music and play Home music ONLY if not rematching
+          AudioController.stopGameMusic();
           AudioController.playHomeMusic(isMusicEnabled);
       }
       isRematching.current = false;
@@ -883,16 +998,6 @@ const GameScreen = ({ navigation, route }) => {
     ? (configIA.couleurs.joueur === 'white' ? 'Vous' : configIA.difficulte)
     : 'Joueur 2';
 
-  const getAvatarSource = (avatar) => {
-    if (!avatar) return null;
-    if (avatar.startsWith('http')) return { uri: avatar };
-    if (avatar.startsWith('/uploads')) {
-        const baseUrl = API_URL.replace('/api', '');
-        return { uri: `${baseUrl}${avatar}` };
-    }
-    return { uri: avatar };
-  };
-
   const handleSendFriendRequest = async () => {
     if (!selectedProfile || !selectedProfile.id) return;
     
@@ -908,13 +1013,13 @@ const GameScreen = ({ navigation, route }) => {
         
         const data = await res.json();
         if (res.ok) {
-            Alert.alert("Succès", "Demande d'ami envoyée !");
+            showAlert("Succès", "Demande d'ami envoyée !", [{ text: 'OK', style: 'cancel' }]);
             setSelectedProfile(null);
         } else {
-            Alert.alert("Info", data.message || "Impossible d'envoyer la demande.");
+            showAlert("Info", data.message || "Impossible d'envoyer la demande.", [{ text: 'OK', style: 'cancel' }]);
         }
     } catch (error) {
-        Alert.alert("Erreur", "Erreur réseau.");
+        showAlert("Erreur", "Erreur réseau.", [{ text: 'OK', style: 'cancel' }]);
     }
   };
 
@@ -973,7 +1078,10 @@ const GameScreen = ({ navigation, route }) => {
           <TouchableOpacity 
               style={styles.modalOverlay} 
               activeOpacity={1} 
-              onPress={() => setShowInviteModal(false)}
+              onPress={() => {
+                  playButtonSound();
+                  setShowInviteModal(false);
+              }}
           >
               <View style={[styles.modalContent, { height: '70%', width: '90%' }]} onStartShouldSetResponder={() => true}>
                   <Text style={styles.modalPseudo}>Inviter un joueur</Text>
@@ -982,13 +1090,19 @@ const GameScreen = ({ navigation, route }) => {
                   <View style={{flexDirection: 'row', marginBottom: 15, borderBottomWidth: 1, borderBottomColor: '#333'}}>
                       <TouchableOpacity 
                           style={{flex: 1, padding: 10, alignItems: 'center', borderBottomWidth: inviteMode === 'friends' ? 2 : 0, borderBottomColor: '#f1c40f'}}
-                          onPress={() => setInviteMode('friends')}
+                          onPress={() => {
+                              playButtonSound();
+                              setInviteMode('friends');
+                          }}
                       >
                           <Text style={{color: inviteMode === 'friends' ? '#f1c40f' : '#ccc', fontWeight: 'bold'}}>Amis</Text>
                       </TouchableOpacity>
                       <TouchableOpacity 
                           style={{flex: 1, padding: 10, alignItems: 'center', borderBottomWidth: inviteMode === 'online' ? 2 : 0, borderBottomColor: '#f1c40f'}}
-                          onPress={() => setInviteMode('online')}
+                          onPress={() => {
+                              playButtonSound();
+                              setInviteMode('online');
+                          }}
                       >
                           <Text style={{color: inviteMode === 'online' ? '#f1c40f' : '#ccc', fontWeight: 'bold'}}>En ligne</Text>
                       </TouchableOpacity>
@@ -1019,7 +1133,10 @@ const GameScreen = ({ navigation, route }) => {
                                       borderBottomColor: '#333',
                                       width: '100%'
                                   }}
-                                  onPress={() => handleInviteFriendToGame(item._id)}
+                                  onPress={() => {
+                                      playButtonSound();
+                                      handleInviteFriendToGame(item._id);
+                                  }}
                               >
                                   <View style={{position: 'relative'}}>
                                      <Image 
@@ -1050,7 +1167,10 @@ const GameScreen = ({ navigation, route }) => {
 
                   <TouchableOpacity 
                       style={[styles.closeButton, { marginTop: 20 }]} 
-                      onPress={() => setShowInviteModal(false)}
+                      onPress={() => {
+                          playButtonSound();
+                          setShowInviteModal(false);
+                      }}
                   >
                       <Text style={styles.closeButtonText}>Fermer</Text>
                   </TouchableOpacity>
@@ -1110,24 +1230,27 @@ const GameScreen = ({ navigation, route }) => {
         <TouchableOpacity 
             style={styles.gameMenuOverlay} 
             activeOpacity={1} 
-            onPress={() => setShowGameMenu(false)}
+            onPress={() => {
+                playButtonSound();
+                setShowGameMenu(false);
+            }}
         >
             <View style={styles.menuContent} onStartShouldSetResponder={() => true}>
-                <TouchableOpacity style={styles.menuItem} onPress={handleQuitGame}>
+                <TouchableOpacity style={styles.menuItem} onPress={() => { playButtonSound(); handleQuitGame(); }}>
                     <Ionicons name="exit-outline" size={24} color="#ffffffff" />
                     <Text style={[styles.menuText, { color: '#ffffffff' }]}>Quitter la partie</Text>
                 </TouchableOpacity>
                 
                 <View style={styles.menuDivider} />
 
-                <TouchableOpacity style={styles.menuItem} onPress={() => { dispatch(toggleSound()); setShowGameMenu(false); }}>
+                <TouchableOpacity style={styles.menuItem} onPress={() => { playButtonSound(); dispatch(toggleSound()); setShowGameMenu(false); }}>
                     <Ionicons name={isSoundEnabled ? "volume-high" : "volume-mute"} size={24} color="#ffffffff" />
                     <Text style={styles.menuText}>Son des pions : {isSoundEnabled ? "Activé" : "Désactivé"}</Text>
                 </TouchableOpacity>
 
                 <View style={styles.menuDivider} />
 
-                <TouchableOpacity style={styles.menuItem} onPress={() => setShowGameMenu(false)}>
+                <TouchableOpacity style={styles.menuItem} onPress={() => { playButtonSound(); setShowGameMenu(false); }}>
                     <Text style={styles.closeMenuText}>Fermer</Text>
                 </TouchableOpacity>
             </View>
@@ -1145,7 +1268,10 @@ const GameScreen = ({ navigation, route }) => {
         <TouchableOpacity 
             style={styles.modalOverlay} 
             activeOpacity={1} 
-            onPress={() => setSelectedProfile(null)}
+            onPress={() => {
+                playButtonSound();
+                setSelectedProfile(null);
+            }}
         >
             <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
                  {selectedProfile?.avatar ? (
@@ -1162,7 +1288,7 @@ const GameScreen = ({ navigation, route }) => {
                  {selectedProfile?.country && <Text style={styles.modalFlag}>{selectedProfile.country}</Text>}
                  
                  {(mode === 'online' || mode === 'live' || mode === 'spectator') && selectedProfile?.id && selectedProfile.id !== (user?._id || user?.id) && (
-                     <TouchableOpacity style={styles.friendButton} onPress={handleSendFriendRequest}>
+                     <TouchableOpacity style={styles.friendButton} onPress={() => { playButtonSound(); handleSendFriendRequest(); }}>
                         <Ionicons name="person-add" size={20} color="white" style={{marginRight: 8}} />
                         <Text style={styles.friendButtonText}>Demander en ami</Text>
                      </TouchableOpacity>
@@ -1170,7 +1296,10 @@ const GameScreen = ({ navigation, route }) => {
                  
                  <TouchableOpacity 
                     style={styles.closeButton} 
-                    onPress={() => setSelectedProfile(null)}
+                    onPress={() => {
+                        playButtonSound();
+                        setSelectedProfile(null);
+                    }}
                  >
                     <Text style={styles.closeButtonText}>Fermer</Text>
                  </TouchableOpacity>
@@ -1196,6 +1325,7 @@ const GameScreen = ({ navigation, route }) => {
                   <TouchableOpacity 
                       style={[styles.closeButton, { backgroundColor: '#e74c3c', width: 200 }]}
                       onPress={() => {
+                           playButtonSound();
                            if (params.gameId) {
                                socket.emit('quit_waiting_room', { gameId: params.gameId, userId: user?._id });
                            }
@@ -1348,7 +1478,10 @@ const GameScreen = ({ navigation, route }) => {
           //     alignItems: 'center'
           // }
       ]}
-      onPress={() => setSelectedProfile(player)}
+      onPress={() => {
+          playButtonSound();
+          setSelectedProfile(player);
+      }}
       activeOpacity={0.8}
     >
       {(mode === 'online' || mode === 'live' || mode === 'spectator' || mode === 'ai' || mode === 'local') && isCurrent && !gameOver && (player === player1 || mode === 'spectator' || mode === 'ai' || mode === 'local') && (
@@ -1501,7 +1634,18 @@ const GameScreen = ({ navigation, route }) => {
       {bubbleMessage && (
           <View style={styles.bubbleContainer}>
               {bubbleMessage.type === 'emoji' ? (
-                  <Text style={styles.bubbleEmoji}>{bubbleMessage.content}</Text>
+                  getEmojiSource(bubbleMessage.content) ? (
+                    <Video
+                        source={getEmojiSource(bubbleMessage.content)}
+                        style={{ width: 60, height: 60 }}
+                        resizeMode="contain"
+                        shouldPlay
+                        isLooping={true}
+                        isMuted={true}
+                    />
+                  ) : (
+                    <Text style={styles.bubbleEmoji}>{bubbleMessage.content}</Text>
+                  )
               ) : (
                   <Text style={styles.bubbleText} numberOfLines={3}>{bubbleMessage.content}</Text>
               )}
@@ -1678,7 +1822,7 @@ const GameScreen = ({ navigation, route }) => {
         c -= dy;
       }
 
-      if (count >= 5) return line;
+      if (count === 5) return line;
     }
     return null;
   };
@@ -1699,7 +1843,7 @@ const GameScreen = ({ navigation, route }) => {
       
       await sound.playAsync();
     } catch (error) {
-      console.log('Error playing sound', error);
+      // console.log('Error playing sound', error);
     }
   };
 
@@ -1936,7 +2080,7 @@ const GameScreen = ({ navigation, route }) => {
         if (blackId && myId && blackId.toString() === myId.toString()) myColor = 'black';
         else if (whiteId && myId && whiteId.toString() === myId.toString()) myColor = 'white';
         
-        console.log('[handlePress] Check:', { 
+        /* console.log('[handlePress] Check:', { 
             currentPlayer, 
             myColor, 
             userId: myId, 
@@ -1945,7 +2089,7 @@ const GameScreen = ({ navigation, route }) => {
             isMyTurn: currentPlayer === myColor,
             boardSize: board.length,
             socketConnected: socket.connected
-        });
+        }); */
 
         if (!myColor) {
              console.log('Cannot determine my color');
@@ -2322,7 +2466,7 @@ const GameScreen = ({ navigation, route }) => {
   useEffect(() => {
     if (mode === 'online' || mode === 'online_custom' || mode === 'live') {
         const handleRematchRequested = (data) => {
-             Alert.alert(
+             showAlert(
                  'Revanche !',
                  'Votre adversaire souhaite rejouer. Acceptez-vous ?',
                  [
@@ -2335,7 +2479,7 @@ const GameScreen = ({ navigation, route }) => {
                          text: 'Accepter', 
                          onPress: () => {
                              if (user.coins < params.betAmount) {
-                                 Alert.alert('Erreur', 'Pas assez de coins pour rejouer.');
+                                 showAlert('Erreur', 'Pas assez de coins pour rejouer.', [{ text: 'OK', style: 'cancel' }]);
                                  return;
                              }
                              socket.emit('respond_rematch', { gameId: params.gameId, accepted: true });
@@ -2347,12 +2491,12 @@ const GameScreen = ({ navigation, route }) => {
 
         const handleRematchDeclined = () => {
             setRematchRequested(false);
-            Alert.alert('Refusé', 'Votre adversaire a décliné la revanche.');
+            showAlert('Refusé', 'Votre adversaire a décliné la revanche.', [{ text: 'OK', style: 'cancel' }]);
         };
 
         const handleRematchFailed = (msg) => {
             setRematchRequested(false);
-            Alert.alert('Erreur', msg || 'La revanche a échoué.');
+            showAlert('Erreur', msg || 'La revanche a échoué.', [{ text: 'OK', style: 'cancel' }]);
         };
 
         socket.on('rematch_requested', handleRematchRequested);
@@ -2409,14 +2553,14 @@ const GameScreen = ({ navigation, route }) => {
             pointerEvents="box-none"
           >
               <View style={[styles.resultCard, (type === 'online' || type === 'live' || type === 'ia') && { padding: 16, width: '90%' }]}>
-              <Text style={[styles.emojiResult, (type === 'online' || type === 'live' || type === 'ia') && { fontSize: 40, marginBottom: 5 }]}>
+              <Text style={[styles.emojiResult, (type === 'online' || type === 'live' || type === 'ia' || type === 'ai') && { fontSize: 40, marginBottom: 5 }]}>
                 {isDraw || isTournamentDraw ? '🤝' : (victoire ? '🏆' : '😢')}
               </Text>
-              <Text style={[styles.titreResult, (type === 'online' || type === 'live' || type === 'ia') && { fontSize: 24, marginBottom: 5 }]}>
+              <Text style={[styles.titreResult, (type === 'online' || type === 'live' || type === 'ia' || type === 'ai') && { fontSize: 24, marginBottom: 5 }]}>
                 {isDraw || isTournamentDraw ? 'MATCH NUL' : (victoire ? 'VICTOIRE !' : 'DÉFAITE')}
               </Text>
               
-              {(type === 'online' || type === 'live' || type === 'ia') && (
+              {(type === 'online' || type === 'live' || type === 'ia' || type === 'ai') && (
                   <>
                       <Text style={[styles.adversaireResult, { marginBottom: 10 }]}>Contre {adversaire?.pseudo || 'Adversaire'}</Text>
                           
@@ -2491,8 +2635,9 @@ const GameScreen = ({ navigation, route }) => {
                               ]} 
                               disabled={rematchRequested}
                               onPress={() => {
+                                  playButtonSound();
                                   if (user.coins < montantPari) {
-                                      Alert.alert('Solde insuffisant', 'Vous n\'avez pas assez de coins pour rejouer.');
+                                      showAlert('Solde insuffisant', 'Vous n\'avez pas assez de coins pour rejouer.', [{ text: 'OK', style: 'cancel' }]);
                                       return;
                                   }
                                   setRematchRequested(true);
@@ -2517,6 +2662,7 @@ const GameScreen = ({ navigation, route }) => {
                                   }
                               ]} 
                               onPress={async () => {
+                                  playButtonSound();
                                   try {
                                       const message = type === 'online'
                                           ? `Je viens de gagner contre ${adversaire?.pseudo || 'un adversaire'} sur DeadPions ! 🏆💰\nViens m'affronter !`
@@ -2529,7 +2675,7 @@ const GameScreen = ({ navigation, route }) => {
                                           title: 'Ma victoire sur DeadPions'
                                       });
                                   } catch (error) {
-                                      console.log('Error sharing:', error);
+                                      // console.log('Error sharing:', error);
                                   }
                               }}
                           >
@@ -2554,6 +2700,7 @@ const GameScreen = ({ navigation, route }) => {
                                           <TouchableOpacity 
                                                style={[styles.boutonRejouer, { backgroundColor: '#f59e0b', marginBottom: 10 }]} 
                                                onPress={() => {
+                                                   playButtonSound();
                                                    setRematchRequested(true);
                                                    socket.emit('request_rematch', { gameId: params.gameId });
                                                }}
@@ -2567,6 +2714,7 @@ const GameScreen = ({ navigation, route }) => {
                                           <TouchableOpacity 
                                               style={[styles.boutonRejouer, { backgroundColor: '#3b82f6', marginBottom: 10 }]} 
                                               onPress={() => {
+                                                  playButtonSound();
                                                   setShowResultModal(false);
                                                   if (params.roomConfig) {
                                                       navigation.replace('SalleAttenteLive', { configSalle: params.roomConfig });
@@ -2584,6 +2732,7 @@ const GameScreen = ({ navigation, route }) => {
                               <TouchableOpacity 
                                   style={styles.boutonMenuResult} 
                                   onPress={() => {
+                                      playButtonSound();
                                       setShowResultModal(false);
                                       navigation.navigate('Home');
                                   }}
@@ -2596,20 +2745,27 @@ const GameScreen = ({ navigation, route }) => {
                               <TouchableOpacity 
                                   style={styles.boutonRejouer} 
                                   onPress={() => {
+                                      playButtonSound();
                                       setShowResultModal(false);
                                       if (type === 'online') {
                                           navigation.navigate('Home');
                                       } else if (type === 'online_custom') {
                                           navigation.navigate('Home');
-                                      } else if (type === 'ia') {
+                                      } else if (type === 'ia' || type === 'ai') {
+                                          isRematching.current = true;
+                                          AudioController.setRematchMode(true);
                                           navigation.replace('Game', { modeJeu: 'ia', configIA: resultData.configIA, betAmount: montantPari });
                                       } else if (type === 'local') {
+                                          isRematching.current = true;
+                                          AudioController.setRematchMode(true);
                                           if (resultData.localConfig) {
                                               navigation.replace('Game', { mode: 'local', localConfig: resultData.localConfig });
                                           } else {
                                               navigation.replace('Game', { mode: 'local' });
                                           }
                                       } else {
+                                          isRematching.current = true;
+                                          AudioController.setRematchMode(true);
                                           navigation.replace('Game', { modeJeu: 'local' });
                                       }
                                   }}
@@ -2617,8 +2773,8 @@ const GameScreen = ({ navigation, route }) => {
                                   <Text style={styles.boutonTexteResult}>
                                       {type === 'online' ? '🔙 Changer d\'adversaire' : 
                                       (type === 'online_custom' ? '🏠 Quitter' : 
-                                      (type === 'ia' && isTournament && !tournamentOver ? '➡️ Match Suivant' : 
-                                      (type === 'ia' && isTournament && tournamentOver ? '🔄 Nouveau Tournoi' : 
+                                      ((type === 'ia' || type === 'ai') && isTournament && !tournamentOver ? '➡️ Match Suivant' : 
+                                      ((type === 'ia' || type === 'ai') && isTournament && tournamentOver ? '🔄 Nouveau Tournoi' : 
                                       (type === 'local' && isTournament && !tournamentOver ? '➡️ Match Suivant' :
                                       (type === 'local' && isTournament && tournamentOver ? '🔄 Nouveau Tournoi' : '🔄 Rejouer')))))}
                                   </Text>
@@ -2627,6 +2783,7 @@ const GameScreen = ({ navigation, route }) => {
                               <TouchableOpacity 
                                   style={styles.boutonMenuResult} 
                                   onPress={() => {
+                                      playButtonSound();
                                       setShowResultModal(false);
                                       navigation.navigate('Home');
                                   }}
@@ -2636,6 +2793,7 @@ const GameScreen = ({ navigation, route }) => {
                           </>
                       )}
                   </View>
+                  <View style={styles.innerShadow} pointerEvents="none" />
               </View>
           </View>
       );
@@ -2657,10 +2815,11 @@ const GameScreen = ({ navigation, route }) => {
                         <TouchableOpacity 
                             style={[styles.menuFab, fabStyle, { bottom: 170, backgroundColor: '#e74c3c' }]} 
                             onPress={() => {
+                                playButtonSound();
                                 setShowGameMenu(false);
                                 
                                 if (isLiveCreator) {
-                                    Alert.alert(
+                                    showAlert(
                                         "Gestion du Live",
                                         "Que voulez-vous faire ?",
                                         [
@@ -2676,7 +2835,7 @@ const GameScreen = ({ navigation, route }) => {
                                         ]
                                     );
                                 } else {
-                                    Alert.alert(
+                                    showAlert(
                                         mode === 'live' ? "Quitter le live" : "Quitter la partie",
                                         mode === 'live' ? "Voulez-vous vraiment quitter cette partie ?" : "Voulez-vous vraiment quitter la partie ?",
                                         [
@@ -2701,7 +2860,10 @@ const GameScreen = ({ navigation, route }) => {
 
                         <TouchableOpacity 
                             style={[styles.menuFab, fabStyle, { bottom: 100, backgroundColor: isSoundEnabled ? '#3b82f6' : '#95a5a6' }]} 
-                            onPress={() => dispatch(toggleSound())}
+                            onPress={() => {
+                                playButtonSound();
+                                dispatch(toggleSound());
+                            }}
                         >
                             <Ionicons name={isSoundEnabled ? "volume-high" : "volume-mute"} size={28} color="#fff" />
                         </TouchableOpacity>
@@ -2711,7 +2873,10 @@ const GameScreen = ({ navigation, route }) => {
                 {/* Main Toggle Button */}
                 <TouchableOpacity 
                     style={[styles.menuFab, fabStyle]}
-                    onPress={() => setShowGameMenu(!showGameMenu)}
+                    onPress={() => {
+                        playButtonSound();
+                        setShowGameMenu(!showGameMenu);
+                    }}
                 >
                     <Ionicons name={showGameMenu ? "close" : "menu"} size={30} color="#fff" />
                 </TouchableOpacity>
@@ -2748,7 +2913,10 @@ const GameScreen = ({ navigation, route }) => {
     return (
         <TouchableOpacity 
             style={styles.menuFab}
-            onPress={() => setShowGameMenu(true)}
+            onPress={() => {
+                playButtonSound();
+                setShowGameMenu(true);
+            }}
         >
             <Ionicons name="menu" size={30} color="#fff" />
         </TouchableOpacity>
@@ -2872,6 +3040,16 @@ const GameScreen = ({ navigation, route }) => {
             >
               <Animated.View style={{ transform: [{ translateX }, { translateY }, { scale }] }}>
                 <Svg width={BOARD_WIDTH} height={BOARD_HEIGHT}>
+                <Defs>
+                    <RadialGradient id="redGradient" cx="50%" cy="50%" rx="50%" ry="50%" fx="30%" fy="30%" gradientUnits="userSpaceOnUse">
+                        <Stop offset="0%" stopColor="#ff6b6b" stopOpacity="1" />
+                        <Stop offset="100%" stopColor="#ff0808ff" stopOpacity="1" />
+                    </RadialGradient>
+                    <LinearGradient id="blueGradient" x1="0" y1="0" x2="1" y2="1">
+                        <Stop offset="0%" stopColor="#4dabf7" stopOpacity="1" />
+                        <Stop offset="100%" stopColor="#1e272fff" stopOpacity="1" />
+                    </LinearGradient>
+                </Defs>
                 {/* Fond du plateau pour lisibilité */}
                 <Rect 
                     x={PADDING_LEFT - 10} 
@@ -2977,47 +3155,18 @@ const GameScreen = ({ navigation, route }) => {
                 {board.map((stone, index) => {
                   const cx = PADDING_LEFT + stone.col * CELL_SIZE;
                   const cy = PADDING_TOP + stone.row * CELL_SIZE;
-                  const r = (CELL_SIZE / 2) * 0.6; // Réduction de la taille à 60% de la demi-cellule
+                  // Agrandissement des pions (0.85 au lieu de 0.6)
+                  const r = (CELL_SIZE / 2) * 0.70;
 
-                  if (stone.player === 'black') {
-                    // Rond Rouge
-                    return (
-                      <Circle
-                        key={index}
-                        cx={cx}
-                        cy={cy}
+                  return (
+                      <Pawn 
+                        key={`${stone.row}-${stone.col}-${index}`}
+                        color={stone.player}
+                        x={cx}
+                        y={cy}
                         r={r}
-                        fill="#FF0000"
-                        stroke="#8B0000"
-                        strokeWidth="1"
                       />
-                    );
-                  } else {
-                    // Croix Bleue
-                    const crossSize = r * 0.8;
-                    return (
-                      <React.Fragment key={index}>
-                        <Line
-                          x1={cx - crossSize}
-                          y1={cy - crossSize}
-                          x2={cx + crossSize}
-                          y2={cy + crossSize}
-                          stroke="#0000FF"
-                          strokeWidth="2" // Bordure un peu plus fine pour la petite taille
-                          strokeLinecap="round"
-                        />
-                        <Line
-                          x1={cx + crossSize}
-                          y1={cy - crossSize}
-                          x2={cx - crossSize}
-                          y2={cy + crossSize}
-                          stroke="#0000FF"
-                          strokeWidth="2" // Bordure un peu plus fine pour la petite taille
-                          strokeLinecap="round"
-                        />
-                      </React.Fragment>
-                    );
-                  }
+                  );
                 })}
 
                 {/* Guides de visée (Crosshair) lors de la pré-sélection */}
@@ -3053,46 +3202,18 @@ const GameScreen = ({ navigation, route }) => {
                     (() => {
                         const cx = PADDING_LEFT + selectedCell.col * CELL_SIZE;
                         const cy = PADDING_TOP + selectedCell.row * CELL_SIZE;
-                        const r = (CELL_SIZE / 2) * 0.6;
+                        const r = (CELL_SIZE / 2) * 0.70;
                         
-                        if (currentPlayer === 'black') {
-                             return (
-                                 <Circle
-                                     cx={cx}
-                                     cy={cy}
-                                     r={r}
-                                     fill="#FF0000"
-                                     stroke="#8B0000"
-                                     strokeWidth="1"
-                                     opacity={0.5}
-                                     onPress={() => handlePress(selectedCell.row, selectedCell.col)}
-                                 />
-                             );
-                        } else {
-                             const crossSize = r * 0.8;
-                             return (
-                                 <React.Fragment>
-                                     <Line
-                                         x1={cx - crossSize} y1={cy - crossSize}
-                                         x2={cx + crossSize} y2={cy + crossSize}
-                                         stroke="#0000FF"
-                                         strokeWidth="2"
-                                         strokeLinecap="round"
-                                         opacity={0.5}
-                                         onPress={() => handlePress(selectedCell.row, selectedCell.col)}
-                                     />
-                                     <Line
-                                         x1={cx + crossSize} y1={cy - crossSize}
-                                         x2={cx - crossSize} y2={cy + crossSize}
-                                         stroke="#0000FF"
-                                         strokeWidth="2"
-                                         strokeLinecap="round"
-                                         opacity={0.5}
-                                         onPress={() => handlePress(selectedCell.row, selectedCell.col)}
-                                     />
-                                 </React.Fragment>
-                             );
-                        }
+                        return (
+                            <Pawn 
+                                color={currentPlayer}
+                                x={cx}
+                                y={cy}
+                                r={r}
+                                opacity={0.5}
+                                onPress={() => handlePress(selectedCell.row, selectedCell.col)}
+                            />
+                        );
                     })()
                 )}
 
@@ -3369,6 +3490,21 @@ const GameScreen = ({ navigation, route }) => {
       {renderInviteModal()}
       {renderResultModal()}
       {renderFloatingMenu()}
+
+      <CustomAlert 
+          visible={customAlert.visible}
+          title={customAlert.title}
+          message={customAlert.message}
+          buttons={customAlert.buttons}
+          onClose={() => setCustomAlert(prev => ({ ...prev, visible: false }))}
+      />
+
+      <VersusAnimation 
+          player1={player1}
+          player2={player2}
+          visible={showVersusAnim}
+          onFinish={() => setShowVersusAnim(false)}
+      />
     </ImageBackground>
   );
 };
@@ -3725,16 +3861,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: 'white',
+    backgroundColor: '#041c55',
     padding: 20,
     borderRadius: 20,
     alignItems: 'center',
     width: '80%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowColor: '#f1c40f',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 3,
+    shadowRadius: 3,
     elevation: 5,
+    borderWidth: 1,
+    borderColor: '#f1c40f',
   },
   modalAvatar: {
     width: 100,
@@ -3748,7 +3886,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 5,
-    color: '#333',
+    color: '#fff',
   },
   modalFlag: {
     fontSize: 30,
@@ -3773,7 +3911,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   closeButtonText: {
-    color: '#999',
+    color: '#fff',
     fontSize: 16,
   },
   flagOutsideRight: {
@@ -4036,19 +4174,31 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   resultCard: {
-    backgroundColor: 'rgba(31, 52, 100, 1)',
+    backgroundColor: '#041c55',
     borderRadius: 20,
     padding: 24,
     alignItems: 'center',
     width: '95%',
     maxWidth: 500,
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
+    elevation: 5,
+    shadowColor: '#f1c40f',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 3,
+    shadowRadius: 3,
     borderWidth: 1,
     borderColor: '#f1c40f',
+    overflow: 'hidden',
+  },
+  innerShadow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 20,
+    borderWidth: 4,
+    borderColor: 'rgba(0, 0, 0, 0.3)',
+    zIndex: 10,
   },
   emojiResult: {
     fontSize: 60,

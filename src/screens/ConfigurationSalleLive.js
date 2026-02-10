@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Switch
 import { useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { socket } from '../utils/socket';
+import { playButtonSound } from '../utils/soundManager';
 
 /**
  * Écran de configuration pour la création d'une salle live.
@@ -240,7 +241,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
                     styles.optionChip,
                     limitSpectateurs === limit && styles.optionChipActive
                     ]}
-                    onPress={() => setLimitSpectateurs(limit)}
+                    onPress={() => { playButtonSound(); setLimitSpectateurs(limit); }}
                 >
                     <Text style={[
                     styles.optionChipTexte,
@@ -262,7 +263,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
                     styles.modeButton,
                     modeSpectateur === 'libre' && styles.modeButtonActive
                 ]}
-                onPress={() => setModeSpectateur('libre')}
+                onPress={() => { playButtonSound(); setModeSpectateur('libre'); }}
                 >
                 <Text style={[
                     styles.modeButtonTexte,
@@ -280,7 +281,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
                     styles.modeButton,
                     modeSpectateur === 'modere' && styles.modeButtonActive
                 ]}
-                onPress={() => setModeSpectateur('modere')}
+                onPress={() => { playButtonSound(); setModeSpectateur('modere'); }}
                 >
                 <Text style={[
                     styles.modeButtonTexte,
@@ -379,7 +380,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
                         styles.optionChip,
                         tournamentGames === nb && styles.optionChipActive
                     ]}
-                    onPress={() => setTournamentGames(nb)}
+                    onPress={() => { playButtonSound(); setTournamentGames(nb); }}
                     >
                     <Text style={[
                         styles.optionChipTexte,
@@ -398,7 +399,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
 
             <View style={styles.inputGroup}>
             <Text style={styles.label}>Mise (coins)</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: 10 }}>
+            <View style={styles.betContainer}>
                 {(() => {
                     // Logic similar to HomeScreen for consistency
                     const availableBets = betOptions.filter(b => b <= (user?.coins || 0));
@@ -412,35 +413,18 @@ const ConfigurationSalleLive = ({ navigation }) => {
                         <>
                             <TouchableOpacity 
                                 onPress={() => {
+                                    playButtonSound();
                                     if (canGoPrev) setBetAmount(effectiveBets[currentIndex - 1]);
                                 }}
                                 disabled={!canGoPrev}
-                                style={{ padding: 10, opacity: !canGoPrev ? 0.3 : 1 }}
+                                style={[styles.betButton, { opacity: !canGoPrev ? 0.3 : 1 }]}
                             >
                                 <Ionicons name="remove-circle-outline" size={40} color="#fff" />
                             </TouchableOpacity>
                             
-                            <View style={{ 
-                                flexDirection: 'row', 
-                                alignItems: 'center', 
-                                justifyContent: 'center',
-                                width: 280,
-                                height: 50,
-                                overflow: 'hidden',
-                                backgroundColor: 'rgba(0,0,0,0.3)',
-                                borderRadius: 25,
-                                marginHorizontal: 10,
-                                borderWidth: 1,
-                                borderColor: 'rgba(241, 196, 15, 0.3)'
-                            }}>
+                            <View style={styles.betDisplay}>
                                 <Text 
-                                    style={{ 
-                                        color: '#f1c40f', 
-                                        fontSize: 14, 
-                                        opacity: 0.5, 
-                                        width: 70, 
-                                        textAlign: 'center' 
-                                    }}
+                                    style={styles.betTextSmall}
                                     numberOfLines={1}
                                     adjustsFontSizeToFit
                                 >
@@ -448,16 +432,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
                                 </Text>
 
                                 <Text 
-                                    style={{ 
-                                        color: '#f1c40f', 
-                                        fontSize: 22, 
-                                        fontWeight: 'bold', 
-                                        width: 120,
-                                        textAlign: 'center',
-                                        textShadowColor: 'rgba(0, 0, 0, 0.75)',
-                                        textShadowOffset: {width: -1, height: 1},
-                                        textShadowRadius: 10
-                                    }}
+                                    style={styles.betTextLarge}
                                     numberOfLines={1}
                                     adjustsFontSizeToFit
                                     minimumFontScale={0.5}
@@ -466,13 +441,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
                                 </Text>
 
                                 <Text 
-                                    style={{ 
-                                        color: '#f1c40f', 
-                                        fontSize: 14, 
-                                        opacity: 0.5, 
-                                        width: 70, 
-                                        textAlign: 'center' 
-                                    }}
+                                    style={styles.betTextSmall}
                                     numberOfLines={1}
                                     adjustsFontSizeToFit
                                 >
@@ -482,10 +451,11 @@ const ConfigurationSalleLive = ({ navigation }) => {
 
                             <TouchableOpacity 
                                 onPress={() => {
+                                    playButtonSound();
                                     if (canGoNext) setBetAmount(effectiveBets[currentIndex + 1]);
                                 }}
                                 disabled={!canGoNext}
-                                style={{ padding: 10, opacity: !canGoNext ? 0.3 : 1 }}
+                                style={[styles.betButton, { opacity: !canGoNext ? 0.3 : 1 }]}
                             >
                                 <Ionicons name="add-circle-outline" size={40} color="#fff" />
                             </TouchableOpacity>
@@ -505,7 +475,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
                     styles.optionChip,
                     tempsParCoup === option.valeur && styles.optionChipActive
                     ]}
-                    onPress={() => setTempsParCoup(option.valeur)}
+                    onPress={() => { playButtonSound(); setTempsParCoup(option.valeur); }}
                 >
                     <Text style={[
                     styles.optionChipTexte,
@@ -523,7 +493,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
         <View style={styles.footer}>
             <TouchableOpacity
             style={styles.boutonCreer}
-            onPress={creerSalleLive}
+            onPress={() => { playButtonSound(); creerSalleLive(); }}
             >
             <Text style={styles.boutonCreerTexte}>CRÉER LA SALLE LIVE</Text>
             <View style={styles.liveBadgeSmall}>
@@ -768,6 +738,45 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: '#fff',
+  },
+  betContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 10,
+  },
+  betButton: {
+    padding: 10,
+  },
+  betDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 280,
+    height: 50,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 25,
+    marginHorizontal: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(241, 196, 15, 0.3)',
+  },
+  betTextSmall: {
+    color: '#f1c40f',
+    fontSize: 14,
+    opacity: 0.5,
+    width: 70,
+    textAlign: 'center',
+  },
+  betTextLarge: {
+    color: '#f1c40f',
+    fontSize: 22,
+    fontWeight: 'bold',
+    width: 120,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: {width: -1, height: 1},
+    textShadowRadius: 10,
   },
 });
 

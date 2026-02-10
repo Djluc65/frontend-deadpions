@@ -14,6 +14,7 @@ const RegisterScreen = ({ navigation }) => {
   const dispatch = useDispatch();
 
   const handleRegister = async () => {
+    Keyboard.dismiss();
     if (!pseudo || !email || !password || !confirmPassword) {
         Alert.alert('Erreur', 'Veuillez remplir tous les champs');
         return;
@@ -31,6 +32,13 @@ const RegisterScreen = ({ navigation }) => {
         },
         body: JSON.stringify({ pseudo, email, password }),
       });
+
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        console.error("Non-JSON response from register:", text);
+        throw new Error("Erreur serveur: Réponse invalide (HTML reçue)");
+      }
 
       const data = await response.json();
 

@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { Modal, Pressable, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { playButtonSound } from '../../utils/soundManager';
 
 const FriendsMenuModal = memo(({ 
   visible, 
@@ -23,7 +24,10 @@ const FriendsMenuModal = memo(({
           {/* Bouton pour créer une Salle Live (Publique) */}
           <TouchableOpacity 
             style={[styles.menuButton, { backgroundColor: '#041c55'}]}
-            onPress={onNavigateToLiveConfig}
+            onPress={() => {
+                playButtonSound();
+                onNavigateToLiveConfig();
+            }}
           >
             <Ionicons name="radio-outline" size={24} color="#ef4444" style={{ marginRight: 10 }} />
             <Text style={styles.menuButtonText}>Créer une Salle Live</Text>
@@ -35,7 +39,10 @@ const FriendsMenuModal = memo(({
           {/* Bouton pour Jouer avec un ami (Privé) */}
           <TouchableOpacity 
             style={[styles.menuButton, { backgroundColor:  '#041c55', marginTop: 15 }]}
-            onPress={onOpenFriendConfig}
+            onPress={() => {
+                playButtonSound();
+                onOpenFriendConfig();
+            }}
           >
             <Ionicons name="add-circle" size={24} color="#fff" style={{ marginRight: 10 }} />
             <Text style={styles.menuButtonText}>Jouer avec un ami</Text>
@@ -43,7 +50,10 @@ const FriendsMenuModal = memo(({
 
           <TouchableOpacity
             style={styles.closeButton}
-            onPress={onClose}
+            onPress={() => {
+                playButtonSound();
+                onClose();
+            }}
           >
             <Text style={styles.closeButtonText}>{t.close}</Text>
           </TouchableOpacity>

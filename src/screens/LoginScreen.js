@@ -45,6 +45,13 @@ const LoginScreen = ({ navigation }) => {
         body: JSON.stringify({ idToken }),
       });
 
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await res.text();
+        console.error("Non-JSON response from google login:", text);
+        throw new Error("Erreur serveur: Réponse invalide (HTML reçue)");
+      }
+
       const data = await res.json();
 
       if (res.ok) {
@@ -74,6 +81,7 @@ const LoginScreen = ({ navigation }) => {
   };
 
   const handleLogin = async () => {
+    Keyboard.dismiss();
     if (!email || !password) {
       Alert.alert('Erreur', 'Veuillez remplir tous les champs');
       return;
@@ -89,6 +97,13 @@ const LoginScreen = ({ navigation }) => {
         },
         body: JSON.stringify({ email, password }),
       });
+
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        console.error("Non-JSON response from login:", text);
+        throw new Error("Erreur serveur: Réponse invalide (HTML reçue)");
+      }
 
       const data = await response.json();
 
@@ -171,6 +186,12 @@ const LoginScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('Register')} 
             style={{ backgroundColor: 'transparent', borderWidth: 1, borderColor: '#fff' }}
           />
+
+          {!API_URL.includes('railway') && (
+            <Text style={{ color: '#00ff00', textAlign: 'center', marginTop: 20, fontWeight: 'bold' }}>
+              🔌 MODE LOCAL ({API_URL})
+            </Text>
+          )}
         </View>
       </TouchableWithoutFeedback>
     </View>

@@ -7,6 +7,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
 import { Audio } from 'expo-av';
+import { playButtonSound } from '../utils/soundManager';
 import { 
   RTCPeerConnection, 
   RTCIceCandidate, 
@@ -925,7 +926,7 @@ const ChatScreen = ({ route, navigation }) => {
                /* Audio Only UI */
                <View style={styles.avatarContainer}>
                  <Image 
-                   source={{ uri: friendAvatar?.uri || 'https://i.pravatar.cc/150' }} 
+                   source={friendAvatar || { uri: 'https://i.pravatar.cc/150' }} 
                    style={styles.callAvatar} 
                  />
                </View>
@@ -982,7 +983,7 @@ const ChatScreen = ({ route, navigation }) => {
       <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => { playButtonSound(); navigation.goBack(); }}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <View style={styles.headerInfo}>
@@ -996,10 +997,10 @@ const ChatScreen = ({ route, navigation }) => {
           )}
         </View>
         <View style={styles.headerIcons}>
-          <TouchableOpacity onPress={() => initiateCall('audio')} style={styles.headerIcon}>
+          <TouchableOpacity onPress={() => { playButtonSound(); initiateCall('audio'); }} style={styles.headerIcon}>
             <Ionicons name="call" size={22} color="#fff" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => initiateCall('video')} style={styles.headerIcon}>
+          <TouchableOpacity onPress={() => { playButtonSound(); initiateCall('video'); }} style={styles.headerIcon}>
             <Ionicons name="videocam" size={22} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -1022,7 +1023,7 @@ const ChatScreen = ({ route, navigation }) => {
         {isRecordingOverlayVisible ? (
              <View style={styles.inputContainer}>
                 {/* Cancel Button */}
-                <TouchableOpacity onPress={cancelRecording} style={{ padding: 10 }}>
+                <TouchableOpacity onPress={() => { playButtonSound(); cancelRecording(); }} style={{ padding: 10 }}>
                     <Ionicons name="trash-outline" size={24} color="#e74c3c" />
                 </TouchableOpacity>
 
@@ -1051,7 +1052,7 @@ const ChatScreen = ({ route, navigation }) => {
                 </View>
 
                 {/* Send Button */}
-                <TouchableOpacity onPress={sendRecording} style={styles.sendButton}>
+                <TouchableOpacity onPress={() => { playButtonSound(); sendRecording(); }} style={styles.sendButton}>
                     <Ionicons name="arrow-up-circle" size={32} color="#2ecc71" />
                 </TouchableOpacity>
              </View>
@@ -1066,13 +1067,13 @@ const ChatScreen = ({ route, navigation }) => {
                 multiline
               />
               {inputText.length > 0 ? (
-                <TouchableOpacity style={styles.sendButton} onPress={handleSendMessage}>
+                <TouchableOpacity style={styles.sendButton} onPress={() => { playButtonSound(); handleSendMessage(); }}>
                   <Ionicons name="send" size={24} color="#f1c40f" />
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity 
                   style={[styles.micButton]} 
-                  onPress={startRecording}
+                  onPress={() => { playButtonSound(); startRecording(); }}
                 >
                   <Ionicons name="mic" size={24} color="#fff" />
                 </TouchableOpacity>

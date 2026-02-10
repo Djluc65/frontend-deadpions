@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { Modal, Pressable, View, Text, ActivityIndicator, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { playButtonSound } from '../../utils/soundManager';
 
 const OnlineConfigModal = memo(({
   visible,
@@ -27,10 +28,10 @@ const OnlineConfigModal = memo(({
       transparent={true}
       animationType="slide"
       onRequestClose={() => {
-          if (!isSearchingOnline) onClose();
+          if (!isSearchingOnline) { playButtonSound(); onClose(); }
       }}
     >
-      <Pressable style={styles.modalOverlay} onPress={() => !isSearchingOnline && onClose()}>
+      <Pressable style={styles.modalOverlay} onPress={() => { if (!isSearchingOnline) { playButtonSound(); onClose(); } }}>
         <Pressable style={styles.friendsModalContent} onPress={() => {}}>
           {isSearchingOnline ? (
             <View style={{ alignItems: 'center', width: '100%' }}>
@@ -41,7 +42,7 @@ const OnlineConfigModal = memo(({
                 
                 <TouchableOpacity 
                     style={styles.cancelSearchButton} 
-                    onPress={handleCancelOnlineSearch}
+                    onPress={() => { playButtonSound(); handleCancelOnlineSearch(); }}
                 >
                     <Text style={styles.cancelSearchButtonText}>Annuler</Text>
                 </TouchableOpacity>
@@ -54,13 +55,13 @@ const OnlineConfigModal = memo(({
                 <View style={styles.optionsRow}>
                     <TouchableOpacity 
                         style={[styles.friendsOptionButton, onlineMode === 'simple' && styles.friendsOptionButtonActive]}
-                        onPress={() => setOnlineMode('simple')}
+                        onPress={() => { playButtonSound(); setOnlineMode('simple'); }}
                     >
                         <Text style={[styles.friendsOptionText, onlineMode === 'simple' && styles.friendsOptionTextActive]}>Simple</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
                         style={[styles.friendsOptionButton, onlineMode === 'tournament' && styles.friendsOptionButtonActive]}
-                        onPress={() => setOnlineMode('tournament')}
+                        onPress={() => { playButtonSound(); setOnlineMode('tournament'); }}
                     >
                         <Text style={[styles.friendsOptionText, onlineMode === 'tournament' && styles.friendsOptionTextActive]}>Tournoi</Text>
                     </TouchableOpacity>
@@ -74,7 +75,7 @@ const OnlineConfigModal = memo(({
                                 <TouchableOpacity 
                                     key={num} 
                                     style={[styles.friendsOptionButton, onlineSeriesLength === num && styles.friendsOptionButtonActive]}
-                                    onPress={() => setOnlineSeriesLength(num)}
+                                    onPress={() => { playButtonSound(); setOnlineSeriesLength(num); }}
                                 >
                                     <Text style={[styles.friendsOptionText, onlineSeriesLength === num && styles.friendsOptionTextActive]}>{num}</Text>
                                 </TouchableOpacity>
@@ -97,6 +98,7 @@ const OnlineConfigModal = memo(({
                             <>
                                 <TouchableOpacity 
                                     onPress={() => {
+                                        playButtonSound();
                                         if (canGoPrev) setOnlineBet(effectiveBets[currentIndex - 1]);
                                     }}
                                     disabled={!canGoPrev}
@@ -134,6 +136,7 @@ const OnlineConfigModal = memo(({
 
                                 <TouchableOpacity 
                                     onPress={() => {
+                                        playButtonSound();
                                         if (canGoNext) setOnlineBet(effectiveBets[currentIndex + 1]);
                                     }}
                                     disabled={!canGoNext}
@@ -152,7 +155,7 @@ const OnlineConfigModal = memo(({
                         <TouchableOpacity 
                             key={opt.label} 
                             style={[styles.friendsOptionButton, onlineTime === opt.value && styles.friendsOptionButtonActive]}
-                            onPress={() => setOnlineTime(opt.value)}
+                            onPress={() => { playButtonSound(); setOnlineTime(opt.value); }}
                         >
                             <Text style={[styles.friendsOptionText, onlineTime === opt.value && styles.friendsOptionTextActive]}>
                                 {opt.label}
@@ -162,10 +165,10 @@ const OnlineConfigModal = memo(({
                 </View>
 
                 <View style={styles.modalButtons}>
-                    <TouchableOpacity style={styles.modalButtonCancel} onPress={onClose}>
+                    <TouchableOpacity style={styles.modalButtonCancel} onPress={() => { playButtonSound(); onClose(); }}>
                         <Text style={styles.modalButtonText}>Annuler</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.modalButtonConfirm} onPress={handleStartOnlineSearch}>
+                    <TouchableOpacity style={styles.modalButtonConfirm} onPress={() => { playButtonSound(); handleStartOnlineSearch(); }}>
                         <Text style={styles.modalButtonText}>JOUER</Text>
                     </TouchableOpacity>
                 </View>

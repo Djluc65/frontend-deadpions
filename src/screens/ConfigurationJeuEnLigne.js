@@ -4,6 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { socket } from '../utils/socket';
 import { translations } from '../utils/translations';
+import { playButtonSound } from '../utils/soundManager';
 
 import { updateUser } from '../redux/slices/authSlice';
 
@@ -130,7 +131,7 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
       style={styles.container}
     >
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => { playButtonSound(); navigation.goBack(); }} style={styles.backButton}>
           <Ionicons name="arrow-back" size={30} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.title}>Jeu en Ligne</Text>
@@ -156,6 +157,7 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
                             <>
                                 <TouchableOpacity 
                                     onPress={() => {
+                                        playButtonSound();
                                         if (canGoPrev) setMontantPari(effectiveBets[currentIndex - 1]);
                                     }}
                                     disabled={!canGoPrev}
@@ -226,6 +228,7 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
 
                                 <TouchableOpacity 
                                     onPress={() => {
+                                        playButtonSound();
                                         if (canGoNext) setMontantPari(effectiveBets[currentIndex + 1]);
                                     }}
                                     disabled={!canGoNext}
@@ -247,7 +250,7 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
                         styles.betButton,
                         timeControl === option.value && styles.selectedBet
                       ]}
-                      onPress={() => setTimeControl(option.value)}
+                      onPress={() => { playButtonSound(); setTimeControl(option.value); }}
                     >
                       <Text style={[
                         styles.betText, 
@@ -259,7 +262,7 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
                   ))}
                 </View>
                 
-                <TouchableOpacity style={styles.playButton} onPress={demarrerRecherche}>
+                <TouchableOpacity style={styles.playButton} onPress={() => { playButtonSound(); demarrerRecherche(); }}>
                     <Text style={styles.playButtonText}>JOUER</Text>
                 </TouchableOpacity>
           </View>
@@ -270,7 +273,7 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
             <Text style={styles.timerText}>{tempsRestant}s</Text>
             <Text style={styles.infoText}>Mise : {montantPari.toLocaleString()} 💰</Text>
             
-            <TouchableOpacity style={styles.cancelButton} onPress={annulerRecherche}>
+            <TouchableOpacity style={styles.cancelButton} onPress={() => { playButtonSound(); annulerRecherche(); }}>
               <Text style={styles.cancelButtonText}>Annuler</Text>
             </TouchableOpacity>
           </View>

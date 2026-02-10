@@ -6,8 +6,13 @@ import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { playButtonSound } from '../utils/soundManager';
 import { API_URL } from '../config';
 import { COUNTRIES } from '../utils/countries';
+import { PREMIUM_AVATARS, getAvatarSource } from '../utils/avatarUtils';
+
+// Note: PREMIUM_AVATARS is imported from utils, do not redeclare it here.
+
 
 const AVATARS = [
   'https://cdn-icons-png.flaticon.com/512/147/147144.png',
@@ -216,19 +221,22 @@ const ProfileScreen = ({ navigation }) => {
     );
   };
 
+  const handleSelectPremiumAvatar = (avatarId) => {
+    if (!user?.isPremium && !user?.isEarlyAccess) {
+        Alert.alert('Premium requis', 'Ces avatars sont réservés aux membres Premium.');
+        return;
+    }
+    setSelectedAvatar(avatarId);
+    setImageUri(null);
+    setShowAvatarModal(false);
+  };
+
   const renderAvatar = () => {
     if (imageUri) {
       return <Image source={{ uri: imageUri }} style={styles.avatarImage} />;
     }
     if (selectedAvatar) {
-      // Check if it's a full URL or a relative path (if previously uploaded)
-      // If it's a relative path starting with /uploads, prepend BASE_URL (API_URL without /api)
-      const source = selectedAvatar.startsWith('http') 
-        ? { uri: selectedAvatar } 
-        : selectedAvatar.startsWith('/uploads')
-          ? { uri: `${API_URL.replace('/api', '')}${selectedAvatar}` }
-          : { uri: selectedAvatar }; // Fallback
-          
+      const source = getAvatarSource(selectedAvatar);
       return <Image source={source} style={styles.avatarImage} />;
     }
     return <Ionicons name="person-circle-outline" size={100} color="#fff" />;
@@ -244,7 +252,7 @@ const ProfileScreen = ({ navigation }) => {
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={{ flex: 1 }}>
             <View style={styles.header}>
-              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <TouchableOpacity onPress={() => { playButtonSound(); navigation.goBack(); }} style={styles.backButton}>
                 <Ionicons name="arrow-back" size={24} color="#fff" />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>Mon Profil</Text>
@@ -253,7 +261,7 @@ const ProfileScreen = ({ navigation }) => {
 
             <View style={styles.container}>
           <View style={styles.avatarSection}>
-             <TouchableOpacity onPress={() => setShowAvatarModal(true)}>
+             <TouchableOpacity onPress={() => { playButtonSound(); setShowAvatarModal(true); }}>
                <View style={styles.avatarWrapper}>
                  {renderAvatar()}
                  <View style={styles.editIcon}>
@@ -261,6 +269,13 @@ const ProfileScreen = ({ navigation }) => {
                  </View>
                </View>
              </TouchableOpacity>
+             {user?.isPremium && (
+               <View style={{ marginTop: 10, backgroundColor: '#FFD700', paddingHorizontal: 10, paddingVertical: 2, borderRadius: 10 }}>
+                 <Text style={{ color: 'black', fontWeight: 'bold', fontSize: 12 }}>
+                   💎 {user.isEarlyAccess ? 'PREMIUM (OFFERT)' : 'PREMIUM'}
+                 </Text>
+               </View>
+             )}
              <Text style={styles.currentPseudo}>{user?.pseudo}</Text>
              {selectedCountry && <Text style={styles.flag}>{selectedCountry}</Text>}
 
@@ -298,7 +313,7 @@ const ProfileScreen = ({ navigation }) => {
               />
 
               <Text style={styles.label}>Pays</Text>
-              <TouchableOpacity style={styles.countrySelector} onPress={() => setShowCountryModal(true)}>
+              <TouchableOpacity style={styles.countrySelector} onPress={() => { playButtonSound(); setShowCountryModal(true); }}>
                 <Text style={styles.countryText}>
                   {selectedCountry ? `Drapeau actuel: ${selectedCountry}` : 'Choisir un pays'}
                 </Text>
@@ -336,24 +351,42 @@ const ProfileScreen = ({ navigation }) => {
       <Modal visible={showAvatarModal} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Changer d'avatar</Text>
-            
-            <TouchableOpacity style={styles.uploadOption} onPress={pickImage}>
-              <Ionicons name="image" size={24} color="#333" />
-              <Text style={styles.uploadText}>Choisir depuis la galerie</Text>
-            </TouchableOpacity>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalTitle}>Changer d'avatar</Text>
+              
+              <TouchableOpacity style={styles.uploadOption} onPress={pickImage}>
+                <Ionicons name="image" size={24} color="#333" />
+                <Text style={styles.uploadText}>Choisir depuis la galerie</Text>
+              </TouchableOpacity>
 
-            <Text style={styles.separator}>OU choisir un avatar</Text>
+              <Text style={styles.separator}>OU choisir un avatar</Text>
 
-            <View style={styles.avatarGrid}>
-              {AVATARS.map((avatar, index) => (
-                <TouchableOpacity key={index} onPress={() => handleSelectAvatar(avatar)}>
-                  <Image source={{ uri: avatar }} style={styles.gridAvatar} />
-                </TouchableOpacity>
-              ))}
-            </View>
-            
-            <Button title="Annuler" onPress={() => setShowAvatarModal(false)} style={{ marginTop: 20, backgroundColor: '#999' }} />
+              <View style={styles.avatarGrid}>
+                {AVATARS.map((avatar, index) => (
+                  <TouchableOpacity key={index} onPress={() => handleSelectAvatar(avatar)}>
+                    <Image source={{ uri: avatar }} style={styles.gridAvatar} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={[styles.separator, { marginTop: 20, color: '#f1c40f' }]}>Avatars Premium</Text>
+              <View style={styles.avatarGrid}>
+                {PREMIUM_AVATARS.map((avatar, index) => (
+                  <TouchableOpacity key={index} onPress={() => handleSelectPremiumAvatar(avatar.id)}>
+                    <View>
+                        <Image source={avatar.source} style={styles.gridAvatar} />
+                        {(!user?.isPremium && !user?.isEarlyAccess) && (
+                            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', borderRadius: 40 }}>
+                                <Ionicons name="lock-closed" size={24} color="#f1c40f" />
+                            </View>
+                        )}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              
+              <Button title="Annuler" onPress={() => setShowAvatarModal(false)} style={{ marginTop: 20, backgroundColor: '#999' }} />
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -376,7 +409,7 @@ const ProfileScreen = ({ navigation }) => {
               keyExtractor={(item) => item.name}
               numColumns={3}
               renderItem={({ item }) => (
-                <TouchableOpacity style={styles.countryItem} onPress={() => handleSelectCountry(item)}>
+                <TouchableOpacity style={styles.countryItem} onPress={() => { playButtonSound(); handleSelectCountry(item); }}>
                   <Text style={styles.countryFlag}>{item.flag}</Text>
                   <Text style={styles.countryName}>{item.name}</Text>
                 </TouchableOpacity>

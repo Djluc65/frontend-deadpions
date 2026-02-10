@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Animated, Dimensions, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Video } from 'expo-av';
+import { getEmojiSource } from '../utils/emojis';
 
 const { width, height } = Dimensions.get('window');
 
@@ -74,7 +76,18 @@ const LiveChatOverlay = ({
                         <View style={styles.messageRow}>
                             <Text style={styles.messageAuthor}>{item.auteur}: </Text>
                             {item.type === 'emoji' ? (
-                                <Text style={styles.messageEmoji}>{item.contenu}</Text>
+                                getEmojiSource(item.contenu) ? (
+                                    <Video
+                                        source={getEmojiSource(item.contenu)}
+                                        style={{ width: 24, height: 24 }}
+                                        resizeMode="contain"
+                                        shouldPlay
+                                        isLooping={true}
+                                        isMuted={true}
+                                    />
+                                ) : (
+                                    <Text style={styles.messageEmoji}>{item.contenu}</Text>
+                                )
                             ) : (
                                 <Text style={styles.messageText}>{item.contenu}</Text>
                             )}
@@ -158,9 +171,11 @@ const FloatingEmoji = ({ emoji, startX }) => {
         ]).start();
     }, []);
 
+    const source = getEmojiSource(emoji);
+
     return (
-        <Animated.Text style={[
-            styles.floatingEmoji,
+        <Animated.View style={[
+            styles.floatingEmojiContainer,
             {
                 left: startX,
                 bottom: 100,
@@ -168,8 +183,19 @@ const FloatingEmoji = ({ emoji, startX }) => {
                 opacity
             }
         ]}>
-            {emoji}
-        </Animated.Text>
+            {source ? (
+                 <Video
+                    source={source}
+                    style={{ width: 60, height: 60 }}
+                    resizeMode="contain"
+                    shouldPlay
+                    isLooping={true}
+                    isMuted={true}
+                />
+            ) : (
+                <Text style={styles.floatingEmojiText}>{emoji}</Text>
+            )}
+        </Animated.View>
     );
 };
 
@@ -263,10 +289,12 @@ const styles = StyleSheet.create({
     reactionText: {
         fontSize: 24,
     },
-    floatingEmoji: {
+    floatingEmojiContainer: {
         position: 'absolute',
-        fontSize: 30,
         zIndex: 100,
+    },
+    floatingEmojiText: {
+        fontSize: 30,
         textShadowColor: 'rgba(0, 0, 0, 0.75)',
         textShadowOffset: {width: -1, height: 1},
         textShadowRadius: 10

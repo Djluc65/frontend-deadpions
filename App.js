@@ -9,12 +9,16 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './src/utils/queryClient';
+import { StripeProvider } from '@stripe/stripe-react-native';
+import LoadingSpinner from './src/components/common/LoadingSpinner';
+import { CoinsProvider } from './src/context/CoinsContext';
 
 const linking = {
   prefixes: [Linking.createURL('/'), 'deadpions://'],
   config: {
     screens: {
       ResetPassword: 'reset-password/:devToken',
+      SalleAttenteLive: 'live/:roomId',
     },
   },
 };
@@ -22,16 +26,23 @@ const linking = {
 export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <Provider store={store}>
-        <PersistGate loading={null} persistor={persistor}>
-          <QueryClientProvider client={queryClient}>
-            <NavigationContainer linking={linking} fallback={<React.Fragment />}>
-              <AppNavigator />
-              <StatusBar style="light" />
-            </NavigationContainer>
-          </QueryClientProvider>
-        </PersistGate>
-      </Provider>
+      <StripeProvider
+        publishableKey={process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY}
+        merchantIdentifier="merchant.com.deadpions"
+      >
+        <Provider store={store}>
+          <PersistGate loading={null} persistor={persistor}>
+            <QueryClientProvider client={queryClient}>
+              <CoinsProvider>
+                <NavigationContainer linking={linking} fallback={<React.Fragment />}>
+                  <AppNavigator />
+                  <StatusBar style="light" />
+                </NavigationContainer>
+              </CoinsProvider>
+            </QueryClientProvider>
+          </PersistGate>
+        </Provider>
+      </StripeProvider>
     </GestureHandlerRootView>
   );
 }

@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { Modal, Pressable, ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { playButtonSound } from '../../utils/soundManager';
 
 const AIDifficultyModal = memo(({
   visible,
@@ -25,8 +26,8 @@ const AIDifficultyModal = memo(({
         animationType="slide"
         onRequestClose={onClose}
     >
-        <Pressable style={styles.modalOverlay} onPress={onClose}>
-            <Pressable style={[styles.friendsModalContent, { maxHeight: '90%', backgroundColor: '#020f2e', borderColor: '#f1c40f', borderWidth: 1 }]} onPress={() => {}}>
+        <Pressable style={styles.modalOverlay} onPress={() => { playButtonSound(); onClose(); }}>
+            <Pressable style={[styles.friendsModalContent, { maxHeight: '90%', backgroundColor: '#041c55', borderColor: '#f1c40f', borderWidth: 1 }]} onPress={() => {}}>
                 <ScrollView contentContainerStyle={{ alignItems: 'center', width: '100%' }} style={{ width: '100%' }}>
                     <Text style={[styles.friendsModalTitle, { color: '#f1c40f', textShadowColor: 'rgba(241, 196, 15, 0.5)', textShadowRadius: 10, marginBottom: 30 }]}>Options de jeu</Text>
 
@@ -35,13 +36,13 @@ const AIDifficultyModal = memo(({
                     <View style={styles.optionsRow}>
                         <TouchableOpacity 
                             style={[styles.friendsOptionButton, aiMode === 'simple' && styles.friendsOptionButtonActive]}
-                            onPress={() => setAiMode('simple')}
+                            onPress={() => { playButtonSound(); setAiMode('simple'); }}
                         >
                             <Text style={[styles.friendsOptionText, aiMode === 'simple' && styles.friendsOptionTextActive]}>Simple</Text>
                         </TouchableOpacity>
                         <TouchableOpacity 
                             style={[styles.friendsOptionButton, aiMode === 'tournament' && styles.friendsOptionButtonActive]}
-                            onPress={() => setAiMode('tournament')}
+                            onPress={() => { playButtonSound(); setAiMode('tournament'); }}
                         >
                             <Text style={[styles.friendsOptionText, aiMode === 'tournament' && styles.friendsOptionTextActive]}>Tournoi</Text>
                         </TouchableOpacity>
@@ -55,7 +56,7 @@ const AIDifficultyModal = memo(({
                                     <TouchableOpacity 
                                         key={num} 
                                         style={[styles.friendsOptionButton, aiSeriesLength === num && styles.friendsOptionButtonActive]}
-                                        onPress={() => setAiSeriesLength(num)}
+                                        onPress={() => { playButtonSound(); setAiSeriesLength(num); }}
                                     >
                                         <Text style={[styles.friendsOptionText, aiSeriesLength === num && styles.friendsOptionTextActive]}>{num}</Text>
                                     </TouchableOpacity>
@@ -77,13 +78,13 @@ const AIDifficultyModal = memo(({
 
                                 return (
                                     <>
-                                        <TouchableOpacity onPress={() => canGoPrev && setAiBet(effectiveBets[currentIndex - 1])} disabled={!canGoPrev} style={{ padding: 10, opacity: !canGoPrev ? 0.3 : 1 }}>
+                                        <TouchableOpacity onPress={() => { playButtonSound(); canGoPrev && setAiBet(effectiveBets[currentIndex - 1]); }} disabled={!canGoPrev} style={{ padding: 10, opacity: !canGoPrev ? 0.3 : 1 }}>
                                             <Ionicons name="remove-circle" size={40} color="#f1c40f" />
                                         </TouchableOpacity>
                                         <View style={styles.betValueContainer}>
                                             <Text style={styles.betValueText}>{aiBet.toLocaleString()}</Text>
                                         </View>
-                                        <TouchableOpacity onPress={() => canGoNext && setAiBet(effectiveBets[currentIndex + 1])} disabled={!canGoNext} style={{ padding: 10, opacity: !canGoNext ? 0.3 : 1 }}>
+                                        <TouchableOpacity onPress={() => { playButtonSound(); canGoNext && setAiBet(effectiveBets[currentIndex + 1]); }} disabled={!canGoNext} style={{ padding: 10, opacity: !canGoNext ? 0.3 : 1 }}>
                                             <Ionicons name="add-circle" size={40} color="#f1c40f" />
                                         </TouchableOpacity>
                                     </>
@@ -99,7 +100,7 @@ const AIDifficultyModal = memo(({
                             <TouchableOpacity 
                                 key={opt.label} 
                                 style={[styles.friendsOptionButton, aiTimeControl === opt.value && styles.friendsOptionButtonActive]}
-                                onPress={() => setAiTimeControl(opt.value)}
+                                onPress={() => { playButtonSound(); setAiTimeControl(opt.value); }}
                             >
                                 <Text style={[styles.friendsOptionText, aiTimeControl === opt.value && styles.friendsOptionTextActive]}>
                                     {opt.label}
@@ -110,14 +111,14 @@ const AIDifficultyModal = memo(({
 
                     <TouchableOpacity 
                         style={[styles.friendsCloseButton, { backgroundColor: '#f1c40f', width: '100%', borderRadius: 15, paddingVertical: 15, marginTop: 20 }]}
-                        onPress={onNext}
+                        onPress={() => { playButtonSound(); onNext(); }}
                     >
                         <Text style={[styles.friendsCloseButtonText, { color: '#000', fontWeight: 'bold', fontSize: 18 }]}>Suivant</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity 
                         style={{ marginTop: 15, padding: 10 }}
-                        onPress={onClose}
+                        onPress={() => { playButtonSound(); onClose(); }}
                     >
                         <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 16 }}>Annuler</Text>
                     </TouchableOpacity>

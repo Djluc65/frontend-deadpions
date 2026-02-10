@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { Modal, Pressable, ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { playButtonSound } from '../../utils/soundManager';
 
 const AIOptionsModal = memo(({
   visible,
@@ -27,12 +28,12 @@ const AIOptionsModal = memo(({
         animationType="slide"
         onRequestClose={onClose}
     >
-        <Pressable style={styles.modalOverlay} onPress={onClose}>
-            <Pressable style={[styles.friendsModalContent, { maxHeight: '90%', backgroundColor: '#020f2e', borderColor: '#f1c40f', borderWidth: 1 }]} onPress={() => {}}>
+        <Pressable style={styles.modalOverlay} onPress={() => { playButtonSound(); onClose(); }}>
+            <Pressable style={[styles.friendsModalContent, { maxHeight: '90%' }]} onPress={() => {}}>
                 <ScrollView contentContainerStyle={{ alignItems: 'center', width: '100%' }} style={{ width: '100%' }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: 30, justifyContent: 'center', position: 'relative' }}>
                         <TouchableOpacity 
-                            onPress={onBack}
+                            onPress={() => { playButtonSound(); onBack(); }}
                             style={{ position: 'absolute', left: 0, padding: 10, zIndex: 10 }}
                             hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
                         >
@@ -59,7 +60,7 @@ const AIOptionsModal = memo(({
                                         borderColor: aiDifficulte === niveau.id ? '#f1c40f' : 'rgba(255,255,255,0.1)',
                                     }
                                 ]}
-                                onPress={() => setAiDifficulte(niveau.id)}
+                                onPress={() => { playButtonSound(); setAiDifficulte(niveau.id); }}
                             >
                                 <Text style={{ fontSize: 24, marginRight: 15 }}>{niveau.emoji}</Text>
                                 <View>
@@ -94,7 +95,7 @@ const AIOptionsModal = memo(({
                                         borderWidth: 1,
                                         borderColor: aiPremierJoueur === opt ? '#f1c40f' : 'rgba(255,255,255,0.1)'
                                     }} 
-                                    onPress={() => setAiPremierJoueur(opt)}
+                                    onPress={() => { playButtonSound(); setAiPremierJoueur(opt); }}
                                 >
                                     <Text style={{ 
                                         fontSize: 14, 
@@ -128,7 +129,7 @@ const AIOptionsModal = memo(({
                                         borderWidth: 1,
                                         borderColor: aiCouleurJoueur === opt.id ? '#f1c40f' : 'rgba(255,255,255,0.1)'
                                     }} 
-                                    onPress={() => setAiCouleurJoueur(opt.id)}
+                                    onPress={() => { playButtonSound(); setAiCouleurJoueur(opt.id); }}
                                 >
                                     <Text style={{ fontSize: 20, marginBottom: 5 }}>{opt.icon}</Text>
                                     <Text style={{ 
@@ -145,18 +146,19 @@ const AIOptionsModal = memo(({
 
                     <TouchableOpacity 
                         style={[styles.friendsCloseButton, { backgroundColor: '#f1c40f', width: '100%', borderRadius: 15, paddingVertical: 10 }]}
-                        onPress={onStart}
+                        onPress={() => { playButtonSound(); onStart(); }}
                     >
                         <Text style={[styles.friendsCloseButtonText, { color: '#000', fontWeight: 'bold', fontSize: 18 }]}>Jouer</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity 
                         style={{ marginTop: 15, padding: 10 }}
-                        onPress={onBack}
+                        onPress={() => { playButtonSound(); onBack(); }}
                     >
                         <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 16 }}>Retour</Text>
                     </TouchableOpacity>
                 </ScrollView>
+                <View style={styles.innerShadow} pointerEvents="none" />
             </Pressable>
         </Pressable>
     </Modal>

@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { Alert } from 'react-native';
 import { useSelector } from 'react-redux';
 import { translations } from '../../utils/translations';
 import { socket } from '../../utils/socket';
@@ -6,7 +7,7 @@ import { BET_OPTIONS } from '../../utils/constants';
 import FriendsMenuModal from './FriendsMenuModal';
 import CreateRoomModal from './CreateRoomModal';
 
-const FriendsGameSetup = ({ visible, onClose, navigation, user }) => {
+const FriendsGameSetup = ({ visible, onClose, navigation, user, onOpenLiveConfig }) => {
   const settings = useSelector(state => state.settings);
   const t = translations[settings.language] || translations.fr;
 
@@ -25,14 +26,32 @@ const FriendsGameSetup = ({ visible, onClose, navigation, user }) => {
 
   const handleNavigateToLiveConfig = useCallback(() => {
     onClose();
-    navigation.navigate('ConfigurationSalleLive');
-  }, [navigation, onClose]);
+    if (onOpenLiveConfig) {
+      onOpenLiveConfig();
+    }
+  }, [onClose, onOpenLiveConfig]);
 
   const handleOpenFriendConfig = useCallback(() => {
     setShowCreateRoom(true);
   }, []);
 
   const handleCreateRoom = useCallback(() => {
+    // Check quota for free users
+    if (!user?.isPremium && user?.dailyCreatedRooms >= 5) {
+        Alert.alert(
+            "Limite atteinte",
+            "Vous avez atteint votre limite de 5 salles privées par jour. Passez Premium pour un accès illimité !",
+            [
+                { text: "Annuler", style: "cancel" },
+                { text: "Devenir Premium", onPress: () => {
+                    onClose();
+                    navigation.navigate('Shop');
+                }}
+            ]
+        );
+        return;
+    }
+
     // Emit create_room event
     socket.emit('create_room', {
         betAmount: inviteBet,

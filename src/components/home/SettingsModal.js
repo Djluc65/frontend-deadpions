@@ -1,11 +1,15 @@
 import React, { memo } from 'react';
 import { Modal, Pressable, View, Text, Switch, TouchableOpacity, StyleSheet } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { toggleMusic, toggleSound, setLanguage } from '../../redux/slices/settingsSlice';
 import { translations } from '../../utils/translations';
+import { playButtonSound } from '../../utils/soundManager';
 
 const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
   const dispatch = useDispatch();
+  const navigation = useNavigation();
   const settings = useSelector(state => state.settings || { isMusicEnabled: true, isSoundEnabled: true, language: 'fr' });
   const t = translations[settings.language] || translations.fr;
 
@@ -39,7 +43,7 @@ const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
               trackColor={{ false: "#767577", true: "#81b0ff" }}
               thumbColor={settings.isSoundEnabled ? "#f5dd4b" : "#f4f3f4"}
               onValueChange={() => {
-                handlePlaySound();
+                playButtonSound();
                 dispatch(toggleSound());
               }}
               value={settings.isSoundEnabled}
@@ -53,29 +57,44 @@ const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
                 style={[styles.langButton, settings.language === 'fr' && styles.langButtonActive]}
                 hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
                 onPress={() => {
+                  playButtonSound();
                   handlePlaySound();
                   dispatch(setLanguage('fr'));
                 }}
               >
-                <Text style={styles.langText}>FR</Text>
+                <Text style={[styles.langText, settings.language === 'fr' && styles.langTextActive]}>FR</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.langButton, settings.language === 'en' && styles.langButtonActive]}
                 hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
                 onPress={() => {
+                  playButtonSound();
                   handlePlaySound();
                   dispatch(setLanguage('en'));
                 }}
               >
-                <Text style={styles.langText}>EN</Text>
+                <Text style={[styles.langText, settings.language === 'en' && styles.langTextActive]}>EN</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           <TouchableOpacity
+            style={styles.infoButton}
+            onPress={() => {
+              playButtonSound();
+              onClose();
+              navigation.navigate('Info');
+            }}
+          >
+            <Ionicons name="information-circle-outline" size={24} color="#f1c40f" />
+            <Text style={styles.infoButtonText}>{settings.language === 'en' ? 'About & Rules' : 'Infos & Règles'}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={styles.closeButton}
             hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
             onPress={() => {
+              playButtonSound();
               handlePlaySound();
               onClose();
             }}
@@ -97,24 +116,23 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '80%',
-    backgroundColor: '#fff',
+    backgroundColor: '#041c55',
     borderRadius: 20,
     padding: 20,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowColor: '#f1c40f',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 3,
+    shadowRadius: 3,
     elevation: 5,
+    borderWidth: 1,
+    borderColor: '#f1c40f',
   },
   modalTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
-    color: '#041c55',
+    color: '#fff',
   },
   settingRow: {
     flexDirection: 'row',
@@ -126,7 +144,7 @@ const styles = StyleSheet.create({
   },
   settingText: {
     fontSize: 18,
-    color: '#333',
+    color: '#fff',
   },
   languageContainer: {
     flexDirection: 'row',
@@ -136,14 +154,34 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 5,
     borderWidth: 1,
-    borderColor: '#041c55',
+    borderColor: '#f1c40f',
   },
   langButtonActive: {
-    backgroundColor: '#041c55',
+    backgroundColor: '#f1c40f',
   },
   langText: {
-    color: '#333',
+    color: '#fff',
     fontWeight: 'bold',
+  },
+  langTextActive: {
+    color: '#041c55',
+  },
+  infoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#f1c40f',
+    borderRadius: 10,
+    width: '100%',
+    justifyContent: 'center',
+  },
+  infoButtonText: {
+    color: '#fff',
+    marginLeft: 10,
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   closeButton: {
     backgroundColor: '#eb4141ff',

@@ -6,12 +6,14 @@ import authReducer from './slices/authSlice';
 import settingsReducer from './slices/settingsSlice';
 import socialReducer from './slices/socialSlice';
 import gameReducer from './slices/gameSlice';
+import uiReducer from './slices/uiSlice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
   settings: settingsReducer,
   social: socialReducer,
   game: gameReducer,
+  ui: uiReducer,
 });
 
 const persistConfig = {

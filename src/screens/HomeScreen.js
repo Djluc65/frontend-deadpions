@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, Image, ActivityIndicator, ImageBackground, Touc
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { useDispatch, useSelector } from 'react-redux';
-import { logout } from '../redux/slices/authSlice';
 import { toggleMusic, toggleSound, setLanguage } from '../redux/slices/settingsSlice';
 import { API_URL } from '../config';
 import { playButtonSound } from '../utils/soundManager';
@@ -20,6 +19,8 @@ import LocalGameSetup from '../components/home/LocalGameSetup';
 import HomeHeader from '../components/home/HomeHeader';
 import OnlineGameSetup from '../components/home/OnlineGameSetup';
 import FriendsGameSetup from '../components/home/FriendsGameSetup';
+import LiveGameSetup from '../components/home/LiveGameSetup';
+import BattleAnimation from '../components/BattleAnimation';
 
 // Components imported above
 
@@ -45,6 +46,7 @@ const HomeScreen = ({ navigation }) => {
 
   // Menu Amis & États de Création de Salle
   const [friendsMenuVisible, setFriendsMenuVisible] = useState(false);
+  const [liveConfigVisible, setLiveConfigVisible] = useState(false);
 
   // Online Game Config State
   const [onlineConfigVisible, setOnlineConfigVisible] = useState(false);
@@ -114,7 +116,10 @@ const HomeScreen = ({ navigation }) => {
   }, [user]);
 
   useEffect(() => {
-    AudioController.playHomeMusic(settings.isMusicEnabled);
+    // Vérifier si nous sommes en mode rematch avant de jouer la musique
+    if (!AudioController.isRematchMode) {
+      AudioController.playHomeMusic(settings.isMusicEnabled);
+    }
 
     return () => {
       // Arrêter seulement si le composant est démonté (ex: déconnexion)
@@ -140,8 +145,14 @@ const HomeScreen = ({ navigation }) => {
     if (user && user._id) {
         socket.on('room_created', handleRoomCreated);
         
+        const handleError = (message) => {
+            Alert.alert('Erreur', message);
+        };
+        socket.on('error', handleError);
+
         return () => {
             socket.off('room_created', handleRoomCreated);
+            socket.off('error', handleError);
         };
     }
   }, [user, navigation]);
@@ -150,11 +161,6 @@ const HomeScreen = ({ navigation }) => {
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
   });
-
-  const handleLogout = () => {
-    dispatch(logout());
-    navigation.replace('Login');
-  };
 
   // Handlers for new components are internal to those components
 
@@ -189,6 +195,13 @@ const HomeScreen = ({ navigation }) => {
         onClose={() => setFriendsMenuVisible(false)} 
         navigation={navigation} 
         user={user} 
+        onOpenLiveConfig={() => setLiveConfigVisible(true)}
+      />
+      <LiveGameSetup
+        visible={liveConfigVisible}
+        onClose={() => setLiveConfigVisible(false)}
+        navigation={navigation}
+        user={user}
       />
       <OnlineGameSetup 
         visible={onlineConfigVisible} 
@@ -216,7 +229,6 @@ const HomeScreen = ({ navigation }) => {
         navigation={navigation} 
         onSearch={() => console.log('Search clicked')} 
         onSettings={() => setSettingsVisible(true)} 
-        onLogout={handleLogout} 
         onPlaySound={handlePlaySound} 
       />
 
@@ -233,6 +245,28 @@ const HomeScreen = ({ navigation }) => {
           ]}
           resizeMode="contain"
         />
+        
+        {/* Early Access Banner */}
+        {/* {user?.isEarlyAccess && (
+          <View style={{
+            backgroundColor: 'rgba(241, 196, 15, 0.2)',
+            paddingVertical: 10,
+            paddingHorizontal: 20,
+            borderRadius: 20,
+            marginTop: -20,
+            marginBottom: 20,
+            borderWidth: 1,
+            borderColor: '#f1c40f',
+            alignItems: 'center'
+          }}>
+            <Text style={{ color: '#f1c40f', fontWeight: 'bold', fontSize: 16, textAlign: 'center' }}>
+              🎉 Lancement DeadPions
+            </Text>
+            <Text style={{ color: 'white', fontSize: 14, textAlign: 'center' }}>
+              Premium offert jusqu'au {new Date(user.earlyAccessEndDate).toLocaleDateString()} !
+            </Text>
+          </View> */}
+        {/* )} */}
       </View>
 
       <View style={[styles.container, { paddingBottom: 100 }]}>
@@ -305,6 +339,9 @@ const HomeScreen = ({ navigation }) => {
             </View>
           </GameCard>
         </View>
+
+        {/* Animation Duel de Pions */}
+        <BattleAnimation />
       </View>
     </ImageBackground>
   );
@@ -344,6 +381,7 @@ const styles = StyleSheet.create({
   },
   liveCard: {
   borderWidth: 3,
+  top: 130,
   borderColor: 'rgba(4, 28, 85, 0.95)',
 
   // shadow bottom

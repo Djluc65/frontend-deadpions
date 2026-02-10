@@ -3,6 +3,7 @@ import { View, Text, Modal, Pressable, TouchableOpacity, ScrollView, ActivityInd
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch } from 'react-redux';
 import { socket } from '../../utils/socket';
+import { playButtonSound } from '../../utils/soundManager';
 import { BET_OPTIONS, ONLINE_TIME_OPTIONS } from '../../utils/constants';
 import { logout } from '../../redux/slices/authSlice';
 
@@ -103,6 +104,7 @@ const OnlineGameSetup = memo(({ visible, onClose, navigation, user }) => {
     }, [user, isSearching, navigation, onClose, dispatch]);
 
     const handleStartSearch = () => {
+        playButtonSound();
         setIsSearching(true);
         setSearchTimer(120);
         socket.emit('find_game', {
@@ -116,6 +118,7 @@ const OnlineGameSetup = memo(({ visible, onClose, navigation, user }) => {
     };
 
     const handleCancelSearch = () => {
+        playButtonSound();
         setIsSearching(false);
         socket.emit('cancel_search', {
             betAmount: bet,
@@ -138,6 +141,7 @@ const OnlineGameSetup = memo(({ visible, onClose, navigation, user }) => {
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: 10 }}>
                 <TouchableOpacity 
                     onPress={() => {
+                        playButtonSound();
                         if (canGoPrev) setBet(effectiveBets[currentIndex - 1]);
                     }}
                     disabled={!canGoPrev}
@@ -162,6 +166,7 @@ const OnlineGameSetup = memo(({ visible, onClose, navigation, user }) => {
 
                 <TouchableOpacity 
                     onPress={() => {
+                        playButtonSound();
                         if (canGoNext) setBet(effectiveBets[currentIndex + 1]);
                     }}
                     disabled={!canGoNext}
@@ -279,7 +284,7 @@ const styles = StyleSheet.create({
     },
     friendsModalContent: {
         width: '90%',
-        backgroundColor: '#0f2350',
+        backgroundColor: '#041c55',
         borderRadius: 25,
         padding: 25,
         alignItems: 'center',

@@ -18,6 +18,18 @@ const GlobalInviteListener = () => {
             // Join user room for status tracking and private events
             socket.emit('join_user_room', user._id);
             console.log(`GlobalSocket: User ${user._id} joined room`);
+
+            // Re-join on reconnection
+            const handleConnect = () => {
+                console.log(`GlobalSocket: Reconnected, re-joining user room ${user._id}`);
+                socket.emit('join_user_room', user._id);
+            };
+
+            socket.on('connect', handleConnect);
+
+            return () => {
+                socket.off('connect', handleConnect);
+            };
         }
     }, [user]);
 
@@ -115,24 +127,29 @@ const GlobalInviteListener = () => {
             // If we are in 'SalleAttenteLive', that component handles the transition to Game.
             // If we are in 'GameScreen', it might handle it too (if gameId changes).
             
-            // We can check the current route using navigation state, but inside useEffect it's tricky.
-            // However, we can use a small delay or rely on the fact that SalleAttenteLive handles it.
-            // If we are the creator or in the waiting room, we are already subscribed there.
-            
-            // To prevent double navigation, we can check if the route is already 'SalleAttenteLive'.
-            // But we don't have access to current route easily here without useRoute (which is not available in global component).
-            // Instead, we can try to navigate only if NOT already there.
-            
-            // Use navigation.getState() to check current route
+            // We can check the current route using navigation state
             const state = navigation.getState();
             if (state) {
                 const currentRoute = state.routes[state.index];
+                
+                // Check if we are in Home -> Social
+                // SocialScreen handles game_start itself to manage its waiting state and navigation
+                if (currentRoute.name === 'Home' && currentRoute.state) {
+                    const tabRoute = currentRoute.state.routes[currentRoute.state.index];
+                    if (tabRoute.name === 'Social') {
+                        console.log('Skipping Global navigation because we are in SocialScreen');
+                        return;
+                    }
+                }
+
                 if (currentRoute.name === 'SalleAttenteLive' && isLive) {
                     console.log('Skipping Global navigation because we are in SalleAttenteLive');
                     return;
                 }
-                if (currentRoute.name === 'Game' && currentRoute.params?.gameId === data.gameId) {
-                    console.log('Skipping Global navigation because we are already in GameScreen with same ID');
+                // Fix: If we are already in GameScreen, let GameScreen handle the transition (even for new gameId)
+                // This prevents double navigation and audio glitches (home music playing during rematch)
+                if (currentRoute.name === 'Game') {
+                    console.log('Skipping Global navigation because we are in GameScreen (let GameScreen handle it)');
                     return;
                 }
             }

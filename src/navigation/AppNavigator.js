@@ -17,6 +17,8 @@ import LiveConfigScreen from '../screens/ConfigurationSalleLive';
 import LiveWaitingScreen from '../screens/SalleAttenteLive';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import ResetPasswordScreen from '../screens/ResetPasswordScreen';
+import InfoScreen from '../screens/InfoScreen';
+import AssistantScreen from '../screens/AssistantScreen';
 
 const Stack = createStackNavigator();
 
@@ -41,6 +43,8 @@ function AppNavigator() {
         <Stack.Screen name="ConfigurationSalleLive" component={LiveConfigScreen} />
         <Stack.Screen name="SalleAttenteLive" component={LiveWaitingScreen} />
         <Stack.Screen name="Game" component={GameScreen} />
+        <Stack.Screen name="Info" component={InfoScreen} />
+        <Stack.Screen name="Assistant" component={AssistantScreen} />
       </Stack.Navigator>
       <GlobalInviteListener />
     </>

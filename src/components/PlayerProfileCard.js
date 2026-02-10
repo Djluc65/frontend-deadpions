@@ -1,23 +1,15 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { API_URL } from '../config';
-
-const getAvatarUri = (avatarPath) => {
-    if (!avatarPath) return { uri: 'https://i.pravatar.cc/150' };
-    if (avatarPath.startsWith('http')) return { uri: avatarPath };
-    
-    // Remove /api if present to get base URL
-    const baseUrl = API_URL.replace('/api', '');
-    const safePath = avatarPath.startsWith('/') ? avatarPath : `/${avatarPath}`;
-    return { uri: `${baseUrl}${safePath}` };
-};
+import { getAvatarSource } from '../utils/avatarUtils';
 
 const PlayerProfileCard = ({ player, isMe, style }) => {
   if (!player) return null;
 
-  const avatarSource = typeof player.avatar === 'string' 
-      ? getAvatarUri(player.avatar) 
-      : (player.avatar || { uri: 'https://i.pravatar.cc/150' });
+  let avatarSource = getAvatarSource(player.avatar);
+  if (!avatarSource) {
+      avatarSource = { uri: 'https://i.pravatar.cc/150' };
+  }
 
   return (
     <View style={[styles.card, isMe ? styles.meCard : styles.opponentCard, style]}>

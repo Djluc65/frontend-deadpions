@@ -5,17 +5,12 @@ import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import { socket } from '../utils/socket';
 import { API_URL } from '../config';
+import { getAvatarSource as getBaseAvatarSource } from '../utils/avatarUtils';
 
 // Helper pour les avatars
 const getAvatarSource = (avatar) => {
-    if (!avatar) return require('../../assets/images/LogoDeadPions-nobg.png');
-    if (avatar.startsWith('http') || avatar.startsWith('file')) {
-        return { uri: avatar };
-    }
-    if (avatar.startsWith('/uploads')) {
-        const baseUrl = API_URL.replace('/api', '');
-        return { uri: `${baseUrl}${avatar}` };
-    }
+    const source = getBaseAvatarSource(avatar);
+    if (source) return source;
     // Fallback default image since local avatar files are missing
     return require('../../assets/images/LogoDeadPions-nobg.png');
 };

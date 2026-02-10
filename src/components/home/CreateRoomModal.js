@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { Modal, Pressable, ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { playButtonSound } from '../../utils/soundManager';
 
 const CreateRoomModal = memo(({
   visible,
@@ -33,13 +34,13 @@ const CreateRoomModal = memo(({
             <View style={styles.optionsRow}>
                 <TouchableOpacity 
                     style={[styles.friendsOptionButton, inviteMode === 'simple' && styles.friendsOptionButtonActive]}
-                    onPress={() => setInviteMode('simple')}
+                    onPress={() => { playButtonSound(); setInviteMode('simple'); }}
                 >
                     <Text style={[styles.friendsOptionText, inviteMode === 'simple' && styles.friendsOptionTextActive]}>Simple</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                     style={[styles.friendsOptionButton, inviteMode === 'tournament' && styles.friendsOptionButtonActive]}
-                    onPress={() => setInviteMode('tournament')}
+                    onPress={() => { playButtonSound(); setInviteMode('tournament'); }}
                 >
                     <Text style={[styles.friendsOptionText, inviteMode === 'tournament' && styles.friendsOptionTextActive]}>Tournoi</Text>
                 </TouchableOpacity>
@@ -53,7 +54,7 @@ const CreateRoomModal = memo(({
                             <TouchableOpacity 
                                 key={num} 
                                 style={[styles.friendsOptionButton, inviteSeriesLength === num && styles.friendsOptionButtonActive]}
-                                onPress={() => setInviteSeriesLength(num)}
+                                onPress={() => { playButtonSound(); setInviteSeriesLength(num); }}
                             >
                                 <Text style={[styles.friendsOptionText, inviteSeriesLength === num && styles.friendsOptionTextActive]}>{num}</Text>
                             </TouchableOpacity>
@@ -76,6 +77,7 @@ const CreateRoomModal = memo(({
                         <>
                             <TouchableOpacity 
                                 onPress={() => {
+                                    playButtonSound();
                                     if (canGoPrev) setInviteBet(effectiveBets[currentIndex - 1]);
                                 }}
                                 disabled={!canGoPrev}
@@ -113,6 +115,7 @@ const CreateRoomModal = memo(({
 
                             <TouchableOpacity 
                                 onPress={() => {
+                                    playButtonSound();
                                     if (canGoNext) setInviteBet(effectiveBets[currentIndex + 1]);
                                 }}
                                 disabled={!canGoNext}
@@ -131,7 +134,7 @@ const CreateRoomModal = memo(({
                     <TouchableOpacity 
                         key={time} 
                         style={[styles.friendsOptionButton, inviteTime === time && styles.friendsOptionButtonActive]}
-                        onPress={() => setInviteTime(time)}
+                        onPress={() => { playButtonSound(); setInviteTime(time); }}
                     >
                         <Text style={[styles.friendsOptionText, inviteTime === time && styles.friendsOptionTextActive]}>
                             {time ? `${time}s` : '∞'}
@@ -141,10 +144,10 @@ const CreateRoomModal = memo(({
             </View>
 
             <View style={styles.modalButtons}>
-            <TouchableOpacity style={styles.modalButtonCancel} onPress={onClose}>
+            <TouchableOpacity style={styles.modalButtonCancel} onPress={() => { playButtonSound(); onClose(); }}>
                 <Text style={styles.modalButtonText}>Annuler</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.modalButtonConfirm} onPress={handleCreateRoom}>
+            <TouchableOpacity style={styles.modalButtonConfirm} onPress={() => { playButtonSound(); handleCreateRoom(); }}>
                 <Text style={styles.modalButtonText}>Créer</Text>
             </TouchableOpacity>
             </View>

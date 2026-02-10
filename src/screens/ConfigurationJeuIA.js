@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch, ImageBack
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
+import { playButtonSound } from '../utils/soundManager';
 
 const { width } = Dimensions.get('window');
 
@@ -136,7 +137,7 @@ const ConfigurationJeuIA = ({ navigation }) => {
             styles.niveauCard,
             difficulte === niveau.id && styles.niveauCardActive
           ]}
-          onPress={() => setDifficulte(niveau.id)}
+          onPress={() => { playButtonSound(); setDifficulte(niveau.id); }}
         >
           <Text style={styles.niveauEmoji}>{niveau.emoji}</Text>
           <View style={styles.niveauInfo}>
@@ -173,6 +174,7 @@ const ConfigurationJeuIA = ({ navigation }) => {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: 10 }}>
             <TouchableOpacity 
                 onPress={() => {
+                    playButtonSound();
                     const currentIndex = BET_OPTIONS.indexOf(betAmount);
                     if (currentIndex > 0) setBetAmount(BET_OPTIONS[currentIndex - 1]);
                 }}
@@ -190,6 +192,7 @@ const ConfigurationJeuIA = ({ navigation }) => {
 
             <TouchableOpacity 
                 onPress={() => {
+                    playButtonSound();
                     const currentIndex = BET_OPTIONS.indexOf(betAmount);
                     if (currentIndex < BET_OPTIONS.length - 1) setBetAmount(BET_OPTIONS[currentIndex + 1]);
                 }}

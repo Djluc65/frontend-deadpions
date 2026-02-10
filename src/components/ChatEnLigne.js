@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { Video } from 'expo-av';
+import { emojisDisponibles, getEmojiSource } from '../utils/emojis';
 
 const ChatEnLigne = ({ 
   matchId, 
@@ -15,30 +17,6 @@ const ChatEnLigne = ({
   
   const scrollViewRef = useRef(null);
   const emojiScrollViewRef = useRef(null);
-  
-  // Liste des emojis disponibles
-  const emojisDisponibles = [
-    { id: 1, emoji: '😀', label: 'Sourire' },
-    { id: 2, emoji: '😂', label: 'Rire' },
-    { id: 3, emoji: '😍', label: 'Amour' },
-    { id: 4, emoji: '😎', label: 'Cool' },
-    { id: 5, emoji: '👍', label: 'Pouce en haut' },
-    { id: 6, emoji: '👎', label: 'Pouce en bas' },
-    { id: 7, emoji: '🔥', label: 'Feu' },
-    { id: 8, emoji: '⚡', label: 'Éclair' },
-    { id: 9, emoji: '🎉', label: 'Fête' },
-    { id: 10, emoji: '😢', label: 'Triste' },
-    { id: 11, emoji: '😡', label: 'En colère' },
-    { id: 12, emoji: '🤔', label: 'Réflexion' },
-    { id: 13, emoji: '💪', label: 'Force' },
-    { id: 14, emoji: '🙏', label: 'Prière' },
-    { id: 15, emoji: '🎯', label: 'Cible' },
-    { id: 16, emoji: '⭐', label: 'Étoile' },
-    { id: 17, emoji: '💯', label: '100%' },
-    { id: 18, emoji: '🤝', label: 'Poignée de main' },
-    { id: 19, emoji: '🧠', label: 'Cerveau' },
-    { id: 20, emoji: '👀', label: 'Yeux' }
-  ];
   
   // Scroll automatique vers le bas (Chat Texte)
   useEffect(() => {
@@ -68,8 +46,6 @@ const ChatEnLigne = ({
       timestamp: new Date()
     };
     
-    // setMessages(prev => [...prev, nouveauMessage]);
-    
     // Envoyer au serveur via WebSocket
     if (onEnvoyerMessage) {
       onEnvoyerMessage(nouveauMessage, {
@@ -94,11 +70,9 @@ const ChatEnLigne = ({
       type: 'emoji',
       auteur: monPseudo,
       estMoi: true,
-      contenu: emojiData.emoji,
+      contenu: emojiData.name,
       timestamp: new Date()
     };
-    
-    // setMessages(prev => [...prev, nouveauMessage]);
     
     // Animation de l'emoji pressé
     setEmojisPresses(prev => [...prev, emojiData.id]);
@@ -111,13 +85,13 @@ const ChatEnLigne = ({
       onEnvoyerMessage(nouveauMessage, {
         type: 'MESSAGE_EMOJI',
         matchId,
-        emoji: emojiData.emoji
+        emoji: emojiData.name
       });
     }
   };
   
   const formatHeure = (date) => {
-    return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return new Date(date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   };
   
   return (
@@ -181,7 +155,6 @@ const ChatEnLigne = ({
             placeholderTextColor="#9ca3af"
             multiline
             maxLength={200}
-            // onSubmitEditing={envoyerMessageTexte} // Désactivé pour multiline, utiliser le bouton
           />
           <TouchableOpacity
             style={[
@@ -201,7 +174,6 @@ const ChatEnLigne = ({
       {(displayMode === 'full' || displayMode === 'emoji') && (
       <View style={styles.chatEmojis}>
 
-        
         {/* Historique des emojis envoyés */}
         <ScrollView 
           ref={emojiScrollViewRef}
@@ -213,7 +185,9 @@ const ChatEnLigne = ({
               <Text style={styles.emptyTexte}>Aucune réaction</Text>
             </View>
           ) : (
-            messages.filter(m => m.type === 'emoji').map(msg => (
+            messages.filter(m => m.type === 'emoji').map(msg => {
+              const source = getEmojiSource(msg.contenu);
+              return (
               <View
                 key={msg.id}
                 style={[
@@ -221,12 +195,23 @@ const ChatEnLigne = ({
                   msg.estMoi ? styles.emojiHistoriqueItemMoi : styles.emojiHistoriqueItemAutre
                 ]}
               >
-                <Text style={styles.emojiHistoriqueEmoji}>{msg.contenu}</Text>
+                {source ? (
+                    <Video
+                        source={source}
+                        style={{ width: 80, height: 80 }}
+                        resizeMode="contain"
+                        shouldPlay
+                        isLooping={true}
+                        isMuted={true}
+                    />
+                ) : (
+                    <Text style={styles.emojiHistoriqueEmoji}>{msg.contenu}</Text>
+                )}
                 <Text style={styles.emojiHistoriqueAuteur}>
                   {msg.estMoi ? 'Vous' : msg.auteur}
                 </Text>
               </View>
-            ))
+            )})
           )}
         </ScrollView>
         
@@ -242,7 +227,14 @@ const ChatEnLigne = ({
               onPress={() => envoyerEmoji(emojiData)}
               activeOpacity={0.7}
             >
-              <Text style={styles.emojiTexte}>{emojiData.emoji}</Text>
+              <Video
+                  source={emojiData.source}
+                  style={{ width: '100%', height: '100%' }}
+                  resizeMode="contain"
+                  shouldPlay={true}
+                  isLooping={true}
+                  isMuted={true}
+              />
             </TouchableOpacity>
           ))}
         </View>
@@ -416,17 +408,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around'
   },
   emojiButton: {
-    width: '18%',
+    width: '22%',
     aspectRatio: 1,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
     borderRadius: 8,
-    backgroundColor: '#f3f4f6'
+    backgroundColor: '#f3f4f6',
+    overflow: 'hidden'
   },
   emojiButtonPresse: {
     backgroundColor: '#dbeafe',
-    transform: [{ scale: 1.2 }]
+    transform: [{ scale: 1.1 }]
   },
   emojiTexte: {
     fontSize: 28
