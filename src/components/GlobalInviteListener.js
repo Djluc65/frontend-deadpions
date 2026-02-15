@@ -4,18 +4,21 @@ import { useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import socket from '../services/socket';
 
+// Composant global qui écoute les invitations de partie (socket) partout dans l'application
 const GlobalInviteListener = () => {
     const navigation = useNavigation();
+    // Récupère l'utilisateur connecté depuis Redux
     const user = useSelector(state => state.auth.user);
+    // Stocke l'invitation en cours (null si aucune)
     const [invitation, setInvitation] = useState(null);
 
-    // Global Socket Connection & Status
+    // Connexion globale au socket + inscription dans la room utilisateur
     useEffect(() => {
         if (user && user._id) {
             if (!socket.connected) {
                 socket.connect();
             }
-            // Join user room for status tracking and private events
+            // Rejoint la room privée de l'utilisateur pour recevoir ses événements
             socket.emit('join_user_room', user._id);
             console.log(`GlobalSocket: User ${user._id} joined room`);
 
@@ -33,6 +36,7 @@ const GlobalInviteListener = () => {
         }
     }, [user]);
 
+    // Gestion des événements liés aux invitations (réception / refus / erreurs)
     useEffect(() => {
         const handleInvitation = (data) => {
             console.log('Invitation received:', data);
@@ -40,18 +44,20 @@ const GlobalInviteListener = () => {
         };
 
         const handleInvitationError = (message) => {
-            // Could show a toast or alert here
+            // Affiche simplement l'erreur dans la console (non bloquant)
             console.log('Invitation error:', message);
         };
 
         const handleInvitationDeclined = (data) => {
-            Alert.alert("Refusé", `${data.recipientPseudo || 'L\'adversaire'} a refusé l'invitation.`);
+            // L'autre joueur a refusé l'invitation
+            Alert.alert("Refusé", `${data.recipientPseudo || "L'adversaire"} a refusé l'invitation.`);
         };
 
         socket.on('game_invitation', handleInvitation);
         socket.on('invitation_declined', handleInvitationDeclined);
         socket.on('invitation_error', handleInvitationError);
 
+        // Quand on rejoint une salle "Live" (jeu en direct), on navigue vers l'écran d'attente
         const handleLiveRoomJoined = (data) => {
              console.log('Joined Live Room:', data);
              const configSalle = data.config || {
@@ -75,6 +81,7 @@ const GlobalInviteListener = () => {
         };
     }, []);
 
+    // Accepter une invitation
     const handleAccept = () => {
         if (!invitation) return;
         
@@ -101,6 +108,7 @@ const GlobalInviteListener = () => {
         setInvitation(null);
     };
 
+    // Refuser une invitation
     const handleDecline = () => {
         if (!invitation) return;
 
@@ -113,75 +121,78 @@ const GlobalInviteListener = () => {
         setInvitation(null);
     };
 
-    // Global listener for game_start to navigate
+    // Écoute globale de l'événement game_start pour rediriger vers l'écran de jeu
     useEffect(() => {
-        const handleGameStart = (data) => {
-            // Only navigate if we are the ones involved (checked by socket room, but global listener hears all events on this socket)
-            // If we accepted an invite, we are in the room.
-            console.log('Global game_start received:', data);
-            
-            const isLive = data.gameId && data.gameId.toString().startsWith('live_');
-            const gameMode = isLive ? 'live' : 'online';
+    const handleGameStart = (data) => {
+        console.log('🌍 Global game_start received:', data);
+        
+        const isLive = data.gameId && data.gameId.toString().startsWith('live_');
+        const gameMode = isLive ? 'live' : 'online';
 
-            // Check if we are already in Game screen or Waiting Room?
-            // If we are in 'SalleAttenteLive', that component handles the transition to Game.
-            // If we are in 'GameScreen', it might handle it too (if gameId changes).
+        // Check current route
+        const state = navigation.getState();
+        if (state) {
+            const currentRoute = state.routes[state.index];
             
-            // We can check the current route using navigation state
-            const state = navigation.getState();
-            if (state) {
-                const currentRoute = state.routes[state.index];
-                
-                // Check if we are in Home -> Social
-                // SocialScreen handles game_start itself to manage its waiting state and navigation
-                if (currentRoute.name === 'Home' && currentRoute.state) {
-                    const tabRoute = currentRoute.state.routes[currentRoute.state.index];
-                    if (tabRoute.name === 'Social') {
-                        console.log('Skipping Global navigation because we are in SocialScreen');
-                        return;
-                    }
-                }
-
-                if (currentRoute.name === 'SalleAttenteLive' && isLive) {
-                    console.log('Skipping Global navigation because we are in SalleAttenteLive');
-                    return;
-                }
-                // Fix: If we are already in GameScreen, let GameScreen handle the transition (even for new gameId)
-                // This prevents double navigation and audio glitches (home music playing during rematch)
-                if (currentRoute.name === 'Game') {
-                    console.log('Skipping Global navigation because we are in GameScreen (let GameScreen handle it)');
+            // Ne pas naviguer si on est déjà dans SocialScreen (gère sa propre navigation)
+            if (currentRoute.name === 'Home' && currentRoute.state) {
+                const tabRoute = currentRoute.state.routes[currentRoute.state.index];
+                if (tabRoute.name === 'Social') {
+                    console.log('Skipping Global navigation - in SocialScreen');
                     return;
                 }
             }
 
-            // Check if we are already in Game screen? 
-            // The navigation.navigate operation is safe (it pushes or focuses).
-            // We pass the data to GameScreen.
-            navigation.navigate('Game', {
-                mode: gameMode,
-                gameId: data.gameId,
-                players: data.players,
-                currentTurn: data.currentTurn,
-                betAmount: data.betAmount,
-                timeControl: data.timeControl,
-                gameType: data.mode,
-                tournamentSettings: data.tournamentSettings,
-                opponent: data.players.black.id.toString() === (user._id || user.id).toString() ? data.players.white : data.players.black
-            });
-            
-            // Clear invitation if it was open (just in case)
-            setInvitation(null);
-        };
+            // Ne pas naviguer si on est dans SalleAttenteLive (gère sa propre navigation)
+            if (currentRoute.name === 'SalleAttenteLive' && isLive) {
+                console.log('Skipping Global navigation - in SalleAttenteLive');
+                return;
+            }
 
-        socket.on('game_start', handleGameStart);
+            // Si on est déjà dans GameScreen
+            if (currentRoute.name === 'Game') {
+                const currentGameId = currentRoute.params?.gameId;
+                
+                // Si c'est le même gameId, on ne fait rien (GameScreen mettra à jour l'état)
+                if (currentGameId === data.gameId) {
+                    console.log('Skipping Global navigation - same gameId, GameScreen will handle');
+                    return;
+                }
+                
+                // Si c'est un nouveau gameId (ex: invitation acceptée), on force la navigation
+                console.log('🚀 Global: FORCING navigation to NEW game:', data.gameId);
+                // Continue vers navigation.navigate ci-dessous
+            }
+        }
 
-        return () => {
-            socket.off('game_start', handleGameStart);
-        };
-    }, [navigation]);
+        // Navigation vers l'écran de jeu avec toutes les données nécessaires
+        navigation.navigate('Game', {
+            mode: gameMode,
+            gameId: data.gameId,
+            players: data.players,
+            currentTurn: data.currentTurn,
+            betAmount: data.betAmount,
+            timeControl: data.timeControl,
+            gameType: data.mode,
+            tournamentSettings: data.tournamentSettings,
+            opponent: data.players.black.id.toString() === (user._id || user.id).toString() ? data.players.white : data.players.black
+        });
+        
+        // Nettoie l'invitation en cours
+        setInvitation(null);
+    };
 
+    socket.on('game_start', handleGameStart);
+
+    return () => {
+        socket.off('game_start', handleGameStart);
+    };
+    }, [navigation, user]);
+
+    // Si aucune invitation, ne rien afficher
     if (!invitation) return null;
 
+    // Modal affiché quand on reçoit une invitation
     return (
         <Modal
             transparent={true}

@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppState } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateUser } from '../redux/slices/authSlice';
 import CoinsService from '../services/CoinsService';
@@ -11,24 +13,45 @@ export const CoinsProvider = ({ children }) => {
     const dispatch = useDispatch();
     const { user, token } = useSelector(state => state.auth);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [lastSync, setLastSync] = useState(null);
     const [feedback, setFeedback] = useState({ visible: false, amount: 0 });
 
     // Initialisation et écouteurs
     useEffect(() => {
         if (token) {
-            refreshBalance();
+            syncBalance();
             
             // Écouter les mises à jour de solde en temps réel
             socket.on('balance_updated', handleBalanceUpdate);
-            
-            // Tentative de synchronisation des transactions en attente
-            syncTransactions();
         }
+
+        const subscription = AppState.addEventListener('change', nextAppState => {
+            if (nextAppState === 'active' && token) {
+                syncBalance();
+            }
+        });
 
         return () => {
             socket.off('balance_updated', handleBalanceUpdate);
+            subscription.remove();
         };
     }, [token]);
+
+    // Persister le solde Redux dans AsyncStorage pour qu'il soit disponible au redémarrage
+    // même avant la première requête réseau
+    useEffect(() => {
+        if (user && typeof user.coins === 'number') {
+            const saveCoins = async () => {
+                try {
+                    await AsyncStorage.setItem('user_coins', user.coins.toString());
+                } catch (error) {
+                    console.error('Erreur sauvegarde coins local:', error);
+                }
+            };
+            saveCoins();
+        }
+    }, [user?.coins]);
 
     const handleBalanceUpdate = (data) => {
         console.log('Balance updated via socket:', data);
@@ -37,17 +60,31 @@ export const CoinsProvider = ({ children }) => {
         }
     };
 
-    const refreshBalance = async () => {
+    const syncBalance = async () => {
         if (!token) return;
+        setIsLoading(true);
         try {
-            const balance = await CoinsService.obtenirSolde(token);
-            if (user && user.coins !== balance) {
+            // 1. D'abord synchroniser les transactions locales en attente (Push)
+            // Cela permet de mettre à jour le serveur avec nos gains/pertes locaux
+            await syncTransactions();
+
+            // 2. Ensuite, récupérer la vérité terrain du serveur (Pull)
+            // Cela assure que nous avons le solde final (incluant ce qu'on vient de pousser + d'autres changements)
+            const balance = await CoinsService.reconcileBalance(user?.id, token);
+            if (balance !== null && user && user.coins !== balance) {
                 dispatch(updateUser({ coins: balance }));
             }
+            
+            setLastSync(Date.now());
         } catch (error) {
-            console.error('Erreur refreshBalance:', error);
+            console.error('Erreur syncBalance:', error);
+        } finally {
+            setIsLoading(false);
         }
     };
+
+    // Alias pour compatibilité
+    const refreshBalance = syncBalance;
 
     const syncTransactions = async () => {
         if (!token || isSyncing) return;
@@ -89,7 +126,7 @@ export const CoinsProvider = ({ children }) => {
             dispatch(updateUser({ coins: result.nouveauSolde }));
             
             // Feedback visuel
-            setFeedback({ visible: true, amount: amount });
+            setFeedback({ visible: true, amount: amount, type: 'CREDIT' });
             
             syncTransactions();
             return result;
@@ -99,18 +136,43 @@ export const CoinsProvider = ({ children }) => {
         }
     };
 
+    const refund = async (amount, reason, metadata) => {
+        const currentBalance = user?.coins || 0;
+        try {
+            const result = await CoinsService.rembourserTransaction(currentBalance, amount, reason, metadata);
+            dispatch(updateUser({ coins: result.nouveauSolde }));
+            
+            // Feedback visuel
+            setFeedback({ visible: true, amount: amount, type: 'REMBOURSEMENT' });
+            
+            syncTransactions();
+            return result;
+        } catch (error) {
+            console.error('Erreur refund context:', error);
+            throw error;
+        }
+    };
+
+    const value = {
+        refreshBalance,
+        syncBalance, // Nouvelle fonction exportée
+        debit,
+        credit,
+        refund,
+        isSyncing,
+        isLoading,
+        lastSync,
+        feedback,
+        setFeedback // Pour pouvoir fermer le feedback manuellement
+    };
+
     return (
-        <CoinsContext.Provider value={{ 
-            coins: user?.coins || 0, 
-            debit, 
-            credit, 
-            refresh: refreshBalance,
-            sync: syncTransactions
-        }}>
+        <CoinsContext.Provider value={value}>
             {children}
             <CoinsFeedback 
                 visible={feedback.visible} 
-                amount={feedback.amount} 
+                amount={feedback.amount}
+                type={feedback.type}
                 onFinish={() => setFeedback(prev => ({ ...prev, visible: false }))} 
             />
         </CoinsContext.Provider>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ImageBackground } from 'react-native';
+import { CommonActions } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 
 const ResultatJeuOnline = ({ route, navigation }) => {
@@ -60,7 +61,12 @@ const ResultatJeuOnline = ({ route, navigation }) => {
 
           <TouchableOpacity 
             style={styles.boutonMenu} 
-            onPress={() => navigation.navigate('Home')}
+            onPress={() => navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [{ name: 'Home' }],
+              })
+            )}
           >
             <Text style={styles.boutonTexte}>🏠 Menu</Text>
           </TouchableOpacity>

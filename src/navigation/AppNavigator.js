@@ -23,10 +23,12 @@ import AssistantScreen from '../screens/AssistantScreen';
 const Stack = createStackNavigator();
 
 import GlobalInviteListener from '../components/GlobalInviteListener';
+import SessionController from '../components/SessionController';
 
 function AppNavigator() {
   return (
     <>
+      <SessionController />
       <Stack.Navigator initialRouteName="Waiting" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Waiting" component={WaitingScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Image, ActivityIndicator, ImageBackground, TouchableOpacity, useWindowDimensions, Animated, Easing, Modal, Switch, Pressable, ScrollView, Alert } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { useDispatch, useSelector } from 'react-redux';
@@ -10,6 +11,7 @@ import { translations } from '../utils/translations';
 import { AudioController } from '../utils/AudioController';
 import { socket } from '../utils/socket';
 import { BET_OPTIONS, ONLINE_TIME_OPTIONS } from '../utils/constants';
+import { useCoinsContext } from '../context/CoinsContext';
 
 // Components
 import GameCard from '../components/common/GameCard';
@@ -32,6 +34,15 @@ const HomeScreen = ({ navigation }) => {
   const [settingsVisible, setSettingsVisible] = useState(false);
   const spinValue = useRef(new Animated.Value(0)).current;
   const pulseValue = useRef(new Animated.Value(1)).current;
+  
+  const { syncBalance } = useCoinsContext();
+
+  useFocusEffect(
+    useCallback(() => {
+      // Synchroniser les coins à chaque fois que l'écran d'accueil est affiché
+      syncBalance();
+    }, [])
+  );
 
   const t = translations[settings.language] || translations.fr;
 

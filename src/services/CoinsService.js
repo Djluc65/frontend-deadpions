@@ -63,11 +63,22 @@ class CoinsService {
             throw new Error(`Solde insuffisant. Manque ${check.manquant} coins.`);
         }
 
+        // Génère un ID unique ou utilise celui fourni pour éviter les doublons
+        // Si metadata.uniqueId est fourni, on l'utilise pour l'idempotence
+        const transactionId = metadata?.uniqueId || `tx_${metadata?.gameId || metadata?.tournamentId || 'gen'}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+
+        // Vérifie si cette transaction existe déjà (Idempotence)
+        const existing = await TransactionService.getTransactionById(transactionId);
+        if (existing) {
+            console.warn('Transaction déjà effectuée, ignorée:', transactionId);
+            return { success: true, nouveauSolde: soldeActuel, transaction: existing, alreadyProcessed: true };
+        }
+
         const nouveauSolde = soldeActuel - montant;
         
         // Créer la transaction
         const transaction = {
-            id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            id: transactionId,
             type: 'DEBIT',
             montant,
             raison,
@@ -87,6 +98,41 @@ class CoinsService {
     }
 
     /**
+     * Réconciliation en cas de désynchronisation
+     * @param {string} userId 
+     * @param {string} token 
+     */
+    static async reconcileBalance(userId, token) {
+        try {
+            // 1. Récupère le solde serveur
+            const response = await fetch(`${API_URL}/users/balance`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            if (!response.ok) return null;
+            
+            const data = await response.json();
+            const serverBalance = data.coins;
+            
+            // 2. Récupère le solde local
+            const localCoins = await AsyncStorage.getItem(this.STORAGE_KEY_COINS);
+            const localBalance = localCoins ? parseInt(localCoins, 10) : 0;
+
+            // 3. Si différence, utilise le serveur comme source de vérité
+            if (serverBalance !== localBalance) {
+                console.warn('Désynchronisation détectée', { serverBalance, localBalance });
+                await AsyncStorage.setItem(this.STORAGE_KEY_COINS, serverBalance.toString());
+                return serverBalance;
+            }
+
+            return localBalance;
+        } catch (error) {
+            console.error('Erreur reconciliation:', error);
+            return null;
+        }
+    }
+
+    /**
      * Crédite des coins
      * @param {number} soldeActuel 
      * @param {number} montant 
@@ -95,10 +141,20 @@ class CoinsService {
      * @returns {Promise<object>} { success, nouveauSolde, transactionId }
      */
     static async crediterCoins(soldeActuel, montant, raison, metadata) {
+        // Idempotence: Génère un ID unique ou utilise celui fourni
+        const transactionId = metadata?.uniqueId || `tx_${metadata?.gameId || metadata?.tournamentId || 'gen'}_credit_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+
+        // Vérifie si cette transaction existe déjà
+        const existing = await TransactionService.getTransactionById(transactionId);
+        if (existing) {
+            console.warn('Transaction (crédit) déjà effectuée, ignorée:', transactionId);
+            return { success: true, nouveauSolde: soldeActuel, transaction: existing, alreadyProcessed: true };
+        }
+
         const nouveauSolde = soldeActuel + montant;
 
         const transaction = {
-            id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            id: transactionId,
             type: 'CREDIT',
             montant,
             raison,
@@ -107,6 +163,45 @@ class CoinsService {
             soldeApres: nouveauSolde,
             timestamp: Date.now(),
             statut: 'COMPLETEE', // Les crédits sont généralement finaux (gains)
+            synchronise: false
+        };
+
+        await TransactionService.ajouterTransaction(transaction);
+        await AsyncStorage.setItem(this.STORAGE_KEY_COINS, nouveauSolde.toString());
+
+        return { success: true, nouveauSolde, transaction };
+    }
+
+    /**
+     * Rembourse une transaction (ex: match nul ou annulé)
+     * @param {number} soldeActuel 
+     * @param {number} montant 
+     * @param {string} raison 
+     * @param {object} metadata 
+     * @returns {Promise<object>} { success, nouveauSolde, transactionId }
+     */
+    static async rembourserTransaction(soldeActuel, montant, raison, metadata) {
+        // Idempotence
+        const transactionId = metadata?.uniqueId || `tx_${metadata?.gameId || metadata?.tournamentId || 'gen'}_refund_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+
+        const existing = await TransactionService.getTransactionById(transactionId);
+        if (existing) {
+             console.warn('Transaction (remboursement) déjà effectuée, ignorée:', transactionId);
+             return { success: true, nouveauSolde: soldeActuel, transaction: existing, alreadyProcessed: true };
+        }
+
+        const nouveauSolde = soldeActuel + montant;
+
+        const transaction = {
+            id: transactionId,
+            type: 'REMBOURSEMENT',
+            montant,
+            raison,
+            metadata,
+            soldeAvant: soldeActuel,
+            soldeApres: nouveauSolde,
+            timestamp: Date.now(),
+            statut: 'COMPLETEE',
             synchronise: false
         };
 

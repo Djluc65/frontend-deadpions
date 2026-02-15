@@ -4,13 +4,13 @@ import { Svg, Defs, LinearGradient, Stop, Path, Polygon, Circle } from 'react-na
 
 const { width } = Dimensions.get('window');
 
-// Images assets (Using existing project assets)
+// Images assets (Utilisation des assets existants du projet)
 const LION_IMG = require('../../assets/avatars2/lion2.png');
 const TIGER_IMG = require('../../assets/avatars2/tigre.png');
 
-const AVATAR_SIZE = 65; // Slightly larger for better visibility
+const AVATAR_SIZE = 65; // Légèrement plus grand pour une meilleure visibilité
 
-// --- Visual Effects Components ---
+// --- Composants d'effets visuels ---
 
 const RadiantGlow = ({ color, anim, intensity }) => (
   <Animated.View style={[
@@ -120,15 +120,15 @@ const CollisionEffect = ({ anim }) => (
 );
 
 const BattleAnimation = () => {
-  // --- Animation Values ---
-  const moveAnim = useRef(new Animated.Value(0)).current;   // 0: Start, 1: Center Clash
-  const popAnim = useRef(new Animated.Value(0)).current;    // 0: Normal, 1: Heads Out
-  const breathAnim = useRef(new Animated.Value(0)).current; // 0: No breath, 1: Attack
-  const collisionAnim = useRef(new Animated.Value(0)).current; // 0: None, 1: Explosion
-  const pulseAnim = useRef(new Animated.Value(0)).current;  // Continuous glow
+  // --- Valeurs d'animation ---
+  const moveAnim = useRef(new Animated.Value(0)).current;   // 0: Début, 1: Affrontement central
+  const popAnim = useRef(new Animated.Value(0)).current;    // 0: Normal, 1: Têtes en avant
+  const breathAnim = useRef(new Animated.Value(0)).current; // 0: Pas de souffle, 1: Attaque
+  const collisionAnim = useRef(new Animated.Value(0)).current; // 0: Aucun, 1: Explosion
+  const pulseAnim = useRef(new Animated.Value(0)).current;  // Lueur continue
 
   useEffect(() => {
-    // 1. Continuous Pulse Loop
+    // 1. Boucle de pulsation continue
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
@@ -136,13 +136,13 @@ const BattleAnimation = () => {
       ])
     ).start();
 
-    // 2. Main Battle Sequence Loop
+    // 2. Boucle de séquence de combat principale
     const battleLoop = Animated.loop(
       Animated.sequence([
-        // State 0: Idle at corners
+        // État 0: Inactif dans les coins
         Animated.delay(1000),
 
-        // Phase 1: Approach (1.2s - Fluid Ease In Out)
+        // Phase 1: Approche (1.2s - Fluide Ease In Out)
         Animated.timing(moveAnim, {
           toValue: 1,
           duration: 1200,
@@ -150,15 +150,15 @@ const BattleAnimation = () => {
           useNativeDriver: true,
         }),
 
-        // Phase 2: Clash & Heads Emerge (Pop)
+        // Phase 2: Choc et émergence des têtes (Pop)
         Animated.parallel([
           Animated.timing(popAnim, {
             toValue: 1,
             duration: 400,
-            easing: Easing.out(Easing.back(1.5)), // Bounce effect
+            easing: Easing.out(Easing.back(1.5)), // Effet de rebond
             useNativeDriver: true,
           }),
-          // Trigger Attacks slightly after pop
+          // Déclencher les attaques légèrement après le pop
           Animated.sequence([
              Animated.delay(100),
              Animated.timing(breathAnim, {
@@ -169,16 +169,16 @@ const BattleAnimation = () => {
           ])
         ]),
 
-        // Phase 3: Collision Explosion
+        // Phase 3: Explosion de collision
         Animated.sequence([
           Animated.timing(collisionAnim, { toValue: 1, duration: 100, useNativeDriver: true }),
           Animated.timing(collisionAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
         ]),
 
-        // Hold / Struggle
+        // Maintien / Lutte
         Animated.delay(800),
 
-        // Phase 4: Retreat
+        // Phase 4: Retraite
         Animated.parallel([
           Animated.timing(moveAnim, {
             toValue: 0,
@@ -198,7 +198,7 @@ const BattleAnimation = () => {
           })
         ]),
 
-        // Rest before next loop
+        // Repos avant la prochaine boucle
         Animated.delay(500),
       ])
     );
@@ -210,27 +210,27 @@ const BattleAnimation = () => {
 
   // --- Interpolations ---
 
-  // Movement: From edges to center
-  // Distance: (Screen Width / 2) - (Avatar Size) - (Safety Margin)
+  // Mouvement: Des bords vers le centre
+  // Distance: (Largeur écran / 2) - (Taille avatar) - (Marge de sécurité)
   const maxTravel = (width / 2) - AVATAR_SIZE - 20; 
   
   const lionTranslateX = moveAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [-maxTravel * 0.5, 30], // Start further left, end near center
+    outputRange: [-maxTravel * 0.5, 30], // Départ plus à gauche, fin près du centre
   });
 
   const tigerTranslateX = moveAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [maxTravel * 0.5, -30], // Start further right, end near center
+    outputRange: [maxTravel * 0.5, -30], // Départ plus à droite, fin près du centre
   });
 
-  // Scale Heads (Pop)
+  // Mise à l'échelle des têtes (Pop)
   const imageScale = popAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [1, 1.5],
   });
 
-  // Tilt heads during attack
+  // Incliner les têtes pendant l'attaque
   const lionRotate = popAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '-15deg'],
@@ -242,7 +242,7 @@ const BattleAnimation = () => {
 
   return (
     <View style={styles.container}>
-      {/* --- LION (Left / Red) --- */}
+      {/* --- LION (Gauche / Rouge) --- */}
       <Animated.View style={[
         styles.fighterContainer,
         {
@@ -266,12 +266,12 @@ const BattleAnimation = () => {
         <FireBreath anim={breathAnim} />
       </Animated.View>
 
-      {/* --- Collision Center --- */}
+      {/* --- Centre de collision --- */}
       <View style={styles.centerZone}>
         <CollisionEffect anim={collisionAnim} />
       </View>
 
-      {/* --- TIGER (Right / Blue) --- */}
+      {/* --- TIGRE (Droite / Bleu) --- */}
       <Animated.View style={[
         styles.fighterContainer,
         {
@@ -301,14 +301,14 @@ const BattleAnimation = () => {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    justifyContent: 'center', // Center alignment
+    justifyContent: 'center', // Alignement central
     alignItems: 'center',
     height: 120,
     width: '100%',
     marginTop: 20,
     marginBottom: 10,
     top: 120,
-    overflow: 'visible', // Allow effects to spill out
+    overflow: 'visible', // Permettre aux effets de dépasser
   },
   fighterContainer: {
     width: AVATAR_SIZE + 10,
@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
-    marginHorizontal: 10, // Initial spacing
+    marginHorizontal: 10, // Espacement initial
   },
   centerZone: {
     position: 'absolute',
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
     height: 60,
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 30, // Top of everything
+    zIndex: 30, // Au-dessus de tout
   },
   collisionContainer: {
     width: '100%',
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
   },
   breathContainer: {
     position: 'absolute',
-    top: AVATAR_SIZE / 2 - 25, // Centered vertically relative to avatar
+    top: AVATAR_SIZE / 2 - 25, // Centré verticalement par rapport à l'avatar
     zIndex: 20,
     width: 100,
     height: 50,

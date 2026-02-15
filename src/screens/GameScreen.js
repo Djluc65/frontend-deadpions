@@ -2,7 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, Dimensions, Alert, ScrollView, Animated, Image, Modal, Keyboard, Platform, Share, ActivityIndicator, FlatList } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { Audio, Video } from 'expo-av';
+import { Audio } from 'expo-av';
+import EmojiAnimation from '../components/EmojiAnimation';
+import LottieView from "lottie-react-native";
 import { useSelector, useDispatch } from 'react-redux';
 import Svg, { Line, Circle, Text as SvgText, Rect, Defs, LinearGradient, RadialGradient, Stop, Path, G } from 'react-native-svg';
 import { PinchGestureHandler, PanGestureHandler, State } from 'react-native-gesture-handler';
@@ -10,7 +12,7 @@ import { API_URL } from '../config';
 import { calculerCoupIA } from '../utils/IAEngine';
 import { socket } from '../utils/socket';
 import { updateUser } from '../redux/slices/authSlice';
-import { setPlayers, updatePlayerCoins, setSpectators } from '../redux/slices/gameSlice';
+import { setPlayers, setSpectators } from '../redux/slices/gameSlice';
 import { toggleSound } from '../redux/slices/settingsSlice';
 import { AudioController } from '../utils/AudioController';
 import { playButtonSound } from '../utils/soundManager';
@@ -20,7 +22,7 @@ import ProfilIA from './ProfilIA';
 import ChatEnLigne from '../components/ChatEnLigne';
 import VoiceChat from '../components/VoiceChat';
 import LiveChatOverlay from '../components/LiveChatOverlay';
-import CoinsFeedback from '../components/CoinsFeedback';
+import { useCoinsContext } from '../context/CoinsContext';
 import PlayerProfileCard from '../components/PlayerProfileCard';
 import CustomAlert from '../components/CustomAlert';
 import VersusAnimation from '../components/VersusAnimation';
@@ -28,8 +30,8 @@ import VersusAnimation from '../components/VersusAnimation';
 const { width, height } = Dimensions.get('window');
 
 // Configuration du plateau
-const COLS = 18; // A à R
-const ROWS = 28; // 1 à 28
+const COLS = 13; // A à M
+const ROWS = 19; // 1 à 19
 const PADDING_LEFT = 35; // Espace pour les numéros
 const PADDING_TOP = 35; // Espace pour les lettres
 const PADDING_RIGHT = 35;
@@ -37,12 +39,12 @@ const PADDING_BOTTOM = 150;
 
 // Calcul de la taille des cellules pour tenir en largeur
 const AVAILABLE_WIDTH = width - PADDING_LEFT - PADDING_RIGHT;
-const CELL_SIZE = AVAILABLE_WIDTH / (COLS - 1);
+const CELL_SIZE = (AVAILABLE_WIDTH / (COLS - 1)) + 5; // +5px comme demandé
 
-const BOARD_WIDTH = width;
+const BOARD_WIDTH = Math.max(width, PADDING_LEFT + (COLS - 1) * CELL_SIZE + PADDING_RIGHT);
 const BOARD_HEIGHT = PADDING_TOP + (ROWS - 1) * CELL_SIZE + PADDING_BOTTOM;
 
-const LETTERS = 'ABCDEFGHIJKLMNOPQR'.split('');
+const LETTERS = 'ABCDEFGHIJKLM'.split('');
 
 const GradientArrow = ({ size }) => (
     <Svg width={size} height={size} viewBox="0 0 100 100">
@@ -146,6 +148,7 @@ const GameScreen = ({ navigation, route }) => {
   }
 
   const dispatch = useDispatch();
+  const { setFeedback, debit, credit, refund } = useCoinsContext();
   const user = useSelector(state => state.auth.user);
   const { players: reduxPlayers, spectators: reduxSpectators } = useSelector(state => state.game);
 
@@ -159,12 +162,14 @@ const GameScreen = ({ navigation, route }) => {
   const playersDataRef = useRef(playersData);
   const timeControlSettingRef = useRef(timeControlSetting);
   const userRef = useRef(user);
+  const boardRef = useRef(board); // Ref for board to access in socket callbacks
   
   useEffect(() => {
       playersDataRef.current = playersData;
       timeControlSettingRef.current = timeControlSetting;
       userRef.current = user;
-  }, [playersData, timeControlSetting, user]);
+      boardRef.current = board;
+  }, [playersData, timeControlSetting, user, board]);
 
   // Check if current user is the White player in Live/Custom modes
   // This allows us to swap positions so the local player is always on the Left (Player 1 slot)
@@ -177,28 +182,6 @@ const GameScreen = ({ navigation, route }) => {
       mode === 'online' ? route.params?.opponent?.coins : 
       ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite) ? playersData?.white?.coins : playersData?.black?.coins
   );
-
-  // Custom Alert State
-  const [customAlert, setCustomAlert] = useState({ visible: false, title: '', message: '', buttons: [] });
-
-  // Versus Animation State
-  const [showVersusAnim, setShowVersusAnim] = useState(false);
-  const hasShownVersus = useRef(false);
-
-  // Trigger animation for Local/AI/Online modes
-  useEffect(() => {
-    // For live mode, only show if opponent is present (not waiting)
-    const isLiveWaiting = mode === 'live' && !params.players?.white;
-    
-    if ((mode === 'local' || mode === 'ai' || mode === 'online' || mode === 'online_custom' || (mode === 'live' && !isLiveWaiting)) && !hasShownVersus.current) {
-        setShowVersusAnim(true);
-        hasShownVersus.current = true;
-    }
-  }, [mode, params.players]);
-
-  const showAlert = (title, message, buttons = []) => {
-      setCustomAlert({ visible: true, title, message, buttons });
-  };
 
   // Define players early to avoid ReferenceError in useEffect
   const player1 = {
@@ -233,6 +216,46 @@ const GameScreen = ({ navigation, route }) => {
         : (mode === 'spectator' || mode === 'online_custom' || mode === 'live') ? (isLocalPlayerWhite ? 'black' : 'white') : 'white'
   };
 
+  // Custom Alert State
+  const [customAlert, setCustomAlert] = useState({ visible: false, title: '', message: '', buttons: [] });
+  
+  // Tournament Next Match Modal State
+  const [nextMatchVisible, setNextMatchVisible] = useState(false);
+    const [nextMatchTimer, setNextMatchTimer] = useState(30);
+    const [hasClickedNextMatch, setHasClickedNextMatch] = useState(false);
+    const nextMatchIntervalRef = useRef(null);
+  const [alertData, setAlertData] = useState(null);
+  const [roundOverData, setRoundOverData] = useState(null);
+
+  // Versus Animation State
+  const [showVersusAnim, setShowVersusAnim] = useState(false);
+  const hasShownVersus = useRef(false);
+
+  // Trigger animation for Local/AI/Online modes
+  useEffect(() => {
+    // Check if players are ready
+    const isPlayer2Ready = player2 && player2.pseudo && player2.pseudo !== 'En attente...';
+    
+    // Logic specific to each mode
+    const shouldShow = 
+        (mode === 'local') || 
+        (mode === 'ai') || 
+        (mode === 'online') || 
+        (mode === 'online_custom' && isPlayer2Ready) || 
+        (mode === 'live' && isPlayer2Ready);
+
+    if (shouldShow && !hasShownVersus.current) {
+        setShowVersusAnim(true);
+        hasShownVersus.current = true;
+    }
+  }, [mode, player2?.pseudo]);
+
+  const showAlert = (title, message, buttons = []) => {
+      setCustomAlert({ visible: true, title, message, buttons });
+  };
+
+
+
   // Disable swipe back on iOS to prevent accidental exit
   useEffect(() => {
     navigation.setOptions({
@@ -240,36 +263,52 @@ const GameScreen = ({ navigation, route }) => {
     });
   }, [navigation]);
 
-  // Sync Redux user coins with game params if available (fixes initial display after bet)
+  // Synchroniser les pièces utilisateur Redux avec les paramètres de jeu si disponibles (corrige l'affichage initial après la mise)
   useEffect(() => {
     if ((mode === 'online' || mode === 'online_custom' || mode === 'live') && params.players) {
         const myId = user?._id || user?.id;
         let myGameCoins = null;
         
-        // Find my coins in params.players
+        // Trouver mes pièces dans params.players
         if (getPlayerId(params.players.black)?.toString() === myId?.toString()) {
             myGameCoins = params.players.black.coins;
         } else if (getPlayerId(params.players.white)?.toString() === myId?.toString()) {
             myGameCoins = params.players.white.coins;
         }
 
-        // If found and different from current user coins, update Redux
+        // Si trouvé et différent des pièces utilisateur actuelles, mettre à jour Redux
         if (myGameCoins !== null && myGameCoins !== undefined && user?.coins !== myGameCoins) {
             console.log(`[GameScreen] Syncing initial coins from params: ${user?.coins} -> ${myGameCoins}`);
             dispatch(updateUser({ coins: myGameCoins }));
         }
     }
-  }, [params.players, user?.coins, mode]);
+  }, [params.players, mode]);
 
     // EFFET : Déduction de la mise pour le mode IA
     useEffect(() => {
         if ((mode === 'ai' || mode === 'ia') && params.betAmount > 0) {
-            // Déduire la mise au début de la partie
-            dispatch(updateUser({ coins: user.coins - params.betAmount }));
+            const isTournament = params.configIA?.mode === 'tournament';
+            const gameNumber = params.configIA?.tournamentSettings?.gameNumber || 1;
+            
+            // Si c'est un tournoi, on ne paie qu'au premier match
+            if (isTournament && gameNumber > 1) {
+                return;
+            }
+
+            // Déduire la mise au début de la partie (ou du tournoi)
+            debit(params.betAmount, isTournament ? 'Inscription Tournoi IA' : 'Mise partie IA', { 
+                gameId: params.gameId || 'local_ia',
+                mode: 'ia',
+                isTournament
+            }).catch(err => {
+                console.error('Erreur débit IA:', err);
+                Alert.alert('Erreur', 'Impossible de débiter la mise.');
+                navigation.goBack();
+            });
         }
     }, []);
 
-  // Initialize Redux game state
+  // Initialiser l'état du jeu Redux
   useEffect(() => {
       dispatch(setPlayers({
           me: {
@@ -291,10 +330,10 @@ const GameScreen = ({ navigation, route }) => {
   const { isSoundEnabled, isMusicEnabled } = useSelector(state => state.settings || {});
   const [board, setBoard] = useState([]); // Array of { row, col, player }
   
-  // Pre-selection state
+  // État de pré-sélection
   const [selectedCell, setSelectedCell] = useState(null); // { row, col }
 
-  // Clear selection when turn changes or game ends
+  // Effacer la sélection au changement de tour ou fin de partie
   useEffect(() => {
       setSelectedCell(null);
   }, [currentPlayer, gameOver, mode]);
@@ -341,16 +380,47 @@ const GameScreen = ({ navigation, route }) => {
              console.log('New Game ID detected, reloading screen...');
              isRematching.current = true;
              AudioController.setRematchMode(true);
+
+             // Calculer le nouvel adversaire pour mettre à jour les coins dans les params
+             const pBlack = data.players.black;
+             const pWhite = data.players.white;
+             // Utiliser currentUserId pour identifier l'adversaire
+             const isBlackMe = (pBlack.id || pBlack._id)?.toString() === currentUserId?.toString();
+             const newOpponent = isBlackMe ? pWhite : pBlack;
+
              navigation.replace('Game', {
                  ...params, 
                  gameId: data.gameId,
                  players: data.players,
+                 opponent: newOpponent,
                  betAmount: data.betAmount,
                  timeControl: data.timeControl,
                  tournamentSettings: data.tournamentSettings,
                  currentTurn: data.currentTurn
              });
              return;
+        }
+
+        // Handle same game ID (e.g. initial game start for creator)
+        console.log('Game started with same ID, updating local state...');
+        if (data.players) {
+            setPlayersData(data.players);
+            
+            // Also update opponent coins
+            const pBlack = data.players.black;
+            const pWhite = data.players.white;
+            const isBlackMe = (pBlack.id || pBlack._id)?.toString() === currentUserId?.toString();
+            const opponent = isBlackMe ? pWhite : pBlack;
+            if (opponent) {
+                setOpponentCoins(opponent.coins);
+            }
+            
+            // Update Redux
+            dispatch(setPlayers(data.players));
+        }
+        
+        if (data.timeControl) {
+            setTimeControlSetting(data.timeControl);
         }
     };
 
@@ -371,7 +441,6 @@ const GameScreen = ({ navigation, route }) => {
   
   // Keyboard handling for chat modal
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [feedback, setFeedback] = useState({ visible: false, amount: 0 });
 
   useEffect(() => {
     const keyboardShowEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -587,10 +656,19 @@ const GameScreen = ({ navigation, route }) => {
              console.log('New Game ID detected, reloading screen...');
              isRematching.current = true;
              AudioController.setRematchMode(true);
+
+             // Calculer le nouvel adversaire pour mettre à jour les coins dans les params
+             const pBlack = data.players.black;
+             const pWhite = data.players.white;
+             // Utiliser currentUserId pour identifier l'adversaire
+             const isBlackMe = (pBlack.id || pBlack._id)?.toString() === currentUserId?.toString();
+             const newOpponent = isBlackMe ? pWhite : pBlack;
+
              navigation.replace('Game', {
                  ...params, 
                  gameId: data.gameId,
                  players: data.players,
+                 opponent: newOpponent,
                  betAmount: data.betAmount,
                  timeControl: data.timeControl,
                  tournamentSettings: data.tournamentSettings,
@@ -640,6 +718,10 @@ const GameScreen = ({ navigation, route }) => {
       });
       
       setCurrentPlayer(nextTurn);
+      if (nextTurn === null) {
+          setWaitingForNextRound(true); // Lock board immediately while waiting for game/round over event
+      }
+
       if (timeControl) setTimeLeft(timeControl);
 
       if (newAutoPlayCount !== undefined) {
@@ -665,9 +747,7 @@ const GameScreen = ({ navigation, route }) => {
              setOpponentCoins(data.updatedCoins[opponentId]);
           }
           
-          Object.entries(data.updatedCoins).forEach(([playerId, coins]) => {
-              dispatch(updatePlayerCoins({ playerId, coins }));
-          });
+
       }
 
       if (data.reason !== 'timeout' && data.reason !== 'resign') {
@@ -677,7 +757,9 @@ const GameScreen = ({ navigation, route }) => {
       const isWinner = data.winnerId?.toString() === (user?._id || user?.id).toString();
       
       if (isWinner && data.gains > 0) {
-          setFeedback({ visible: true, amount: data.gains });
+          setFeedback({ visible: true, amount: data.gains, type: 'CREDIT' });
+      } else if (data.reason === 'draw' && (params.betAmount || 0) > 0) {
+          setFeedback({ visible: true, amount: params.betAmount || 0, type: 'REMBOURSEMENT' });
       }
 
       setTimeout(() => {
@@ -771,34 +853,48 @@ const GameScreen = ({ navigation, route }) => {
     };
 
     const handleRoundOver = (data) => {
+        setRoundOverData(data);
+        setWaitingForNextRound(false);
+
+        // Calculate winning line for visual effect
+        if (data.winner) {
+            const currentBoard = boardRef.current;
+            const playerStones = currentBoard.filter(s => s.player === data.winner);
+            for (let s of playerStones) {
+                const line = checkWinner(s.row, s.col, data.winner, currentBoard);
+                if (line) {
+                    setWinningLine(line);
+                    break;
+                }
+            }
+        }
+        setWinner(data.winner);
+        setGameOver(true);
+
         setTimeout(() => {
-             showAlert(
-                `Match ${data.nextGameNumber - 1} terminé`,
-                `${data.winner === 'black' ? (params.players?.black?.pseudo || 'Joueur 1') : (params.players?.white?.pseudo || 'Joueur 2')} gagne ! \nScore: ${data.score.black} - ${data.score.white}`,
-                [
-                    { 
-                        text: "Match Suivant", 
-                        onPress: () => {
-                            playButtonSound();
-                            isRematching.current = true;
-                            AudioController.setRematchMode(true);
-                            setBoard([]);
-                            setTournamentScore(data.score);
-                            setTournamentGameNumber(data.nextGameNumber);
-                            setWinningLine(null);
-                            setDernierCoupIA(null);
-                            
-                            setWaitingForNextRound(true);
-                            setCurrentPlayer(null); 
-                            
-                            socket.emit('player_ready_next_round', {
-                                gameId: params.gameId,
-                                userId: user._id
-                            });
-                        }
-                    }
-                ]
-             );
+             setAlertData({ 
+                 title: `Match ${data.nextGameNumber - 1} terminé`, 
+                 message: `${data.winner === 'black' 
+                     ? (params.players?.black?.pseudo || 'Joueur 1') 
+                     : (params.players?.white?.pseudo || 'Joueur 2') 
+                 } gagne ! \nScore: ${data.score.black} - ${data.score.white}` 
+             }); 
+         
+             setNextMatchVisible(true); 
+             
+             // Start 30s timer
+             setNextMatchTimer(30);
+             setHasClickedNextMatch(false);
+             if (nextMatchIntervalRef.current) clearInterval(nextMatchIntervalRef.current);
+             nextMatchIntervalRef.current = setInterval(() => {
+                 setNextMatchTimer(prev => {
+                     if (prev <= 1) {
+                         clearInterval(nextMatchIntervalRef.current);
+                         return 0;
+                     }
+                     return prev - 1;
+                 });
+             }, 1000);
         }, 500);
     };
 
@@ -809,6 +905,15 @@ const GameScreen = ({ navigation, route }) => {
         setTournamentGameNumber(data.nextGameNumber);
         setCurrentPlayer(data.nextTurn);
         if (data.timeControl) setTimeLeft(data.timeControl);
+
+        // Reset game state for next round
+        setGameOver(false);
+        setWinner(null);
+        setWinningLine(null);
+        
+        // Stop next match timer
+        if (nextMatchIntervalRef.current) clearInterval(nextMatchIntervalRef.current);
+        setNextMatchVisible(false);
     };
 
     const handleTournamentOver = (data) => {
@@ -816,6 +921,21 @@ const GameScreen = ({ navigation, route }) => {
         setWaitingForNextRound(false);
         if (data.winner) setWinner(data.winner);
         
+        // Handle coin updates
+        if (data.updatedCoins) {
+            const myId = user?._id || user?.id;
+            const opponentId = player2.id;
+
+            if (data.updatedCoins[myId] !== undefined) {
+               dispatch(updateUser({ coins: data.updatedCoins[myId] }));
+            }
+            if (data.updatedCoins[opponentId] !== undefined) {
+               setOpponentCoins(data.updatedCoins[opponentId]);
+            }
+            
+
+        }
+
         if (data.reason !== 'timeout' && data.reason !== 'resign') {
              AudioController.playVictorySound(isSoundEnabled);
         }
@@ -839,13 +959,13 @@ const GameScreen = ({ navigation, route }) => {
         }, 1500);
     };
 
-    const handleGameRejoined = (data) => {
-        console.log('Game rejoined:', data);
-        if (data.board) setBoard(data.board);
-        if (data.currentTurn) setCurrentPlayer(data.currentTurn);
-        if (data.timeControl) setTimeLeft(data.timeControl);
-        if (data.players) setPlayersData(data.players);
-    };
+    // const handleGameRejoined = (data) => {
+    //     console.log('Game rejoined:', data);
+    //     if (data.board) setBoard(data.board);
+    //     if (data.currentTurn) setCurrentPlayer(data.currentTurn);
+    //     if (data.timeControl) setTimeLeft(data.timeControl);
+    //     if (data.players) setPlayersData(data.players);
+    // };
 
     const handleSocketError = (msg) => {
         console.log('Socket error:', msg);
@@ -856,6 +976,32 @@ const GameScreen = ({ navigation, route }) => {
         } else {
              // Alert.alert('Erreur', msg);
         }
+    };
+
+    const handleTournamentAutoWin = (data) => {
+        if (nextMatchIntervalRef.current) clearInterval(nextMatchIntervalRef.current);
+        setNextMatchVisible(false);
+        handleTournamentOver({
+            winner: data.winner,
+            winnerId: data.winnerId,
+            reason: data.reason,
+            gains: data.gains,
+            updatedCoins: data.updatedCoins,
+            score: data.score
+        });
+    };
+
+    const handleTournamentDraw = (data) => {
+        if (nextMatchIntervalRef.current) clearInterval(nextMatchIntervalRef.current);
+        setNextMatchVisible(false);
+        handleTournamentOver({
+            winner: null,
+            winnerId: null,
+            reason: 'draw_timeout',
+            updatedCoins: data.updatedCoins,
+            score: data.score,
+            gains: 0
+        });
     };
 
     const handleLiveRoomClosed = () => {
@@ -894,7 +1040,7 @@ const GameScreen = ({ navigation, route }) => {
 
     socket.on('spectator_joined', handleSpectatorJoined);
     socket.on('game_start', handleGameStart);
-    socket.on('game_rejoined', handleGameRejoined);
+    // socket.on('game_rejoined', handleGameRejoined);
     socket.on('move_made', handleMoveMade);
     socket.on('game_over', handleGameOver);
     socket.on('opponent_disconnected', handleOpponentDisconnected);
@@ -906,23 +1052,27 @@ const GameScreen = ({ navigation, route }) => {
     socket.on('round_over', handleRoundOver);
     socket.on('start_next_round', handleStartNextRound);
     socket.on('tournament_over', handleTournamentOver);
+    socket.on('tournament_auto_win', handleTournamentAutoWin);
+    socket.on('tournament_draw', handleTournamentDraw);
     socket.on('error', handleSocketError);
 
     return () => {
       socket.off('spectator_joined', handleSpectatorJoined);
-    socket.off('game_start', handleGameStart);
-    socket.off('game_rejoined', handleGameRejoined);
-    socket.off('move_made', handleMoveMade);
-    socket.off('game_over', handleGameOver);
-    socket.off('opponent_disconnected', handleOpponentDisconnected);
-    socket.off('opponent_left_live', handleOpponentLeftLive);
-    socket.off('live_room_closed', handleLiveRoomClosed);
-    socket.off('balance_updated', handleBalanceUpdated);
+      socket.off('game_start', handleGameStart);
+    //   socket.off('game_rejoined', handleGameRejoined);
+      socket.off('move_made', handleMoveMade);
+      socket.off('game_over', handleGameOver);
+      socket.off('opponent_disconnected', handleOpponentDisconnected);
+      socket.off('opponent_left_live', handleOpponentLeftLive);
+      socket.off('live_room_closed', handleLiveRoomClosed);
+      socket.off('balance_updated', handleBalanceUpdated);
       socket.off('MESSAGE_TEXTE', handleMessageTexte);
       socket.off('MESSAGE_EMOJI', handleMessageEmoji);
       socket.off('round_over', handleRoundOver);
       socket.off('start_next_round', handleStartNextRound);
       socket.off('tournament_over', handleTournamentOver);
+      socket.off('tournament_auto_win', handleTournamentAutoWin);
+      socket.off('tournament_draw', handleTournamentDraw);
       socket.off('error', handleSocketError);
     };
   }, [mode, navigation, user, isSoundEnabled, player1.id, player2.id]);
@@ -1635,13 +1785,9 @@ const GameScreen = ({ navigation, route }) => {
           <View style={styles.bubbleContainer}>
               {bubbleMessage.type === 'emoji' ? (
                   getEmojiSource(bubbleMessage.content) ? (
-                    <Video
+                    <EmojiAnimation
                         source={getEmojiSource(bubbleMessage.content)}
                         style={{ width: 60, height: 60 }}
-                        resizeMode="contain"
-                        shouldPlay
-                        isLooping={true}
-                        isMuted={true}
                     />
                   ) : (
                     <Text style={styles.bubbleEmoji}>{bubbleMessage.content}</Text>
@@ -1670,6 +1816,41 @@ const GameScreen = ({ navigation, route }) => {
   const onPinchHandlerStateChange = event => {
     if (event.nativeEvent.oldState === State.ACTIVE) {
       lastScale.current *= event.nativeEvent.scale;
+
+      // ✨ NOUVELLE LOGIQUE : Si l'utilisateur dézoome en dessous de 1, retour à l'état initial
+      if (lastScale.current <= 1) {
+        lastScale.current = 1;
+        baseScale.setValue(1);
+        pinchScale.setValue(1);
+        setIsPanEnabled(false);
+
+        // Réinitialiser la position à (0, 0) - position initiale
+        lastOffset.current = { x: 0, y: 0 };
+
+        translateX.flattenOffset();
+        translateY.flattenOffset();
+
+        Animated.parallel([
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+            friction: 5,
+          }),
+          Animated.spring(translateY, {
+            toValue: 0,
+            useNativeDriver: true,
+            friction: 5,
+          })
+        ]).start(() => {
+          translateX.setOffset(0);
+          translateX.setValue(0);
+          translateY.setOffset(0);
+          translateY.setValue(0);
+        });
+
+        return; // On arrête ici, pas besoin du reste du code
+      }
+
       // Limiter le zoom entre 1x (taille normale) et 3x
       lastScale.current = Math.max(1, Math.min(lastScale.current, 3));
       baseScale.setValue(lastScale.current);
@@ -2058,6 +2239,7 @@ const GameScreen = ({ navigation, route }) => {
 
   const handlePress = (row, col) => {
     if (gameOver) return;
+    if (waitingForNextRound) return; // Prevent moves while waiting for next round/game over
     if (mode === 'spectator') return;
     
     // En mode IA, bloquer les clics pendant le tour de l'IA
@@ -2225,11 +2407,29 @@ const GameScreen = ({ navigation, route }) => {
             };
 
             // Calcul des gains (Mise * 1.9 pour 90% de profit)
-            const profit = Math.floor((params.betAmount || 0) * 0.9);
-            const totalReturn = (params.betAmount || 0) + profit;
+            // Modification pour synchronisation globale et tournoi
+            let profit = 0;
+            let totalReturn = 0;
             
-            if (params.betAmount > 0) {
-                dispatch(updateUser({ coins: user.coins + totalReturn }));
+            const userColor = configIA.couleurs.joueur;
+            const iaColor = configIA.couleurs.ia;
+            
+            const didUserWinGame = currentPlayer === userColor;
+            const isUserWinnerOfTournament = newScore[userColor] > newScore[iaColor];
+            
+            const shouldAwardGains = (!isTournament && didUserWinGame) || (isTournament && tournamentOver && isUserWinnerOfTournament);
+
+            if (shouldAwardGains) {
+                profit = Math.floor((params.betAmount || 0) * 0.9);
+                totalReturn = (params.betAmount || 0) + profit;
+            }
+            
+            if (params.betAmount > 0 && totalReturn > 0) {
+                credit(totalReturn, isTournament ? 'Victoire Tournoi IA' : 'Victoire IA', { 
+                    gameId: params.gameId || 'local_ia',
+                    mode: 'ia',
+                    isTournament
+                }).catch(err => console.error('Erreur credit gain IA:', err));
             }
 
             setResultData({
@@ -2415,6 +2615,11 @@ const GameScreen = ({ navigation, route }) => {
                          score: tournamentOver ? { black: 0, white: 0 } : newScore
                      } : null
                  };
+
+                 if (params.betAmount > 0) {
+                     refund(params.betAmount, 'Remboursement Match Nul IA', { gameId: params.gameId || 'local_ia' })
+                         .catch(err => console.error('Erreur remboursement IA:', err));
+                 }
 
                  setResultData({
                      victoire: false,
@@ -2936,7 +3141,9 @@ const GameScreen = ({ navigation, route }) => {
                 <Text style={{ color: '#fff', fontWeight: 'bold' }}>👁️ Mode Spectateur</Text>
             </View>
         )}
-        {mode === 'local' ? (
+        
+        {!nextMatchVisible && (
+        mode === 'local' ? (
              // MODE LOCAL : Joueur 2 (Haut Droite Inversé)
              <View style={[styles.headerIA, { justifyContent: localConfig?.mode === 'tournament' ? 'space-between' : 'flex-end', alignItems: 'center' }]}>
                  {localConfig?.mode === 'tournament' && (
@@ -3005,7 +3212,7 @@ const GameScreen = ({ navigation, route }) => {
                 </View>
             </View>
             )
-        )}
+        ))}
       </View>
       
       {/* Indicateur du tour actuel en mode IA */}
@@ -3019,10 +3226,10 @@ const GameScreen = ({ navigation, route }) => {
           </View>
       )} */}
 
-      <View style={[styles.boardContainer, (mode === 'online' || mode === 'live') && { marginTop: gameOver ? -50 : 40 }]} onLayout={(e) => containerDimensions.current = e.nativeEvent.layout}>
+      <View style={[styles.boardContainer, (mode === 'online' || mode === 'live') && { marginTop: gameOver ? -50 : (nextMatchVisible ? 0 : 70) }]} onLayout={(e) => containerDimensions.current = e.nativeEvent.layout}>
         {waitingForNextRound && (
             <View style={styles.waitingOverlay}>
-                <ActivityIndicator size="large" color="#f1c40f" />
+                <ActivityIndicator style={styles.indicator} size="large" color="#fdd300ff" />
                 <Text style={styles.waitingText}>En attente de l'adversaire...</Text>
             </View>
         )}
@@ -3099,10 +3306,10 @@ const GameScreen = ({ navigation, route }) => {
                     );
                 })}
 
-                {/* Lignes horizontales et Numéros (1-30) */}
+                {/* Lignes horizontales et Numéros (1-28) */}
                 {Array.from({ length: ROWS }).map((_, i) => {
                     const y = PADDING_TOP + i * CELL_SIZE;
-                    const isRedRow = [0, 6, 12, 18, 24].includes(i);
+                    const isRedRow = [0, 6, 12, 18].includes(i);
                     return (
                         <React.Fragment key={`h-${i}`}>
                             <SvgText
@@ -3151,7 +3358,27 @@ const GameScreen = ({ navigation, route }) => {
                   ))
                 )}
 
-                {/* Pions placés */}
+                {/* Highlight Winning Line (Drawn BEFORE pawns so it is UNDER them) */}
+                {winningLine && winningLine.length > 0 && (() => {
+                    const sorted = [...winningLine].sort((a, b) => a.row - b.row || a.col - b.col);
+                    const start = sorted[0];
+                    const end = sorted[sorted.length - 1];
+                    const x1 = PADDING_LEFT + start.col * CELL_SIZE;
+                    const y1 = PADDING_TOP + start.row * CELL_SIZE;
+                    const x2 = PADDING_LEFT + end.col * CELL_SIZE;
+                    const y2 = PADDING_TOP + end.row * CELL_SIZE;
+                    
+                    return (
+                        <Line
+                            x1={x1} y1={y1} x2={x2} y2={y2}
+                            stroke="#000000"
+                            strokeWidth="10"
+                            strokeLinecap="round"
+                        />
+                    );
+                })()}
+
+                {/* Pions placés */ }
                 {board.map((stone, index) => {
                   const cx = PADDING_LEFT + stone.col * CELL_SIZE;
                   const cy = PADDING_TOP + stone.row * CELL_SIZE;
@@ -3217,29 +3444,7 @@ const GameScreen = ({ navigation, route }) => {
                     })()
                 )}
 
-                {/* Highlight Winning Line */}
-                {winningLine && winningLine.length > 0 && (() => {
-                    const sorted = [...winningLine].sort((a, b) => a.row - b.row || a.col - b.col);
-                    const start = sorted[0];
-                    const end = sorted[sorted.length - 1];
-                    const x1 = PADDING_LEFT + start.col * CELL_SIZE;
-                    const y1 = PADDING_TOP + start.row * CELL_SIZE;
-                    const x2 = PADDING_LEFT + end.col * CELL_SIZE;
-                    const y2 = PADDING_TOP + end.row * CELL_SIZE;
-                    
-                    return (
-                        <React.Fragment>
-                        <Line
-                            x1={x1} y1={y1} x2={x2} y2={y2}
-                            stroke="#000000"
-                            strokeWidth="4"
-                            strokeLinecap="round"
-                        />
-                        {/* Animated Skull on the 5th winning pawn (last placed in the winning line) */}
-                        {/* Skull is now handled by Animated.View overlay below Svg */}
-                        </React.Fragment>
-                    );
-                })()}
+
 
                 {/* Highlight du dernier coup de l'IA */}
                 {dernierCoupIA && configIA?.animationsActives && (
@@ -3271,7 +3476,7 @@ const GameScreen = ({ navigation, route }) => {
                                    top: cy - size / 2,
                                    width: size,
                                    height: size,
-                                   fontSize: size * 0.8,
+                                   fontSize: size * 0.6,
                                    textAlign: 'center',
                                    textAlignVertical: 'center',
                                    lineHeight: size, // Helps centering vertically on iOS
@@ -3482,14 +3687,79 @@ const GameScreen = ({ navigation, route }) => {
           </View>
       )}
 
-      <CoinsFeedback 
-          visible={feedback.visible} 
-          amount={feedback.amount} 
-          onFinish={() => setFeedback({ visible: false, amount: 0 })}
-      />
       {renderInviteModal()}
       {renderResultModal()}
       {renderFloatingMenu()}
+
+      <Modal 
+        transparent 
+        visible={nextMatchVisible} 
+        animationType="fade"
+      > 
+        {/* We use a pointerEvents="box-none" view to allow clicking through to the board if needed, 
+            but here we want to block interaction on the board. 
+            However, we DON'T want a dimming overlay. So backgroundColor is transparent. */}
+        <View style={[styles.overlay, { backgroundColor: 'transparent', justifyContent: 'flex-end', paddingBottom: 20 }]}> 
+          <View style={[styles.customAlertContainer, { 
+              width: '90%', 
+              marginBottom: 20, 
+              top: 0, 
+              backgroundColor: '#041c55', 
+              borderColor: '#f1c40f',
+              borderWidth: 2,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.25,
+              shadowRadius: 4,
+              elevation: 5
+          }]}> 
+            
+            <Text style={styles.alertTitle}> 
+              {alertData?.title} 
+            </Text> 
+      
+            <Text style={styles.alertMessage}> 
+              {alertData?.message} 
+            </Text> 
+            
+            <Text style={{ color: '#fbbf24', fontSize: 18, marginVertical: 10, textAlign: 'center', fontWeight: 'bold' }}>
+              {nextMatchTimer > 0 ? `Temps restant: ${nextMatchTimer}s` : 'Temps écoulé'}
+            </Text>
+      
+            <TouchableOpacity 
+              style={[styles.nextMatchButton, hasClickedNextMatch && { opacity: 0.5, backgroundColor: '#555' }]} 
+              disabled={hasClickedNextMatch}
+              onPress={() => { 
+                  playButtonSound(); 
+                  setHasClickedNextMatch(true);
+                  isRematching.current = true; 
+                  AudioController.setRematchMode(true); 
+                  
+                  // We do NOT clear board here, to keep winning line visible until next round starts
+                  // setBoard([]); 
+                  // setWinningLine(null);
+                  // setDernierCoupIA(null); 
+      
+                  setWaitingForNextRound(true); 
+                  setCurrentPlayer(null); 
+      
+                  socket.emit('player_ready_next_round', { 
+                      gameId: params.gameId, 
+                      userId: user._id 
+                  }); 
+                  
+                  // Keep modal open to show timer/waiting status
+                  // setNextMatchVisible(false); 
+              }} 
+            > 
+              <Text style={styles.nextMatchButtonText}> 
+                {hasClickedNextMatch ? 'En attente...' : 'Match Suivant'}
+              </Text> 
+            </TouchableOpacity> 
+      
+          </View> 
+        </View> 
+      </Modal>
 
       <CustomAlert 
           visible={customAlert.visible}
@@ -4025,17 +4295,22 @@ const styles = StyleSheet.create({
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.7)',
+      backgroundColor: 'rgba(0, 0, 0, 0.83)',
       justifyContent: 'center',
       alignItems: 'center',
       zIndex: 1000,
       borderRadius: 10,
   },
   waitingText: {
-      color: '#fff',
+      color: '#ffffffc9',
       fontSize: 18,
       fontWeight: 'bold',
       marginTop: 20,
+      top: 30,
+  },
+
+  indicator: {
+    top: 30,
   },
   // Chat Styles
   chatFab: {
@@ -4329,7 +4604,48 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
-  
+  overlay: { 
+     flex: 1, 
+     backgroundColor: "rgba(0,0,0,0.6)", 
+     justifyContent: "center", 
+     alignItems: "center"
+   }, 
+ 
+   customAlertContainer: { 
+     width: "85%", 
+     backgroundColor: "#1e1e1e", 
+     borderRadius: 15, 
+     padding: 20, 
+     alignItems: "center", 
+     borderWidth: 2, 
+     borderColor: "#FFD700",
+     top: 320 
+   }, 
+ 
+   alertTitle: { 
+     fontSize: 18, 
+     fontWeight: "bold", 
+     color: "#FFD700", 
+     marginBottom: 10 
+   }, 
+ 
+   alertMessage: { 
+     color: "#fff", 
+     textAlign: "center", 
+     marginBottom: 20 
+   }, 
+ 
+   nextMatchButton: { 
+     backgroundColor: "#FFD700", 
+     paddingVertical: 10, 
+     paddingHorizontal: 25, 
+     borderRadius: 10 
+   }, 
+ 
+   nextMatchButtonText: { 
+     fontWeight: "bold", 
+     color: "#000" 
+   }
 });
 
 export default GameScreen;

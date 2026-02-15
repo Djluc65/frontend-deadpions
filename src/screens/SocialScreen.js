@@ -577,6 +577,7 @@ const SocialScreen = ({ navigation }) => {
           accepted: true,
           betAmount: incomingInvite.betAmount,
           timeControl: incomingInvite.timeControl,
+          gameId: incomingInvite.gameId,
           mode: incomingInvite.mode,
           seriesLength: incomingInvite.seriesLength
       });

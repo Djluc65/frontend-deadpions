@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
-import { Video } from 'expo-av';
+import EmojiAnimation from './EmojiAnimation';
 import { emojisDisponibles, getEmojiSource } from '../utils/emojis';
 
 const ChatEnLigne = ({ 
@@ -196,13 +196,9 @@ const ChatEnLigne = ({
                 ]}
               >
                 {source ? (
-                    <Video
+                    <EmojiAnimation
                         source={source}
-                        style={{ width: 80, height: 80 }}
-                        resizeMode="contain"
-                        shouldPlay
-                        isLooping={true}
-                        isMuted={true}
+                        style={{ width: 24, height: 24 }}
                     />
                 ) : (
                     <Text style={styles.emojiHistoriqueEmoji}>{msg.contenu}</Text>
@@ -227,13 +223,9 @@ const ChatEnLigne = ({
               onPress={() => envoyerEmoji(emojiData)}
               activeOpacity={0.7}
             >
-              <Video
+              <EmojiAnimation
                   source={emojiData.source}
                   style={{ width: '100%', height: '100%' }}
-                  resizeMode="contain"
-                  shouldPlay={true}
-                  isLooping={true}
-                  isMuted={true}
               />
             </TouchableOpacity>
           ))}

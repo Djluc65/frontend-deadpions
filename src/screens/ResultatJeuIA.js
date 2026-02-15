@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { CommonActions } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -85,7 +86,12 @@ const ResultatJeuIA = ({ route, navigation }) => {
           
           <TouchableOpacity
             style={styles.boutonMenu}
-            onPress={() => navigation.navigate('Home')}
+            onPress={() => navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [{ name: 'Home' }],
+              })
+            )}
           >
             <Text style={styles.boutonTexteMenu}>🏠 Menu</Text>
           </TouchableOpacity>

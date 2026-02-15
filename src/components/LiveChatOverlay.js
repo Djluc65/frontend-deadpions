@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Animated, Dimensions, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Video } from 'expo-av';
+import EmojiAnimation from './EmojiAnimation';
 import { getEmojiSource } from '../utils/emojis';
 
 const { width, height } = Dimensions.get('window');
@@ -77,13 +77,9 @@ const LiveChatOverlay = ({
                             <Text style={styles.messageAuthor}>{item.auteur}: </Text>
                             {item.type === 'emoji' ? (
                                 getEmojiSource(item.contenu) ? (
-                                    <Video
+                                    <EmojiAnimation
                                         source={getEmojiSource(item.contenu)}
                                         style={{ width: 24, height: 24 }}
-                                        resizeMode="contain"
-                                        shouldPlay
-                                        isLooping={true}
-                                        isMuted={true}
                                     />
                                 ) : (
                                     <Text style={styles.messageEmoji}>{item.contenu}</Text>
@@ -184,13 +180,9 @@ const FloatingEmoji = ({ emoji, startX }) => {
             }
         ]}>
             {source ? (
-                 <Video
+                 <EmojiAnimation
                     source={source}
                     style={{ width: 60, height: 60 }}
-                    resizeMode="contain"
-                    shouldPlay
-                    isLooping={true}
-                    isMuted={true}
                 />
             ) : (
                 <Text style={styles.floatingEmojiText}>{emoji}</Text>

@@ -15,21 +15,6 @@ const gameSlice = createSlice({
     setPlayers(state, action) {
       state.players = action.payload;
     },
-    updatePlayerCoins(state, action) {
-      const { playerId, coins } = action.payload;
-
-      if (state.players.me?.id?.toString() === playerId?.toString()) {
-        state.players.me.coins = coins;
-      }
-      if (state.players.opponent?.id?.toString() === playerId?.toString()) {
-        state.players.opponent.coins = coins;
-      }
-      
-      // Update spectators if needed
-      state.spectators = state.spectators.map(s => 
-        s.id?.toString() === playerId?.toString() ? { ...s, coins } : s
-      );
-    },
     setSpectators(state, action) {
       state.spectators = action.payload;
     },
@@ -44,7 +29,6 @@ const gameSlice = createSlice({
 
 export const {
   setPlayers,
-  updatePlayerCoins,
   setSpectators,
   addSpectator,
   removeSpectator

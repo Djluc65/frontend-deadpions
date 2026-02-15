@@ -1,15 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ImageBackground, Alert, TouchableOpacity, Image, ScrollView, Modal, FlatList, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateUser, logout } from '../redux/slices/authSlice';
+import { useCoinsContext } from '../context/CoinsContext';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
+import SyncIndicator from '../components/SyncIndicator';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { playButtonSound } from '../utils/soundManager';
 import { API_URL } from '../config';
 import { COUNTRIES } from '../utils/countries';
 import { PREMIUM_AVATARS, getAvatarSource } from '../utils/avatarUtils';
+import TransactionService from '../services/TransactionService';
 
 // Note: PREMIUM_AVATARS is imported from utils, do not redeclare it here.
 
@@ -28,6 +32,8 @@ const ProfileScreen = ({ navigation }) => {
   const token = useSelector(state => state.auth.token);
   const dispatch = useDispatch();
   
+  const { refreshBalance } = useCoinsContext();
+  
   const [pseudo, setPseudo] = useState(user?.pseudo || '');
   const [email, setEmail] = useState(user?.email || '');
   const [selectedAvatar, setSelectedAvatar] = useState(user?.avatar || null);
@@ -37,6 +43,19 @@ const ProfileScreen = ({ navigation }) => {
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [showCountryModal, setShowCountryModal] = useState(false);
   const [imageUri, setImageUri] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadTransactions();
+      refreshBalance();
+    }, [])
+  );
+
+  const loadTransactions = async () => {
+      const history = await TransactionService.getHistory();
+      setTransactions(history);
+  };
 
   const filteredCountries = COUNTRIES.filter(country => 
     country.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -293,6 +312,57 @@ const ProfileScreen = ({ navigation }) => {
                   <Text style={styles.statLabel}>Coins</Text>
                 </View>
              </View>
+             
+             <SyncIndicator />
+          </View>
+
+          <View style={styles.historySection}>
+            <Text style={styles.sectionTitle}>Historique des transactions</Text>
+            {transactions.length === 0 ? (
+                <Text style={styles.emptyText}>Aucune transaction récente</Text>
+            ) : (
+                (() => {
+                    const today = new Date().toDateString();
+                    const yesterday = new Date(Date.now() - 86400000).toDateString();
+                    const groups = { "Aujourd'hui": [], "Hier": [], "Plus ancien": [] };
+                    
+                    transactions.forEach(tx => {
+                        const d = new Date(tx.timestamp).toDateString();
+                        if (d === today) groups["Aujourd'hui"].push(tx);
+                        else if (d === yesterday) groups["Hier"].push(tx);
+                        else groups["Plus ancien"].push(tx);
+                    });
+
+                    return Object.entries(groups).map(([label, txs]) => (
+                        txs.length > 0 && (
+                            <View key={label} style={{ marginBottom: 15 }}>
+                                <Text style={styles.dateHeader}>{label}</Text>
+                                {txs.map((tx, index) => (
+                                    <View key={index} style={styles.txItem}>
+                                        <View style={styles.txIcon}>
+                                            <Text style={styles.txEmoji}>
+                                                {tx.type === 'CREDIT' ? '🟢' : (tx.type === 'REMBOURSEMENT' || tx.type === 'REFUND') ? '🔵' : '🔴'}
+                                            </Text>
+                                        </View>
+                                        <View style={styles.txDetails}>
+                                            <Text style={styles.txReason}>{tx.raison || 'Transaction'}</Text>
+                                            <Text style={styles.txDate}>
+                                                {new Date(tx.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </Text>
+                                        </View>
+                                        <Text style={[
+                                            styles.txAmount, 
+                                            { color: tx.type === 'CREDIT' ? '#4CAF50' : ((tx.type === 'REMBOURSEMENT' || tx.type === 'REFUND') ? '#2196F3' : '#F44336') }
+                                        ]}>
+                                            {tx.type === 'CREDIT' || tx.type === 'REMBOURSEMENT' || tx.type === 'REFUND' ? '+' : '-'}{tx.montant} 🪙
+                                        </Text>
+                                    </View>
+                                ))}
+                            </View>
+                        )
+                    ));
+                })()
+            )}
           </View>
 
           <View style={styles.form}>
@@ -537,6 +607,59 @@ const styles = StyleSheet.create({
   countryText: {
     fontSize: 16,
     color: '#000',
+  },
+  historySection: {
+    marginBottom: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 15,
+    borderRadius: 15,
+  },
+  sectionTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+  },
+  dateHeader: {
+    color: '#ccc',
+    fontSize: 14,
+    marginBottom: 10,
+    fontWeight: '600',
+  },
+  txItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    padding: 10,
+    borderRadius: 8,
+  },
+  txIcon: {
+    marginRight: 10,
+  },
+  txEmoji: {
+    fontSize: 16,
+  },
+  txDetails: {
+    flex: 1,
+  },
+  txReason: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  txDate: {
+    color: '#999',
+    fontSize: 12,
+  },
+  txAmount: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  emptyText: {
+    color: '#999',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   modalOverlay: {
     flex: 1,

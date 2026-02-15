@@ -54,10 +54,10 @@ const VersusAnimation = ({ player1, player2, onFinish, visible }) => {
                 ])
             ]).start();
 
-            // Auto finish after 1s
+            // Auto finish after 2s
             const timer = setTimeout(() => {
                 onFinish && onFinish();
-            }, 1000);
+            }, 2000);
 
             return () => clearTimeout(timer);
         }

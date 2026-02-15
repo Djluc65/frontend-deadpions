@@ -34,6 +34,22 @@ class TransactionService {
     }
 
     /**
+     * Récupère toutes les transactions (alias pour getHistory)
+     */
+    static async getAllTransactions() {
+        return this.getHistory();
+    }
+
+    /**
+     * Récupère une transaction par son ID
+     * @param {string} id 
+     */
+    static async getTransactionById(id) {
+        const history = await this.getHistory();
+        return history.find(t => t.id === id);
+    }
+
+    /**
      * Récupère les transactions en attente de synchro
      */
     static async getPendingTransactions() {

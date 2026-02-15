@@ -1,31 +1,51 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { Audio } from 'expo-av';
+import * as Haptics from 'expo-haptics';
 
-const CoinsFeedback = ({ amount, visible, onFinish }) => {
+const CoinsFeedback = ({ amount, visible, type, onFinish }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const translateY = useRef(new Animated.Value(20)).current;
 
     useEffect(() => {
         if (visible) {
-            playSound(amount > 0);
-            startAnimation();
+            playSound(type);
+            triggerHaptics(type);
+            startAnimation(type);
         }
-    }, [visible, amount]);
+    }, [visible, amount, type]);
 
-    const playSound = async (isGain) => {
+    const playSound = async (type) => {
         try {
-            // Placeholder for sound logic - in real app would load specific files
-            // const { sound } = await Audio.Sound.createAsync(
-            //    isGain ? require('../../assets/sounds/coins-win.mp3') : require('../../assets/sounds/coins-pay.mp3')
-            // );
-            // await sound.playAsync();
+            let soundFile;
+            if (type === 'CREDIT' || amount > 0) {
+                soundFile = require('../../assets/song/gaming-victory-464016.mp3');
+            } else if (type === 'REMBOURSEMENT' || type === 'REFUND') {
+                soundFile = require('../../assets/song/MatchNul.mp3');
+            } else {
+                soundFile = require('../../assets/song/PionRouge.mp3');
+            }
+
+            const { sound } = await Audio.Sound.createAsync(soundFile);
+            await sound.playAsync();
         } catch (error) {
             console.log('Error playing sound', error);
         }
     };
 
-    const startAnimation = () => {
+    const triggerHaptics = (type) => {
+        if (type === 'CREDIT' || amount > 0) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } else if (type === 'REMBOURSEMENT' || type === 'REFUND') {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        } else {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        }
+    };
+
+    const startAnimation = (type) => {
+        const duration = (type === 'CREDIT' || amount > 0) ? 2000 : 1000;
+        
         // Reset
         fadeAnim.setValue(0);
         translateY.setValue(20);
@@ -46,7 +66,7 @@ const CoinsFeedback = ({ amount, visible, onFinish }) => {
             Animated.timing(fadeAnim, {
                 toValue: 0,
                 duration: 500,
-                delay: 1000,
+                delay: duration,
                 useNativeDriver: true,
             }).start(() => {
                 if (onFinish) onFinish();
@@ -57,8 +77,18 @@ const CoinsFeedback = ({ amount, visible, onFinish }) => {
     if (!visible) return null;
 
     const isGain = amount > 0;
-    const text = isGain ? `+${amount}` : `${amount}`;
-    const color = isGain ? '#FFD700' : '#FF4444'; // Gold or Red
+    const isRefund = type === 'REMBOURSEMENT' || type === 'REFUND' || (amount === 0); 
+    
+    let color = '#FF4444'; // Red (Debit)
+    let message = `${Math.abs(amount)} coins misés`;
+
+    if (isGain) {
+        color = '#FFD700'; // Gold
+        message = `+${amount} coins gagnés ! 🎉`;
+    } else if (isRefund) {
+        color = '#4da6ff'; // Blue
+        message = `${amount} coins remboursés`;
+    }
 
     return (
         <Animated.View
@@ -71,7 +101,7 @@ const CoinsFeedback = ({ amount, visible, onFinish }) => {
             ]}
         >
             <Text style={[styles.text, { color, textShadowColor: isGain ? '#FFA500' : '#8B0000' }]}>
-                {text} 🪙
+                {message}
             </Text>
         </Animated.View>
     );
