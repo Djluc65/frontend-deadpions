@@ -371,7 +371,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
             
             {isTournament && (
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Nombre de manches</Text>
+                <Text style={styles.label}>Nombre de parties</Text>
                 <View style={styles.optionsGrid}>
                 {[2, 4, 6, 8, 10].map(nb => (
                     <TouchableOpacity

@@ -269,7 +269,7 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                             <>
                                 <Text style={styles.friendsLabel}>Nombre de manches:</Text>
                                 <View style={styles.optionsRow}>
-                                    {[2, 3, 5, 10].map(num => (
+                                    {[2, 4, 6, 8, 10].map(num => (
                                         <TouchableOpacity 
                                             key={num} 
                                             style={[styles.friendsOptionButton, tournamentGames === num && styles.friendsOptionButtonActive]}

@@ -26,6 +26,7 @@ import { useCoinsContext } from '../context/CoinsContext';
 import PlayerProfileCard from '../components/PlayerProfileCard';
 import CustomAlert from '../components/CustomAlert';
 import VersusAnimation from '../components/VersusAnimation';
+import NextMatchModal from '../components/NextMatchModal';
 
 const { width, height } = Dimensions.get('window');
 
@@ -3691,75 +3692,36 @@ const GameScreen = ({ navigation, route }) => {
       {renderResultModal()}
       {renderFloatingMenu()}
 
-      <Modal 
-        transparent 
-        visible={nextMatchVisible} 
-        animationType="fade"
-      > 
-        {/* We use a pointerEvents="box-none" view to allow clicking through to the board if needed, 
-            but here we want to block interaction on the board. 
-            However, we DON'T want a dimming overlay. So backgroundColor is transparent. */}
-        <View style={[styles.overlay, { backgroundColor: 'transparent', justifyContent: 'flex-end', paddingBottom: 20 }]}> 
-          <View style={[styles.customAlertContainer, { 
-              width: '90%', 
-              marginBottom: 20, 
-              top: 0, 
-              backgroundColor: '#041c55', 
-              borderColor: '#f1c40f',
-              borderWidth: 2,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.25,
-              shadowRadius: 4,
-              elevation: 5
-          }]}> 
-            
-            <Text style={styles.alertTitle}> 
-              {alertData?.title} 
-            </Text> 
-      
-            <Text style={styles.alertMessage}> 
-              {alertData?.message} 
-            </Text> 
-            
-            <Text style={{ color: '#fbbf24', fontSize: 18, marginVertical: 10, textAlign: 'center', fontWeight: 'bold' }}>
-              {nextMatchTimer > 0 ? `Temps restant: ${nextMatchTimer}s` : 'Temps écoulé'}
-            </Text>
-      
-            <TouchableOpacity 
-              style={[styles.nextMatchButton, hasClickedNextMatch && { opacity: 0.5, backgroundColor: '#555' }]} 
-              disabled={hasClickedNextMatch}
-              onPress={() => { 
-                  playButtonSound(); 
-                  setHasClickedNextMatch(true);
-                  isRematching.current = true; 
-                  AudioController.setRematchMode(true); 
-                  
-                  // We do NOT clear board here, to keep winning line visible until next round starts
-                  // setBoard([]); 
-                  // setWinningLine(null);
-                  // setDernierCoupIA(null); 
-      
-                  setWaitingForNextRound(true); 
-                  setCurrentPlayer(null); 
-      
-                  socket.emit('player_ready_next_round', { 
-                      gameId: params.gameId, 
-                      userId: user._id 
-                  }); 
-                  
-                  // Keep modal open to show timer/waiting status
-                  // setNextMatchVisible(false); 
-              }} 
-            > 
-              <Text style={styles.nextMatchButtonText}> 
-                {hasClickedNextMatch ? 'En attente...' : 'Match Suivant'}
-              </Text> 
-            </TouchableOpacity> 
-      
-          </View> 
-        </View> 
-      </Modal>
+      <NextMatchModal
+        visible={nextMatchVisible}
+        title={alertData?.title || ''}
+        message={alertData?.message || ''}
+        initialTimer={30}
+        onConfirm={() => {
+          playButtonSound();
+          isRematching.current = true;
+          AudioController.setRematchMode(true);
+          setWaitingForNextRound(true);
+          setCurrentPlayer(null);
+          socket.emit('player_ready_next_round', {
+            gameId: params.gameId,
+            userId: user._id
+          });
+        }}
+        // containerStyle={mode === 'live' ? { justifyContent: 'center', paddingBottom: 0 } : undefined}
+        cardStyle={mode === 'live' ? { alignItems: 'center' } : undefined}
+        titleStyle={[styles.alertTitle, mode === 'live' ? { textAlign: 'center' } : null]}
+        messageStyle={[styles.alertMessage, mode === 'live' ? { textAlign: 'center' } : null]}
+        timerStyle={{
+          color: '#fbbf24',
+          fontSize: 18,
+          marginVertical: 10,
+          textAlign: 'center',
+          fontWeight: 'bold'
+        }}
+        buttonStyle={styles.nextMatchButton}
+        buttonTextStyle={styles.nextMatchButtonText}
+      />
 
       <CustomAlert 
           visible={customAlert.visible}
