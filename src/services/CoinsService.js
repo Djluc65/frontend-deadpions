@@ -229,14 +229,12 @@ class CoinsService {
      * @param {string} token 
      */
     static async synchroniser(token) {
-        if (!token) return;
+        if (!token) return { ok: false, status: 0 };
         
         try {
-            // Récupérer les transactions non synchronisées
             const pending = await TransactionService.getPendingTransactions();
-            if (pending.length === 0) return;
+            if (pending.length === 0) return { ok: true, skipped: true };
 
-            // Envoyer au serveur
             const response = await fetch(`${API_URL}/transactions/sync`, {
                 method: 'POST',
                 headers: {
@@ -248,23 +246,20 @@ class CoinsService {
 
             if (response.ok) {
                 const data = await response.json();
-                
-                // Marquer comme synchronisées celles qui ont réussi (ou toutes si le batch est accepté)
-                // Ici on suppose que le serveur renvoie les IDs traités ou qu'on traite le lot
-                // Simplification: si 200 OK, on marque tout le lot envoyé comme sync
                 const syncedIds = pending.map(t => t.id);
                 await TransactionService.markAsSynced(syncedIds);
-                
-                // Mettre à jour le solde local avec la vérité serveur si renvoyée
                 if (data.serverBalance !== undefined) {
                     await AsyncStorage.setItem(this.STORAGE_KEY_COINS, data.serverBalance.toString());
-                    return data.serverBalance;
+                    return { ok: true, serverBalance: data.serverBalance };
                 }
+                return { ok: true };
             } else {
                 console.error('Erreur sync serveur:', response.status);
+                return { ok: false, status: response.status };
             }
         } catch (error) {
             console.error('Erreur synchronisation:', error);
+            return { ok: false, status: 0 };
         }
     }
 }

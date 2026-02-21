@@ -2,16 +2,17 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
-import { updateUser } from '../redux/slices/authSlice';
+import { updateUser, updateAccessToken } from '../redux/slices/authSlice';
 import CoinsService from '../services/CoinsService';
 import { socket } from '../utils/socket';
 import CoinsFeedback from '../components/CoinsFeedback';
+import { API_URL } from '../config';
 
 const CoinsContext = createContext(null);
 
 export const CoinsProvider = ({ children }) => {
     const dispatch = useDispatch();
-    const { user, token } = useSelector(state => state.auth);
+    const { user, token, refreshToken } = useSelector(state => state.auth);
     const [isSyncing, setIsSyncing] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [lastSync, setLastSync] = useState(null);
@@ -90,7 +91,23 @@ export const CoinsProvider = ({ children }) => {
         if (!token || isSyncing) return;
         try {
             setIsSyncing(true);
-            await CoinsService.synchroniser(token);
+            const res = await CoinsService.synchroniser(token);
+            if (res && res.ok === false && res.status === 401 && refreshToken) {
+                try {
+                    const refreshResponse = await fetch(`${API_URL}/auth/refresh-token`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ refreshToken })
+                    });
+                    if (refreshResponse.ok) {
+                        const data = await refreshResponse.json();
+                        dispatch(updateAccessToken(data.token));
+                        await CoinsService.synchroniser(data.token);
+                    }
+                } catch (e) {
+                    console.error('Erreur refresh token:', e);
+                }
+            }
         } catch (error) {
             console.error('Erreur syncTransactions:', error);
         } finally {

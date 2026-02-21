@@ -82,9 +82,11 @@ const VoiceChat = ({ gameId, userId, socket, isSpectator = false }) => {
         // Listeners
         const handleVoiceJoin = async (data) => {
             if (data.senderId === userId) return;
-            // New peer joined, initiate connection
             const pc = createPeerConnection(data.senderId);
             try {
+                if (!pc || pc.signalingState !== 'stable' || pc.localDescription || pc.remoteDescription) {
+                    return;
+                }
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
                 socket.emit('voice_offer', {
@@ -122,8 +124,11 @@ const VoiceChat = ({ gameId, userId, socket, isSpectator = false }) => {
             if (data.targetId && data.targetId !== userId) return;
             
             const pc = peerConnections.current[data.senderId];
-            if (pc) {
+            if (pc && data.answer) {
                 try {
+                    if (pc.signalingState === 'stable' || pc.remoteDescription) {
+                        return;
+                    }
                     await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
                 } catch (err) {
                     console.error("Error handling answer:", err);

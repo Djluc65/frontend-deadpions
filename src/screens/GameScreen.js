@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, Dimensions, Alert, ScrollView, Animated, Image, Modal, Keyboard, Platform, Share, ActivityIndicator, FlatList } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -184,6 +184,8 @@ const GameScreen = ({ navigation, route }) => {
       ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite) ? playersData?.white?.coins : playersData?.black?.coins
   );
 
+  const iaColors = configIA?.couleurs || { joueur: 'black', ia: 'white' };
+
   // Define players early to avoid ReferenceError in useEffect
   const player1 = {
     id: ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite) ? getPlayerId(playersData?.black) : currentUserId,
@@ -193,12 +195,37 @@ const GameScreen = ({ navigation, route }) => {
     coins: ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite) ? playersData?.black?.coins : ((mode === 'online_custom' || mode === 'live') && isLocalPlayerWhite ? playersData?.white?.coins : user?.coins),
     level: ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite) ? (playersData?.black?.niveau || playersData?.black?.level) : (user?.niveau || user?.level),
     color: mode === 'ai' 
-      ? configIA.couleurs.joueur 
+      ? iaColors.joueur 
       : mode === 'local'
       ? (localConfig.player1Color || 'black')
       : mode === 'online' 
       ? (getPlayerId(playersData?.black)?.toString() === currentUserId?.toString() ? 'black' : 'white')
       : (mode === 'spectator' || mode === 'online_custom' || mode === 'live') ? (isLocalPlayerWhite ? 'white' : 'black') : 'black'
+  };
+
+  const handleNextMatchConfirm = () => {
+    if (mode === 'spectator') return;
+    playButtonSound();
+    if (mode === 'online' || mode === 'online_custom' || mode === 'live') {
+      isRematching.current = true;
+      AudioController.setRematchMode(true);
+      setWaitingForNextRound(true);
+      setCurrentPlayer(null);
+      socket.emit('player_ready_next_round', {
+        gameId: params.gameId,
+        userId: user._id
+      });
+    } else if (mode === 'ai' || mode === 'ia') {
+      isRematching.current = true;
+      AudioController.setRematchMode(true);
+      setNextMatchVisible(false);
+      if (nextAiConfig) {
+        navigation.replace('Game', { modeJeu: 'ia', configIA: nextAiConfig, betAmount: params.betAmount || 0 });
+      } else {
+        // Fallback: relancer avec la config IA courante si la prochaine n'est pas définie
+        navigation.replace('Game', { modeJeu: 'ia', configIA: configIA, betAmount: params.betAmount || 0 });
+      }
+    }
   };
 
   const player2 = {
@@ -209,7 +236,7 @@ const GameScreen = ({ navigation, route }) => {
     coins: opponentCoins ?? (mode === 'online' ? route.params?.opponent?.coins : ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite) ? playersData?.white?.coins : playersData?.black?.coins),
     level: mode === 'online' ? (route.params?.opponent?.niveau || route.params?.opponent?.level) : ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite) ? (playersData?.white?.niveau || playersData?.white?.level) : (playersData?.black?.niveau || playersData?.black?.level),
     color: mode === 'ai' 
-      ? configIA.couleurs.ia 
+      ? iaColors.ia 
       : mode === 'local'
       ? (localConfig.player2Color || 'white')
       : mode === 'online'
@@ -227,19 +254,17 @@ const GameScreen = ({ navigation, route }) => {
     const nextMatchIntervalRef = useRef(null);
   const [alertData, setAlertData] = useState(null);
   const [roundOverData, setRoundOverData] = useState(null);
+  const [nextAiConfig, setNextAiConfig] = useState(null);
+  // Waiting message for spectators while opponent left / creator choosing
+  const [waitingMessage, setWaitingMessage] = useState(null);
 
   // Versus Animation State
   const [showVersusAnim, setShowVersusAnim] = useState(false);
   const hasShownVersus = useRef(false);
 
-  // Trigger animation for Local/AI/Online modes
   useEffect(() => {
-    // Check if players are ready
     const isPlayer2Ready = player2 && player2.pseudo && player2.pseudo !== 'En attente...';
-    
-    // Logic specific to each mode
     const shouldShow = 
-        (mode === 'local') || 
         (mode === 'ai') || 
         (mode === 'online') || 
         (mode === 'online_custom' && isPlayer2Ready) || 
@@ -381,6 +406,22 @@ const GameScreen = ({ navigation, route }) => {
              console.log('New Game ID detected, reloading screen...');
              isRematching.current = true;
              AudioController.setRematchMode(true);
+            setRematchRequested(false);
+
+             // Reset local state aggressively before navigation to avoid UI artifacts
+             setBoard([]);
+             setWinningLine(null);
+             setGameOver(false);
+             setShowResultModal(false);
+             setNextMatchVisible(false);
+             setWaitingForNextRound(false);
+             setWaitingMessage(null);
+             setCurrentPlayer(null);
+             setTimeLeft(undefined);
+             setTimeouts({ black: 0, white: 0 });
+             setTournamentScore({ black: 0, white: 0 });
+             setTournamentGameNumber(1);
+             // total games will be reset by incoming tournamentSettings
 
              // Calculer le nouvel adversaire pour mettre à jour les coins dans les params
              const pBlack = data.players.black;
@@ -404,6 +445,29 @@ const GameScreen = ({ navigation, route }) => {
 
         // Handle same game ID (e.g. initial game start for creator)
         console.log('Game started with same ID, updating local state...');
+        // Full reset for new match startup even if same gameId
+        setRematchRequested(false);
+        setBoard(Array.isArray(data.board) ? data.board : []);
+        setWinningLine(null);
+        setGameOver(false);
+        setShowResultModal(false);
+        setNextMatchVisible(false);
+        setWaitingForNextRound(false);
+        setWaitingMessage(null);
+        setCurrentPlayer(data.currentTurn ?? null);
+        setTimeouts({ black: 0, white: 0 });
+        if (data.timeControl) {
+            setTimeControlSetting(data.timeControl);
+            setTimeLeft(data.timeControl);
+        }
+        if (data.tournamentSettings) {
+            setTournamentScore(data.tournamentSettings.score);
+            setTournamentGameNumber(data.tournamentSettings.gameNumber);
+            setTournamentTotalGames(data.tournamentSettings.totalGames);
+        } else {
+            setTournamentScore({ black: 0, white: 0 });
+            setTournamentGameNumber(1);
+        }
         if (data.players) {
             setPlayersData(data.players);
             
@@ -419,10 +483,7 @@ const GameScreen = ({ navigation, route }) => {
             // Update Redux
             dispatch(setPlayers(data.players));
         }
-        
-        if (data.timeControl) {
-            setTimeControlSetting(data.timeControl);
-        }
+        // timeControl handled above
     };
 
     socket.on('game_start', handleGameStart);
@@ -460,136 +521,25 @@ const GameScreen = ({ navigation, route }) => {
     };
   }, []);
 
-  // Timer state for online mode
-  const timeControl = timeControlSetting; // Seconds or null
+  // Timer state (seconds left for current player) + timeouts
+  const timeControl = timeControlSetting;
   const [timeLeft, setTimeLeft] = useState(timeControl);
   const [timeouts, setTimeouts] = useState({ black: 0, white: 0 });
 
-  // Timer countdown effect
-  useEffect(() => {
-      const validModes = ['online', 'live', 'spectator', 'ai', 'local'];
-      if (!validModes.includes(mode) || !timeControl || gameOver || (!playersData?.white && mode !== 'ai' && mode !== 'local') || waitingForNextRound || !currentPlayer) return;
-      
-      const interval = setInterval(() => {
-          setTimeLeft(prev => {
-              if (prev <= 1) {
-                  if (mode === 'ai' || mode === 'local') {
-                      // Logic for Local mode timeouts
-                      if (mode === 'local') {
-                          const currentTimeoutCount = timeouts[currentPlayer] || 0;
-                          
-                          if (currentTimeoutCount + 1 >= 5) {
-                                setGameOver(true);
-                                AudioController.playVictorySound(isSoundEnabled);
-                                setTimeout(() => {
-                                   let newScore = { ...tournamentScore };
-                                   let isTournament = localConfig.mode === 'tournament' || (initialTournamentSettings && initialTournamentSettings.totalGames > 1);
-                                   let tournamentOver = false;
-                                   let nextGameNumber = tournamentGameNumber;
-                                   
-                                   const winnerColor = currentPlayer === 'black' ? 'white' : 'black';
-
-                                   if (isTournament) {
-                                        newScore[winnerColor] += 1;
-                                        setTournamentScore(newScore);
-                                        
-                                        if (tournamentGameNumber >= tournamentTotalGames) {
-                                            tournamentOver = true;
-                                        } else {
-                                             const blackScore = newScore.black;
-                                             const whiteScore = newScore.white;
-                                             const remainingGames = tournamentTotalGames - tournamentGameNumber;
-                                             
-                                             if (Math.abs(blackScore - whiteScore) > remainingGames) {
-                                                 tournamentOver = true;
-                                             }
-                                        }
-                                        
-                                        if (!tournamentOver) {
-                                            nextGameNumber += 1;
-                                        }
-                                   }
-
-                                   let nextStartingPlayer = localConfig.startingPlayer || 'black';
-                                   if (isTournament && !tournamentOver) {
-                                       nextStartingPlayer = (localConfig.startingPlayer || 'black') === 'black' ? 'white' : 'black';
-                                   }
-
-                                   const nextLocalConfig = {
-                                       ...localConfig,
-                                       startingPlayer: nextStartingPlayer,
-                                       tournamentSettings: isTournament ? {
-                                           totalGames: tournamentTotalGames,
-                                           gameNumber: tournamentOver ? 1 : nextGameNumber,
-                                           score: tournamentOver ? { black: 0, white: 0 } : newScore
-                                       } : null
-                                   };
-
-                                   setResultData({
-                                       victoire: true,
-                                       winnerColor: winnerColor,
-                                       type: 'local',
-                                       reason: 'timeout',
-                                       localConfig: nextLocalConfig,
-                                       isTournament,
-                                       tournamentScore: newScore,
-                                       tournamentOver,
-                                       gameNumber: tournamentGameNumber,
-                                       totalGames: tournamentTotalGames
-                                   });
-                                   setShowResultModal(true);
-                               }, 500);
-                               return 0;
-                          } else {
-                              setTimeouts(prev => ({ ...prev, [currentPlayer]: currentTimeoutCount + 1 }));
-                          }
-                      }
-
-                      // AI Mode Auto-Play (Time out) & Local Mode Random Move
-                      const move = calculerCoupIA(board, currentPlayer, 'facile');
-                      if (move) {
-                          handlePress(move.row, move.col);
-                      }
-                  } else {
-                      // Trigger Auto-Play if it's my turn
-                      const myColor = getPlayerId(playersData?.black)?.toString() === currentUserId?.toString() ? 'black' : 'white';
-                      if (currentPlayer === myColor && prev === 1) {
-                           const aiMove = calculerCoupIA(board, myColor, 'difficile');
-                           if (aiMove) {
-                               socket.emit('make_move', {
-                                   gameId: params.gameId,
-                                   userId: user._id,
-                                   player: myColor,
-                                   row: aiMove.row,
-                                   col: aiMove.col,
-                                   isAutoPlay: true
-                               });
-                           }
-                      }
-                  }
-                  return 0;
-              }
-              return prev - 1;
-          });
-      }, 1000);
-      
-      return () => clearInterval(interval);
-  }, [mode, timeControl, gameOver, currentPlayer, board, params.gameId, user._id, playersData, waitingForNextRound, configIA, timeouts, isSoundEnabled]);
-
-  // Determine initial player
   const getInitialPlayer = () => {
     if (params.currentTurn) return params.currentTurn;
     if (mode === 'ai') {
-        if (configIA.premierJoueur === 'ia') {
-            return configIA.couleurs.ia;
+        const premier = configIA?.premierJoueur;
+        if (premier === 'ia') {
+            return iaColors.ia;
         } else {
-            return configIA.couleurs.joueur;
+            return iaColors.joueur;
         }
     }
     if (mode === 'local') {
         return localConfig.startingPlayer || 'black';
     }
-    return 'black'; // Standard Gomoku rule: black starts
+    return 'black';
   };
 
   const [currentPlayer, setCurrentPlayer] = useState(getInitialPlayer());
@@ -658,6 +608,20 @@ const GameScreen = ({ navigation, route }) => {
              isRematching.current = true;
              AudioController.setRematchMode(true);
 
+             // Reset local state aggressively before navigation to avoid UI artifacts
+             setBoard([]);
+             setWinningLine(null);
+             setGameOver(false);
+             setShowResultModal(false);
+             setNextMatchVisible(false);
+             setWaitingForNextRound(false);
+             setWaitingMessage(null);
+             setCurrentPlayer(null);
+             setTimeLeft(undefined);
+             setTimeouts({ black: 0, white: 0 });
+             setTournamentScore({ black: 0, white: 0 });
+             setTournamentGameNumber(1);
+
              // Calculer le nouvel adversaire pour mettre à jour les coins dans les params
              const pBlack = data.players.black;
              const pWhite = data.players.white;
@@ -678,6 +642,25 @@ const GameScreen = ({ navigation, route }) => {
              return;
         }
 
+        // Reset even if same gameId
+        setBoard(Array.isArray(data.board) ? data.board : []);
+        setWinningLine(null);
+        setGameOver(false);
+        setShowResultModal(false);
+        setNextMatchVisible(false);
+        setWaitingForNextRound(false);
+        setWaitingMessage(null);
+        setCurrentPlayer(data.currentTurn ?? null);
+        setTimeouts({ black: 0, white: 0 });
+        if (data.tournamentSettings) {
+            setTournamentScore(data.tournamentSettings.score);
+            setTournamentGameNumber(data.tournamentSettings.gameNumber);
+            setTournamentTotalGames(data.tournamentSettings.totalGames);
+        } else {
+            setTournamentScore({ black: 0, white: 0 });
+            setTournamentGameNumber(1);
+        }
+
         if (data.players && JSON.stringify(data.players) !== JSON.stringify(playersDataRef.current)) {
             setPlayersData(data.players);
         }
@@ -688,26 +671,12 @@ const GameScreen = ({ navigation, route }) => {
             hasShownVersus.current = true;
         }
 
-        if (data.currentTurn) {
-            setCurrentPlayer(data.currentTurn);
-        }
-        if (data.board) {
-             setBoard(data.board);
-        }
+        // state already set above
         if (data.timeControl && data.timeControl !== timeControlSettingRef.current) {
              setTimeControlSetting(data.timeControl);
              setTimeLeft(data.timeControl);
         }
-        if (data.tournamentSettings) {
-            setTournamentScore(data.tournamentSettings.score);
-            setTournamentGameNumber(data.tournamentSettings.gameNumber);
-            setTournamentTotalGames(data.tournamentSettings.totalGames);
-        }
-        
-        setGameOver(false);
         setWinner(null);
-        setShowResultModal(false);
-        setWaitingForNextRound(false);
     };
 
     const handleMoveMade = (data) => {
@@ -737,6 +706,70 @@ const GameScreen = ({ navigation, route }) => {
       setWaitingForNextRound(false);
       if (data.winner) setWinner(data.winner);
       
+      // Fallback tournoi en ligne: si le serveur renvoie 'game_over' (ex: timeout 5 fois)
+      // et que la manche n'est PAS décisive, afficher la fenêtre "Match suivant".
+      // On calcule alors le score/nextGameNumber si le serveur ne les fournit pas.
+    if ((mode === 'online' || mode === 'online_custom' || mode === 'live') && params?.tournamentSettings && !data?.tournamentOver) {
+        // Uniquement pour les fins de manche (pas fin de tournoi)
+        const winnerColor = data?.winner;
+        const isRoundEnd = data?.reason === 'round_over' || data?.reason === 'victory';
+        if (winnerColor && isRoundEnd) {
+          // Score fourni par le serveur OU calcul local (ajout d'1 point au vainqueur)
+          const currentScore = data?.score || tournamentScore || { black: 0, white: 0 };
+          const newScore = data?.score ? data.score : {
+            ...currentScore,
+            [winnerColor]: (currentScore[winnerColor] || 0) + 1
+          };
+          const totalGames = tournamentTotalGames || params.tournamentSettings?.totalGames || 1;
+          const currentGameNumber = tournamentGameNumber || params.tournamentSettings?.gameNumber || 1;
+          const nextGameNumber = (typeof data?.nextGameNumber === 'number') ? data.nextGameNumber : (currentGameNumber + 1);
+          const remainingGames = totalGames - currentGameNumber;
+          const blackScore = newScore.black || 0;
+          const whiteScore = newScore.white || 0;
+          const wouldBeTournamentOver = (currentGameNumber >= totalGames) || (Math.abs(blackScore - whiteScore) > remainingGames);
+
+          if (!wouldBeTournamentOver) {
+            // Calculer la ligne gagnante pour l'effet visuel
+            if (data.winner) {
+              const currentBoard = boardRef.current;
+              const playerStones = currentBoard.filter(s => s.player === data.winner);
+              for (let s of playerStones) {
+                const line = checkWinner(s.row, s.col, data.winner, currentBoard);
+                if (line) {
+                  setWinningLine(line);
+                  break;
+                }
+              }
+            }
+            setTimeout(() => {
+              setAlertData({
+                title: `Match ${nextGameNumber - 1} terminé`,
+                message: `${winnerColor === 'black'
+                    ? (params.players?.black?.pseudo || 'Joueur 1')
+                    : (params.players?.white?.pseudo || 'Joueur 2')
+                  } gagne ! \nScore: ${blackScore} - ${whiteScore}`
+              });
+              setNextMatchVisible(true);
+              // Démarrer un timer de 30s comme NextMatchModal par défaut
+              setNextMatchTimer(30);
+              setHasClickedNextMatch(false);
+              if (nextMatchIntervalRef.current) clearInterval(nextMatchIntervalRef.current);
+              nextMatchIntervalRef.current = setInterval(() => {
+                setNextMatchTimer(prev => {
+                  if (prev <= 1) {
+                    clearInterval(nextMatchIntervalRef.current);
+                    return 0;
+                  }
+                  return prev - 1;
+                });
+              }, 1000);
+            }, 500);
+            return;
+          }
+          // Si c'est décisif, ne rien faire ici: le serveur doit envoyer 'tournament_over'/'tournament_draw'
+        }
+      }
+
       if (data.updatedCoins) {
           const myId = user?._id || user?.id;
           const opponentId = player2.id;
@@ -747,11 +780,27 @@ const GameScreen = ({ navigation, route }) => {
           if (data.updatedCoins[opponentId] !== undefined) {
              setOpponentCoins(data.updatedCoins[opponentId]);
           }
-          
+
+          // Mettre à jour les coins des deux joueurs dans playersData
+          setPlayersData(prev => {
+              if (!prev) return prev;
+              const updated = { ...prev };
+              const blackId = getPlayerId(prev.black);
+              const whiteId = getPlayerId(prev.white);
+
+              if (blackId && data.updatedCoins[blackId] !== undefined) {
+                  updated.black = { ...prev.black, coins: data.updatedCoins[blackId] };
+              }
+              if (whiteId && data.updatedCoins[whiteId] !== undefined) {
+                  updated.white = { ...prev.white, coins: data.updatedCoins[whiteId] };
+              }
+
+              return updated;
+          });
 
       }
 
-      if (data.reason !== 'timeout' && data.reason !== 'resign') {
+      if (data.reason !== 'timeout' && data.reason !== 'resign' && data.reason !== 'draw_timeout') {
         AudioController.playVictorySound(isSoundEnabled);
       }
 
@@ -902,6 +951,7 @@ const GameScreen = ({ navigation, route }) => {
     const handleStartNextRound = (data) => {
         setWaitingForNextRound(false);
         setBoard([]);
+        setTimeouts({ black: 0, white: 0 });
         setTournamentScore(data.score);
         setTournamentGameNumber(data.nextGameNumber);
         setCurrentPlayer(data.nextTurn);
@@ -933,15 +983,17 @@ const GameScreen = ({ navigation, route }) => {
             if (data.updatedCoins[opponentId] !== undefined) {
                setOpponentCoins(data.updatedCoins[opponentId]);
             }
-            
-
         }
 
-        if (data.reason !== 'timeout' && data.reason !== 'resign') {
+        if (data.reason !== 'timeout' && data.reason !== 'resign' && data.reason !== 'draw_timeout') {
              AudioController.playVictorySound(isSoundEnabled);
         }
 
         const isWinner = data.winnerId?.toString() === (user?._id || user?.id).toString();
+        const hasWinner = !!data.winnerId;
+        if (!hasWinner && (params.betAmount || 0) > 0) {
+            setFeedback({ visible: true, amount: params.betAmount || 0, type: 'REMBOURSEMENT' });
+        }
         
         setTimeout(() => {
              setResultData({
@@ -949,8 +1001,9 @@ const GameScreen = ({ navigation, route }) => {
                  gains: data.gains || 0,
                  montantPari: params.betAmount || 0,
                  adversaire: params.opponent,
-                 raisonVictoire: data.reason === 'victory' ? 'tournament_win' : null,
-                 raisonDefaite: data.reason === 'victory' ? 'tournament_loss' : null,
+                 // Considérer toutes les fins avec un winnerId comme victoire/défaite de tournoi
+                 raisonVictoire: hasWinner ? 'tournament_win' : null,
+                 raisonDefaite: hasWinner ? 'tournament_loss' : null,
                  isTournament: true,
                  tournamentScore: data.score,
                  reason: data.reason,
@@ -1012,6 +1065,32 @@ const GameScreen = ({ navigation, route }) => {
     };
 
     const handleOpponentLeftLive = () => {
+        if (mode === 'spectator') {
+            setShowResultModal(false);
+            setNextMatchVisible(false);
+            setWaitingForNextRound(true);
+            setWaitingMessage("⏸️ L'adversaire a quitté. En attente d'un nouvel adversaire…");
+            showAlert(
+                "Adversaire parti",
+                "L'adversaire a quitté la partie. Le créateur peut inviter un nouveau joueur.",
+                [
+                    { text: "OK", onPress: () => {} }
+                ]
+            );
+            return;
+        }
+        const creatorId = params.roomConfig?.createur?._id || params.roomConfig?.createur?.id;
+        const userId = user?._id || user?.id;
+        const isCreator = creatorId && userId && creatorId.toString() === userId.toString();
+        if (!isCreator) {
+            // Non créateur: rester silencieux (utilisé pour certains flux), ne rien afficher ici
+            if (params.roomConfig) {
+                navigation.replace('SalleAttenteLive', { configSalle: params.roomConfig });
+            } else {
+                navigation.goBack();
+            }
+            return;
+        }
         showAlert(
             "Adversaire parti",
             "Votre adversaire a quitté la partie. Le live reste actif.",
@@ -1019,8 +1098,9 @@ const GameScreen = ({ navigation, route }) => {
                 { 
                     text: "Attendre un autre joueur",
                     onPress: () => {
+                        socket.emit('reset_live_opponent', { gameId: params.gameId });
                         if (params.roomConfig) {
-                            navigation.replace('SalleAttenteLive', { configSalle: params.roomConfig });
+                            navigation.replace('SalleAttenteLive', { configSalle: params.roomConfig, roomId: params.gameId });
                         } else {
                             navigation.goBack();
                         }
@@ -1039,6 +1119,15 @@ const GameScreen = ({ navigation, route }) => {
         );
     };
 
+    const handleDowngradedToSpectator = () => {
+        setShowResultModal(false);
+        if (params.roomConfig) {
+            navigation.replace('SalleAttenteLive', { configSalle: params.roomConfig });
+        } else {
+            navigation.navigate('Home');
+        }
+    };
+
     socket.on('spectator_joined', handleSpectatorJoined);
     socket.on('game_start', handleGameStart);
     // socket.on('game_rejoined', handleGameRejoined);
@@ -1047,6 +1136,7 @@ const GameScreen = ({ navigation, route }) => {
     socket.on('opponent_disconnected', handleOpponentDisconnected);
     socket.on('opponent_left_live', handleOpponentLeftLive);
     socket.on('live_room_closed', handleLiveRoomClosed);
+    socket.on('downgraded_to_spectator', handleDowngradedToSpectator);
     socket.on('balance_updated', handleBalanceUpdated);
     socket.on('MESSAGE_TEXTE', handleMessageTexte);
     socket.on('MESSAGE_EMOJI', handleMessageEmoji);
@@ -1066,6 +1156,7 @@ const GameScreen = ({ navigation, route }) => {
       socket.off('opponent_disconnected', handleOpponentDisconnected);
       socket.off('opponent_left_live', handleOpponentLeftLive);
       socket.off('live_room_closed', handleLiveRoomClosed);
+      socket.off('downgraded_to_spectator', handleDowngradedToSpectator);
       socket.off('balance_updated', handleBalanceUpdated);
       socket.off('MESSAGE_TEXTE', handleMessageTexte);
       socket.off('MESSAGE_EMOJI', handleMessageEmoji);
@@ -1142,11 +1233,11 @@ const GameScreen = ({ navigation, route }) => {
 
   // Déterminer les noms pour l'affichage
   const joueurNoir = mode === 'ai' 
-    ? (configIA.couleurs.joueur === 'black' ? 'Vous' : configIA.difficulte) 
+    ? (iaColors.joueur === 'black' ? 'Vous' : configIA?.difficulte || 'IA') 
     : 'Joueur 1';
 
   const joueurBlanc = mode === 'ai'
-    ? (configIA.couleurs.joueur === 'white' ? 'Vous' : configIA.difficulte)
+    ? (iaColors.joueur === 'white' ? 'Vous' : configIA?.difficulte || 'IA')
     : 'Joueur 2';
 
   const handleSendFriendRequest = async () => {
@@ -1687,8 +1778,8 @@ const GameScreen = ({ navigation, route }) => {
                   width: '100%' 
               }
           ]}>
-              {player.coins != null && (
-                  <Text style={styles.playerCoinsText}>💰 {player.coins.toLocaleString()}</Text>
+              {player?.coins != null && (
+                  <Text style={styles.playerCoinsText}>💰 {Number(player.coins).toLocaleString()}</Text>
               )}
               <Text style={[styles.playerCoinsText, { fontSize: 11, color: '#e5e7eb', marginTop: 2 }]}>
                   Coups: {board.filter(p => p.player === player.color).length}
@@ -2031,8 +2122,8 @@ const GameScreen = ({ navigation, route }) => {
 
   // Fonction pour vérifier si c'est le tour de l'IA
   const estTourIA = () => {
-    if (mode !== 'ai' || !configIA || !configIA.couleurs || gameOver) return false;
-    const couleurIA = configIA.couleurs.ia;
+    if (mode !== 'ai' || gameOver) return false;
+    const couleurIA = iaColors.ia;
     return currentPlayer === couleurIA;
   };
 
@@ -2175,9 +2266,8 @@ const GameScreen = ({ navigation, route }) => {
                        if (tournamentGameNumber >= tournamentTotalGames) {
                            tournamentOver = true;
                        } else {
-                            // Check if impossible to catch up (Best of N logic)
-                            const userColor = configIA.couleurs.joueur;
-                            const iaColor = configIA.couleurs.ia;
+                            const userColor = iaColors.joueur;
+                            const iaColor = iaColors.ia;
                             const scoreUser = newScore[userColor];
                             const scoreIA = newScore[iaColor];
                             const remainingGames = tournamentTotalGames - tournamentGameNumber;
@@ -2203,21 +2293,65 @@ const GameScreen = ({ navigation, route }) => {
                        } : null
                    };
 
-                   setResultData({
-                       victoire: false,
-                       gains: 0,
-                       montantPari: params.betAmount || 0,
-                       adversaire: { pseudo: 'Ordinateur (IA)' },
-                       difficulte: configIA.difficulte,
-                       configIA: nextConfigIA,
-                       type: 'ia',
-                       isTournament,
-                       tournamentScore: newScore,
-                       tournamentOver,
-                       gameNumber: tournamentGameNumber,
-                       totalGames: tournamentTotalGames
-                   });
-                   setShowResultModal(true);
+                   // IA Tournament: utiliser la fenêtre "Match suivant" comme en Jeu en ligne
+                   if (isTournament && !tournamentOver) {
+                       const userColor = iaColors.joueur;
+                       const iaColor = iaColors.ia;
+                       const scoreUser = newScore[userColor] || 0;
+                       const scoreIA = newScore[iaColor] || 0;
+                       
+                       setNextAiConfig(nextConfigIA);
+                       setAlertData({
+                           title: `Match ${tournamentGameNumber} terminé`,
+                           message: `Score: ${scoreUser} - ${scoreIA}\nProchain: Match ${nextGameNumber}/${tournamentTotalGames}`
+                       });
+                       setNextMatchVisible(true);
+                       } else {
+                       const userColor = iaColors.joueur;
+                       const iaColor = iaColors.ia;
+                       const isTournamentDrawFinal = isTournament && tournamentOver && (newScore[userColor] === newScore[iaColor]);
+                       if (isTournamentDrawFinal) {
+                           if (params.betAmount > 0) {
+                               refund(params.betAmount, 'Remboursement Tournoi IA (Match Nul)', { 
+                                   gameId: params.gameId || 'local_ia',
+                                   mode: 'ia',
+                                   isTournament
+                               }).catch(err => console.error('Erreur remboursement IA (tournoi nul):', err));
+                           }
+                           setResultData({
+                               victoire: false,
+                               reason: 'draw',
+                               gains: params.betAmount || 0,
+                               montantPari: params.betAmount || 0,
+                               adversaire: { pseudo: 'Ordinateur (IA)' },
+                               difficulte: configIA.difficulte,
+                               configIA: nextConfigIA,
+                               type: 'ia',
+                               isTournament,
+                               tournamentScore: newScore,
+                               tournamentOver,
+                               gameNumber: tournamentGameNumber,
+                               totalGames: tournamentTotalGames
+                           });
+                           setShowResultModal(true);
+                       } else {
+                           setResultData({
+                               victoire: false,
+                               gains: 0,
+                               montantPari: params.betAmount || 0,
+                               adversaire: { pseudo: 'Ordinateur (IA)' },
+                               difficulte: configIA.difficulte,
+                               configIA: nextConfigIA,
+                               type: 'ia',
+                               isTournament,
+                               tournamentScore: newScore,
+                               tournamentOver,
+                               gameNumber: tournamentGameNumber,
+                               totalGames: tournamentTotalGames
+                           });
+                           setShowResultModal(true);
+                       }
+                   }
                 }, 500);
             } else {
                 setCurrentPlayer(currentPlayer === 'black' ? 'white' : 'black');
@@ -2371,10 +2505,9 @@ const GameScreen = ({ navigation, route }) => {
                 // Check if tournament is over
                 if (tournamentGameNumber >= tournamentTotalGames) {
                     tournamentOver = true;
-                } else {
-                     // Check if impossible to catch up (Best of N logic)
-                     const userColor = configIA.couleurs.joueur;
-                     const iaColor = configIA.couleurs.ia;
+                      } else {
+                     const userColor = iaColors.joueur;
+                     const iaColor = iaColors.ia;
                      const scoreUser = newScore[userColor];
                      const scoreIA = newScore[iaColor];
                      const remainingGames = tournamentTotalGames - tournamentGameNumber;
@@ -2412,8 +2545,8 @@ const GameScreen = ({ navigation, route }) => {
             let profit = 0;
             let totalReturn = 0;
             
-            const userColor = configIA.couleurs.joueur;
-            const iaColor = configIA.couleurs.ia;
+            const userColor = iaColors.joueur;
+            const iaColor = iaColors.ia;
             
             const didUserWinGame = currentPlayer === userColor;
             const isUserWinnerOfTournament = newScore[userColor] > newScore[iaColor];
@@ -2433,21 +2566,60 @@ const GameScreen = ({ navigation, route }) => {
                 }).catch(err => console.error('Erreur credit gain IA:', err));
             }
 
-            setResultData({
-                victoire: true,
-                gains: profit,
-                montantPari: params.betAmount || 0,
-                adversaire: { pseudo: 'Ordinateur (IA)' },
-                difficulte: configIA.difficulte,
-                configIA: nextConfigIA,
-                type: 'ia',
-                isTournament,
-                tournamentScore: newScore,
-                tournamentOver,
-                gameNumber: tournamentGameNumber,
-                totalGames: tournamentTotalGames
-            });
-             setShowResultModal(true);
+            if (isTournament && !tournamentOver) {
+                const scoreUserDisplay = newScore[userColor] || 0;
+                const scoreIADisplay = newScore[iaColor] || 0;
+                setNextAiConfig(nextConfigIA);
+                setAlertData({
+                    title: `Match ${tournamentGameNumber} terminé`,
+                    message: `Score: ${scoreUserDisplay} - ${scoreIADisplay}\nProchain: Match ${nextGameNumber}/${tournamentTotalGames}`
+                });
+                setNextMatchVisible(true);
+            } else {
+                // Fin de tournoi IA: vérifier égalité -> remboursement
+                const isTournamentDrawFinal = isTournament && tournamentOver && (newScore[userColor] === newScore[iaColor]);
+                if (isTournamentDrawFinal) {
+                    if (params.betAmount > 0) {
+                        refund(params.betAmount, 'Remboursement Tournoi IA (Match Nul)', { 
+                            gameId: params.gameId || 'local_ia',
+                            mode: 'ia',
+                            isTournament
+                        }).catch(err => console.error('Erreur remboursement IA (tournoi nul):', err));
+                    }
+                    setResultData({
+                        victoire: false,
+                        reason: 'draw',
+                        gains: params.betAmount || 0,
+                        montantPari: params.betAmount || 0,
+                        adversaire: { pseudo: 'Ordinateur (IA)' },
+                        difficulte: configIA.difficulte,
+                        configIA: nextConfigIA,
+                        type: 'ia',
+                        isTournament,
+                        tournamentScore: newScore,
+                        tournamentOver,
+                        gameNumber: tournamentGameNumber,
+                        totalGames: tournamentTotalGames
+                    });
+                    setShowResultModal(true);
+                } else {
+                    setResultData({
+                        victoire: true,
+                        gains: profit,
+                        montantPari: params.betAmount || 0,
+                        adversaire: { pseudo: 'Ordinateur (IA)' },
+                        difficulte: configIA.difficulte,
+                        configIA: nextConfigIA,
+                        type: 'ia',
+                        isTournament,
+                        tournamentScore: newScore,
+                        tournamentOver,
+                        gameNumber: tournamentGameNumber,
+                        totalGames: tournamentTotalGames
+                    });
+                    setShowResultModal(true);
+                }
+            }
          }, 500);
       } else {
           setTimeout(() => {
@@ -2581,12 +2753,12 @@ const GameScreen = ({ navigation, route }) => {
                  let tournamentOver = false;
                  let nextGameNumber = tournamentGameNumber;
 
-                 if (isTournament) {
+                  if (isTournament) {
                       if (tournamentGameNumber >= tournamentTotalGames) {
                           tournamentOver = true;
                       } else {
-                          const userColor = configIA.couleurs.joueur;
-                          const iaColor = configIA.couleurs.ia;
+                           const userColor = iaColors.joueur;
+                           const iaColor = iaColors.ia;
                           const scoreUser = newScore[userColor];
                           const scoreIA = newScore[iaColor];
                           const remainingGames = tournamentTotalGames - tournamentGameNumber;
@@ -2622,23 +2794,36 @@ const GameScreen = ({ navigation, route }) => {
                          .catch(err => console.error('Erreur remboursement IA:', err));
                  }
 
-                 setResultData({
-                     victoire: false,
-                     winnerColor: null,
-                     reason: 'draw',
-                     gains: params.betAmount || 0,
-                     montantPari: params.betAmount || 0,
-                     adversaire: { pseudo: 'Ordinateur (IA)' },
-                     difficulte: configIA.difficulte,
-                     configIA: nextConfigIA,
-                     type: 'ia',
-                     isTournament,
-                     tournamentScore: newScore,
-                     tournamentOver,
-                     gameNumber: tournamentGameNumber,
-                     totalGames: tournamentTotalGames
-                 });
-                 setShowResultModal(true);
+                 if (isTournament && !tournamentOver) {
+                     const userColor = iaColors.joueur;
+                     const iaColor = iaColors.ia;
+                     const scoreUser = newScore[userColor] || 0;
+                     const scoreIA = newScore[iaColor] || 0;
+                     setNextAiConfig(nextConfigIA);
+                     setAlertData({
+                         title: `Match ${tournamentGameNumber} terminé`,
+                         message: `Score: ${scoreUser} - ${scoreIA}\nProchain: Match ${nextGameNumber}/${tournamentTotalGames}`
+                     });
+                     setNextMatchVisible(true);
+                 } else {
+                     setResultData({
+                         victoire: false,
+                         winnerColor: null,
+                         reason: 'draw',
+                         gains: params.betAmount || 0,
+                         montantPari: params.betAmount || 0,
+                         adversaire: { pseudo: 'Ordinateur (IA)' },
+                         difficulte: configIA.difficulte,
+                         configIA: nextConfigIA,
+                         type: 'ia',
+                         isTournament,
+                         tournamentScore: newScore,
+                         tournamentOver,
+                         gameNumber: tournamentGameNumber,
+                         totalGames: tournamentTotalGames
+                     });
+                     setShowResultModal(true);
+                 }
              }, 500);
              return;
         }
@@ -2647,6 +2832,333 @@ const GameScreen = ({ navigation, route }) => {
     setCurrentPlayer(currentPlayer === 'black' ? 'white' : 'black');
     if (timeControl) setTimeLeft(timeControl);
   };
+
+  // Global timeout lock to éviter les doubles déclenchements pour un même tour
+  const timeoutHandledRef = useRef(false);
+
+  const jouerCoupLocalOuIAParTimer = useCallback((row, col, player) => {
+    playSound(player);
+    const newStone = { row, col, player };
+    const newBoard = [...board, newStone];
+    setBoard(newBoard);
+
+    const winLine = checkWinner(row, col, player);
+    if (winLine) {
+      setWinningLine(winLine);
+      AudioController.playVictorySound(isSoundEnabled);
+      setWinner(player);
+      setGameOver(true);
+      return;
+    }
+
+    if (newBoard.length === ROWS * COLS) {
+      setGameOver(true);
+      return;
+    }
+
+    setCurrentPlayer(player === 'black' ? 'white' : 'black');
+    if (timeControl) setTimeLeft(timeControl);
+  }, [board, isSoundEnabled, timeControl]);
+
+  const handleLocalTimeout = useCallback(() => {
+    if (mode !== 'local' || !currentPlayer) return;
+    const player = currentPlayer;
+    setTimeouts(prev => {
+      const current = prev[player] || 0;
+      const next = current + 1;
+      const updated = { ...prev, [player]: next };
+
+      if (next >= 5) {
+        const winnerColor = player === 'black' ? 'white' : 'black';
+
+        let newScore = { ...tournamentScore };
+        const isTournament =
+          localConfig.mode === 'tournament' ||
+          (initialTournamentSettings && initialTournamentSettings.totalGames > 1);
+        let tournamentOver = false;
+        let nextGameNumber = tournamentGameNumber;
+
+        if (isTournament) {
+          newScore[winnerColor] += 1;
+          setTournamentScore(newScore);
+
+          if (tournamentGameNumber >= tournamentTotalGames) {
+            tournamentOver = true;
+          } else {
+            const blackScore = newScore.black;
+            const whiteScore = newScore.white;
+            const remainingGames = tournamentTotalGames - tournamentGameNumber;
+
+            if (Math.abs(blackScore - whiteScore) > remainingGames) {
+              tournamentOver = true;
+            }
+          }
+
+          if (!tournamentOver) {
+            nextGameNumber += 1;
+          }
+        }
+
+        let nextStartingPlayer = localConfig.startingPlayer || 'black';
+        if (isTournament && !tournamentOver) {
+          nextStartingPlayer =
+            (localConfig.startingPlayer || 'black') === 'black' ? 'white' : 'black';
+        }
+
+        const nextLocalConfig = {
+          ...localConfig,
+          startingPlayer: nextStartingPlayer,
+          tournamentSettings: isTournament
+            ? {
+                totalGames: tournamentTotalGames,
+                gameNumber: tournamentOver ? 1 : nextGameNumber,
+                score: tournamentOver ? { black: 0, white: 0 } : newScore
+              }
+            : null
+        };
+
+        setGameOver(true);
+        setResultData({
+          victoire: true,
+          winnerColor,
+          type: 'local',
+          reason: 'timeout',
+          localConfig: nextLocalConfig,
+          isTournament,
+          tournamentScore: newScore,
+          tournamentOver,
+          gameNumber: tournamentGameNumber,
+          totalGames: tournamentTotalGames,
+          timeouts: updated
+        });
+        setShowResultModal(true);
+        return updated;
+      }
+
+      const move = calculerCoupIA(board, 'facile', player);
+      if (move) {
+        jouerCoupLocalOuIAParTimer(move.row, move.col, player);
+      }
+
+      return updated;
+    });
+  }, [
+    mode,
+    currentPlayer,
+    board,
+    jouerCoupLocalOuIAParTimer,
+    tournamentScore,
+    localConfig,
+    initialTournamentSettings,
+    tournamentGameNumber,
+    tournamentTotalGames
+  ]);
+
+  const handleAiTimeout = useCallback(() => {
+    if (mode !== 'ai') return;
+    const humanColor = iaColors.joueur;
+    if (currentPlayer !== humanColor) return;
+
+    setTimeouts(prev => {
+      const current = prev[humanColor] || 0;
+      const next = current + 1;
+      const updated = { ...prev, [humanColor]: next };
+
+      if (next >= 5) {
+        const winnerColor = iaColors.ia;
+        setGameOver(true);
+
+        const isTournament = configIA?.mode === 'tournament';
+
+        if (isTournament) {
+          const newScore = { ...tournamentScore };
+          const userColor = iaColors.joueur;
+          const iaColor = iaColors.ia;
+          newScore[iaColor] = (newScore[iaColor] || 0) + 1;
+          setTournamentScore(newScore);
+
+          let tournamentOver = false;
+          let nextGameNumber = tournamentGameNumber;
+
+          if (tournamentGameNumber >= tournamentTotalGames) {
+            tournamentOver = true;
+          } else {
+            const scoreUser = newScore[userColor] || 0;
+            const scoreIA = newScore[iaColor] || 0;
+            const remainingGames = tournamentTotalGames - tournamentGameNumber;
+            if (Math.abs(scoreUser - scoreIA) > remainingGames) {
+              tournamentOver = true;
+            }
+          }
+
+          if (!tournamentOver) {
+            nextGameNumber += 1;
+          }
+
+          const nextConfigIA = {
+            ...configIA,
+            tournamentSettings: {
+              totalGames: tournamentTotalGames,
+              gameNumber: tournamentOver ? 1 : nextGameNumber,
+              score: tournamentOver ? { black: 0, white: 0 } : newScore
+            }
+          };
+
+          if (!tournamentOver) {
+            setNextAiConfig(nextConfigIA);
+            const scoreUserDisplay = newScore[userColor] || 0;
+            const scoreIADisplay = newScore[iaColor] || 0;
+            setAlertData({
+              title: `Match ${tournamentGameNumber} terminé`,
+              message: `Score: ${scoreUserDisplay} - ${scoreIADisplay}\nProchain: Match ${nextGameNumber}/${tournamentTotalGames}`
+            });
+            setNextMatchVisible(true);
+          } else {
+            const scoreUser = newScore[userColor] || 0;
+            const scoreIA = newScore[iaColor] || 0;
+            const isTournamentDrawFinal = scoreUser === scoreIA;
+
+            if (isTournamentDrawFinal && (params.betAmount || 0) > 0) {
+              refund(params.betAmount, 'Remboursement Tournoi IA (Match Nul)', {
+                gameId: params.gameId || 'local_ia',
+                mode: 'ia',
+                isTournament: true
+              }).catch(err => console.error('Erreur remboursement IA (tournoi nul):', err));
+            }
+
+            setResultData({
+              victoire: scoreUser > scoreIA,
+              reason: isTournamentDrawFinal ? 'draw' : 'timeout',
+              gains: isTournamentDrawFinal ? (params.betAmount || 0) : 0,
+              montantPari: params.betAmount || 0,
+              adversaire: { pseudo: 'Ordinateur (IA)' },
+              difficulte: configIA?.difficulte,
+              configIA: nextConfigIA,
+              type: 'ia',
+              isTournament: true,
+              tournamentScore: newScore,
+              tournamentOver: true,
+              gameNumber: tournamentGameNumber,
+              totalGames: tournamentTotalGames,
+              timeouts: updated
+            });
+            setShowResultModal(true);
+          }
+        } else {
+          setResultData({
+            victoire: false,
+            reason: 'timeout',
+            type: 'ia',
+            winnerColor,
+            difficulte: configIA?.difficulte,
+            timeouts: updated
+          });
+          setShowResultModal(true);
+        }
+
+        return updated;
+      }
+
+      const difficulte = configIA?.difficulte || 'moyen';
+      const move = calculerCoupIA(board, difficulte, humanColor);
+      if (move) {
+        jouerCoupLocalOuIAParTimer(move.row, move.col, humanColor);
+      }
+
+      return updated;
+    });
+  }, [mode, currentPlayer, board, jouerCoupLocalOuIAParTimer, configIA, iaColors, tournamentScore, tournamentGameNumber, tournamentTotalGames]);
+
+  const handleOnlineTimeout = useCallback(() => {
+    if (!(mode === 'online' || mode === 'online_custom' || mode === 'live')) return;
+    if (!playersData || !user) return;
+
+    const myId = user._id || user.id;
+    const blackId = getPlayerId(playersData.black);
+    const whiteId = getPlayerId(playersData.white);
+
+    let myColor = null;
+    if (blackId && myId && blackId.toString() === myId.toString()) myColor = 'black';
+    else if (whiteId && myId && whiteId.toString() === myId.toString()) myColor = 'white';
+
+    if (!myColor) return;
+    if (currentPlayer !== myColor) return;
+
+    const move = calculerCoupIA(board, 'moyen', myColor);
+    if (!move) return;
+
+    if (socket.connected) {
+      socket.emit('make_move', {
+        gameId: params.gameId,
+        userId: myId,
+        player: myColor,
+        row: move.row,
+        col: move.col,
+        isAutoPlay: true
+      });
+    } else {
+      socket.connect();
+      Alert.alert('Erreur connexion', 'Connexion au serveur perdue. Tentative de reconnexion...');
+      setTimeout(() => {
+        if (socket.connected) {
+          socket.emit('make_move', {
+            gameId: params.gameId,
+            userId: myId,
+            player: myColor,
+            row: move.row,
+            col: move.col,
+            isAutoPlay: true
+          });
+        }
+      }, 1000);
+    }
+  }, [mode, playersData, user, currentPlayer, board, params.gameId]);
+
+  // Minuteur multi‑modes (Local, IA, En ligne / Live / Spectateur)
+  useEffect(() => {
+    const validModes = ['local', 'ai', 'online', 'online_custom', 'live', 'spectator'];
+    if (!validModes.includes(mode) || !timeControl || gameOver || waitingForNextRound || !currentPlayer) return;
+
+    // Pour les modes réseau, attendre que les joueurs soient chargés
+    if ((mode === 'online' || mode === 'online_custom' || mode === 'live' || mode === 'spectator') && !playersData) return;
+
+    timeoutHandledRef.current = false;
+
+    const intervalId = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          // Déclencher le timeout uniquement quand prev === 1
+          if (prev === 1 && !timeoutHandledRef.current) {
+            timeoutHandledRef.current = true;
+            if (mode === 'local') {
+              handleLocalTimeout();
+            } else if (mode === 'ai') {
+              handleAiTimeout();
+            } else if (mode === 'online' || mode === 'online_custom' || mode === 'live') {
+              handleOnlineTimeout();
+            }
+          }
+          // Toujours borner à 0
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [
+    mode,
+    timeControl,
+    gameOver,
+    waitingForNextRound,
+    currentPlayer,
+    playersData,
+    handleLocalTimeout,
+    handleAiTimeout,
+    handleOnlineTimeout
+  ]);
 
   // --- REMATCH & NEW GAME LISTENERS ---
   useEffect(() => {
@@ -2751,20 +3263,29 @@ const GameScreen = ({ navigation, route }) => {
       const tauxVictoire = statsIA ? ((statsIA.gagnees / statsIA.jouees) * 100).toFixed(0) : 0;
 
       const isDraw = reason === 'draw';
-      const isTournamentDraw = type === 'local' && isTournament && tournamentOver && resultData.tournamentScore?.black === resultData.tournamentScore?.white;
+      const isTournamentDraw = (type === 'local' || type === 'ia' || type === 'ai') && isTournament && tournamentOver && resultData.tournamentScore?.black === resultData.tournamentScore?.white;
 
       return (
           <View 
             style={styles.modalOverlay} 
             pointerEvents="box-none"
           >
-              <View style={[styles.resultCard, (type === 'online' || type === 'live' || type === 'ia') && { padding: 16, width: '90%' }]}>
+              <View 
+                style={[styles.resultCard, (type === 'online' || type === 'live' || type === 'ia') && { padding: 16, width: '90%' }]}
+                pointerEvents={mode === 'spectator' ? 'none' : 'auto'}
+              >
               <Text style={[styles.emojiResult, (type === 'online' || type === 'live' || type === 'ia' || type === 'ai') && { fontSize: 40, marginBottom: 5 }]}>
                 {isDraw || isTournamentDraw ? '🤝' : (victoire ? '🏆' : '😢')}
               </Text>
               <Text style={[styles.titreResult, (type === 'online' || type === 'live' || type === 'ia' || type === 'ai') && { fontSize: 24, marginBottom: 5 }]}>
                 {isDraw || isTournamentDraw ? 'MATCH NUL' : (victoire ? 'VICTOIRE !' : 'DÉFAITE')}
               </Text>
+              
+              {(type === 'live' || type === 'online' || type === 'online_custom' || type === 'ai' || type === 'ia') && resultData?.isTournament && (
+                  <Text style={{ color: '#f1c40f', fontWeight: 'bold', textAlign: 'center', marginBottom: 8 }}>
+                      Score: {(tournamentScore?.black ?? 0)} - {(tournamentScore?.white ?? 0)}
+                  </Text>
+              )}
               
               {(type === 'online' || type === 'live' || type === 'ia' || type === 'ai') && (
                   <>
@@ -2788,21 +3309,21 @@ const GameScreen = ({ navigation, route }) => {
                               </View>
                           )}
 
-                          {isDraw ? (
+                          {(isDraw || isTournamentDraw) ? (
                               <View style={[styles.gainsContainer, { padding: 10, marginBottom: 10, backgroundColor: '#34495e' }]}>
                                   <Text style={styles.gainsLabel}>Mise remboursée :</Text>
-                                  <Text style={[styles.gainsMontant, { fontSize: 24, color: '#ecf0f1' }]}>🪙 {gains.toLocaleString()}</Text>
+                                  <Text style={[styles.gainsMontant, { fontSize: 24, color: '#ecf0f1' }]}>🪙 {Number(gains ?? 0).toLocaleString()}</Text>
                               </View>
                           ) : (
                               victoire ? (
                                   <View style={[styles.gainsContainer, { padding: 10, marginBottom: 10 }]}>
                                       <Text style={styles.gainsLabel}>Vous avez gagné :</Text>
-                                      <Text style={[styles.gainsMontant, { fontSize: 24 }]}>+🪙 {gains.toLocaleString()}</Text>
+                                      <Text style={[styles.gainsMontant, { fontSize: 24 }]}>+🪙 {Number(gains ?? 0).toLocaleString()}</Text>
                                   </View>
                               ) : (
                                   <View style={[styles.perteContainer, { padding: 10, marginBottom: 10 }]}>
                                       <Text style={styles.perteLabel}>Vous avez perdu :</Text>
-                                      <Text style={[styles.perteMontant, { fontSize: 24 }]}>-🪙 {montantPari.toLocaleString()}</Text>
+                                      <Text style={[styles.perteMontant, { fontSize: 24 }]}>-🪙 {Number(montantPari ?? 0).toLocaleString()}</Text>
                                   </View>
                               )
                           )}
@@ -2856,7 +3377,7 @@ const GameScreen = ({ navigation, route }) => {
                           </TouchableOpacity>
                       )}
 
-                      {victoire && (
+                      {victoire && mode !== 'spectator' && (
                           <TouchableOpacity 
                               style={[
                                   styles.boutonRejouer, 
@@ -2892,6 +3413,13 @@ const GameScreen = ({ navigation, route }) => {
                       )}
                   </View>
 
+                  {mode === 'spectator' && (
+                      <View style={styles.spectatorNoteContainer}>
+                          <Text style={styles.spectatorNote}>Résultat affiché – le créateur choisit la suite…</Text>
+                      </View>
+                  )}
+
+                  {mode !== 'spectator' && (
                   <View style={styles.boutonsResult}>
                       {type === 'live' ? (
                           <>
@@ -2913,7 +3441,7 @@ const GameScreen = ({ navigation, route }) => {
                                                disabled={rematchRequested}
                                            >
                                                <Text style={styles.boutonTexteResult}>
-                                                   {rematchRequested ? 'Demande envoyée...' : (isTournament ? '🔄 Nouveau tournoi' : '🔄 Rejouer')}
+                                                   {rematchRequested ? 'Demande envoyée...' : '🔄 Nouveau tournoi'}
                                                </Text>
                                            </TouchableOpacity>
 
@@ -2922,8 +3450,9 @@ const GameScreen = ({ navigation, route }) => {
                                               onPress={() => {
                                                   playButtonSound();
                                                   setShowResultModal(false);
+                                                  socket.emit('reset_live_opponent', { gameId: params.gameId });
                                                   if (params.roomConfig) {
-                                                      navigation.replace('SalleAttenteLive', { configSalle: params.roomConfig });
+                                                      navigation.replace('SalleAttenteLive', { configSalle: params.roomConfig, autoInvite: true });
                                                   } else {
                                                       navigation.navigate('Home');
                                                   }
@@ -2940,10 +3469,16 @@ const GameScreen = ({ navigation, route }) => {
                                   onPress={() => {
                                       playButtonSound();
                                       setShowResultModal(false);
+                                      const creatorId = params.roomConfig?.createur?._id || params.roomConfig?.createur?.id;
+                                      const userId = user?._id || user?.id;
+                                      const isCreator = creatorId && userId && creatorId.toString() === userId.toString();
+                                      if (isCreator) {
+                                          socket.emit('stop_live_room', { gameId: params.gameId });
+                                      }
                                       navigation.navigate('Home');
                                   }}
                               >
-                                  <Text style={styles.boutonTexteResult}>🏠 Menu</Text>
+                                  <Text style={styles.boutonTexteResult}>🛑 Arrêter le live</Text>
                               </TouchableOpacity>
                           </>
                       ) : (
@@ -2999,6 +3534,7 @@ const GameScreen = ({ navigation, route }) => {
                           </>
                       )}
                   </View>
+                  )}
                   <View style={styles.innerShadow} pointerEvents="none" />
               </View>
           </View>
@@ -3136,7 +3672,7 @@ const GameScreen = ({ navigation, route }) => {
     >
       <View style={styles.header}>
         {renderProfileModal()}
-        {mode !== 'live' && mode !== 'online_custom' && mode !== 'online' && mode !== 'ai' && mode !== 'ia' && mode !== 'local' && renderGameMenu()}
+        {mode !== 'live' && mode !== 'online_custom' && mode !== 'online' && mode !== 'ai' && mode !== 'ia' && mode !== 'local' && mode !== 'spectator' && renderGameMenu()}
         {mode === 'spectator' && (
             <View style={{ position: 'absolute', top: 10, alignSelf: 'center', backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 15, paddingVertical: 5, borderRadius: 20, zIndex: 10 }}>
                 <Text style={{ color: '#fff', fontWeight: 'bold' }}>👁️ Mode Spectateur</Text>
@@ -3176,16 +3712,18 @@ const GameScreen = ({ navigation, route }) => {
                 <View style={styles.playersWrapper}>
                   <View style={{flexDirection: 'row', alignItems: 'center'}}>
                       {renderPlayer(player1, currentPlayer === player1.color, bubbles.player1)}
-                      {player1.country && (
-                          <View style={{ alignItems: 'center', marginLeft: 10 }}>
-                              <Text style={[styles.flagOutsideRight, { marginLeft: 0 }]}>{player1.country}</Text>
-                              {(mode === 'online_custom' || mode === 'online' || mode === 'live' || mode === 'ai') && tournamentTotalGames > 1 && (
-                                  <Text style={{ color: '#f1c40f', fontWeight: 'bold', fontSize: 14 }}>
-                                      {tournamentScore[player1.color] || 0}
-                                  </Text>
+                      <View style={{ alignItems: 'center', marginLeft: 10 }}>
+                          <View style={{ minHeight: 18, justifyContent: 'center' }}>
+                              {player1.country && (
+                                  <Text style={[styles.flagOutsideRight, { marginLeft: 0 }]}>{player1.country}</Text>
                               )}
                           </View>
-                      )}
+                          {(mode === 'online_custom' || mode === 'online' || mode === 'live' || mode === 'ai') && tournamentTotalGames > 1 && (
+                              <Text style={{ color: '#f1c40f', fontWeight: 'bold', fontSize: 14 }}>
+                                  {tournamentScore[player1.color] || 0}
+                              </Text>
+                          )}
+                      </View>
                   </View>
                   <View style={{ alignItems: 'center' }}>
                       <Text style={styles.vsText}>VS</Text>
@@ -3198,16 +3736,18 @@ const GameScreen = ({ navigation, route }) => {
                       )}
                   </View>
                   <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                      {player2.country && (
-                          <View style={{ alignItems: 'center', marginRight: 10 }}>
-                              <Text style={[styles.flagOutsideLeft, { marginRight: 0 }]}>{player2.country}</Text>
-                              {(mode === 'online_custom' || mode === 'online' || mode === 'live' || mode === 'ai') && tournamentTotalGames > 1 && (
-                                  <Text style={{ color: '#f1c40f', fontWeight: 'bold', fontSize: 14 }}>
-                                      {tournamentScore[player2.color] || 0}
-                                  </Text>
+                      <View style={{ alignItems: 'center', marginRight: 10 }}>
+                          <View style={{ minHeight: 18, justifyContent: 'center' }}>
+                              {player2.country && (
+                                  <Text style={[styles.flagOutsideLeft, { marginRight: 0 }]}>{player2.country}</Text>
                               )}
                           </View>
-                      )}
+                          {(mode === 'online_custom' || mode === 'online' || mode === 'live' || mode === 'ai') && tournamentTotalGames > 1 && (
+                              <Text style={{ color: '#f1c40f', fontWeight: 'bold', fontSize: 14 }}>
+                                  {tournamentScore[player2.color] || 0}
+                              </Text>
+                          )}
+                      </View>
                       {renderPlayer(player2, currentPlayer === player2.color, bubbles.player2)}
                   </View>
                 </View>
@@ -3227,11 +3767,26 @@ const GameScreen = ({ navigation, route }) => {
           </View>
       )} */}
 
-      <View style={[styles.boardContainer, (mode === 'online' || mode === 'live') && { marginTop: gameOver ? -50 : (nextMatchVisible ? 0 : 70) }]} onLayout={(e) => containerDimensions.current = e.nativeEvent.layout}>
+      {/* Score overlay spectateur */}
+      {mode === 'spectator' && (
+          <View style={[styles.spectatorHeaderPills, { pointerEvents: 'none' }]}>
+              <View style={styles.spectatorPill}>
+                  <Text style={styles.spectatorPillText}>
+                      Score: {(tournamentScore?.black ?? 0)} - {(tournamentScore?.white ?? 0)} {tournamentTotalGames > 1 ? `· Match ${tournamentGameNumber}/${tournamentTotalGames}` : ''}
+                  </Text>
+              </View>
+          </View>
+      )}
+
+      <View 
+        style={[styles.boardContainer, (mode === 'online' || mode === 'live') && { marginTop: gameOver ? -50 : (nextMatchVisible ? 0 : 70) }]} 
+        onLayout={(e) => containerDimensions.current = e.nativeEvent.layout}
+        pointerEvents={mode === 'spectator' ? 'none' : 'auto'}
+      >
         {waitingForNextRound && (
             <View style={styles.waitingOverlay}>
                 <ActivityIndicator style={styles.indicator} size="large" color="#fdd300ff" />
-                <Text style={styles.waitingText}>En attente de l'adversaire...</Text>
+                <Text style={styles.waitingText}>{waitingMessage || "En attente de l'adversaire..."}</Text>
             </View>
         )}
         <PanGestureHandler
@@ -3501,7 +4056,7 @@ const GameScreen = ({ navigation, route }) => {
       {gameOver && mode === 'ai' && (
         <View style={styles.gameOverContainer}>
             <Text style={styles.gameOverText}>
-                {winner === (configIA.couleurs.joueur === 'black' ? 'black' : 'white') 
+                {winner === (iaColors.joueur === 'black' ? 'black' : 'white') 
                     ? '🎉 Vous avez gagné !' 
                     : '😢 L\'IA a gagné !'}
             </Text>
@@ -3666,27 +4221,7 @@ const GameScreen = ({ navigation, route }) => {
             {renderLocalPlayer(player1)}
         </View>
       )}
-      {/* SPECTATOR UI OVERLAY */}
-      {mode === 'spectator' && reduxPlayers.me && reduxPlayers.opponent && (
-          <View style={styles.spectatorOverlay}>
-              <View style={styles.spectatorPlayers}>
-                <PlayerProfileCard player={reduxPlayers.me} isMe={true} />
-                <Text style={styles.vsText}>VS</Text>
-                <PlayerProfileCard player={reduxPlayers.opponent} isMe={false} />
-              </View>
-              {reduxSpectators.length > 0 && (
-                  <View style={styles.spectatorList}>
-                      <Text style={styles.spectatorLabel}>Spectateurs:</Text>
-                      <FlatList 
-                          data={reduxSpectators}
-                          horizontal
-                          renderItem={({item}) => <PlayerProfileCard player={item} style={{ transform: [{ scale: 0.8 }] }} />}
-                          keyExtractor={item => item.id}
-                      />
-                  </View>
-              )}
-          </View>
-      )}
+      {/* Spectator overlay removed to avoid duplicate profiles; spectator uses standard header */}
 
       {renderInviteModal()}
       {renderResultModal()}
@@ -3696,19 +4231,10 @@ const GameScreen = ({ navigation, route }) => {
         visible={nextMatchVisible}
         title={alertData?.title || ''}
         message={alertData?.message || ''}
-        initialTimer={30}
-        onConfirm={() => {
-          playButtonSound();
-          isRematching.current = true;
-          AudioController.setRematchMode(true);
-          setWaitingForNextRound(true);
-          setCurrentPlayer(null);
-          socket.emit('player_ready_next_round', {
-            gameId: params.gameId,
-            userId: user._id
-          });
-        }}
-        // containerStyle={mode === 'live' ? { justifyContent: 'center', paddingBottom: 0 } : undefined}
+        initialTimer={(mode === 'ai' || mode === 'ia') ? 0 : 30}
+        onConfirm={mode === 'spectator' ? undefined : handleNextMatchConfirm}
+        readOnly={mode === 'spectator'}
+        readOnlyLabel="En attente de la décision de l'hôte..."
         cardStyle={mode === 'live' ? { alignItems: 'center' } : undefined}
         titleStyle={[styles.alertTitle, mode === 'live' ? { textAlign: 'center' } : null]}
         messageStyle={[styles.alertMessage, mode === 'live' ? { textAlign: 'center' } : null]}
@@ -3734,7 +4260,7 @@ const GameScreen = ({ navigation, route }) => {
       <VersusAnimation 
           player1={player1}
           player2={player2}
-          visible={showVersusAnim}
+          visible={mode !== 'local' && showVersusAnim}
           onFinish={() => setShowVersusAnim(false)}
       />
     </ImageBackground>
@@ -3772,6 +4298,36 @@ const styles = StyleSheet.create({
       color: '#aaa',
       fontSize: 10,
       marginBottom: 2,
+  },
+  spectatorHeaderPills: {
+      position: 'absolute',
+      top: 10,
+      alignSelf: 'center',
+      flexDirection: 'row',
+      gap: 8,
+      zIndex: 15
+  },
+  spectatorPill: {
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.2)'
+  },
+  spectatorPillText: {
+      color: '#fff',
+      fontWeight: 'bold'
+  },
+  spectatorNoteContainer: {
+      width: '100%',
+      alignItems: 'center',
+      marginBottom: 10
+  },
+  spectatorNote: {
+      color: '#e5e7eb',
+      fontSize: 14,
+      fontStyle: 'italic'
   },
   background: {
     flex: 1,

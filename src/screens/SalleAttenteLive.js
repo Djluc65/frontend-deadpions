@@ -30,6 +30,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
   const [inviteModalVisible, setInviteModalVisible] = useState(false);
   const [friends, setFriends] = useState([]);
   const [loadingFriends, setLoadingFriends] = useState(false);
+  const [autoInviteDone, setAutoInviteDone] = useState(false);
 
   const getAvatarSource = (avatar) => {
     return getBaseAvatarSource(avatar);
@@ -43,6 +44,16 @@ const SalleAttenteLive = ({ route, navigation }) => {
         setIsCreator(creatorId.toString() === userId.toString());
     }
   }, [user, configSalle]);
+
+  // Auto-ouvrir la fenêtre d'invitation si demandé et si l'utilisateur est créateur
+  useEffect(() => {
+    const shouldAutoInvite = route.params && route.params.autoInvite;
+    if (!autoInviteDone && shouldAutoInvite && isCreator && configSalle) {
+      setAutoInviteDone(true);
+      setInviteModalVisible(true);
+      fetchFriends();
+    }
+  }, [route.params, isCreator, configSalle, autoInviteDone]);
 
   // Connexion au salon socket et écoute du démarrage
   useEffect(() => {
@@ -423,19 +434,28 @@ const SalleAttenteLive = ({ route, navigation }) => {
 
       {/* Actions de pied de page */}
       <View style={styles.footer}>
-        {isCreator ? (
-            <TouchableOpacity 
-                style={styles.mainButton}
-                onPress={handleStartGame}
+        {isCreator ? (<View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
+            {/* <TouchableOpacity 
+              style={[styles.mainButton, { flex: 1, marginRight: 8, backgroundColor: '#10b981' }]}
+              onPress={() => {yButtonSound(); handleOpenInviteModal(); }}
             >
-                <Text style={styles.mainButtonText}>LANCER LA PARTIE</Text>
-                <Ionicons name="play" size={24} color="#fff" style={{ marginLeft: 10 }} />
+              <Text style={styles.mainButtonText}>INVITATION</Text>
+              <Ionicons name="person-add" size={24} color="#fff" style={{ marginLeft: 10 }} />
+            </TouchableOpacity> */}
+            <TouchableOpacity 
+              style={[styles.mainButton, { flex: 1, marginLeft: 8, opacity: opponent ? 1 : 0.6 }]}
+              onPress={handleStartGame}
+              disabled={!opponent}
+            >
+              <Text style={styles.mainButtonText}>LANCER LA PARTIE</Text>
+              <Ionicons name="play" size={24} color="#fff" style={{ marginLeft: 10 }} />
             </TouchableOpacity>
+          </View>
         ) : (
-            <View style={styles.waitingMessage}>
-                <ActivityIndicator size="small" color="#fff" />
-                <Text style={styles.waitingText}>En attente de l'hôte...</Text>
-            </View>
+          <View style={styles.waitingMessage}>
+            <ActivityIndicator size="small" color="#fff" />
+            <Text style={styles.waitingText}>En attente de l'hôte...</Text>
+          </View>
         )}
       </View>
 

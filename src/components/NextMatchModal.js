@@ -7,6 +7,8 @@ const NextMatchModal = ({
   message,
   initialTimer = 30,
   onConfirm,
+  readOnly,
+  readOnlyLabel,
   containerStyle,
   cardStyle,
   titleStyle,
@@ -24,15 +26,18 @@ const NextMatchModal = ({
       setTimer(initialTimer);
       setHasClicked(false);
       if (intervalRef.current) clearInterval(intervalRef.current);
-      intervalRef.current = setInterval(() => {
-        setTimer(prev => {
-          if (prev <= 1) {
-            clearInterval(intervalRef.current);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+      // Démarrer le compte à rebours uniquement si initialTimer > 0
+      if (Number.isFinite(initialTimer) && initialTimer > 0) {
+        intervalRef.current = setInterval(() => {
+          setTimer(prev => {
+            if (prev <= 1) {
+              clearInterval(intervalRef.current);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -49,7 +54,7 @@ const NextMatchModal = ({
   }, [visible, initialTimer]);
 
   const handlePress = () => {
-    if (hasClicked) return;
+    if (hasClicked || readOnly) return;
     setHasClicked(true);
     if (onConfirm) onConfirm();
   };
@@ -60,9 +65,10 @@ const NextMatchModal = ({
         style={[
           {
             flex: 1,
-            backgroundColor: 'transparent',
-            justifyContent: 'flex-end',
-            paddingBottom: 20
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            paddingHorizontal: 20
           },
           containerStyle
         ]}
@@ -72,8 +78,6 @@ const NextMatchModal = ({
             {
               alignSelf: 'center',
               width: '90%',
-              marginBottom: 20,
-              top: 0,
               backgroundColor: '#041c55',
               borderColor: '#f1c40f',
               borderWidth: 2,
@@ -83,26 +87,29 @@ const NextMatchModal = ({
               shadowRadius: 4,
               elevation: 5,
               padding: 20,
-              borderRadius: 10
+              borderRadius: 10,
+              alignItems: 'center'
             },
             cardStyle
           ]}
         >
           <Text style={titleStyle}>{title}</Text>
           <Text style={messageStyle}>{message}</Text>
-          <Text style={timerStyle}>
-            {timer > 0 ? `Temps restant: ${timer}s` : 'Temps écoulé'}
-          </Text>
+          {(Number.isFinite(initialTimer) && initialTimer > 0) ? (
+            <Text style={timerStyle}>
+              {timer > 0 ? `Temps restant: ${timer}s` : 'Temps écoulé'}
+            </Text>
+          ) : null}
           <TouchableOpacity
             style={[
               buttonStyle,
-              hasClicked && { opacity: 0.5, backgroundColor: '#555' }
+              (hasClicked || readOnly) && { opacity: 0.5, backgroundColor: '#555' }
             ]}
-            disabled={hasClicked}
+            disabled={hasClicked || readOnly}
             onPress={handlePress}
           >
             <Text style={buttonTextStyle}>
-              {hasClicked ? 'En attente...' : 'Match Suivant'}
+              {readOnly ? (readOnlyLabel || "En attente de la décision de l'hôte...") : (hasClicked ? 'En attente...' : 'Match Suivant')}
             </Text>
           </TouchableOpacity>
         </View>

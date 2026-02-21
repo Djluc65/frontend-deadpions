@@ -387,7 +387,7 @@ const evaluerPosition = (boardArray, map, joueur, pressionMap) => {
 const obtenirCoupsPertinents = (boardArray, map, modeDefense = false, adversaire = null) => {
     const coups = new Set();
     
-    if (boardArray.length === 0) return [{row: 15, col: 9}];
+    if (boardArray.length === 0) return [{row: 9, col: 6}];
 
     for (const stone of boardArray) {
         // Rayon de 2 cases

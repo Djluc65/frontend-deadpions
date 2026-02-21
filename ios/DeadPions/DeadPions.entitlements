@@ -2,13 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
   <dict>
-    <!-- 
-    Temporarily commented out to fix physical device build (Provisioning Profile mismatch).
-    Uncomment when Apple Pay Merchant ID is properly configured in Apple Developer Portal.
     <key>com.apple.developer.in-app-payments</key>
     <array>
       <string>merchant.com.deadpions</string>
     </array>
-    -->
   </dict>
 </plist>
