@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, Dimensions, Alert, ScrollView, Animated, Image, Modal, Keyboard, Platform, Share, ActivityIndicator, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, Dimensions, Alert, ScrollView, Animated, Image, Modal, Keyboard, Platform, Share, ActivityIndicator, FlatList, AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
@@ -184,6 +184,7 @@ const GameScreen = ({ navigation, route }) => {
   );
 
   const [opponent, setOpponent] = useState(params.opponent || null);
+  const [isWaitingState, setIsWaitingState] = useState(!!(params && params.isWaiting));
 
   const iaColors = configIA?.couleurs || { joueur: 'black', ia: 'white' };
 
@@ -405,6 +406,9 @@ const GameScreen = ({ navigation, route }) => {
   const [bubbles, setBubbles] = useState({ player1: null, player2: null });
   const [rematchRequested, setRematchRequested] = useState(false);
   const isRematching = useRef(false);
+  const listenersReadyRef = useRef(false);
+  const hasJoinedRoomRef = useRef(false);
+  const syncReadyRef = useRef(true);
 
   useEffect(() => {
     if (bubbles.player1) {
@@ -470,6 +474,8 @@ const GameScreen = ({ navigation, route }) => {
         }
 
         console.log('Game started with same ID, updating local state...');
+        syncReadyRef.current = true;
+        setIsWaitingState(false);
         setRematchRequested(false);
         setBoard(Array.isArray(data.board) ? data.board : []);
         setWinningLine(null);
@@ -665,6 +671,8 @@ const GameScreen = ({ navigation, route }) => {
         }
 
         // Reset even if same gameId
+        syncReadyRef.current = true;
+        setIsWaitingState(false);
         setBoard(Array.isArray(data.board) ? data.board : []);
         setWinningLine(null);
         setGameOver(false);
@@ -1036,6 +1044,7 @@ const GameScreen = ({ navigation, route }) => {
 
     const handleGameRejoined = (data) => {
         try {
+            syncReadyRef.current = true;
             if (Array.isArray(data.board)) setBoard(data.board);
             if (data.currentTurn) setCurrentPlayer(data.currentTurn);
             if (data.timeControl) {
@@ -1058,6 +1067,7 @@ const GameScreen = ({ navigation, route }) => {
                     if (newOpponent.coins != null) setOpponentCoins(newOpponent.coins);
                 }
                 dispatch(setPlayers(data.players));
+                if (data.players.white && data.players.black) setIsWaitingState(false);
             }
         } catch (e) {
         }
@@ -1178,10 +1188,11 @@ const GameScreen = ({ navigation, route }) => {
         }
     };
 
-    // After all listeners are registered, (re)join the game room if needed.
-    if (user && (mode === 'online' || mode === 'online_custom') && params.gameId) {
+    listenersReadyRef.current = true;
+    if (user && (mode === 'online' || mode === 'online_custom') && params.gameId && !hasJoinedRoomRef.current) {
         console.log('Attempting to rejoin game room (with listeners ready):', params.gameId);
         socket.emit('join_custom_game', { gameId: params.gameId });
+        hasJoinedRoomRef.current = true;
     }
 
     socket.on('spectator_joined', handleSpectatorJoined);
@@ -1204,6 +1215,7 @@ const GameScreen = ({ navigation, route }) => {
     socket.on('error', handleSocketError);
 
     return () => {
+      listenersReadyRef.current = false;
       socket.off('spectator_joined', handleSpectatorJoined);
       socket.off('game_start', handleGameStart);
       socket.off('game_rejoined', handleGameRejoined);
@@ -1224,6 +1236,26 @@ const GameScreen = ({ navigation, route }) => {
       socket.off('error', handleSocketError);
     };
   }, [mode, navigation, user, isSoundEnabled, player1.id, player2.id, params.gameId]);
+
+  useEffect(() => {
+    if (isWaitingState && user && (mode === 'online' || mode === 'online_custom') && params.gameId && listenersReadyRef.current && !hasJoinedRoomRef.current) {
+        console.log('Waiting state: ensuring joined to game room:', params.gameId);
+        socket.emit('join_custom_game', { gameId: params.gameId });
+        hasJoinedRoomRef.current = true;
+    }
+  }, [isWaitingState, user, mode, params.gameId]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+        if (next === 'active' && user && (mode === 'online' || mode === 'online_custom') && params.gameId && listenersReadyRef.current) {
+            syncReadyRef.current = false;
+            console.log('Foreground: rejoining game room for resync:', params.gameId);
+            socket.emit('join_custom_game', { gameId: params.gameId });
+            hasJoinedRoomRef.current = true;
+        }
+    });
+    return () => sub.remove();
+  }, [user, mode, params.gameId]);
 
   // Effect to find winning line in online mode (since server doesn't send it)
   useEffect(() => {
@@ -1478,7 +1510,7 @@ const GameScreen = ({ navigation, route }) => {
   );
 
   const handleQuitGame = () => {
-    if (params.isWaiting && params.gameId) {
+    if (isWaitingState && params.gameId) {
         Alert.alert(
             "Annuler la partie ?",
             "Voulez-vous fermer la salle et récupérer votre mise ?",
@@ -1489,6 +1521,7 @@ const GameScreen = ({ navigation, route }) => {
                     style: "destructive",
                     onPress: () => {
                         socket.emit('quit_waiting_room', { gameId: params.gameId, userId: user?._id });
+                        setIsWaitingState(false);
                         setShowGameMenu(false);
                         navigation.navigate('Social');
                     }
@@ -1772,7 +1805,7 @@ const GameScreen = ({ navigation, route }) => {
       style={[
           styles.playerContainer, 
           isCurrent && styles.activePlayer,
-           (mode === 'online' || mode === 'live' || mode === 'spectator' || mode === 'ai' || mode === 'local') && { height: 132 }
+           (mode === 'online' || mode === 'online_custom' || mode === 'live' || mode === 'spectator' || mode === 'ai' || mode === 'local') && { height: 132 }
           // mode === 'online' && { 
           //     height: 180, // Increased height for better spacing
           //     justifyContent: 'flex-start', 
@@ -1786,7 +1819,7 @@ const GameScreen = ({ navigation, route }) => {
       }}
       activeOpacity={0.8}
     >
-      {(mode === 'online' || mode === 'live' || mode === 'spectator' || mode === 'ai' || mode === 'local') && isCurrent && !gameOver && (player === player1 || mode === 'spectator' || mode === 'ai' || mode === 'local') && (
+      {(mode === 'online' || mode === 'online_custom' || mode === 'live' || mode === 'spectator' || mode === 'ai' || mode === 'local') && isCurrent && !gameOver && (player === player1 || mode === 'spectator' || mode === 'ai' || mode === 'local') && (
         <Animated.View style={{ 
             position: 'absolute', 
             top: -25, 
@@ -1802,12 +1835,12 @@ const GameScreen = ({ navigation, route }) => {
       )}
       <View style={[
           styles.avatarContainer,
-          (mode === 'online' || mode === 'live' || mode === 'spectator' || mode === 'ai' || mode === 'local') && { alignItems: 'center', width: '100%', marginBottom: 5 }
+          (mode === 'online' || mode === 'online_custom' || mode === 'live' || mode === 'spectator' || mode === 'ai' || mode === 'local') && { alignItems: 'center', width: '100%', marginBottom: 5 }
       ]}>
         {player.avatar ? (
           <Image source={getAvatarSource(player.avatar)} style={[
               styles.avatar,
-              (mode === 'online' || mode === 'live' || mode === 'spectator' || mode === 'ai' || mode === 'local') && { left: 0 } // Reset offset for online mode
+              (mode === 'online' || mode === 'online_custom' || mode === 'live' || mode === 'spectator' || mode === 'ai' || mode === 'local') && { left: 0 } // Reset offset for online mode
           ]} />
         ) : (
           <Ionicons name="person-circle-outline" size={40} color="#fff" />
@@ -1816,7 +1849,7 @@ const GameScreen = ({ navigation, route }) => {
       
       <Text style={[
           styles.playerName,
-          (mode === 'online' || mode === 'live' || mode === 'spectator' || mode === 'ai' || mode === 'local') && { 
+          (mode === 'online' || mode === 'online_custom' || mode === 'live' || mode === 'spectator' || mode === 'ai' || mode === 'local') && { 
               bottom: 35, 
               right: 25, 
               marginTop: 0,
@@ -1826,7 +1859,7 @@ const GameScreen = ({ navigation, route }) => {
           }
       ]} numberOfLines={1}>{player.pseudo}</Text>
       
-      {(mode === 'online' || mode === 'live' || mode === 'spectator' || mode === 'ai' || mode === 'local') && (
+      {(mode === 'online' || mode === 'online_custom' || mode === 'live' || mode === 'spectator' || mode === 'ai' || mode === 'local') && (
           <View style={[
               styles.playerCoinsContainer,
               { 
@@ -1890,7 +1923,7 @@ const GameScreen = ({ navigation, route }) => {
 
 
       {/* ONLINE INFO FOOTER (Timer + Timeouts) */}
-      {(mode === 'online' || mode === 'live' || mode === 'spectator' || mode === 'ai' || mode === 'local') && (
+      {(mode === 'online' || mode === 'online_custom' || mode === 'live' || mode === 'spectator' || mode === 'ai' || mode === 'local') && (
           <View style={{ position: 'absolute', bottom: 5, width: '100%', alignItems: 'center' }}>
               {/* CHRONOMÈTRE */}
               {!gameOver && timeControl && (
@@ -2436,6 +2469,7 @@ const GameScreen = ({ navigation, route }) => {
     if (gameOver) return;
     if (waitingForNextRound) return; // Prevent moves while waiting for next round/game over
     if (mode === 'spectator') return;
+    if (!syncReadyRef.current && (mode === 'online' || mode === 'online_custom' || mode === 'live')) return;
     
     // En mode IA, bloquer les clics pendant le tour de l'IA
     if (mode === 'ai' && iaEnReflexion) {
@@ -4138,7 +4172,7 @@ const GameScreen = ({ navigation, route }) => {
       {(mode === 'online' || mode === 'online_custom' || mode === 'spectator' || mode === 'live') && (
         <>
             {/* Waiting Overlay */}
-            {((params.isWaiting && mode !== 'live') || (mode === 'live' && !player2.id)) && !gameOver && (
+            {((isWaitingState && mode !== 'live') || (mode === 'live' && !player2.id)) && !gameOver && (
                 <View style={[styles.modalOverlay, { zIndex: 50, justifyContent: 'center', paddingBottom: 0 }]}>
                     <View style={{ backgroundColor: 'rgba(0,0,0,0.8)', padding: 20, borderRadius: 15, alignItems: 'center', width: '80%' }}>
                         <ActivityIndicator size="large" color="#f1c40f" style={{ marginBottom: 15 }} />
@@ -4177,8 +4211,8 @@ const GameScreen = ({ navigation, route }) => {
                 </View>
             )}
 
-            {/* Invite Friend FAB - Only for Custom Online Games or Waiting State */}
-            {(mode === 'online_custom' || params.isWaiting) && !gameOver && (
+            {/* Invite Friend FAB - Only while waiting in Custom Online */}
+            {(mode === 'online_custom' && isWaitingState) && !gameOver && (
                 <TouchableOpacity 
                     style={[styles.menuFab, { bottom: 240, backgroundColor: '#2ecc71' }]} 
                     onPress={() => setShowInviteModal(true)}

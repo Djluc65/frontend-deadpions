@@ -107,6 +107,17 @@ const SessionController = () => {
 
             // Decide Navigation
             if (status.matchStatus === 'active') {
+                const navState = navigation.getState();
+                if (navState) {
+                    const currentRoute = navState.routes[navState.index];
+                    if (currentRoute.name === 'Game') {
+                        const currentGameId = currentRoute.params?.gameId;
+                        if (currentGameId === status.gameId) {
+                            console.log('SessionController: already on Game for active session, skipping navigation');
+                            return;
+                        }
+                    }
+                }
                 const isLive = typeof status.gameId === 'string' && status.gameId.startsWith('live_');
                 const baseParams = {
                     gameId: status.gameId,
