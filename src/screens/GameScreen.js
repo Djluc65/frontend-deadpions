@@ -156,7 +156,6 @@ const GameScreen = ({ navigation, route }) => {
   const getPlayerId = (p) => p?._id || p?.id;
   const currentUserId = getPlayerId(user);
 
-  // Local state for players and timeControl to avoid setParams issues
   const [playersData, setPlayersData] = useState(params.players || {});
   const [timeControlSetting, setTimeControlSetting] = useState(params.timeControl || configIA?.timeControl || localConfig?.timeControl);
 
@@ -183,6 +182,8 @@ const GameScreen = ({ navigation, route }) => {
       mode === 'online' ? route.params?.opponent?.coins : 
       ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite) ? playersData?.white?.coins : playersData?.black?.coins
   );
+
+  const [opponent, setOpponent] = useState(params.opponent || null);
 
   const iaColors = configIA?.couleurs || { joueur: 'black', ia: 'white' };
 
@@ -229,12 +230,40 @@ const GameScreen = ({ navigation, route }) => {
   };
 
   const player2 = {
-    id: ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite) ? getPlayerId(playersData?.white) : (mode === 'online' ? getPlayerId(route.params?.opponent) : getPlayerId(playersData?.black)),
-    pseudo: mode === 'ai' ? 'IA' : mode === 'local' ? 'Joueur 2' : mode === 'online' ? (route.params?.opponent?.pseudo || 'Adversaire') : ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite) ? (playersData?.white?.pseudo || 'En attente...') : (playersData?.black?.pseudo || 'Joueur 2'),
-    avatar: mode === 'online' ? route.params?.opponent?.avatar : ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite) ? playersData?.white?.avatar : playersData?.black?.avatar,
-    country: mode === 'online' ? route.params?.opponent?.country : ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite) ? playersData?.white?.country : playersData?.black?.country,
-    coins: opponentCoins ?? (mode === 'online' ? route.params?.opponent?.coins : ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite) ? playersData?.white?.coins : playersData?.black?.coins),
-    level: mode === 'online' ? (route.params?.opponent?.niveau || route.params?.opponent?.level) : ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite) ? (playersData?.white?.niveau || playersData?.white?.level) : (playersData?.black?.niveau || playersData?.black?.level),
+    id: ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite)
+      ? getPlayerId(playersData?.white)
+      : (mode === 'online'
+        ? (getPlayerId(opponent) || getPlayerId(route.params?.opponent))
+        : getPlayerId(playersData?.black)),
+    pseudo: mode === 'ai'
+      ? 'IA'
+      : mode === 'local'
+      ? 'Joueur 2'
+      : mode === 'online'
+      ? (opponent?.pseudo || route.params?.opponent?.pseudo || 'Adversaire')
+      : ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite)
+        ? (playersData?.white?.pseudo || 'En attente...')
+        : (playersData?.black?.pseudo || 'Joueur 2'),
+    avatar: mode === 'online'
+      ? (opponent?.avatar || route.params?.opponent?.avatar)
+      : ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite)
+        ? playersData?.white?.avatar
+        : playersData?.black?.avatar,
+    country: mode === 'online'
+      ? (opponent?.country || route.params?.opponent?.country)
+      : ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite)
+        ? playersData?.white?.country
+        : playersData?.black?.country,
+    coins: opponentCoins ?? (mode === 'online'
+      ? (opponent?.coins ?? route.params?.opponent?.coins)
+      : ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite)
+        ? playersData?.white?.coins
+        : playersData?.black?.coins),
+    level: mode === 'online'
+      ? (opponent?.niveau || opponent?.level || route.params?.opponent?.niveau || route.params?.opponent?.level)
+      : ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite)
+        ? (playersData?.white?.niveau || playersData?.white?.level)
+        : (playersData?.black?.niveau || playersData?.black?.level),
     color: mode === 'ai' 
       ? iaColors.ia 
       : mode === 'local'
@@ -329,7 +358,11 @@ const GameScreen = ({ navigation, route }) => {
             }).catch(err => {
                 console.error('Erreur débit IA:', err);
                 Alert.alert('Erreur', 'Impossible de débiter la mise.');
-                navigation.goBack();
+                if (navigation.canGoBack()) {
+                    navigation.goBack();
+                } else {
+                    navigation.navigate('Home');
+                }
             });
         }
     }, []);
@@ -382,20 +415,13 @@ const GameScreen = ({ navigation, route }) => {
     }
   }, [bubbles.player1]);
 
-  // Ensure socket is identified for online modes
+  // Ensure socket is identified for online modes (user room only)
   useEffect(() => {
     if (user && (mode === 'online' || mode === 'online_custom' || mode === 'spectator' || mode === 'live')) {
          if (!socket.connected) socket.connect();
-         // Always re-identify to ensure server has userId in socket.data
          socket.emit('join_user_room', user._id);
-         
-         // Rejoin game room if we have a gameId
-         if (params.gameId && mode !== 'spectator' && mode !== 'live') {
-             console.log('Attempting to rejoin game room:', params.gameId);
-             socket.emit('join_custom_game', { gameId: params.gameId });
-         }
     }
-  }, [user, mode, params.gameId]);
+  }, [user, mode]);
 
   // Handle game start/reload logic
   useEffect(() => {
@@ -443,9 +469,7 @@ const GameScreen = ({ navigation, route }) => {
              return;
         }
 
-        // Handle same game ID (e.g. initial game start for creator)
         console.log('Game started with same ID, updating local state...');
-        // Full reset for new match startup even if same gameId
         setRematchRequested(false);
         setBoard(Array.isArray(data.board) ? data.board : []);
         setWinningLine(null);
@@ -471,19 +495,17 @@ const GameScreen = ({ navigation, route }) => {
         if (data.players) {
             setPlayersData(data.players);
             
-            // Also update opponent coins
             const pBlack = data.players.black;
             const pWhite = data.players.white;
             const isBlackMe = (pBlack.id || pBlack._id)?.toString() === currentUserId?.toString();
-            const opponent = isBlackMe ? pWhite : pBlack;
-            if (opponent) {
-                setOpponentCoins(opponent.coins);
+            const newOpponent = isBlackMe ? pWhite : pBlack;
+            if (newOpponent) {
+                setOpponent(newOpponent);
+                if (newOpponent.coins != null) setOpponentCoins(newOpponent.coins);
             }
             
-            // Update Redux
             dispatch(setPlayers(data.players));
         }
-        // timeControl handled above
     };
 
     socket.on('game_start', handleGameStart);
@@ -813,17 +835,17 @@ const GameScreen = ({ navigation, route }) => {
       }
 
       setTimeout(() => {
-        setResultData({
-            victoire: isWinner,
-            gains: data.gains || 0,
-            montantPari: params.betAmount || 0,
-            adversaire: params.opponent,
-            raisonVictoire: isWinner && data.reason === 'timeout' ? 'timeout_adverse' : null,
-            raisonDefaite: !isWinner && data.reason === 'timeout' ? 'timeout' : null,
-            timeouts: data.timeouts,
-            type: mode,
-            isTournament: !!params.tournamentSettings
-        });
+            setResultData({
+                victoire: isWinner,
+                gains: data.gains || 0,
+                montantPari: params.betAmount || 0,
+                adversaire: opponent,
+                raisonVictoire: isWinner && data.reason === 'timeout' ? 'timeout_adverse' : null,
+                raisonDefaite: !isWinner && data.reason === 'timeout' ? 'timeout' : null,
+                timeouts: data.timeouts,
+                type: mode,
+                isTournament: !!params.tournamentSettings
+            });
         setShowResultModal(true);
       }, 1500);
     };
@@ -835,7 +857,7 @@ const GameScreen = ({ navigation, route }) => {
          victoire: true,
          gains: (params.betAmount || 0) * 0.9,
          montantPari: params.betAmount || 0,
-         adversaire: params.opponent,
+         adversaire: opponent,
          raisonVictoire: 'disconnect',
          type: mode
        });
@@ -852,7 +874,7 @@ const GameScreen = ({ navigation, route }) => {
         const nouveauMessage = {
             id: msgId,
             type: 'texte',
-            auteur: data.senderPseudo || params.opponent?.pseudo || 'Adversaire',
+            auteur: data.senderPseudo || opponent?.pseudo || 'Adversaire',
             estMoi: false,
             contenu: data.message,
             timestamp: new Date()
@@ -880,7 +902,7 @@ const GameScreen = ({ navigation, route }) => {
         const nouveauMessage = {
             id: msgId,
             type: 'emoji',
-            auteur: data.senderPseudo || params.opponent?.pseudo || 'Adversaire',
+            auteur: data.senderPseudo || opponent?.pseudo || 'Adversaire',
             estMoi: false,
             contenu: data.emoji,
             timestamp: new Date()
@@ -1000,8 +1022,7 @@ const GameScreen = ({ navigation, route }) => {
                  victoire: isWinner,
                  gains: data.gains || 0,
                  montantPari: params.betAmount || 0,
-                 adversaire: params.opponent,
-                 // Considérer toutes les fins avec un winnerId comme victoire/défaite de tournoi
+                 adversaire: opponent,
                  raisonVictoire: hasWinner ? 'tournament_win' : null,
                  raisonDefaite: hasWinner ? 'tournament_loss' : null,
                  isTournament: true,
@@ -1013,22 +1034,43 @@ const GameScreen = ({ navigation, route }) => {
         }, 1500);
     };
 
-    // const handleGameRejoined = (data) => {
-    //     console.log('Game rejoined:', data);
-    //     if (data.board) setBoard(data.board);
-    //     if (data.currentTurn) setCurrentPlayer(data.currentTurn);
-    //     if (data.timeControl) setTimeLeft(data.timeControl);
-    //     if (data.players) setPlayersData(data.players);
-    // };
+    const handleGameRejoined = (data) => {
+        try {
+            if (Array.isArray(data.board)) setBoard(data.board);
+            if (data.currentTurn) setCurrentPlayer(data.currentTurn);
+            if (data.timeControl) {
+                setTimeControlSetting(data.timeControl);
+                setTimeLeft(data.timeControl);
+            }
+            if (data.tournamentSettings) {
+                if (data.tournamentSettings.score) setTournamentScore(data.tournamentSettings.score);
+                if (data.tournamentSettings.gameNumber) setTournamentGameNumber(data.tournamentSettings.gameNumber);
+                if (data.tournamentSettings.totalGames !== undefined) setTournamentTotalGames(data.tournamentSettings.totalGames);
+            }
+            if (data.players) {
+                setPlayersData(data.players);
+                const pBlack = data.players.black;
+                const pWhite = data.players.white;
+                const isBlackMe = (getPlayerId(pBlack)?.toString() === currentUserId?.toString());
+                const newOpponent = isBlackMe ? pWhite : pBlack;
+                if (newOpponent) {
+                    setOpponent(newOpponent);
+                    if (newOpponent.coins != null) setOpponentCoins(newOpponent.coins);
+                }
+                dispatch(setPlayers(data.players));
+            }
+        } catch (e) {
+        }
+    };
 
     const handleSocketError = (msg) => {
         console.log('Socket error:', msg);
-        // Only show alert if it's a critical error or we are trying to play
-        if (msg === 'Not your turn' || msg === 'Cell occupied') {
-             // Toast or small feedback? For now Alert is fine for debugging
-             // Alert.alert('Info', msg);
-        } else {
-             // Alert.alert('Erreur', msg);
+        if (msg === 'Cell occupied') {
+            if ((mode === 'online' || mode === 'online_custom') && params.gameId) {
+                console.log('Board desync detected, requesting full state via join_custom_game');
+                socket.emit('join_custom_game', { gameId: params.gameId });
+            }
+            return;
         }
     };
 
@@ -1087,7 +1129,11 @@ const GameScreen = ({ navigation, route }) => {
             if (params.roomConfig) {
                 navigation.replace('SalleAttenteLive', { configSalle: params.roomConfig });
             } else {
-                navigation.goBack();
+                if (navigation.canGoBack()) {
+                    navigation.goBack();
+                } else {
+                    navigation.navigate('Home');
+                }
             }
             return;
         }
@@ -1102,7 +1148,11 @@ const GameScreen = ({ navigation, route }) => {
                         if (params.roomConfig) {
                             navigation.replace('SalleAttenteLive', { configSalle: params.roomConfig, roomId: params.gameId });
                         } else {
-                            navigation.goBack();
+                            if (navigation.canGoBack()) {
+                                navigation.goBack();
+                            } else {
+                                navigation.navigate('Home');
+                            }
                         }
                     }
                 },
@@ -1128,9 +1178,15 @@ const GameScreen = ({ navigation, route }) => {
         }
     };
 
+    // After all listeners are registered, (re)join the game room if needed.
+    if (user && (mode === 'online' || mode === 'online_custom') && params.gameId) {
+        console.log('Attempting to rejoin game room (with listeners ready):', params.gameId);
+        socket.emit('join_custom_game', { gameId: params.gameId });
+    }
+
     socket.on('spectator_joined', handleSpectatorJoined);
     socket.on('game_start', handleGameStart);
-    // socket.on('game_rejoined', handleGameRejoined);
+    socket.on('game_rejoined', handleGameRejoined);
     socket.on('move_made', handleMoveMade);
     socket.on('game_over', handleGameOver);
     socket.on('opponent_disconnected', handleOpponentDisconnected);
@@ -1150,7 +1206,7 @@ const GameScreen = ({ navigation, route }) => {
     return () => {
       socket.off('spectator_joined', handleSpectatorJoined);
       socket.off('game_start', handleGameStart);
-    //   socket.off('game_rejoined', handleGameRejoined);
+      socket.off('game_rejoined', handleGameRejoined);
       socket.off('move_made', handleMoveMade);
       socket.off('game_over', handleGameOver);
       socket.off('opponent_disconnected', handleOpponentDisconnected);
@@ -1167,7 +1223,7 @@ const GameScreen = ({ navigation, route }) => {
       socket.off('tournament_draw', handleTournamentDraw);
       socket.off('error', handleSocketError);
     };
-  }, [mode, navigation, user, isSoundEnabled, player1.id, player2.id]);
+  }, [mode, navigation, user, isSoundEnabled, player1.id, player2.id, params.gameId]);
 
   // Effect to find winning line in online mode (since server doesn't send it)
   useEffect(() => {
@@ -1571,7 +1627,11 @@ const GameScreen = ({ navigation, route }) => {
                            if (params.gameId) {
                                socket.emit('quit_waiting_room', { gameId: params.gameId, userId: user?._id });
                            }
-                           navigation.goBack();
+                           if (navigation.canGoBack()) {
+                               navigation.goBack();
+                           } else {
+                               navigation.navigate('Home');
+                           }
                       }}
                   >
                       <Text style={styles.closeButtonText}>Annuler</Text>
@@ -3588,7 +3648,11 @@ const GameScreen = ({ navigation, route }) => {
                                                     if (mode === 'live' || mode === 'online_custom' || mode === 'online') {
                                                         socket.emit('resign');
                                                     }
-                                                    navigation.goBack();
+                                                    if (navigation.canGoBack()) {
+                                                        navigation.goBack();
+                                                    } else {
+                                                        navigation.navigate('Home');
+                                                    }
                                                 }, 
                                                 style: 'destructive' 
                                             }
@@ -3639,7 +3703,13 @@ const GameScreen = ({ navigation, route }) => {
                             { text: "Annuler", style: "cancel" },
                             { 
                                 text: "Quitter", 
-                                onPress: () => navigation.goBack(), 
+                                onPress: () => {
+                                    if (navigation.canGoBack()) {
+                                        navigation.goBack();
+                                    } else {
+                                        navigation.navigate('Home');
+                                    }
+                                }, 
                                 style: 'destructive' 
                             }
                         ]
@@ -4091,7 +4161,13 @@ const GameScreen = ({ navigation, route }) => {
 
                                 <TouchableOpacity 
                                     style={{ width: '100%', padding: 12, backgroundColor: 'rgba(255, 59, 48, 0.8)', borderRadius: 8, alignItems: 'center' }}
-                                    onPress={() => navigation.goBack()}
+                                    onPress={() => {
+                                        if (navigation.canGoBack()) {
+                                            navigation.goBack();
+                                        } else {
+                                            navigation.navigate('Home');
+                                        }
+                                    }}
                                 >
                                     <Text style={{ color: '#fff', fontWeight: 'bold' }}>Quitter</Text>
                                 </TouchableOpacity>
@@ -4196,7 +4272,7 @@ const GameScreen = ({ navigation, route }) => {
                         <ChatEnLigne
                             matchId={params.gameId}
                             monPseudo={user?.pseudo || 'Vous'}
-                            adversairePseudo={params.opponent?.pseudo || 'Adversaire'}
+                            adversairePseudo={opponent?.pseudo || 'Adversaire'}
                             onEnvoyerMessage={envoyerMessageChat}
                             messages={chatMessages}
                             displayMode={activeModal === 'chat' ? 'text' : 'emoji'}

@@ -20,7 +20,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
   const [chatActif, setChatActif] = useState(true); // Activer/désactiver le chat
   const [audioLobbyActif, setAudioLobbyActif] = useState(true); // Activer/désactiver l'audio lobby
   const [reactionsActives, setReactionsActives] = useState(true); // Activer/désactiver les réactions
-  const [tempsParCoup, setTempsParCoup] = useState(120); // Temps par coup en secondes
+  const [tempsParCoup, setTempsParCoup] = useState(30); // Temps par coup en secondes
   const [isTournament, setIsTournament] = useState(false); // Mode tournoi
   const [tournamentGames, setTournamentGames] = useState(2); // Nombre de manches
   const [betAmount, setBetAmount] = useState(100); // Mise

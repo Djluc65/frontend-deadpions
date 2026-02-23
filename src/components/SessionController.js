@@ -107,11 +107,19 @@ const SessionController = () => {
 
             // Decide Navigation
             if (status.matchStatus === 'active') {
-                // Navigate to Game if not already there
-                // We use navigate which handles "already on screen" gracefully usually,
-                // or pushes if stack.
-                // For GameScreen, we probably want to ensure we are there.
-                navigation.navigate('Game', { gameId: status.gameId });
+                const isLive = typeof status.gameId === 'string' && status.gameId.startsWith('live_');
+                const baseParams = {
+                    gameId: status.gameId,
+                    betAmount: status.gameData?.betAmount,
+                    opponent: status.gameData?.opponent,
+                    gameType: status.gameData?.mode
+                };
+                // Always provide an explicit mode to avoid falling back to 'local'
+                if (isLive) {
+                    navigation.navigate('Game', { mode: 'live', ...baseParams });
+                } else {
+                    navigation.navigate('Game', { mode: 'online', ...baseParams });
+                }
             } else if (status.matchStatus === 'completed') {
                 // Navigate to Result
                 const isVictory = status.result === 'win';

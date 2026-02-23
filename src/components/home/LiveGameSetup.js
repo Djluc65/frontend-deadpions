@@ -19,7 +19,7 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
     const [chatActif, setChatActif] = useState(true);
     const [audioLobbyActif, setAudioLobbyActif] = useState(true);
     const [reactionsActives, setReactionsActives] = useState(true);
-    const [tempsParCoup, setTempsParCoup] = useState(120);
+    const [tempsParCoup, setTempsParCoup] = useState(30);
     const [isTournament, setIsTournament] = useState(false);
     const [tournamentGames, setTournamentGames] = useState(2);
     const [betAmount, setBetAmount] = useState(100);

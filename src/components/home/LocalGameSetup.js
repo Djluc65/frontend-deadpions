@@ -8,7 +8,7 @@ const LocalGameSetup = memo(({ visible, onClose, navigation }) => {
   const [step, setStep] = useState(1);
   const [localMode, setLocalMode] = useState('simple');
   const [localSeriesLength, setLocalSeriesLength] = useState(2);
-  const [localTime, setLocalTime] = useState(120);
+  const [localTime, setLocalTime] = useState(30);
   const [localPremierJoueur, setLocalPremierJoueur] = useState('aleatoire');
   const [localCouleurJoueur1, setLocalCouleurJoueur1] = useState('noir');
 

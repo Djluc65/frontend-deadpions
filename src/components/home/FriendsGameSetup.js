@@ -15,7 +15,7 @@ const FriendsGameSetup = ({ visible, onClose, navigation, user, onOpenLiveConfig
   const [inviteMode, setInviteMode] = useState('simple');
   const [inviteSeriesLength, setInviteSeriesLength] = useState(2);
   const [inviteBet, setInviteBet] = useState(100);
-  const [inviteTime, setInviteTime] = useState(120);
+  const [inviteTime, setInviteTime] = useState(30);
 
   // Reset state when modal is closed
   useEffect(() => {

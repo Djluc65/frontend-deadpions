@@ -10,7 +10,7 @@ import { logout } from '../../redux/slices/authSlice';
 const OnlineGameSetup = memo(({ visible, onClose, navigation, user }) => {
     const dispatch = useDispatch();
     const [bet, setBet] = useState(500);
-    const [time, setTime] = useState(120);
+    const [time, setTime] = useState(30);
     const [mode, setMode] = useState('simple');
     const [seriesLength, setSeriesLength] = useState(2);
     const [isSearching, setIsSearching] = useState(false);

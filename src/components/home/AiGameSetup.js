@@ -11,7 +11,7 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
   const [aiMode, setAiMode] = useState('simple');
   const [aiSeriesLength, setAiSeriesLength] = useState(2);
   const [aiBet, setAiBet] = useState(100);
-  const [aiTimeControl, setAiTimeControl] = useState(120);
+  const [aiTimeControl, setAiTimeControl] = useState(30);
   
   const [aiDifficulte, setAiDifficulte] = useState('moyen');
   const [aiPremierJoueur, setAiPremierJoueur] = useState('joueur');

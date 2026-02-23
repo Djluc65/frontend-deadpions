@@ -16,7 +16,7 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
 
   const [soldeCoins, setSoldeCoins] = useState(user?.coins || 0);
   const [montantPari, setMontantPari] = useState(500);
-  const [timeControl, setTimeControl] = useState(120); // Default 2 minutes
+  const [timeControl, setTimeControl] = useState(30);
   const [step, setStep] = useState(1); // 1: Bet, 2: Time
   const [enAttenteMatch, setEnAttenteMatch] = useState(false);
   const [tempsRestant, setTempsRestant] = useState(120);
