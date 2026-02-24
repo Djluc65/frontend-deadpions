@@ -3973,22 +3973,22 @@ const GameScreen = ({ navigation, route }) => {
                     return (
                         <React.Fragment key={`h-${i}`}>
                             <SvgText
-                                x={PADDING_LEFT - 10}
+                                x={PADDING_LEFT - 3}
                                 y={y + 3}
                                 fontSize="10"
                                 fontWeight="bold"
-                                fill={isRedRow ? "red" : "#fff"}
-                                textAnchor="end"
+                                fill={isRedRow ? "red" : "#000000ff"}
+                                textAnchor="start"
                             >
                                 {i + 1}
                             </SvgText>
                             <SvgText
-                                x={PADDING_LEFT + (COLS - 1) * CELL_SIZE + 10}
+                                x={PADDING_LEFT + (COLS - 1) * CELL_SIZE + 3}
                                 y={y + 3}
                                 fontSize="10"
                                 fontWeight="bold"
-                                fill={isRedRow ? "red" : "#fff"}
-                                textAnchor="start"
+                                fill={isRedRow ? "red" : "#000000ff"}
+                                textAnchor="end"
                             >
                                 {i + 1}
                             </SvgText>

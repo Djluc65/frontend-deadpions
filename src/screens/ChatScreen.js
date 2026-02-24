@@ -19,12 +19,14 @@ import {
 
 import { API_URL } from '../config';
 import socket from '../services/socket';
+import { AudioController } from '../utils/AudioController';
 
 const { width, height } = Dimensions.get('window');
 
 const ChatScreen = ({ route, navigation }) => {
   const { friendId, friendName, friendAvatar } = route.params;
   const { user, token } = useSelector(state => state.auth);
+  const settings = useSelector(state => state.settings || { isMusicEnabled: true });
   
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
@@ -77,11 +79,13 @@ const ChatScreen = ({ route, navigation }) => {
   }, [isRecordingOverlayVisible]);
 
   useEffect(() => {
+    AudioController.notifyChatEnter();
+
     fetchMessages();
     markMessagesAsRead();
     setupSocket();
+    fetchFriendStatus();
 
-    // Request Audio Permissions for Voice Messages
     (async () => {
       await Audio.requestPermissionsAsync();
       await Audio.setAudioModeAsync({
@@ -91,6 +95,8 @@ const ChatScreen = ({ route, navigation }) => {
     })();
 
     return () => {
+      AudioController.notifyChatExit(settings.isMusicEnabled);
+
       if (sound) sound.unloadAsync();
       endCallCleanup();
       socket.off('receive_message');
@@ -386,6 +392,8 @@ const ChatScreen = ({ route, navigation }) => {
       const permission = await Audio.requestPermissionsAsync();
       if (permission.status !== 'granted') return;
 
+      await AudioController.stopHomeMusic();
+
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
@@ -498,39 +506,83 @@ const ChatScreen = ({ route, navigation }) => {
     }
   };
 
-  const playSound = async (uri, messageId) => {
-    try {
-      if (sound) {
-        await sound.unloadAsync();
-        setSound(null);
-        setIsPlaying(null);
-        if (isPlaying === messageId) return; 
-      }
+  const resolveAudioUrl = (item) => { // ✅ CORRIGÉ
+    const url = // ✅ CORRIGÉ
+      item.audioUri || // ✅ CORRIGÉ
+      item.audio_url || // ✅ CORRIGÉ
+      item.mediaUrl || // ✅ CORRIGÉ
+      item.url || // ✅ CORRIGÉ
+      null; // ✅ CORRIGÉ
 
-      const { sound: newSound } = await Audio.Sound.createAsync(
-          { uri },
-          { shouldPlay: true }
-      );
-      
-      setSound(newSound);
-      setIsPlaying(messageId);
-      
-      newSound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded) {
-            setPlaybackStatus({
-                duration: status.durationMillis / 1000,
-                position: status.positionMillis / 1000
-            });
-            if (status.didJustFinish) {
-                setIsPlaying(null);
-                setPlaybackStatus({ duration: 0, position: 0 });
-            }
-        }
-      });
-    } catch (error) {
-      console.error(error);
-    }
-  };
+    if (!url) { // ✅ CORRIGÉ
+      console.warn('⚠️ No audio URL found in message:', item); // ✅ CORRIGÉ
+      return null; // ✅ CORRIGÉ
+    } // ✅ CORRIGÉ
+
+    if (url.startsWith('/')) { // ✅ CORRIGÉ
+      return `${API_URL}${url}`; // ✅ CORRIGÉ
+    } // ✅ CORRIGÉ
+
+    return url; // ✅ CORRIGÉ
+  }; // ✅ CORRIGÉ
+
+  const playSound = async (uri, messageId) => { // ✅ CORRIGÉ
+    if (!uri || uri === 'Message vocal' || !uri.startsWith('http')) { // ✅ CORRIGÉ
+      console.error('❌ Invalid audio URI:', uri); // ✅ CORRIGÉ
+      Alert.alert('Erreur', 'Impossible de lire ce message vocal (URL invalide)'); // ✅ CORRIGÉ
+      return; // ✅ CORRIGÉ
+    } // ✅ CORRIGÉ
+
+    try { // ✅ CORRIGÉ
+      if (sound) { // ✅ CORRIGÉ
+        try { // ✅ CORRIGÉ
+          await sound.stopAsync(); // ✅ CORRIGÉ
+          await sound.unloadAsync(); // ✅ CORRIGÉ
+        } catch (e) { // ✅ CORRIGÉ
+          console.error('Error stopping previous sound:', e); // ✅ CORRIGÉ
+        } // ✅ CORRIGÉ
+        setSound(null); // ✅ CORRIGÉ
+        setIsPlaying(null); // ✅ CORRIGÉ
+        setPlaybackStatus({ duration: 0, position: 0 }); // ✅ CORRIGÉ
+        if (isPlaying === messageId) return; // ✅ CORRIGÉ
+      } // ✅ CORRIGÉ
+
+      await Audio.setAudioModeAsync({ // ✅ CORRIGÉ
+        allowsRecordingIOS: false, // ✅ CORRIGÉ
+        playsInSilentModeIOS: true, // ✅ CORRIGÉ
+      }); // ✅ CORRIGÉ
+
+      const { sound: newSound } = await Audio.Sound.createAsync( // ✅ CORRIGÉ
+        { uri }, // ✅ CORRIGÉ
+        { shouldPlay: true }, // ✅ CORRIGÉ
+      ); // ✅ CORRIGÉ
+
+      setSound(newSound); // ✅ CORRIGÉ
+      setIsPlaying(messageId); // ✅ CORRIGÉ
+
+      newSound.setOnPlaybackStatusUpdate((status) => { // ✅ CORRIGÉ
+        if (status.isLoaded) { // ✅ CORRIGÉ
+          setPlaybackStatus({ // ✅ CORRIGÉ
+            duration: (status.durationMillis || 0) / 1000, // ✅ CORRIGÉ
+            position: (status.positionMillis || 0) / 1000, // ✅ CORRIGÉ
+          }); // ✅ CORRIGÉ
+          if (status.didJustFinish) { // ✅ CORRIGÉ
+            setIsPlaying(null); // ✅ CORRIGÉ
+            setPlaybackStatus({ duration: 0, position: 0 }); // ✅ CORRIGÉ
+          } // ✅ CORRIGÉ
+        } // ✅ CORRIGÉ
+        if (status.error) { // ✅ CORRIGÉ
+          console.error('❌ Playback error:', status.error); // ✅ CORRIGÉ
+          Alert.alert('Erreur', 'Impossible de lire ce message vocal'); // ✅ CORRIGÉ
+          setIsPlaying(null); // ✅ CORRIGÉ
+        } // ✅ CORRIGÉ
+      }); // ✅ CORRIGÉ
+    } catch (error) { // ✅ CORRIGÉ
+      console.error('❌ playSound error:', error); // ✅ CORRIGÉ
+      Alert.alert('Erreur', 'Impossible de lire ce message vocal'); // ✅ CORRIGÉ
+      setIsPlaying(null); // ✅ CORRIGÉ
+    } // ✅ CORRIGÉ
+  }; // ✅ CORRIGÉ
 
   // --- WEBRTC CALL FUNCTIONS ---
 
@@ -720,6 +772,11 @@ const ChatScreen = ({ route, navigation }) => {
     setCallDuration(0);
     setIsMuted(false);
     setIsCameraOff(false);
+
+    Audio.setAudioModeAsync({
+      allowsRecordingIOS: false,
+      playsInSilentModeIOS: true,
+    }).catch(e => console.log('AudioMode reset error:', e));
   };
 
   const toggleMute = () => {
@@ -742,79 +799,109 @@ const ChatScreen = ({ route, navigation }) => {
 
   // --- RENDERERS ---
 
-  const renderMessage = ({ item }) => {
-    const isMe = item.sender === user._id;
+  const renderMessage = ({ item }) => { // ✅ CORRIGÉ
+    const isMe = item.sender === user._id; // ✅ CORRIGÉ
     
-    if (item.type === 'info') {
-      return (
-        <View style={styles.infoMessage}>
+    if (item.type === 'audio') { // ✅ CORRIGÉ
+      console.log('🔊 Audio message received:', JSON.stringify(item, null, 2)); // ✅ CORRIGÉ
+    } // ✅ CORRIGÉ
+
+    if (item.type === 'info') { // ✅ CORRIGÉ
+      return ( // ✅ CORRIGÉ
+        <View style={styles.infoMessage}> 
           <Text style={styles.infoText}>{item.content}</Text>
         </View>
       );
     }
 
-    return (
+    const progressRatio =
+      isPlaying === item._id && playbackStatus.duration > 0
+        ? Math.min(1, playbackStatus.position / playbackStatus.duration)
+        : 0; // ✅ CORRIGÉ
+
+    return ( // ✅ CORRIGÉ
       <View style={[styles.messageBubble, isMe ? styles.myMessage : styles.theirMessage]}>
-        {item.type === 'audio' ? (
-          <View style={styles.audioContainer}>
+        {item.type === 'audio' ? ( // ✅ CORRIGÉ
+          <View style={styles.audioContainer}> 
             <TouchableOpacity 
-                style={[
-                    styles.audioPlayButton, 
-                    { backgroundColor: isMe ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)' }
-                ]}
-                onPress={() => playSound(item.audioUri || item.content, item._id)}
+              style={[
+                styles.audioPlayButton, 
+                { backgroundColor: isMe ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)' }
+              ]}
+              onPress={() => { // ✅ CORRIGÉ
+                const audioUrl = resolveAudioUrl(item); // ✅ CORRIGÉ
+                if (!audioUrl) { // ✅ CORRIGÉ
+                  Alert.alert('Erreur', 'Fichier audio introuvable'); // ✅ CORRIGÉ
+                  return; // ✅ CORRIGÉ
+                } // ✅ CORRIGÉ
+                playSound(audioUrl, item._id); // ✅ CORRIGÉ
+              }} // ✅ CORRIGÉ
             >
               <Ionicons 
                 name={isPlaying === item._id ? "pause" : "play"} 
                 size={20} 
                 color={isMe ? "#fff" : "#333"} 
-                style={{ marginLeft: isPlaying === item._id ? 0 : 2 }} // Optical adjustment
+                style={{ marginLeft: isPlaying === item._id ? 0 : 2 }}
               />
             </TouchableOpacity>
             
-            <View style={{ flex: 1, marginLeft: 12, justifyContent: 'center' }}>
-                {/* Visual Waveform Effect (Static for now) */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', height: 24, marginBottom: 4 }}>
-                    {[...Array(20)].map((_, i) => (
-                         <View 
-                            key={i} 
-                            style={{ 
-                                width: 2, 
-                                height: 8 + Math.random() * 16, 
-                                backgroundColor: isMe 
-                                    ? (isPlaying === item._id && (i / 20) < (playbackStatus.position / playbackStatus.duration) ? 'rgba(255,255,255,1)' : 'rgba(255,255,255,0.4)')
-                                    : (isPlaying === item._id && (i / 20) < (playbackStatus.position / playbackStatus.duration) ? '#333' : 'rgba(0,0,0,0.2)'),
-                                marginHorizontal: 1.5,
-                                borderRadius: 1
-                            }} 
-                         />
-                    ))}
-                </View>
+            <View style={{ flex: 1, marginLeft: 12, justifyContent: 'center' }}> 
+              <View
+                style={{
+                  height: 4,
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                  backgroundColor: isMe
+                    ? 'rgba(255,255,255,0.3)'
+                    : 'rgba(0,0,0,0.1)',
+                }}
+              >
+                <View
+                  style={{
+                    height: 4,
+                    borderRadius: 2,
+                    width: `${progressRatio * 100}%`,
+                    backgroundColor: isMe ? '#fff' : '#333',
+                  }}
+                />
+              </View>
 
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                     <Text style={{ color: isMe ? "rgba(255,255,255,0.8)" : "rgba(0,0,0,0.6)", fontSize: 11, fontVariant: ['tabular-nums'] }}>
-                        {isPlaying === item._id 
-                            ? formatDuration(Math.floor(playbackStatus.position || 0))
-                            : formatDuration(item.duration || 0)}
-                     </Text>
-                </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                <Text style={{ color: isMe ? "rgba(255,255,255,0.8)" : "rgba(0,0,0,0.6)", fontSize: 11, fontVariant: ['tabular-nums'] }}>
+                  {isPlaying === item._id 
+                    ? formatDuration(Math.floor(playbackStatus.position || 0))
+                    : formatDuration(item.duration || 0)}
+                </Text>
+              </View>
             </View>
           </View>
         ) : (
           <Text style={isMe ? styles.myText : styles.theirText}>{item.content}</Text>
         )}
         <View style={styles.timestampContainer}>
-            <Text style={[styles.timestamp, isMe ? { color: '#ddd' } : { color: '#666' }]}>
+          <Text style={[styles.timestamp, isMe ? { color: '#ddd' } : { color: '#666' }]}>
             {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </Text>
-            {isMe && (
+          </Text>
+          {isMe && (
+            <>
+              {item.sendError && (
                 <Ionicons 
-                    name={(item.status === 'read' || item.read || item.status === 'delivered') ? "checkmark-done" : "checkmark"} 
-                    size={16} 
-                    color={(item.status === 'read' || item.read) ? "#3b82f6" : "#ddd"} 
-                    style={{ marginLeft: 5 }}
+                  name="alert-circle-outline"
+                  size={16}
+                  color="#e74c3c"
+                  style={{ marginLeft: 5 }}
                 />
-            )}
+              )}
+              {!item.sendError && (
+                <Ionicons 
+                  name={(item.status === 'read' || item.read || item.status === 'delivered') ? "checkmark-done" : "checkmark"} 
+                  size={16} 
+                  color={(item.status === 'read' || item.read) ? "#3b82f6" : "#ddd"} 
+                  style={{ marginLeft: 5 }}
+                />
+              )}
+            </>
+          )}
         </View>
       </View>
     );

@@ -228,44 +228,470 @@ const checkLiaisonAdverse = (map, coup, adversaire) => {
   return connexions > 0;
 };
 
-// --- LOGIQUE DE DÉCISION v3.1 ---
+const findCriticalMove = (boardMatrix, player, count = 4) => {
+  const directions = [
+    [0, 1],
+    [1, 0],
+    [1, 1],
+    [1, -1],
+  ];
+
+  const rows = ROWS;
+  const cols = COLS;
+
+  const inBounds = (r, c) => r >= 0 && r < rows && c >= 0 && c < cols;
+  const isEmpty = (r, c) => inBounds(r, c) && boardMatrix[r][c] === null;
+  const isPlayer = (r, c) => inBounds(r, c) && boardMatrix[r][c] === player;
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      for (const [dr, dc] of directions) {
+        let sequenceLength = 0;
+        for (let i = 0; i < count; i++) {
+          if (isPlayer(row + dr * i, col + dc * i)) {
+            sequenceLength++;
+          } else {
+            break;
+          }
+        }
+
+        if (sequenceLength === count) {
+          const afterRow = row + dr * count;
+          const afterCol = col + dc * count;
+          const beforeRow = row - dr;
+          const beforeCol = col - dc;
+
+          if (isEmpty(afterRow, afterCol)) {
+            console.log(`findCriticalMove: séquence ${count} pour ${player} → jouer après`, { row: afterRow, col: afterCol });
+            return { row: afterRow, col: afterCol };
+          }
+
+          if (isEmpty(beforeRow, beforeCol)) {
+            console.log(`findCriticalMove: séquence ${count} pour ${player} → jouer avant`, { row: beforeRow, col: beforeCol });
+            return { row: beforeRow, col: beforeCol };
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+};
+
+const evaluateThreat = (boardMatrix, player) => {
+  const directions = [
+    [0, 1],
+    [1, 0],
+    [1, 1],
+    [1, -1],
+  ];
+
+  const rows = ROWS;
+  const cols = COLS;
+
+  const inBounds = (r, c) => r >= 0 && r < rows && c >= 0 && c < cols;
+  const isEmpty = (r, c) => inBounds(r, c) && boardMatrix[r][c] === null;
+  const isPlayer = (r, c) => inBounds(r, c) && boardMatrix[r][c] === player;
+
+  const THREAT_SCORES = {
+    2: 10,
+    3: 100,
+    4: 10000,
+    5: 1000000,
+  };
+
+  let totalScore = 0;
+  const counted = new Set();
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      if (!isPlayer(row, col)) continue;
+
+      for (const [dr, dc] of directions) {
+        let seq = 0;
+        let openEnds = 0;
+
+        for (let i = 0; i < 5; i++) {
+          if (isPlayer(row + dr * i, col + dc * i)) {
+            seq++;
+          } else {
+            break;
+          }
+        }
+
+        if (seq < 2) continue;
+
+        const beforeR = row - dr;
+        const beforeC = col - dc;
+        const afterR = row + dr * seq;
+        const afterC = col + dc * seq;
+
+        if (isEmpty(beforeR, beforeC)) openEnds++;
+        if (isEmpty(afterR, afterC)) openEnds++;
+
+        const key = `${row},${col},${dr},${dc}`;
+        if (counted.has(key)) continue;
+        counted.add(key);
+
+        const baseScore = THREAT_SCORES[seq] || 0;
+        const openBonus = openEnds === 2 ? 2 : openEnds === 1 ? 1 : 0;
+
+        if (openEnds === 0 && seq < 5) continue;
+
+        totalScore += baseScore * openBonus;
+      }
+    }
+  }
+
+  return totalScore;
+};
+
+const shouldAttackOrDefend = (boardMatrix, aiPlayer, humanPlayer) => {
+  const aiThreat = evaluateThreat(boardMatrix, aiPlayer);
+  const humanThreat = evaluateThreat(boardMatrix, humanPlayer);
+
+  console.log(`IA threat: ${aiThreat} | Human threat: ${humanThreat}`);
+
+  const CRITICAL_THRESHOLD = 10000;
+  const ATTACK_THRESHOLD = 5000;
+  const DEFENSE_RATIO = 1.5;
+
+  if (humanThreat >= CRITICAL_THRESHOLD) {
+    console.log('Mode défense critique');
+    return 'defend';
+  }
+
+  if (aiThreat >= CRITICAL_THRESHOLD) {
+    console.log('Mode attaque gagnante');
+    return 'attack';
+  }
+
+  if (humanThreat > aiThreat * DEFENSE_RATIO) {
+    console.log('Défense prioritaire');
+    return 'defend';
+  }
+
+  if (aiThreat > humanThreat * DEFENSE_RATIO) {
+    console.log('Attaque prioritaire');
+    return 'attack';
+  }
+
+  console.log('Stratégie équilibrée');
+  return 'balanced';
+};
+
+const findDoubleThreat = (boardMatrix, player) => {
+  const directions = [
+    [0, 1],
+    [1, 0],
+    [1, 1],
+    [1, -1],
+  ];
+
+  const rows = ROWS;
+  const cols = COLS;
+
+  const inBounds = (r, c) => r >= 0 && r < rows && c >= 0 && c < cols;
+  const isEmpty = (r, c) => inBounds(r, c) && boardMatrix[r][c] === null;
+  const isPlayer = (r, c) => inBounds(r, c) && boardMatrix[r][c] === player;
+
+  const threats = [];
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      for (const [dr, dc] of directions) {
+        let seq = 0;
+        for (let i = 0; i < 4; i++) {
+          if (isPlayer(row + dr * i, col + dc * i)) {
+            seq++;
+          } else {
+            break;
+          }
+        }
+
+        if (seq >= 3) {
+          const afterR = row + dr * seq;
+          const afterC = col + dc * seq;
+          const beforeR = row - dr;
+          const beforeC = col - dc;
+
+          if (isEmpty(afterR, afterC) || isEmpty(beforeR, beforeC)) {
+            threats.push({ row, col, dr, dc, seq });
+          }
+        }
+      }
+    }
+  }
+
+  if (threats.length >= 2) {
+    console.log(`Double menace pour ${player}`, threats);
+    return threats[0];
+  }
+
+  return null;
+};
+
+// --- SYSTÈME DE SCORING STRATÉGIQUE (v5.0 - PRIORITÉ ABSOLUE) ---
+
+const SCORES = {
+  // PRIORITÉ 1: VICTOIRE (Géré par findCriticalMove, mais backup ici)
+  WIN: 1000000,
+  
+  // PRIORITÉ 2: CREATE 4 (Attaque Forcée)
+  CREATE_4: 50000,
+  
+  // PRIORITÉ 3: CREATE DOUBLE (Attaque Gagnante)
+  CREATE_DOUBLE: 40000,
+  
+  // PRIORITÉ 4: BLOCK DOUBLE (Défense Critique)
+  BLOCK_DOUBLE: 30000,
+  
+  // PRIORITÉ 5: BLOCK 3 (Défense Standard)
+  BLOCK_OPEN_3: 20000,
+  
+  // PRIORITÉ 6: CONSTRUCTION
+  CREATE_3: 10000,
+  BLOCK_2: 5000,
+  
+  // PRIORITÉ 7: POSITIONNEL
+  CENTER: 1000,
+  PROXIMITY: 500
+};
+
+const getSequenceInfo = (boardMatrix, r, c, player, dr, dc) => {
+    let len = 1;
+    let blockedEnds = 0;
+
+    // Vers l'avant (direction positive)
+    let i = 1;
+    while (true) {
+        let nr = r + dr * i, nc = c + dc * i;
+        if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) {
+            blockedEnds++; // Bord du plateau = bloqué
+            break;
+        }
+        if (boardMatrix[nr][nc] !== player) {
+            if (boardMatrix[nr][nc] !== null) blockedEnds++; // Pion adverse = bloqué
+            break;
+        }
+        len++; i++;
+    }
+
+    // Vers l'arrière (direction négative)
+    i = 1;
+    while (true) {
+        let nr = r - dr * i, nc = c - dc * i;
+        if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) {
+            blockedEnds++;
+            break;
+        }
+        if (boardMatrix[nr][nc] !== player) {
+            if (boardMatrix[nr][nc] !== null) blockedEnds++;
+            break;
+        }
+        len++; i++;
+    }
+
+    return { len, blockedEnds };
+};
+
+const evaluateMoveStrategic = (boardMatrix, row, col, player, adversaire) => {
+    let score = 0;
+    const directions = [[0,1], [1,0], [1,1], [1,-1]];
+    
+    // 1. POTENTIEL D'ATTAQUE (Si je joue ici)
+    let attack3 = 0;
+    let attack4 = 0;
+    let attack5 = 0;
+    
+    for (const [dr, dc] of directions) {
+        const { len, blockedEnds } = getSequenceInfo(boardMatrix, row, col, player, dr, dc);
+        
+        // VICTOIRE (5 ou plus)
+        if (len >= 5) {
+            attack5++;
+        } 
+        // CREATE 4 (Doit avoir au moins une extrémité libre pour être une menace)
+        else if (len === 4) {
+            if (blockedEnds < 2) attack4++; 
+        } 
+        // CREATE 3 (Doit être ouvert pour être utile)
+        else if (len === 3) {
+            if (blockedEnds === 0) attack3++; // 3 ouvert (très fort)
+            // Note: un 3 semi-ouvert est moins fort, on pourrait le compter différemment
+        }
+    }
+    
+    if (attack5 > 0) score += SCORES.WIN;
+    if (attack4 > 0) score += SCORES.CREATE_4;
+    if (attack3 > 0) score += SCORES.CREATE_3;
+    
+    // Double menace (Fourchette)
+    // On ne compte que les "vraies" menaces (non bloquées totalement)
+    if (attack4 >= 2 || (attack4 > 0 && attack3 > 0) || attack3 >= 2) {
+        score += SCORES.CREATE_DOUBLE;
+    }
+
+    // 2. POTENTIEL DE DÉFENSE (Si l'adversaire jouait ici - Ce que je bloque)
+    let block4 = 0; // Bloque un futur 5
+    let block3 = 0; // Bloque un futur 4
+    let block2 = 0;
+    
+    for (const [dr, dc] of directions) {
+        // On simule si l'adversaire avait joué là
+        const { len, blockedEnds } = getSequenceInfo(boardMatrix, row, col, adversaire, dr, dc);
+        
+        if (len >= 5) {
+            score += SCORES.WIN; // Bloque une victoire immédiate
+        } 
+        else if (len === 4) {
+            // Si l'adversaire a 4, il menace de gagner.
+            // S'il a 4 bloqués (OXXXXO), ce n'est pas une menace immédiate de 5, mais ça reste dangereux.
+            // Mais ici on évalue le coup de BLOCAGE. Si on joue là, on empêche l'adversaire d'utiliser cette case.
+            // Si l'adversaire a 3 et joue là -> il obtient 4.
+            // Si ce 4 est ouvert (blockedEnds < 2), c'est une menace mortelle.
+            if (blockedEnds < 2) block4++;
+        }
+        else if (len === 3) {
+            // L'adversaire a 2, joue là -> obtient 3.
+            if (blockedEnds === 0) block3++; // Bloque la création d'un 3 ouvert
+        }
+        else if (len === 2) {
+            if (blockedEnds === 0) block2++;
+        }
+    }
+
+    if (block4 > 0) score += SCORES.WIN; // ATTENTION: block4 ici signifie "L'adversaire aurait eu 4".
+    // Wait.
+    // Si l'adversaire a 3 (X X X .), et je joue ., je bloque son 4.
+    // getSequenceInfo me dit : si l'adversaire joue ., il a 4.
+    // Donc je bloque la CREATION de 4.
+    // Ce n'est PAS "Bloquer une victoire" (Bloquer un 5).
+    // Bloquer un 5 est géré par "len >= 5".
+    
+    // Donc:
+    // len >= 5 -> Adversaire aurait eu 5 -> C'est un blocage de victoire -> SCORES.WIN.
+    // len === 4 -> Adversaire aurait eu 4 -> C'est un blocage de création de 4 -> SCORES.BLOCK_OPEN_3 (car il avait 3 avant).
+    // Mais attendez.
+    // Si l'adversaire a 4 (X X X X .), et je joue ., je bloque son 5.
+    // getSequenceInfo renverra 5 (4+1). -> SCORES.WIN.
+    
+    // Si l'adversaire a 3 (X X X .), et je joue ., je bloque son 4.
+    // getSequenceInfo renverra 4.
+    // Si ce 4 est ouvert (blockedEnds < 2), c'est une menace.
+    // Donc score += SCORES.BLOCK_OPEN_3 (ou plus fort?).
+    // Dans SCORES, BLOCK_OPEN_3 = 20000.
+    // CREATE_4 = 50000.
+    // Donc CREATE_4 > BLOCK_OPEN_3. C'est ce qu'on veut (Attaque > Défense).
+    
+    if (block4 > 0) score += SCORES.BLOCK_OPEN_3; // Correction: block4 ici = Adversaire passe de 3 à 4.
+    if (block3 > 0) score += SCORES.BLOCK_2; // Adversaire passe de 2 à 3.
+    
+    // Blocage de fourchette adverse
+    if (block4 >= 2 || (block4 > 0 && block3 > 0) || block3 >= 2) {
+        score += SCORES.BLOCK_DOUBLE;
+    }
+
+    // 3. POSITIONNEL
+    // Contrôle du centre
+    const centerR = ROWS / 2;
+    const centerC = COLS / 2;
+    const dist = Math.abs(row - centerR) + Math.abs(col - centerC);
+    if (dist < 5) score += SCORES.CENTER;
+    else if (dist < 10) score += SCORES.CENTER / 2;
+
+    // Proximité (Voisins)
+    let neighbors = 0;
+    for (let r = row-2; r <= row+2; r++) {
+        for (let c = col-2; c <= col+2; c++) {
+             if (r>=0 && r<ROWS && c>=0 && c<COLS && boardMatrix[r][c] !== null) {
+                 neighbors++;
+             }
+        }
+    }
+    if (neighbors > 0) score += SCORES.PROXIMITY;
+
+    return score;
+};
+
+const getBestStrategicMove = (boardMatrix, player, adversaire) => {
+    let bestScore = -Infinity;
+    let bestMove = null;
+    
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+            if (boardMatrix[r][c] !== null) continue;
+            
+            // Optimisation : ignorer les cases isolées (sauf si proche centre au début)
+            let hasNeighbor = false;
+            for (let rr = r-2; rr <= r+2; rr++) {
+                for (let cc = c-2; cc <= c+2; cc++) {
+                     if (rr>=0 && rr<ROWS && cc>=0 && cc<COLS && boardMatrix[rr][cc] !== null) {
+                         hasNeighbor = true; break;
+                     }
+                }
+                if (hasNeighbor) break;
+            }
+            if (!hasNeighbor && (Math.abs(r - ROWS/2) > 4 || Math.abs(c - COLS/2) > 4)) continue;
+            
+            const score = evaluateMoveStrategic(boardMatrix, r, c, player, adversaire);
+            if (score > bestScore) {
+                bestScore = score;
+                bestMove = { row: r, col: c, score };
+            }
+        }
+    }
+    
+    return bestMove;
+};
 
 export const calculerCoupIA = (board, difficulte, currentPlayer) => {
   const map = createBoardMap(board);
   const adversaire = currentPlayer === 'black' ? 'white' : 'black';
+
+  const boardMatrix = Array.from({ length: ROWS }, () =>
+    Array.from({ length: COLS }, () => null)
+  );
+
+  for (const stone of board) {
+    if (
+      stone.row >= 0 &&
+      stone.row < ROWS &&
+      stone.col >= 0 &&
+      stone.col < COLS
+    ) {
+      boardMatrix[stone.row][stone.col] = stone.player;
+    }
+  }
+
+  // 1. VICTOIRE IMMÉDIATE (Absolu)
+  const winningMove = findCriticalMove(boardMatrix, currentPlayer, 4);
+  if (winningMove) {
+    console.log('🤖 IA joue case gagnante (4 alignés):', winningMove);
+    return winningMove;
+  }
+
+  // 2. BLOCAGE CRITIQUE (Absolu)
+  const blockingMove = findCriticalMove(boardMatrix, adversaire, 4);
+  if (blockingMove) {
+    console.log('🛡️ IA bloque le joueur (4 alignés):', blockingMove);
+    return blockingMove;
+  }
+
+  // 3. STRATÉGIE OFFENSIVE & DÉFENSIVE (Priorité Absolue via Scoring)
+  // Gère: Create 4 > Create Double > Block Double > Block 3 > etc.
+  const strategicMove = getBestStrategicMove(boardMatrix, currentPlayer, adversaire);
   
-  // Détection du Mode Défense
+  if (strategicMove && strategicMove.score >= SCORES.BLOCK_2) { // Seuil minimal pour un coup stratégique
+      console.log(`🧠 Coup Stratégique (Score: ${strategicMove.score}):`, strategicMove);
+      return strategicMove;
+  }
+  
+  // 4. FALLBACK (Heuristiques classiques si aucun coup stratégique fort)
   const pionsAdverses = board.filter(p => p.player === adversaire);
   const modeDefense = pionsAdverses.length >= 1;
 
-  // 1. VICTOIRE IMMÉDIATE
-  const mesMenaces = scanPatterns(board, map, currentPlayer);
-  if (mesMenaces.quatre_direct.length > 0) return mesMenaces.quatre_direct[0].coup;
-  if (mesMenaces.quatre_brise.length > 0) return mesMenaces.quatre_brise[0].coup;
-
-  // 2. BLOQUER DÉFAITE IMMÉDIATE
-  const menacesAdverses = scanPatterns(board, map, adversaire);
-  if (menacesAdverses.quatre_direct.length > 0) return menacesAdverses.quatre_direct[0].coup;
-  if (menacesAdverses.quatre_brise.length > 0) return menacesAdverses.quatre_brise[0].coup;
-
-  // 3. ATTAQUE FORCEE (4 Ouvert)
-  if (mesMenaces.trois_ouvert.length > 0) return mesMenaces.trois_ouvert[0].coup;
-  if (mesMenaces.trois_brise.length > 0) return mesMenaces.trois_brise[0].coup;
-
-  // 4. DÉFENSE CRITIQUE (Bloquer 3 ouvert)
-  const coupsDefense = [];
-  if (menacesAdverses.trois_ouvert.length > 0) coupsDefense.push(menacesAdverses.trois_ouvert[0].coup);
-  if (menacesAdverses.trois_brise.length > 0) coupsDefense.push(menacesAdverses.trois_brise[0].coup);
-
-  if (coupsDefense.length > 0) {
-      return coupsDefense[0];
-  }
-
-  // 5. MINIMAX + HEURISTIQUES v3.1
-  
-  // Calcul de la Heatmap (Pression) une seule fois
   const pressionMap = calculerPression(map, adversaire);
-
   const candidats = obtenirCoupsPertinents(board, map, modeDefense, adversaire);
   
   let profondeur = 3;
@@ -273,7 +699,6 @@ export const calculerCoupIA = (board, difficulte, currentPlayer) => {
   if (difficulte === 'moyen') profondeur = 3;
   if (difficulte === 'facile') profondeur = 1;
 
-  // Optimisation : Limiter les candidats pour la profondeur
   const topCandidats = candidats.slice(0, 15);
 
   const meilleur = minimax(board, map, profondeur, currentPlayer, -Infinity, Infinity, true, topCandidats, pressionMap);

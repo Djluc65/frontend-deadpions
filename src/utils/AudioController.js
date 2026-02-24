@@ -156,5 +156,16 @@ export const AudioController = {
     } catch (error) {
       console.log('Error playing victory sound', error);
     }
+  },
+
+  notifyChatEnter() {
+    console.log('Chat Enter: stopping home music');
+    this.stopHomeMusic();
+  },
+
+  async notifyChatExit(isMusicEnabled) {
+    console.log('Chat Exit: resuming home music if eligible');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    this.playHomeMusic(isMusicEnabled);
   }
 };

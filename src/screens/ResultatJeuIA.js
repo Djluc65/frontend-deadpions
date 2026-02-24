@@ -79,7 +79,7 @@ const ResultatJeuIA = ({ route, navigation }) => {
         <View style={styles.boutons}>
           <TouchableOpacity
             style={styles.boutonRejouer}
-            onPress={() => navigation.navigate('Game', { modeJeu: 'ia', configIA })}
+            onPress={() => navigation.replace('Game', { modeJeu: 'ia', configIA })}
           >
             <Text style={styles.boutonTexte}>🔄 Rejouer</Text>
           </TouchableOpacity>
