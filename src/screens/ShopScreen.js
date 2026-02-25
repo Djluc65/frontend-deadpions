@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ImageBackground, ScrollView, TouchableOpacity, Alert, SafeAreaView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
 import { useStripe } from '@stripe/stripe-react-native';
+import Constants from 'expo-constants';
+import * as Linking from 'expo-linking';
 import { API_URL } from '../config';
 import CoinsService from '../services/CoinsService';
+import TransactionService from '../services/TransactionService';
 import { updateUser } from '../redux/slices/authSlice';
 
 const ShopScreen = () => {
@@ -61,7 +65,7 @@ const ShopScreen = () => {
     }
   };
 
-  const verifyPayment = async (paymentIntentId) => {
+  const verifyPayment = async (paymentIntentId, packDetails) => {
     try {
       const response = await fetch(`${API_URL}/payment/verify`, {
         method: 'POST',
@@ -80,6 +84,14 @@ const ShopScreen = () => {
       const data = await response.json();
       
       if (response.ok && data.success) {
+        // Enregistrer la transaction localement
+        await TransactionService.ajouterTransaction({
+            type: 'CREDIT',
+            montant: data.addedCoins || packDetails?.coins || 0,
+            raison: `Achat ${packDetails?.label || 'Boutique'}`,
+            timestamp: Date.now()
+        });
+
         Alert.alert('Succès', data.message);
         // Refresh coins locally
         const newBalance = await CoinsService.obtenirSolde(token);
@@ -93,9 +105,45 @@ const ShopScreen = () => {
     }
   };
 
-  const handleBuyCoins = async (packId, coins, price) => {
+  const handleBuyCoins = async (packId, coins, price, label) => {
     if (loading) return;
     setLoading(true);
+
+    // DÉTECTION MODE EXPO GO : Les paiements Stripe ne fonctionnent PAS dans Expo Go
+    // Il faut utiliser un Development Build ou tester sur simulateur
+    if (Constants.appOwnership === 'expo') {
+      Alert.alert(
+        "Mode Expo Go Détecté",
+        "Les paiements Stripe natifs ne fonctionnent pas dans l'application Expo Go standard.\n\nVoulez-vous simuler un paiement réussi pour tester le flux ?",
+        [
+          { text: "Annuler", style: "cancel", onPress: () => setLoading(false) },
+          { 
+            text: "Simuler Succès", 
+            onPress: async () => {
+              // Simulation pour tester l'interface
+              try {
+                await TransactionService.ajouterTransaction({
+                    type: 'CREDIT',
+                    montant: coins,
+                    raison: `Simulation ${label}`,
+                    timestamp: Date.now()
+                });
+                
+                // On met à jour le state local juste pour l'affichage (ne persiste pas au backend)
+                dispatch(updateUser({ coins: (user.coins || 0) + coins }));
+
+                Alert.alert("Simulation Réussie", `Paiement simulé pour ${label}.\n${coins.toLocaleString()} coins ajoutés (localement).\n\nVérifiez votre historique dans le profil !`);
+              } catch (e) {
+                console.error(e);
+              } finally {
+                setLoading(false);
+              }
+            }
+          }
+        ]
+      );
+      return;
+    }
 
     try {
       // 1. Fetch Payment Intent from Backend
@@ -111,9 +159,19 @@ const ShopScreen = () => {
       const { error: initError } = await initPaymentSheet({
         paymentIntentClientSecret: clientSecret,
         merchantDisplayName: 'DeadPions',
+        returnURL: Linking.createURL('stripe-redirect'), // URL de redirection pour la production
+        allowsDelayedPaymentMethods: true,
         defaultBillingDetails: {
             name: user?.username || 'Joueur DeadPions',
-        }
+        },
+        applePay: {
+            merchantCountryCode: 'FR',
+        },
+        googlePay: {
+            merchantCountryCode: 'FR',
+            testEnv: false, // Production Environment
+            currencyCode: 'EUR',
+        },
       });
 
       if (initError) {
@@ -129,7 +187,8 @@ const ShopScreen = () => {
         Alert.alert(`Erreur de paiement`, paymentError.message);
       } else {
         // 4. Verify Payment on Backend
-        await verifyPayment(paymentIntentId);
+        // On passe les détails du pack pour l'historique si le backend ne renvoie pas tout
+        await verifyPayment(paymentIntentId, { coins, label });
       }
     } catch (error) {
       console.error(error);
@@ -204,7 +263,7 @@ const ShopScreen = () => {
                 <TouchableOpacity 
                   key={index} 
                   style={[styles.coinCard, pack.highlight && styles.highlightCard]}
-                  onPress={() => handleBuyCoins(pack.id, pack.coins, pack.price)}
+                  onPress={() => handleBuyCoins(pack.id, pack.coins, pack.price, pack.label)}
                   disabled={loading}
                 >
                   {pack.bonus && (

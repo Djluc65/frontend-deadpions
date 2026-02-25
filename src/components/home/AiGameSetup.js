@@ -94,7 +94,7 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
   const niveaux = [
     { id: 'facile', titre: 'Facile', emoji: '🟢', description: 'Parfait pour débuter' },
     { id: 'moyen', titre: 'Moyen', emoji: '🟡', description: 'Challenge équilibré' },
-    { id: 'difficile', titre: 'Difficile', emoji: '🔴', description: 'Pour les experts', locked: !user?.isPremium }
+    { id: 'difficile', titre: 'Difficile', emoji: '🔴', description: 'Pour les experts', locked: !user?.isPremium && !user?.isEarlyAccess }
   ];
 
   const handleLevelSelect = (level) => {
@@ -104,7 +104,11 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
             "L'IA Expert est réservée aux membres DeadPions+. Abonnez-vous pour débloquer le coach stratégique !",
             [
                 { text: "Annuler", style: "cancel" },
-                { text: "Voir l'offre", onPress: () => navigation.navigate('Shop') }
+                { text: "Voir l'offre", onPress: () => {
+                    onClose();
+                    // Naviguer vers le TabNavigator 'Home' puis vers l'onglet 'Magasin'
+                    navigation.navigate('Home', { screen: 'Magasin' });
+                }}
             ]
         );
         return;

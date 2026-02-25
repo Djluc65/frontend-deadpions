@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import { translations } from '../../utils/translations';
 import { socket } from '../../utils/socket';
 import { BET_OPTIONS } from '../../utils/constants';
+import TransactionService from '../../services/TransactionService';
 import FriendsMenuModal from './FriendsMenuModal';
 import CreateRoomModal from './CreateRoomModal';
 
@@ -37,7 +38,7 @@ const FriendsGameSetup = ({ visible, onClose, navigation, user, onOpenLiveConfig
 
   const handleCreateRoom = useCallback(() => {
     // Check quota for free users
-    if (!user?.isPremium && user?.dailyCreatedRooms >= 5) {
+    if (!user?.isPremium && !user?.isEarlyAccess && user?.dailyCreatedRooms >= 5) {
         Alert.alert(
             "Limite atteinte",
             "Vous avez atteint votre limite de 5 salles privées par jour. Passez Premium pour un accès illimité !",
@@ -45,7 +46,8 @@ const FriendsGameSetup = ({ visible, onClose, navigation, user, onOpenLiveConfig
                 { text: "Annuler", style: "cancel" },
                 { text: "Devenir Premium", onPress: () => {
                     onClose();
-                    navigation.navigate('Shop');
+                    // Naviguer vers le TabNavigator 'Home' puis vers l'onglet 'Magasin'
+                    navigation.navigate('Home', { screen: 'Magasin' });
                 }}
             ]
         );
@@ -62,6 +64,17 @@ const FriendsGameSetup = ({ visible, onClose, navigation, user, onOpenLiveConfig
         pseudo: user.pseudo,
         isPrivate: true
     });
+
+    // Enregistrer la transaction (Mise) localement
+    if (inviteBet > 0) {
+        TransactionService.ajouterTransaction({
+            type: 'DEBIT',
+            montant: inviteBet,
+            raison: `Création Salle (${inviteMode === 'tournament' ? 'Tournoi' : 'Simple'})`,
+            timestamp: Date.now()
+        });
+    }
+
     onClose(); // Close the modal, HomeScreen waits for room_created
   }, [inviteBet, inviteTime, inviteMode, inviteSeriesLength, user, onClose]);
 

@@ -20,7 +20,9 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "This app needs access to the camera for video calls.",
-        "NSMicrophoneUsageDescription": "This app needs access to the microphone for calls and voice messages."
+        "NSMicrophoneUsageDescription": "This app needs access to the microphone for calls and voice messages.",
+        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to let you select a profile picture.",
+        "ITSAppUsesNonExemptEncryption": false
       },
       "bitcode": false
     },

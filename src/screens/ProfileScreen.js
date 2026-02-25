@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ImageBackground, Alert, TouchableOpacity, Image, ScrollView, Modal, FlatList, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, Alert, TouchableOpacity, Image, ScrollView, Modal, FlatList, TouchableWithoutFeedback, Keyboard, SafeAreaView, Dimensions } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateUser, logout } from '../redux/slices/authSlice';
@@ -7,16 +7,16 @@ import { useCoinsContext } from '../context/CoinsContext';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import SyncIndicator from '../components/SyncIndicator';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { playButtonSound } from '../utils/soundManager';
 import { API_URL } from '../config';
 import { COUNTRIES } from '../utils/countries';
 import { PREMIUM_AVATARS, getAvatarSource } from '../utils/avatarUtils';
 import TransactionService from '../services/TransactionService';
+import { LinearGradient } from 'expo-linear-gradient';
 
-// Note: PREMIUM_AVATARS is imported from utils, do not redeclare it here.
-
+const { width } = Dimensions.get('window');
 
 const AVATARS = [
   'https://cdn-icons-png.flaticon.com/512/147/147144.png',
@@ -42,8 +42,10 @@ const ProfileScreen = ({ navigation }) => {
   
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [showCountryModal, setShowCountryModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [imageUri, setImageUri] = useState(null);
   const [transactions, setTransactions] = useState([]);
+  const [isEditing, setIsEditing] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -62,7 +64,6 @@ const ProfileScreen = ({ navigation }) => {
   );
 
   const pickImage = async () => {
-    // Demander la permission
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission refusée', 'Désolé, nous avons besoin des permissions pour accéder à vos photos !');
@@ -78,19 +79,19 @@ const ProfileScreen = ({ navigation }) => {
 
     if (!result.canceled) {
       setImageUri(result.assets[0].uri);
-      setSelectedAvatar(null); // Clear predefined avatar selection
+      setSelectedAvatar(null);
       setShowAvatarModal(false);
     }
   };
 
   const handleSelectAvatar = (avatarUrl) => {
     setSelectedAvatar(avatarUrl);
-    setImageUri(null); // Clear uploaded image selection
+    setImageUri(null);
     setShowAvatarModal(false);
   };
 
   const handleSelectCountry = (country) => {
-    setSelectedCountry(country.flag); // Store only flag for now, or object if needed
+    setSelectedCountry(country.flag);
     setShowCountryModal(false);
   };
 
@@ -103,7 +104,6 @@ const ProfileScreen = ({ navigation }) => {
     const formData = new FormData();
     formData.append('pseudo', pseudo);
     
-    // Si une nouvelle image a été choisie
     if (imageUri) {
       const filename = imageUri.split('/').pop();
       const match = /\.(\w+)$/.exec(filename);
@@ -123,13 +123,10 @@ const ProfileScreen = ({ navigation }) => {
     }
 
     try {
-      // Note: We need to use fetch directly here because we're sending FormData
-      // Or we can modify our redux action to handle FormData, but direct fetch is easier for this case
       const response = await fetch(`${API_URL}/users/profile`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
-          // 'Content-Type': 'multipart/form-data', // Let fetch set this automatically for FormData
         },
         body: formData
       });
@@ -139,7 +136,7 @@ const ProfileScreen = ({ navigation }) => {
       if (response.ok) {
         dispatch(updateUser(data));
         Alert.alert('Succès', 'Profil mis à jour !');
-        navigation.goBack();
+        setIsEditing(false);
       } else {
         Alert.alert('Erreur', data.message || 'Erreur lors de la mise à jour');
       }
@@ -150,11 +147,24 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const handleLogout = () => {
-    dispatch(logout());
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Login' }],
-    });
+    Alert.alert(
+      "Déconnexion",
+      "Voulez-vous vraiment vous déconnecter ?",
+      [
+        { text: "Annuler", style: "cancel" },
+        { 
+          text: "Se déconnecter", 
+          style: "destructive",
+          onPress: () => {
+            dispatch(logout());
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Login' }],
+            });
+          }
+        }
+      ]
+    );
   };
 
   const handleDeactivate = () => {
@@ -178,16 +188,10 @@ const ProfileScreen = ({ navigation }) => {
 
               if (response.ok) {
                 Alert.alert("Succès", "Votre compte a été désactivé.");
-                handleLogout();
+                dispatch(logout());
+                navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
               } else {
-                const text = await response.text();
-                try {
-                  const data = JSON.parse(text);
-                  Alert.alert("Erreur", data.message || "Impossible de désactiver le compte.");
-                } catch (e) {
-                  console.error("Non-JSON response:", text);
-                  Alert.alert("Erreur", "Réponse inattendue du serveur.");
-                }
+                Alert.alert("Erreur", "Impossible de désactiver le compte.");
               }
             } catch (error) {
               console.error(error);
@@ -202,7 +206,7 @@ const ProfileScreen = ({ navigation }) => {
   const handleDelete = () => {
     Alert.alert(
       "Supprimer le compte",
-      "ATTENTION : Cette action est irréversible. Toutes vos données (victoires, coins, etc.) seront perdues définitivement.",
+      "ATTENTION : Cette action est irréversible. Toutes vos données seront perdues définitivement.",
       [
         { text: "Annuler", style: "cancel" },
         { 
@@ -212,23 +216,15 @@ const ProfileScreen = ({ navigation }) => {
             try {
               const response = await fetch(`${API_URL}/users/profile`, {
                 method: 'DELETE',
-                headers: {
-                  'Authorization': `Bearer ${token}`
-                }
+                headers: { 'Authorization': `Bearer ${token}` }
               });
 
               if (response.ok) {
                 Alert.alert("Compte supprimé", "Votre compte a été supprimé avec succès.");
-                handleLogout();
+                dispatch(logout());
+                navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
               } else {
-                const text = await response.text();
-                try {
-                  const data = JSON.parse(text);
-                  Alert.alert("Erreur", data.message || "Impossible de supprimer le compte.");
-                } catch (e) {
-                  console.error("Non-JSON response:", text);
-                  Alert.alert("Erreur", "Réponse inattendue du serveur.");
-                }
+                Alert.alert("Erreur", "Impossible de supprimer le compte.");
               }
             } catch (error) {
               console.error(error);
@@ -267,195 +263,245 @@ const ProfileScreen = ({ navigation }) => {
       style={styles.background}
       resizeMode="cover"
     >
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={{ flex: 1 }}>
-            <View style={styles.header}>
-              <TouchableOpacity onPress={() => { playButtonSound(); navigation.goBack(); }} style={styles.backButton}>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.header}>
+            <TouchableOpacity onPress={() => { playButtonSound(); navigation.goBack(); }} style={styles.backButton}>
                 <Ionicons name="arrow-back" size={24} color="#fff" />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>Mon Profil</Text>
-              <View style={{ width: 24 }} /> 
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Mon Profil</Text>
+            <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+                <Ionicons name="log-out-outline" size={24} color="#ff6b6b" />
+            </TouchableOpacity>
+        </View>
+
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            
+            {/* Profil Card */}
+            <View style={styles.profileCard}>
+                <View style={styles.avatarContainer}>
+                    <TouchableOpacity onPress={() => isEditing && setShowAvatarModal(true)} disabled={!isEditing}>
+                        <View style={[styles.avatarWrapper, isEditing && styles.avatarEditable]}>
+                            {renderAvatar()}
+                            {isEditing && (
+                                <View style={styles.editIconBadge}>
+                                    <Ionicons name="camera" size={16} color="#fff" />
+                                </View>
+                            )}
+                        </View>
+                    </TouchableOpacity>
+                    
+                    {user?.isPremium && (
+                        <LinearGradient
+                            colors={['#FFD700', '#FFA500']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.premiumBadge}
+                        >
+                            <Text style={styles.premiumText}>
+                                💎 {user.isEarlyAccess ? 'PREMIUM (OFFERT)' : 'PREMIUM'}
+                            </Text>
+                        </LinearGradient>
+                    )}
+
+                    <Text style={styles.pseudoText}>
+                        {user?.pseudo} {selectedCountry && <Text style={{fontSize: 20}}>{selectedCountry}</Text>}
+                    </Text>
+                    <Text style={styles.emailText}>{user?.email}</Text>
+                </View>
+
+                {/* Stats Grid */}
+                <View style={styles.statsGrid}>
+                    <View style={styles.statItem}>
+                        <Text style={styles.statValue}>{user?.stats?.wins || 0}</Text>
+                        <Text style={styles.statLabel}>Victoires</Text>
+                    </View>
+                    <View style={[styles.statItem, styles.statBorder]}>
+                        <Text style={styles.statValue}>{user?.stats?.losses || 0}</Text>
+                        <Text style={styles.statLabel}>Défaites</Text>
+                    </View>
+                    <View style={styles.statItem}>
+                        <Text style={[styles.statValue, { color: '#f1c40f' }]}>{user?.coins || 0}</Text>
+                        <Text style={styles.statLabel}>Coins</Text>
+                    </View>
+                </View>
             </View>
 
-            <View style={styles.container}>
-          <View style={styles.avatarSection}>
-             <TouchableOpacity onPress={() => { playButtonSound(); setShowAvatarModal(true); }}>
-               <View style={styles.avatarWrapper}>
-                 {renderAvatar()}
-                 <View style={styles.editIcon}>
-                   <Ionicons name="camera" size={20} color="#000" />
-                 </View>
-               </View>
-             </TouchableOpacity>
-             {user?.isPremium && (
-               <View style={{ marginTop: 10, backgroundColor: '#FFD700', paddingHorizontal: 10, paddingVertical: 2, borderRadius: 10 }}>
-                 <Text style={{ color: 'black', fontWeight: 'bold', fontSize: 12 }}>
-                   💎 {user.isEarlyAccess ? 'PREMIUM (OFFERT)' : 'PREMIUM'}
-                 </Text>
-               </View>
-             )}
-             <Text style={styles.currentPseudo}>{user?.pseudo}</Text>
-             {selectedCountry && <Text style={styles.flag}>{selectedCountry}</Text>}
+            {/* Actions Menu */}
+            <View style={styles.menuContainer}>
+                <TouchableOpacity style={styles.menuItem} onPress={() => { playButtonSound(); setShowHistoryModal(true); }}>
+                    <View style={[styles.iconBox, { backgroundColor: 'rgba(52, 152, 219, 0.2)' }]}>
+                        <MaterialCommunityIcons name="history" size={24} color="#3498db" />
+                    </View>
+                    <Text style={styles.menuText}>Historique des transactions</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                </TouchableOpacity>
 
-             <View style={styles.statsContainer}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{user?.stats?.wins || 0}</Text>
-                  <Text style={styles.statLabel}>Victoires</Text>
-                </View>
-                <View style={[styles.statItem, styles.statBorder]}>
-                  <Text style={styles.statValue}>{user?.stats?.losses || 0}</Text>
-                  <Text style={styles.statLabel}>Défaites</Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{user?.coins || 0}</Text>
-                  <Text style={styles.statLabel}>Coins</Text>
-                </View>
-             </View>
-             
-             <SyncIndicator />
-          </View>
+                <TouchableOpacity style={styles.menuItem} onPress={() => {
+                    playButtonSound();
+                    setIsEditing(!isEditing);
+                    if (isEditing) handleSave(); // Save on toggle off if needed, but better to use specific button
+                }}>
+                    <View style={[styles.iconBox, { backgroundColor: 'rgba(46, 204, 113, 0.2)' }]}>
+                        <Ionicons name={isEditing ? "save-outline" : "create-outline"} size={24} color="#2ecc71" />
+                    </View>
+                    <Text style={styles.menuText}>{isEditing ? "Sauvegarder les modifications" : "Modifier mon profil"}</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                </TouchableOpacity>
+            </View>
 
-          <View style={styles.historySection}>
-            <Text style={styles.sectionTitle}>Historique des transactions</Text>
-            {transactions.length === 0 ? (
-                <Text style={styles.emptyText}>Aucune transaction récente</Text>
-            ) : (
-                (() => {
-                    const today = new Date().toDateString();
-                    const yesterday = new Date(Date.now() - 86400000).toDateString();
-                    const groups = { "Aujourd'hui": [], "Hier": [], "Plus ancien": [] };
+            {/* Edit Form (Visible only when editing) */}
+            {isEditing && (
+                <View style={styles.editForm}>
+                    <Text style={styles.sectionHeader}>Informations personnelles</Text>
                     
-                    transactions.forEach(tx => {
-                        const d = new Date(tx.timestamp).toDateString();
-                        if (d === today) groups["Aujourd'hui"].push(tx);
-                        else if (d === yesterday) groups["Hier"].push(tx);
-                        else groups["Plus ancien"].push(tx);
-                    });
+                    <Text style={styles.inputLabel}>Pseudo</Text>
+                    <Input 
+                        value={pseudo} 
+                        onChangeText={setPseudo} 
+                        placeholder="Votre pseudo"
+                        containerStyle={styles.inputContainer}
+                    />
+                    
+                    <Text style={styles.inputLabel}>Pays</Text>
+                    <TouchableOpacity style={styles.countrySelectButton} onPress={() => setShowCountryModal(true)}>
+                        <Text style={styles.countrySelectText}>
+                            {selectedCountry ? `Drapeau actuel: ${selectedCountry}` : 'Choisir un pays'}
+                        </Text>
+                        <Ionicons name="chevron-down" size={20} color="#ccc" />
+                    </TouchableOpacity>
 
-                    return Object.entries(groups).map(([label, txs]) => (
-                        txs.length > 0 && (
-                            <View key={label} style={{ marginBottom: 15 }}>
-                                <Text style={styles.dateHeader}>{label}</Text>
-                                {txs.map((tx, index) => (
-                                    <View key={index} style={styles.txItem}>
-                                        <View style={styles.txIcon}>
-                                            <Text style={styles.txEmoji}>
-                                                {tx.type === 'CREDIT' ? '🟢' : (tx.type === 'REMBOURSEMENT' || tx.type === 'REFUND') ? '🔵' : '🔴'}
-                                            </Text>
-                                        </View>
-                                        <View style={styles.txDetails}>
-                                            <Text style={styles.txReason}>{tx.raison || 'Transaction'}</Text>
-                                            <Text style={styles.txDate}>
-                                                {new Date(tx.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </Text>
-                                        </View>
-                                        <Text style={[
-                                            styles.txAmount, 
-                                            { color: tx.type === 'CREDIT' ? '#4CAF50' : ((tx.type === 'REMBOURSEMENT' || tx.type === 'REFUND') ? '#2196F3' : '#F44336') }
-                                        ]}>
-                                            {tx.type === 'CREDIT' || tx.type === 'REMBOURSEMENT' || tx.type === 'REFUND' ? '+' : '-'}{tx.montant} 🪙
-                                        </Text>
-                                    </View>
-                                ))}
-                            </View>
-                        )
-                    ));
-                })()
+                    <Button title="Enregistrer" onPress={handleSave} style={styles.saveButton} />
+                </View>
             )}
-          </View>
 
-          <View style={styles.form}>
-              <Text style={styles.label}>Pseudo</Text>
-              <Input 
-                  value={pseudo} 
-                  onChangeText={setPseudo} 
-                  placeholder="Votre pseudo"
-              />
-              
-              <Text style={styles.label}>Email</Text>
-              <Input 
-                  value={email} 
-                  onChangeText={setEmail} 
-                  placeholder="Votre email"
-                  editable={false}
-                  style={{ opacity: 0.7 }}
-              />
-
-              <Text style={styles.label}>Pays</Text>
-              <TouchableOpacity style={styles.countrySelector} onPress={() => { playButtonSound(); setShowCountryModal(true); }}>
-                <Text style={styles.countryText}>
-                  {selectedCountry ? `Drapeau actuel: ${selectedCountry}` : 'Choisir un pays'}
-                </Text>
-                <Ionicons name="chevron-forward" size={24} color="#000" />
-              </TouchableOpacity>
-
-              <Button title="Enregistrer les modifications" onPress={handleSave} />
-              
-              <Button 
-              title="Se déconnecter" 
-              onPress={handleLogout} 
-              style={{ backgroundColor: '#ff6b6b', marginTop: 20 }}
-              />
-
-              <View style={styles.dangerZone}>
+            {/* Danger Zone */}
+            <View style={styles.dangerZone}>
                 <Text style={styles.dangerTitle}>Zone de danger</Text>
-                <Button 
-                  title="Désactiver mon compte" 
-                  onPress={handleDeactivate} 
-                  style={{ backgroundColor: '#f39c12', marginTop: 10 }}
-                />
-                <Button 
-                  title="Supprimer mon compte" 
-                  onPress={handleDelete} 
-                  style={{ backgroundColor: '#c0392b', marginTop: 10 }}
-                />
-              </View>
-          </View>
+                <TouchableOpacity style={styles.dangerButton} onPress={handleDeactivate}>
+                    <Ionicons name="pause-circle-outline" size={20} color="#f39c12" />
+                    <Text style={[styles.dangerButtonText, { color: '#f39c12' }]}>Désactiver mon compte</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.dangerButton} onPress={handleDelete}>
+                    <Ionicons name="trash-outline" size={20} color="#e74c3c" />
+                    <Text style={[styles.dangerButtonText, { color: '#e74c3c' }]}>Supprimer mon compte</Text>
+                </TouchableOpacity>
+            </View>
+            
+            <View style={{ height: 40 }} />
+        </ScrollView>
+      </SafeAreaView>
+
+      {/* MODAL: Historique des transactions */}
+      <Modal visible={showHistoryModal} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+                <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Historique</Text>
+                    <TouchableOpacity onPress={() => setShowHistoryModal(false)} style={styles.closeButton}>
+                        <Ionicons name="close" size={24} color="#fff" />
+                    </TouchableOpacity>
+                </View>
+                
+                {transactions.length === 0 ? (
+                    <View style={styles.emptyState}>
+                        <MaterialCommunityIcons name="clipboard-text-off-outline" size={60} color="#555" />
+                        <Text style={styles.emptyText}>Aucune transaction récente</Text>
+                    </View>
+                ) : (
+                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+                        {(() => {
+                            const today = new Date().toDateString();
+                            const yesterday = new Date(Date.now() - 86400000).toDateString();
+                            const groups = { "Aujourd'hui": [], "Hier": [], "Plus ancien": [] };
+                            
+                            transactions.forEach(tx => {
+                                const d = new Date(tx.timestamp).toDateString();
+                                if (d === today) groups["Aujourd'hui"].push(tx);
+                                else if (d === yesterday) groups["Hier"].push(tx);
+                                else groups["Plus ancien"].push(tx);
+                            });
+
+                            return Object.entries(groups).map(([label, txs]) => (
+                                txs.length > 0 && (
+                                    <View key={label} style={styles.historyGroup}>
+                                        <Text style={styles.historyDateHeader}>{label}</Text>
+                                        {txs.map((tx, index) => (
+                                            <View key={index} style={styles.txItem}>
+                                                <View style={[styles.txIcon, { 
+                                                    backgroundColor: tx.type === 'CREDIT' ? 'rgba(76, 175, 80, 0.1)' : 
+                                                                    (tx.type === 'REMBOURSEMENT' || tx.type === 'REFUND') ? 'rgba(33, 150, 243, 0.1)' : 'rgba(244, 67, 54, 0.1)' 
+                                                }]}>
+                                                    <Text style={{ fontSize: 18 }}>
+                                                        {tx.type === 'CREDIT' ? '💰' : (tx.type === 'REMBOURSEMENT' || tx.type === 'REFUND') ? '↩️' : '🛒'}
+                                                    </Text>
+                                                </View>
+                                                <View style={styles.txDetails}>
+                                                    <Text style={styles.txReason} numberOfLines={1}>{tx.raison || 'Transaction'}</Text>
+                                                    <Text style={styles.txDate}>
+                                                        {new Date(tx.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </Text>
+                                                </View>
+                                                <Text style={[
+                                                    styles.txAmount, 
+                                                    { color: tx.type === 'CREDIT' ? '#4CAF50' : ((tx.type === 'REMBOURSEMENT' || tx.type === 'REFUND') ? '#2196F3' : '#F44336') }
+                                                ]}>
+                                                    {tx.type === 'CREDIT' || tx.type === 'REMBOURSEMENT' || tx.type === 'REFUND' ? '+' : '-'}{tx.montant}
+                                                </Text>
+                                            </View>
+                                        ))}
+                                    </View>
+                                )
+                            ));
+                        })()}
+                    </ScrollView>
+                )}
+            </View>
         </View>
-        </View>
-      </TouchableWithoutFeedback>
-    </ScrollView>
+      </Modal>
 
       {/* Modal choix Avatar */}
-      <Modal visible={showAvatarModal} animationType="slide" transparent={true}>
+      <Modal visible={showAvatarModal} animationType="fade" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Changer d'avatar</Text>
+                <TouchableOpacity onPress={() => setShowAvatarModal(false)} style={styles.closeButton}>
+                    <Ionicons name="close" size={24} color="#fff" />
+                </TouchableOpacity>
+            </View>
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.modalTitle}>Changer d'avatar</Text>
               
               <TouchableOpacity style={styles.uploadOption} onPress={pickImage}>
-                <Ionicons name="image" size={24} color="#333" />
+                <View style={styles.uploadIconCircle}>
+                    <Ionicons name="images-outline" size={24} color="#fff" />
+                </View>
                 <Text style={styles.uploadText}>Choisir depuis la galerie</Text>
               </TouchableOpacity>
 
-              <Text style={styles.separator}>OU choisir un avatar</Text>
-
+              <Text style={styles.separator}>Avatars Classiques</Text>
               <View style={styles.avatarGrid}>
                 {AVATARS.map((avatar, index) => (
-                  <TouchableOpacity key={index} onPress={() => handleSelectAvatar(avatar)}>
+                  <TouchableOpacity key={index} onPress={() => handleSelectAvatar(avatar)} style={styles.avatarGridItem}>
                     <Image source={{ uri: avatar }} style={styles.gridAvatar} />
                   </TouchableOpacity>
                 ))}
               </View>
 
-              <Text style={[styles.separator, { marginTop: 20, color: '#f1c40f' }]}>Avatars Premium</Text>
+              <Text style={[styles.separator, { color: '#f1c40f' }]}>Avatars Premium</Text>
               <View style={styles.avatarGrid}>
                 {PREMIUM_AVATARS.map((avatar, index) => (
-                  <TouchableOpacity key={index} onPress={() => handleSelectPremiumAvatar(avatar.id)}>
+                  <TouchableOpacity key={index} onPress={() => handleSelectPremiumAvatar(avatar.id)} style={styles.avatarGridItem}>
                     <View>
                         <Image source={avatar.source} style={styles.gridAvatar} />
                         {(!user?.isPremium && !user?.isEarlyAccess) && (
-                            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', borderRadius: 40 }}>
-                                <Ionicons name="lock-closed" size={24} color="#f1c40f" />
+                            <View style={styles.lockedOverlay}>
+                                <Ionicons name="lock-closed" size={20} color="#f1c40f" />
                             </View>
                         )}
                     </View>
                   </TouchableOpacity>
                 ))}
               </View>
-              
-              <Button title="Annuler" onPress={() => setShowAvatarModal(false)} style={{ marginTop: 20, backgroundColor: '#999' }} />
             </ScrollView>
           </View>
         </View>
@@ -465,7 +511,12 @@ const ProfileScreen = ({ navigation }) => {
       <Modal visible={showCountryModal} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Choisir votre pays</Text>
+            <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Choisir votre pays</Text>
+                <TouchableOpacity onPress={() => setShowCountryModal(false)} style={styles.closeButton}>
+                    <Ionicons name="close" size={24} color="#fff" />
+                </TouchableOpacity>
+            </View>
             
             <Input 
               value={searchQuery}
@@ -478,15 +529,14 @@ const ProfileScreen = ({ navigation }) => {
               data={filteredCountries}
               keyExtractor={(item) => item.name}
               numColumns={3}
+              showsVerticalScrollIndicator={false}
               renderItem={({ item }) => (
                 <TouchableOpacity style={styles.countryItem} onPress={() => { playButtonSound(); handleSelectCountry(item); }}>
                   <Text style={styles.countryFlag}>{item.flag}</Text>
-                  <Text style={styles.countryName}>{item.name}</Text>
+                  <Text style={styles.countryName} numberOfLines={1}>{item.name}</Text>
                 </TouchableOpacity>
               )}
             />
-            
-            <Button title="Annuler" onPress={() => setShowCountryModal(false)} style={{ marginTop: 20, backgroundColor: '#999' }} />
           </View>
         </View>
       </Modal>
@@ -501,69 +551,111 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  safeArea: {
+    flex: 1,
+    paddingTop: 20,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    paddingTop: 50,
+    paddingHorizontal: 20,
+    paddingBottom: 10,
   },
   headerTitle: {
     fontSize: 20,
     color: '#fff',
     fontWeight: 'bold',
+    fontFamily: 'Roboto', 
   },
-  container: {
-    flex: 1,
+  backButton: {
+    padding: 8,
+  },
+  logoutButton: {
+    padding: 8,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  profileCard: {
+    backgroundColor: '#041c55',
+    borderRadius: 20,
     padding: 20,
-  },
-  avatarSection: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#f1c40f',
+    shadowColor: '#f1c40f',
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    shadowOpacity: 0.5,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  avatarContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
   },
   avatarWrapper: {
-    position: 'relative',
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 3,
+    borderColor: '#3498db',
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 10,
+    overflow: 'hidden',
+  },
+  avatarEditable: {
+    borderColor: '#2ecc71',
+    borderStyle: 'dashed',
   },
   avatarImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: '100%',
+    height: '100%',
   },
-  editIcon: {
+  editIconBadge: {
     position: 'absolute',
     bottom: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    width: 30,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    width: '100%',
     height: 30,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  currentPseudo: {
-    color: '#fff',
+  premiumBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  premiumText: {
+    color: '#000',
+    fontWeight: 'bold',
+    fontSize: 10,
+  },
+  pseudoText: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginTop: 10,
+    color: '#fff',
+    marginBottom: 4,
   },
-  flag: {
-    fontSize: 30,
-    marginTop: 5,
+  emailText: {
+    fontSize: 14,
+    color: '#aaa',
   },
-  statsContainer: {
+  statsGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
     width: '100%',
-    marginTop: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: 15,
-    padding: 15,
+    justifyContent: 'space-around',
+    marginTop: 10,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
   },
   statItem: {
     alignItems: 'center',
@@ -572,174 +664,291 @@ const styles = StyleSheet.create({
   statBorder: {
     borderLeftWidth: 1,
     borderRightWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   statValue: {
-    color: '#fff',
     fontSize: 20,
     fontWeight: 'bold',
+    color: '#fff',
   },
   statLabel: {
-    color: '#ccc',
     fontSize: 12,
-    marginTop: 5,
+    color: '#888',
+    marginTop: 4,
   },
-  form: {
-    backgroundColor: 'rgba(0,0,0,0.5)',
+  menuContainer: {
+    backgroundColor: '#041c55',
+    borderRadius: 16,
+    padding: 10,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#f1c40f',
+    shadowColor: '#f1c40f',
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    shadowOpacity: 0.5,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  iconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  menuText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#fff',
+  },
+  editForm: {
+    backgroundColor: '#041c55',
+    borderRadius: 16,
     padding: 20,
-    borderRadius: 15,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#f1c40f',
+    shadowColor: '#f1c40f',
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    shadowOpacity: 0.5,
+    shadowRadius: 5,
+    elevation: 5,
   },
-  label: {
+  sectionHeader: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 15,
+  },
+  inputLabel: {
     color: '#ccc',
-    marginBottom: 5,
-    marginLeft: 5,
+    marginBottom: 8,
+    fontSize: 14,
   },
-  countrySelector: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+  inputContainer: {
+    marginBottom: 15,
+  },
+  countrySelectButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     padding: 15,
-    borderRadius: 8,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  countrySelectText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  saveButton: {
+    marginTop: 10,
+  },
+  dangerZone: {
+    marginTop: 20,
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    backgroundColor: '#041c55',
+    borderColor: '#f1c40f',
+    shadowColor: '#f1c40f',
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    shadowOpacity: 0.5,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  dangerTitle: {
+    color: '#e74c3c',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 15,
+  },
+  dangerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  dangerButtonText: {
+    marginLeft: 10,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  
+  // Modals
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#1e1e1e',
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    padding: 20,
+    maxHeight: '85%',
+    minHeight: '50%',
+  },
+  modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
-    marginTop: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+    paddingBottom: 15,
   },
-  countryText: {
-    fontSize: 16,
-    color: '#000',
-  },
-  historySection: {
-    marginBottom: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    padding: 15,
-    borderRadius: 15,
-  },
-  sectionTitle: {
-    color: '#fff',
-    fontSize: 18,
+  modalTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 15,
+    color: '#fff',
   },
-  dateHeader: {
-    color: '#ccc',
+  closeButton: {
+    padding: 5,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  emptyText: {
+    color: '#888',
+    marginTop: 10,
+    fontSize: 16,
+  },
+  historyGroup: {
+    marginBottom: 20,
+  },
+  historyDateHeader: {
+    color: '#888',
     fontSize: 14,
     marginBottom: 10,
-    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   txItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
     backgroundColor: 'rgba(255,255,255,0.05)',
-    padding: 10,
-    borderRadius: 8,
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 8,
   },
   txIcon: {
-    marginRight: 10,
-  },
-  txEmoji: {
-    fontSize: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   txDetails: {
     flex: 1,
   },
   txReason: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '500',
+    marginBottom: 2,
   },
   txDate: {
-    color: '#999',
+    color: '#888',
     fontSize: 12,
   },
   txAmount: {
     fontSize: 16,
     fontWeight: 'bold',
   },
-  emptyText: {
-    color: '#999',
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-    maxHeight: '80%',
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
+  
+  // Avatar Modal
   uploadOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: 'rgba(52, 152, 219, 0.1)',
     padding: 15,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 10,
+    borderRadius: 12,
     marginBottom: 20,
   },
+  uploadIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#3498db',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
   uploadText: {
-    marginLeft: 10,
+    color: '#fff',
     fontSize: 16,
+    fontWeight: '500',
   },
   separator: {
-    textAlign: 'center',
-    color: '#666',
-    marginVertical: 10,
+    color: '#888',
+    fontSize: 14,
     fontWeight: 'bold',
+    marginBottom: 15,
+    marginTop: 10,
   },
   avatarGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 15,
-    marginTop: 10,
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  avatarGridItem: {
+    width: (width - 60) / 3,
+    height: (width - 60) / 3,
+    marginBottom: 10,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   gridAvatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: '100%',
+    height: '100%',
   },
-  countryItem: {
-    flex: 1,
+  lockedOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
     alignItems: 'center',
-    margin: 10,
-    padding: 10,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 10,
+  },
+  
+  // Country Modal
+  countryItem: {
+    width: (width - 60) / 3,
+    alignItems: 'center',
+    marginBottom: 20,
+    padding: 5,
   },
   countryFlag: {
-    fontSize: 40,
+    fontSize: 32,
+    marginBottom: 5,
   },
   countryName: {
+    color: '#ccc',
     fontSize: 12,
     textAlign: 'center',
-    marginTop: 5,
   },
-  dangerZone: {
-    marginTop: 30,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.3)',
-    paddingTop: 20,
-    width: '100%',
-  },
-  dangerTitle: {
-    color: '#ff6b6b',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    textAlign: 'center',
-  }
 });
 
 export default ProfileScreen;

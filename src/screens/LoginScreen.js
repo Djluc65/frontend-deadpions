@@ -63,7 +63,12 @@ const LoginScreen = ({ navigation }) => {
             coins: data.coins,
             avatar: data.avatar,
             country: data.country,
-            stats: data.stats
+            stats: data.stats,
+            isPremium: data.isPremium,
+            isEarlyAccess: data.isEarlyAccess,
+            earlyAccessEndDate: data.earlyAccessEndDate,
+            subscriptionEndDate: data.subscriptionEndDate,
+            dailyCreatedRooms: data.dailyCreatedRooms
           },
           token: data.token,
           refreshToken: data.refreshToken
@@ -116,7 +121,12 @@ const LoginScreen = ({ navigation }) => {
             coins: data.coins,
             avatar: data.avatar,
             country: data.country,
-            stats: data.stats
+            stats: data.stats,
+            isPremium: data.isPremium,
+            isEarlyAccess: data.isEarlyAccess,
+            earlyAccessEndDate: data.earlyAccessEndDate,
+            subscriptionEndDate: data.subscriptionEndDate,
+            dailyCreatedRooms: data.dailyCreatedRooms
           },
           token: data.token,
           refreshToken: data.refreshToken

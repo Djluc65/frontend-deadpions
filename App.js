@@ -9,7 +9,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './src/utils/queryClient';
-import { StripeProvider } from '@stripe/stripe-react-native';
+import { StripeProviderWrapper } from './src/components/StripeProviderWrapper';
 import LoadingSpinner from './src/components/common/LoadingSpinner';
 import { CoinsProvider } from './src/context/CoinsContext';
 
@@ -26,7 +26,7 @@ const linking = {
 export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <StripeProvider
+      <StripeProviderWrapper
         publishableKey={process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY}
         merchantIdentifier="merchant.com.deadpions"
       >
@@ -42,7 +42,7 @@ export default function App() {
             </QueryClientProvider>
           </PersistGate>
         </Provider>
-      </StripeProvider>
+      </StripeProviderWrapper>
     </GestureHandlerRootView>
   );
 }

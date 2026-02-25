@@ -128,6 +128,25 @@ const ConfigurationJeuIA = ({ navigation }) => {
     { id: 'reflexion', label: 'Réflexion (3s)', delai: 3000 }
   ];
 
+  const handleDifficultySelect = (niveau) => {
+    if (niveau.id === 'difficile' && !user?.isPremium && !user?.isEarlyAccess) {
+        Alert.alert(
+            "Fonctionnalité Premium", 
+            "L'IA Expert est réservée aux membres DeadPions+. Abonnez-vous pour débloquer le coach stratégique !",
+            [
+                 { text: "Annuler", style: "cancel" },
+                 { text: "Voir l'offre", onPress: () => {
+                     // Naviguer vers le TabNavigator 'Home' puis vers l'onglet 'Magasin'
+                     navigation.navigate('Home', { screen: 'Magasin' });
+                 }}
+             ]
+         );
+         return;
+     }
+    playButtonSound();
+    setDifficulte(niveau.id);
+  };
+
   const renderDifficultyTab = () => (
     <View style={styles.tabContent}>
       {niveaux.map(niveau => (
@@ -137,12 +156,15 @@ const ConfigurationJeuIA = ({ navigation }) => {
             styles.niveauCard,
             difficulte === niveau.id && styles.niveauCardActive
           ]}
-          onPress={() => { playButtonSound(); setDifficulte(niveau.id); }}
+          onPress={() => handleDifficultySelect(niveau)}
         >
           <Text style={styles.niveauEmoji}>{niveau.emoji}</Text>
           <View style={styles.niveauInfo}>
             <Text style={styles.niveauTitre}>{niveau.titre}</Text>
             <Text style={styles.niveauDesc}>{niveau.description}</Text>
+            {niveau.id === 'difficile' && !user?.isPremium && !user?.isEarlyAccess && (
+                 <Text style={{color: '#f1c40f', fontSize: 12, marginTop: 4}}>🔒 Premium Requis</Text>
+            )}
             <Text style={styles.niveauTaux}>
               IA gagne à {niveau.tauxVictoire}
             </Text>
