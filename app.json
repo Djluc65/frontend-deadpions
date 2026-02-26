@@ -17,6 +17,7 @@
     ],
     "ios": {
       "bundleIdentifier": "com.deadpions.app",
+      "buildNumber": "32",
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "This app needs access to the camera for video calls.",
