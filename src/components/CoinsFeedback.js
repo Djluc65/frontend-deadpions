@@ -2,10 +2,11 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
+import { getResponsiveSize } from '../utils/responsive';
 
 const CoinsFeedback = ({ amount, visible, type, onFinish }) => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
-    const translateY = useRef(new Animated.Value(20)).current;
+    const translateY = useRef(new Animated.Value(getResponsiveSize(20))).current;
 
     useEffect(() => {
         if (visible) {
@@ -48,7 +49,7 @@ const CoinsFeedback = ({ amount, visible, type, onFinish }) => {
         
         // Reset
         fadeAnim.setValue(0);
-        translateY.setValue(20);
+        translateY.setValue(getResponsiveSize(20));
 
         Animated.parallel([
             Animated.timing(fadeAnim, {
@@ -57,7 +58,7 @@ const CoinsFeedback = ({ amount, visible, type, onFinish }) => {
                 useNativeDriver: true,
             }),
             Animated.timing(translateY, {
-                toValue: -50,
+                toValue: -getResponsiveSize(50),
                 duration: 1000,
                 useNativeDriver: true,
             }),
@@ -114,15 +115,15 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         zIndex: 1000,
         backgroundColor: 'rgba(0,0,0,0.7)',
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderRadius: 20,
+        paddingHorizontal: getResponsiveSize(20),
+        paddingVertical: getResponsiveSize(10),
+        borderRadius: getResponsiveSize(20),
     },
     text: {
-        fontSize: 32,
+        fontSize: getResponsiveSize(32),
         fontWeight: 'bold',
-        textShadowOffset: { width: 1, height: 1 },
-        textShadowRadius: 5,
+        textShadowOffset: { width: getResponsiveSize(1), height: getResponsiveSize(1) },
+        textShadowRadius: getResponsiveSize(5),
     },
 });
 

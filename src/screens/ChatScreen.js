@@ -20,6 +20,7 @@ import {
 import { API_URL } from '../config';
 import socket from '../services/socket';
 import { AudioController } from '../utils/AudioController';
+import { getResponsiveSize, isTablet } from '../utils/responsive';
 
 const { width, height } = Dimensions.get('window');
 
@@ -828,28 +829,28 @@ const ChatScreen = ({ route, navigation }) => {
                 styles.audioPlayButton, 
                 { backgroundColor: isMe ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)' }
               ]}
-              onPress={() => { // ✅ CORRIGÉ
-                const audioUrl = resolveAudioUrl(item); // ✅ CORRIGÉ
-                if (!audioUrl) { // ✅ CORRIGÉ
-                  Alert.alert('Erreur', 'Fichier audio introuvable'); // ✅ CORRIGÉ
-                  return; // ✅ CORRIGÉ
-                } // ✅ CORRIGÉ
-                playSound(audioUrl, item._id); // ✅ CORRIGÉ
-              }} // ✅ CORRIGÉ
+              onPress={() => {
+                const audioUrl = resolveAudioUrl(item);
+                if (!audioUrl) {
+                  Alert.alert('Erreur', 'Fichier audio introuvable');
+                  return;
+                }
+                playSound(audioUrl, item._id);
+              }}
             >
               <Ionicons 
                 name={isPlaying === item._id ? "pause" : "play"} 
-                size={20} 
+                size={getResponsiveSize(20)} 
                 color={isMe ? "#fff" : "#333"} 
-                style={{ marginLeft: isPlaying === item._id ? 0 : 2 }}
+                style={{ marginLeft: isPlaying === item._id ? 0 : getResponsiveSize(2) }}
               />
             </TouchableOpacity>
             
-            <View style={{ flex: 1, marginLeft: 12, justifyContent: 'center' }}> 
+            <View style={{ flex: 1, marginLeft: getResponsiveSize(12), justifyContent: 'center' }}> 
               <View
                 style={{
-                  height: 4,
-                  borderRadius: 2,
+                  height: getResponsiveSize(4),
+                  borderRadius: getResponsiveSize(2),
                   overflow: 'hidden',
                   backgroundColor: isMe
                     ? 'rgba(255,255,255,0.3)'
@@ -858,16 +859,16 @@ const ChatScreen = ({ route, navigation }) => {
               >
                 <View
                   style={{
-                    height: 4,
-                    borderRadius: 2,
+                    height: getResponsiveSize(4),
+                    borderRadius: getResponsiveSize(2),
                     width: `${progressRatio * 100}%`,
                     backgroundColor: isMe ? '#fff' : '#333',
                   }}
                 />
               </View>
 
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                <Text style={{ color: isMe ? "rgba(255,255,255,0.8)" : "rgba(0,0,0,0.6)", fontSize: 11, fontVariant: ['tabular-nums'] }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: getResponsiveSize(4) }}>
+                <Text style={{ color: isMe ? "rgba(255,255,255,0.8)" : "rgba(0,0,0,0.6)", fontSize: getResponsiveSize(11), fontVariant: ['tabular-nums'] }}>
                   {isPlaying === item._id 
                     ? formatDuration(Math.floor(playbackStatus.position || 0))
                     : formatDuration(item.duration || 0)}
@@ -887,17 +888,17 @@ const ChatScreen = ({ route, navigation }) => {
               {item.sendError && (
                 <Ionicons 
                   name="alert-circle-outline"
-                  size={16}
+                  size={getResponsiveSize(16)}
                   color="#e74c3c"
-                  style={{ marginLeft: 5 }}
+                  style={{ marginLeft: getResponsiveSize(5) }}
                 />
               )}
               {!item.sendError && (
                 <Ionicons 
                   name={(item.status === 'read' || item.read || item.status === 'delivered') ? "checkmark-done" : "checkmark"} 
-                  size={16} 
+                  size={getResponsiveSize(16)} 
                   color={(item.status === 'read' || item.read) ? "#3b82f6" : "#ddd"} 
-                  style={{ marginLeft: 5 }}
+                  style={{ marginLeft: getResponsiveSize(5) }}
                 />
               )}
             </>
@@ -933,7 +934,7 @@ const ChatScreen = ({ route, navigation }) => {
                             {
                                 height: anim.interpolate({
                                     inputRange: [0, 1],
-                                    outputRange: [4, 50] // Min 4px, Max 50px
+                                    outputRange: [getResponsiveSize(4), getResponsiveSize(50)] // Min 4px, Max 50px
                                 }),
                                 opacity: anim.interpolate({
                                     inputRange: [0, 1],
@@ -948,16 +949,16 @@ const ChatScreen = ({ route, navigation }) => {
             {/* Controls */}
             <View style={styles.recordingControls}>
                 <TouchableOpacity onPress={cancelRecording} style={styles.cancelButton}>
-                    <Ionicons name="close" size={30} color="white" />
+                    <Ionicons name="close" size={getResponsiveSize(30)} color="white" />
                 </TouchableOpacity>
 
                 <View style={styles.recordingIndicator}>
                     <Animated.View style={[styles.recordingDot, { opacity: recordingDotOpacity }]} />
-                    <Ionicons name="mic" size={40} color="white" />
+                    <Ionicons name="mic" size={getResponsiveSize(40)} color="white" />
                 </View>
 
                 <TouchableOpacity onPress={sendRecording} style={styles.sendButtonRecording}>
-                    <Ionicons name="send" size={24} color="white" />
+                    <Ionicons name="send" size={getResponsiveSize(24)} color="white" />
                 </TouchableOpacity>
             </View>
             
@@ -1035,25 +1036,25 @@ const ChatScreen = ({ route, navigation }) => {
               {callStatus === 'incoming' ? (
                 <>
                   <TouchableOpacity style={[styles.controlBtn, { backgroundColor: '#e74c3c' }]} onPress={endCall}>
-                    <Ionicons name="close" size={32} color="white" />
+                    <Ionicons name="close" size={getResponsiveSize(32)} color="white" />
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.controlBtn, { backgroundColor: '#2ecc71' }]} onPress={acceptCall}>
-                    <Ionicons name="call" size={32} color="white" />
+                    <Ionicons name="call" size={getResponsiveSize(32)} color="white" />
                   </TouchableOpacity>
                 </>
               ) : (
                 <>
                   <TouchableOpacity style={[styles.controlBtn, isMuted && styles.activeBtn]} onPress={toggleMute}>
-                    <Ionicons name={isMuted ? "mic-off" : "mic"} size={28} color="white" />
+                    <Ionicons name={isMuted ? "mic-off" : "mic"} size={getResponsiveSize(28)} color="white" />
                   </TouchableOpacity>
                   
-                  <TouchableOpacity style={[styles.controlBtn, { backgroundColor: '#e74c3c', width: 70, height: 70 }]} onPress={endCall}>
-                    <Ionicons name="call" size={32} color="white" />
+                  <TouchableOpacity style={[styles.controlBtn, { backgroundColor: '#e74c3c', width: getResponsiveSize(70), height: getResponsiveSize(70), borderRadius: getResponsiveSize(35) }]} onPress={endCall}>
+                    <Ionicons name="call" size={getResponsiveSize(32)} color="white" />
                   </TouchableOpacity>
 
                   {isVideo && (
                     <TouchableOpacity style={[styles.controlBtn, isCameraOff && styles.activeBtn]} onPress={toggleCamera}>
-                      <Ionicons name={isCameraOff ? "videocam-off" : "videocam"} size={28} color="white" />
+                      <Ionicons name={isCameraOff ? "videocam-off" : "videocam"} size={getResponsiveSize(28)} color="white" />
                     </TouchableOpacity>
                   )}
                 </>
@@ -1071,7 +1072,7 @@ const ChatScreen = ({ route, navigation }) => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => { playButtonSound(); navigation.goBack(); }}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={getResponsiveSize(24)} color="#fff" />
         </TouchableOpacity>
         <View style={styles.headerInfo}>
           <Text style={styles.headerName}>{friendName}</Text>
@@ -1085,10 +1086,10 @@ const ChatScreen = ({ route, navigation }) => {
         </View>
         <View style={styles.headerIcons}>
           <TouchableOpacity onPress={() => { playButtonSound(); initiateCall('audio'); }} style={styles.headerIcon}>
-            <Ionicons name="call" size={22} color="#fff" />
+            <Ionicons name="call" size={getResponsiveSize(22)} color="#fff" />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => { playButtonSound(); initiateCall('video'); }} style={styles.headerIcon}>
-            <Ionicons name="videocam" size={22} color="#fff" />
+            <Ionicons name="videocam" size={getResponsiveSize(22)} color="#fff" />
           </TouchableOpacity>
         </View>
       </View>
@@ -1110,28 +1111,28 @@ const ChatScreen = ({ route, navigation }) => {
         {isRecordingOverlayVisible ? (
              <View style={styles.inputContainer}>
                 {/* Cancel Button */}
-                <TouchableOpacity onPress={() => { playButtonSound(); cancelRecording(); }} style={{ padding: 10 }}>
-                    <Ionicons name="trash-outline" size={24} color="#e74c3c" />
+                <TouchableOpacity onPress={() => { playButtonSound(); cancelRecording(); }} style={{ padding: getResponsiveSize(10) }}>
+                    <Ionicons name="trash-outline" size={getResponsiveSize(24)} color="#e74c3c" />
                 </TouchableOpacity>
 
                 {/* Timer */}
-                <Text style={{ color: '#fff', marginRight: 10, minWidth: 40 }}>
+                <Text style={{ color: '#fff', marginRight: getResponsiveSize(10), minWidth: getResponsiveSize(40), fontSize: getResponsiveSize(14) }}>
                     {formatDuration(recordingDuration)}
                 </Text>
 
                 {/* Visualizer (Horizontal) */}
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', height: 30, justifyContent: 'center' }}>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', height: getResponsiveSize(30), justifyContent: 'center' }}>
                     {visualizerBars.slice(0, 20).map((anim, index) => (
                         <Animated.View
                             key={index}
                             style={{
-                                width: 3,
+                                width: getResponsiveSize(3),
                                 backgroundColor: '#e74c3c',
                                 marginHorizontal: 1,
-                                borderRadius: 1.5,
+                                borderRadius: getResponsiveSize(1.5),
                                 height: anim.interpolate({
                                     inputRange: [0, 1],
-                                    outputRange: [3, 25] 
+                                    outputRange: [getResponsiveSize(3), getResponsiveSize(25)] 
                                 })
                             }}
                         />
@@ -1140,7 +1141,7 @@ const ChatScreen = ({ route, navigation }) => {
 
                 {/* Send Button */}
                 <TouchableOpacity onPress={() => { playButtonSound(); sendRecording(); }} style={styles.sendButton}>
-                    <Ionicons name="arrow-up-circle" size={32} color="#2ecc71" />
+                    <Ionicons name="arrow-up-circle" size={getResponsiveSize(32)} color="#2ecc71" />
                 </TouchableOpacity>
              </View>
         ) : (
@@ -1155,14 +1156,14 @@ const ChatScreen = ({ route, navigation }) => {
               />
               {inputText.length > 0 ? (
                 <TouchableOpacity style={styles.sendButton} onPress={() => { playButtonSound(); handleSendMessage(); }}>
-                  <Ionicons name="send" size={24} color="#f1c40f" />
+                  <Ionicons name="send" size={getResponsiveSize(24)} color="#f1c40f" />
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity 
                   style={[styles.micButton]} 
                   onPress={() => { playButtonSound(); startRecording(); }}
                 >
-                  <Ionicons name="mic" size={24} color="#fff" />
+                  <Ionicons name="mic" size={getResponsiveSize(24)} color="#fff" />
                 </TouchableOpacity>
               )}
             </View>
@@ -1184,114 +1185,117 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
+    padding: getResponsiveSize(15),
     backgroundColor: 'rgba(4, 28, 85, 0.95)',
-    borderBottomWidth: 1,
+    borderBottomWidth: getResponsiveSize(1),
     borderBottomColor: '#f1c40f',
   },
   headerInfo: {
     flex: 1,
-    marginLeft: 15,
+    marginLeft: getResponsiveSize(15),
   },
   headerName: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: getResponsiveSize(18),
     fontWeight: 'bold',
   },
   headerStatus: {
     color: '#2ecc71',
-    fontSize: 12,
+    fontSize: getResponsiveSize(12),
   },
   headerIcons: {
     flexDirection: 'row',
   },
   headerIcon: {
-    marginLeft: 15,
+    marginLeft: getResponsiveSize(15),
   },
   listContent: {
-    padding: 15,
-    paddingBottom: 20,
+    padding: getResponsiveSize(15),
+    paddingBottom: getResponsiveSize(20),
   },
   messageBubble: {
     maxWidth: '80%',
-    padding: 10,
-    borderRadius: 15,
-    marginBottom: 10,
+    padding: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(15),
+    marginBottom: getResponsiveSize(10),
   },
   myMessage: {
     alignSelf: 'flex-end',
     backgroundColor: '#3498db',
-    borderBottomRightRadius: 2,
+    borderBottomRightRadius: getResponsiveSize(2),
   },
   theirMessage: {
     alignSelf: 'flex-start',
     backgroundColor: '#ecf0f1',
-    borderBottomLeftRadius: 2,
+    borderBottomLeftRadius: getResponsiveSize(2),
   },
   myText: {
     color: '#fff',
+    fontSize: getResponsiveSize(14),
   },
   theirText: {
     color: '#333',
+    fontSize: getResponsiveSize(14),
   },
   timestampContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-end',
-    marginTop: 5,
+    marginTop: getResponsiveSize(5),
   },
   timestamp: {
-    fontSize: 10,
+    fontSize: getResponsiveSize(10),
   },
   infoMessage: {
     alignSelf: 'center',
     backgroundColor: 'rgba(255,255,255,0.1)',
-    padding: 5,
-    borderRadius: 5,
-    marginBottom: 10,
+    padding: getResponsiveSize(5),
+    borderRadius: getResponsiveSize(5),
+    marginBottom: getResponsiveSize(10),
   },
   infoText: {
     color: '#ccc',
-    fontSize: 12,
+    fontSize: getResponsiveSize(12),
   },
   audioContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 5,
-    minWidth: 150,
+    paddingVertical: getResponsiveSize(5),
+    minWidth: getResponsiveSize(150),
   },
   audioPlayButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: getResponsiveSize(36),
+    height: getResponsiveSize(36),
+    borderRadius: getResponsiveSize(18),
     justifyContent: 'center',
     alignItems: 'center',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
+    padding: getResponsiveSize(10),
     backgroundColor: 'rgba(4, 28, 85, 0.95)',
-    borderTopWidth: 1,
+    borderTopWidth: getResponsiveSize(1),
     borderTopColor: '#333',
   },
   input: {
     flex: 1,
     backgroundColor: '#1a2a4c',
     color: '#fff',
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    maxHeight: 100,
-    marginRight: 10,
+    borderRadius: getResponsiveSize(20),
+    paddingHorizontal: getResponsiveSize(15),
+    paddingVertical: getResponsiveSize(10),
+    maxHeight: getResponsiveSize(100),
+    marginRight: getResponsiveSize(10),
+    fontSize: getResponsiveSize(16),
   },
   sendButton: {
-    padding: 10,
+    padding: getResponsiveSize(10),
   },
   micButton: {
-    padding: 10,
+    padding: getResponsiveSize(10),
     backgroundColor: '#3498db',
-    borderRadius: 25,
+    borderRadius: getResponsiveSize(25),
   },
   recordingBtn: {
     backgroundColor: '#e74c3c',
@@ -1317,14 +1321,14 @@ const styles = StyleSheet.create({
   },
   localVideoContainer: {
     position: 'absolute',
-    top: 50,
-    right: 20,
-    width: 100,
-    height: 150,
+    top: getResponsiveSize(50),
+    right: getResponsiveSize(20),
+    width: getResponsiveSize(100),
+    height: getResponsiveSize(150),
     backgroundColor: '#333',
-    borderRadius: 10,
+    borderRadius: getResponsiveSize(10),
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: getResponsiveSize(1),
     borderColor: '#fff',
   },
   localVideo: {
@@ -1339,10 +1343,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   callAvatar: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    borderWidth: 3,
+    width: getResponsiveSize(150),
+    height: getResponsiveSize(150),
+    borderRadius: getResponsiveSize(75),
+    borderWidth: getResponsiveSize(3),
     borderColor: '#fff',
   },
   callOverlay: {
@@ -1352,34 +1356,34 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     justifyContent: 'space-between',
-    paddingVertical: 50,
-    paddingHorizontal: 20,
+    paddingVertical: getResponsiveSize(50),
+    paddingHorizontal: getResponsiveSize(20),
     backgroundColor: 'rgba(0,0,0,0.3)',
   },
   callHeader: {
     alignItems: 'center',
-    marginTop: 50,
+    marginTop: getResponsiveSize(50),
   },
   callName: {
     color: '#fff',
-    fontSize: 28,
+    fontSize: getResponsiveSize(28),
     fontWeight: 'bold',
   },
   callStatus: {
     color: '#eee',
-    fontSize: 16,
-    marginTop: 5,
+    fontSize: getResponsiveSize(16),
+    marginTop: getResponsiveSize(5),
   },
   callControls: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: getResponsiveSize(20),
   },
   controlBtn: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: getResponsiveSize(50),
+    height: getResponsiveSize(50),
+    borderRadius: getResponsiveSize(25),
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1397,89 +1401,89 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: '#e74c3c', // Red immersive background
     justifyContent: 'flex-end',
-    paddingBottom: 40,
+    paddingBottom: getResponsiveSize(40),
     zIndex: 1000, // Ensure it's on top
   },
   recordingContent: {
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: getResponsiveSize(20),
   },
   recordingInstruction: {
     color: 'rgba(255,255,255,0.9)',
-    fontSize: 14,
-    marginBottom: 20,
+    fontSize: getResponsiveSize(14),
+    marginBottom: getResponsiveSize(20),
     fontWeight: '500',
   },
   recordingTimer: {
     color: '#fff',
-    fontSize: 48,
+    fontSize: getResponsiveSize(48),
     fontWeight: 'bold',
-    marginBottom: 30,
+    marginBottom: getResponsiveSize(30),
   },
   visualizerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 60,
-    marginBottom: 40,
+    height: getResponsiveSize(60),
+    marginBottom: getResponsiveSize(40),
     width: '100%',
   },
   visualizerBar: {
-    width: 4,
+    width: getResponsiveSize(4),
     backgroundColor: 'rgba(255,255,255,0.8)',
-    marginHorizontal: 1,
-    borderRadius: 2,
+    marginHorizontal: getResponsiveSize(1),
+    borderRadius: getResponsiveSize(2),
   },
   recordingControls: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    paddingHorizontal: 20,
-    marginBottom: 30,
+    paddingHorizontal: getResponsiveSize(20),
+    marginBottom: getResponsiveSize(30),
   },
   cancelButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: getResponsiveSize(60),
+    height: getResponsiveSize(60),
+    borderRadius: getResponsiveSize(30),
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   recordingIndicator: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: getResponsiveSize(80),
+    height: getResponsiveSize(80),
+    borderRadius: getResponsiveSize(40),
     backgroundColor: 'rgba(255,255,255,0.3)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   recordingDot: {
     position: 'absolute',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: getResponsiveSize(100),
+    height: getResponsiveSize(100),
+    borderRadius: getResponsiveSize(50),
     backgroundColor: 'rgba(255,255,255,0.2)',
   },
   sendButtonRecording: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: getResponsiveSize(60),
+    height: getResponsiveSize(60),
+    borderRadius: getResponsiveSize(30),
     backgroundColor: '#2ecc71', // Green send button
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 5,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: getResponsiveSize(2) },
     shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowRadius: getResponsiveSize(3.84),
   },
   recordingProgressBarContainer: {
     width: '100%',
-    height: 6,
+    height: getResponsiveSize(6),
     backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 3,
-    marginTop: 10,
+    borderRadius: getResponsiveSize(3),
+    marginTop: getResponsiveSize(10),
     overflow: 'hidden',
   },
   recordingProgressBar: {

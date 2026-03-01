@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { Modal, Pressable, View, Text, ActivityIndicator, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { getResponsiveSize } from '../../utils/responsive';
 import { playButtonSound } from '../../utils/soundManager';
 
 const OnlineConfigModal = memo(({
@@ -36,9 +37,9 @@ const OnlineConfigModal = memo(({
           {isSearchingOnline ? (
             <View style={{ alignItems: 'center', width: '100%' }}>
                 <Text style={styles.friendsModalTitle}>Recherche d'adversaire...</Text>
-                <ActivityIndicator size="large" color="#f1c40f" style={{ marginVertical: 20 }} />
-                <Text style={{ color: '#f1c40f', fontSize: 32, fontWeight: 'bold', marginBottom: 10 }}>{onlineSearchTimer}s</Text>
-                <Text style={{ color: '#ccc', fontSize: 14, marginBottom: 20 }}>Mise : {onlineBet.toLocaleString()} 💰</Text>
+                <ActivityIndicator size="large" color="#f1c40f" style={{ marginVertical: getResponsiveSize(20) }} />
+                <Text style={{ color: '#f1c40f', fontSize: getResponsiveSize(32), fontWeight: 'bold', marginBottom: getResponsiveSize(10) }}>{onlineSearchTimer}s</Text>
+                <Text style={{ color: '#ccc', fontSize: getResponsiveSize(14), marginBottom: getResponsiveSize(20) }}>Mise : {onlineBet.toLocaleString()} 💰</Text>
                 
                 <TouchableOpacity 
                     style={styles.cancelSearchButton} 
@@ -85,7 +86,7 @@ const OnlineConfigModal = memo(({
                 )}
 
                 <Text style={styles.friendsLabel}>Mise (coins):</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: getResponsiveSize(10) }}>
                     {(() => {
                         const availableBets = betOptions.filter(b => b <= (userCoins || 0));
                         const effectiveBets = availableBets.length > 0 ? availableBets : [100];
@@ -102,9 +103,9 @@ const OnlineConfigModal = memo(({
                                         if (canGoPrev) setOnlineBet(effectiveBets[currentIndex - 1]);
                                     }}
                                     disabled={!canGoPrev}
-                                    style={{ padding: 10, opacity: !canGoPrev ? 0.3 : 1 }}
+                                    style={{ padding: getResponsiveSize(10), opacity: !canGoPrev ? 0.3 : 1 }}
                                 >
-                                    <Ionicons name="remove-circle-outline" size={40} color="#fff" />
+                                    <Ionicons name="remove-circle-outline" size={getResponsiveSize(40)} color="#fff" />
                                 </TouchableOpacity>
                                 
                                 <View style={styles.betDisplay}>
@@ -140,9 +141,9 @@ const OnlineConfigModal = memo(({
                                         if (canGoNext) setOnlineBet(effectiveBets[currentIndex + 1]);
                                     }}
                                     disabled={!canGoNext}
-                                    style={{ padding: 10, opacity: !canGoNext ? 0.3 : 1 }}
+                                    style={{ padding: getResponsiveSize(10), opacity: !canGoNext ? 0.3 : 1 }}
                                 >
-                                    <Ionicons name="add-circle-outline" size={40} color="#fff" />
+                                    <Ionicons name="add-circle-outline" size={getResponsiveSize(40)} color="#fff" />
                                 </TouchableOpacity>
                             </>
                         );
@@ -191,8 +192,8 @@ const styles = StyleSheet.create({
   friendsModalContent: {
     width: '80%',
     backgroundColor: '#041c55',
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: getResponsiveSize(20),
+    padding: getResponsiveSize(20),
     alignItems: 'center',
     shadowColor: '#f1c40f',
     shadowOffset: {
@@ -200,39 +201,39 @@ const styles = StyleSheet.create({
       height: 0,
     },
     shadowOpacity: 3,
-    shadowRadius: 3,
+    shadowRadius: getResponsiveSize(3),
     elevation: 5,
-    borderWidth: 1,
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f1c40f',
   },
   friendsModalTitle: {
-    fontSize: 24,
+    fontSize: getResponsiveSize(24),
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: getResponsiveSize(20),
     color: '#fff',
   },
   friendsLabel: {
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     color: '#f1c40f',
     alignSelf: 'flex-start',
-    marginBottom: 10,
+    marginBottom: getResponsiveSize(10),
     fontWeight: 'bold',
   },
   optionsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 20,
+    gap: getResponsiveSize(10),
+    marginBottom: getResponsiveSize(20),
     width: '100%',
   },
   friendsOptionButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 15,
-    borderRadius: 15,
-    borderWidth: 1,
+    paddingVertical: getResponsiveSize(12),
+    paddingHorizontal: getResponsiveSize(15),
+    borderRadius: getResponsiveSize(15),
+    borderWidth: getResponsiveSize(1),
     borderColor: 'rgba(241, 196, 15, 0.5)',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    marginBottom: 5,
+    marginBottom: getResponsiveSize(5),
   },
   friendsOptionButtonActive: {
     backgroundColor: '#f1c40f',
@@ -240,12 +241,12 @@ const styles = StyleSheet.create({
     shadowColor: '#f1c40f',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
-    shadowRadius: 8,
+    shadowRadius: getResponsiveSize(8),
     elevation: 5,
   },
   friendsOptionText: {
     color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: '500',
   },
   friendsOptionTextActive: {
@@ -256,27 +257,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    marginTop: 10,
-    gap: 15,
+    marginTop: getResponsiveSize(10),
+    gap: getResponsiveSize(15),
   },
   modalButtonCancel: {
     flex: 1,
-    padding: 12,
-    borderRadius: 10,
+    padding: getResponsiveSize(12),
+    borderRadius: getResponsiveSize(10),
     backgroundColor: '#e74c3c',
     alignItems: 'center',
   },
   modalButtonConfirm: {
     flex: 1,
-    padding: 12,
-    borderRadius: 10,
+    padding: getResponsiveSize(12),
+    borderRadius: getResponsiveSize(10),
     backgroundColor: '#2ecc71',
     alignItems: 'center',
   },
   modalButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
   },
   innerShadow: {
     position: 'absolute',
@@ -284,70 +285,70 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 20,
-    borderWidth: 4,
+    borderRadius: getResponsiveSize(20),
+    borderWidth: getResponsiveSize(4),
     borderColor: 'rgba(0, 0, 0, 0.3)',
   },
   cancelSearchButton: {
     backgroundColor: '#e74c3c',
     width: '100%',
-    paddingVertical: 15,
-    borderRadius: 20,
-    borderWidth: 2,
+    paddingVertical: getResponsiveSize(15),
+    borderRadius: getResponsiveSize(20),
+    borderWidth: getResponsiveSize(2),
     borderColor: '#c0392b',
     shadowColor: "#000",
     shadowOffset: {
         width: 0,
-        height: 4,
+        height: getResponsiveSize(4),
     },
     shadowOpacity: 0.3,
-    shadowRadius: 4.65,
+    shadowRadius: getResponsiveSize(4.65),
     elevation: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 10
+    marginTop: getResponsiveSize(10)
   },
   cancelSearchButtonText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 18,
+    fontSize: getResponsiveSize(18),
     textTransform: 'uppercase'
   },
   betDisplay: {
     flexDirection: 'row', 
     alignItems: 'center', 
     justifyContent: 'center',
-    width: 140,
-    height: 50,
+    width: getResponsiveSize(140),
+    height: getResponsiveSize(50),
     overflow: 'hidden',
     backgroundColor: 'rgba(0,0,0,0.3)',
-    borderRadius: 25,
-    marginHorizontal: 10,
-    borderWidth: 1,
+    borderRadius: getResponsiveSize(25),
+    marginHorizontal: getResponsiveSize(10),
+    borderWidth: getResponsiveSize(1),
     borderColor: 'rgba(241, 196, 15, 0.3)'
   },
   prevBetText: {
     color: '#f1c40f', 
-    fontSize: 14, 
+    fontSize: getResponsiveSize(14), 
     opacity: 0.5, 
-    width: 70, 
+    width: getResponsiveSize(70), 
     textAlign: 'center'
   },
   currentBetText: {
     color: '#f1c40f', 
-    fontSize: 22, 
+    fontSize: getResponsiveSize(22), 
     fontWeight: 'bold', 
-    width: 120,
+    width: getResponsiveSize(120),
     textAlign: 'center',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: {width: -1, height: 1},
-    textShadowRadius: 10
+    textShadowOffset: {width: getResponsiveSize(-1), height: getResponsiveSize(1)},
+    textShadowRadius: getResponsiveSize(10)
   },
   nextBetText: {
     color: '#f1c40f', 
-    fontSize: 14, 
+    fontSize: getResponsiveSize(14), 
     opacity: 0.5, 
-    width: 70, 
+    width: getResponsiveSize(70), 
     textAlign: 'center' 
   }
 });

@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import { translations } from '../../utils/translations';
 import { socket } from '../../utils/socket';
 import { BET_OPTIONS } from '../../utils/constants';
+import CoinsService from '../../services/CoinsService';
 import TransactionService from '../../services/TransactionService';
 import FriendsMenuModal from './FriendsMenuModal';
 import CreateRoomModal from './CreateRoomModal';
@@ -17,11 +18,15 @@ const FriendsGameSetup = ({ visible, onClose, navigation, user, onOpenLiveConfig
   const [inviteSeriesLength, setInviteSeriesLength] = useState(2);
   const [inviteBet, setInviteBet] = useState(100);
   const [inviteTime, setInviteTime] = useState(30);
+  const [startingSide, setStartingSide] = useState('random');
+  const [hostColor, setHostColor] = useState('random');
 
   // Reset state when modal is closed
   useEffect(() => {
     if (!visible) {
       setShowCreateRoom(false);
+      setStartingSide('random');
+      setHostColor('random');
     }
   }, [visible]);
 
@@ -62,18 +67,10 @@ const FriendsGameSetup = ({ visible, onClose, navigation, user, onOpenLiveConfig
         seriesLength: inviteMode === 'tournament' ? inviteSeriesLength : 1,
         id: user._id || user.id,
         pseudo: user.pseudo,
-        isPrivate: true
+        isPrivate: true,
+        startingSide,
+        hostColor
     });
-
-    // Enregistrer la transaction (Mise) localement
-    if (inviteBet > 0) {
-        TransactionService.ajouterTransaction({
-            type: 'DEBIT',
-            montant: inviteBet,
-            raison: `Création Salle (${inviteMode === 'tournament' ? 'Tournoi' : 'Simple'})`,
-            timestamp: Date.now()
-        });
-    }
 
     onClose(); // Close the modal, HomeScreen waits for room_created
   }, [inviteBet, inviteTime, inviteMode, inviteSeriesLength, user, onClose]);
@@ -102,6 +99,10 @@ const FriendsGameSetup = ({ visible, onClose, navigation, user, onOpenLiveConfig
         setInviteBet={setInviteBet}
         inviteTime={inviteTime}
         setInviteTime={setInviteTime}
+        startingSide={startingSide}
+        setStartingSide={setStartingSide}
+        hostColor={hostColor}
+        setHostColor={setHostColor}
         handleCreateRoom={handleCreateRoom}
         userCoins={user?.coins}
         betOptions={BET_OPTIONS}

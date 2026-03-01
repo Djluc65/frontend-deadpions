@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { TextInput, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { getResponsiveSize } from '../../utils/responsive';
 
 const Input = ({ value, onChangeText, placeholder, secureTextEntry, style, keyboardType, autoCapitalize, ...props }) => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -30,7 +31,7 @@ const Input = ({ value, onChangeText, placeholder, secureTextEntry, style, keybo
           >
             <Ionicons 
               name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} 
-              size={24} 
+              size={getResponsiveSize(24)} 
               color="#666" 
             />
           </TouchableOpacity>
@@ -43,7 +44,7 @@ const Input = ({ value, onChangeText, placeholder, secureTextEntry, style, keybo
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    marginVertical: 10,
+    marginVertical: getResponsiveSize(10),
   },
   inputContainer: {
     position: 'relative',
@@ -51,18 +52,18 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    padding: 15,
-    borderRadius: 8,
-    fontSize: 16,
+    padding: getResponsiveSize(15),
+    borderRadius: getResponsiveSize(8),
+    fontSize: getResponsiveSize(16),
     color: '#000',
     width: '100%',
   },
   passwordInput: {
-    paddingRight: 50, // Espace pour l'icône
+    paddingRight: getResponsiveSize(50), // Espace pour l'icône
   },
   eyeIcon: {
     position: 'absolute',
-    right: 15,
+    right: getResponsiveSize(15),
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',

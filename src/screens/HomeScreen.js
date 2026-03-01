@@ -12,6 +12,7 @@ import { AudioController } from '../utils/AudioController';
 import { socket } from '../utils/socket';
 import { BET_OPTIONS, ONLINE_TIME_OPTIONS } from '../utils/constants';
 import { useCoinsContext } from '../context/CoinsContext';
+import { getResponsiveSize, isTablet } from '../utils/responsive';
 
 // Components
 import GameCard from '../components/common/GameCard';
@@ -250,8 +251,8 @@ const HomeScreen = ({ navigation }) => {
             styles.logo, 
             { 
               transform: [{ scale: pulseValue }],
-              width: width * 0.8,
-              height: width * 0.8,
+              width: isTablet ? width * 0.5 : width * 0.8,
+              height: isTablet ? width * 0.5 : width * 0.8,
             }
           ]}
           resizeMode="contain"
@@ -280,7 +281,7 @@ const HomeScreen = ({ navigation }) => {
         {/* )} */}
       </View>
 
-      <View style={[styles.container, { paddingBottom: 100 }]}>
+      <View style={[styles.container, { paddingBottom: getResponsiveSize(100) }]}>
         <View style={styles.row}>
           <GameCard
             onPress={() => setOnlineConfigVisible(true)}
@@ -289,11 +290,11 @@ const HomeScreen = ({ navigation }) => {
           >
             <View style={styles.liveContent}>
               <View style={styles.liveIconWrapper}>
-                <Ionicons name="phone-portrait-outline" size={24} color="#f1c40f" />
+                <Ionicons name="phone-portrait-outline" size={getResponsiveSize(24)} color="#f1c40f" />
                 <Animated.View style={{ transform: [{ scale: onlineAnim }, { rotate: spin }] }}>
-                  <Ionicons name="globe-outline" size={40} color="#f1c40f" />
+                  <Ionicons name="globe-outline" size={getResponsiveSize(40)} color="#f1c40f" />
                 </Animated.View>
-                <Ionicons name="phone-portrait-outline" size={24} color="#f1c40f"/>
+                <Ionicons name="phone-portrait-outline" size={getResponsiveSize(24)} color="#f1c40f"/>
               </View>
               <Text style={styles.liveText}>{t.online}</Text>
             </View>
@@ -305,11 +306,11 @@ const HomeScreen = ({ navigation }) => {
           >
             <View style={styles.liveContent}>
               <View style={styles.liveIconWrapper}>
-                <Ionicons name="desktop-outline" size={24} color="#f1c40f" />
+                <Ionicons name="desktop-outline" size={getResponsiveSize(24)} color="#f1c40f" />
                 <Animated.View style={{ transform: [{ scale: computerAnim }] }}>
-                  <Ionicons name="hardware-chip-outline" size={40} color="#f1c40f" />
+                  <Ionicons name="hardware-chip-outline" size={getResponsiveSize(40)} color="#f1c40f" />
                 </Animated.View>
-                <Ionicons name="desktop-outline" size={24} color="#f1c40f" />
+                <Ionicons name="desktop-outline" size={getResponsiveSize(24)} color="#f1c40f" />
               </View>
               <Text style={styles.liveText}>{t.computer}</Text>
             </View>
@@ -323,11 +324,11 @@ const HomeScreen = ({ navigation }) => {
           >
             <View style={styles.liveContent}>
               <View style={styles.liveIconWrapper}>
-                <Ionicons name="person-outline" size={24} color="#f1c40f" />
+                <Ionicons name="person-outline" size={getResponsiveSize(24)} color="#f1c40f" />
                 <Animated.View style={{ transform: [{ scale: friendsAnim }] }}>
-                  <Ionicons name="people-outline" size={40} color="#f1c40f" />
+                  <Ionicons name="people-outline" size={getResponsiveSize(40)} color="#f1c40f" />
                 </Animated.View>
-                <Ionicons name="person-add-outline" size={24} color="#f1c40f" />
+                <Ionicons name="person-add-outline" size={getResponsiveSize(24)} color="#f1c40f" />
               </View>
               <Text style={styles.liveText}>{t.friends}</Text>
             </View>
@@ -340,11 +341,11 @@ const HomeScreen = ({ navigation }) => {
         >
             <View style={styles.liveContent}>
               <View style={styles.liveIconWrapper}>
-                <Ionicons name="phone-portrait-outline" size={24} color="#f1c40f" />
+                <Ionicons name="phone-portrait-outline" size={getResponsiveSize(24)} color="#f1c40f" />
                 <Animated.View style={{ transform: [{ scale: localAnim }] }}>
-                  <Ionicons name="game-controller-outline" size={40} color="#f1c40f" />
+                  <Ionicons name="game-controller-outline" size={getResponsiveSize(40)} color="#f1c40f" />
                 </Animated.View>
-                <Ionicons name="phone-portrait-outline" size={24} color="#f1c40f" />
+                <Ionicons name="phone-portrait-outline" size={getResponsiveSize(24)} color="#f1c40f" />
               </View>
               <Text style={styles.liveText}>{t.local}</Text>
             </View>
@@ -368,7 +369,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    bottom: 45,
+    bottom: getResponsiveSize(45),
   },
   logo: {
     // Taille dynamique dans le composant
@@ -376,30 +377,30 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'flex-end',
-    padding: 20,
-    gap: 20,
+    padding: getResponsiveSize(20),
+    gap: getResponsiveSize(20),
     width: '100%',
     bottom: '18%',
-    paddingBottom: 100,
+    paddingBottom: getResponsiveSize(100),
   },
   row: {
     flexDirection: 'row',
-    gap: 20,
+    gap: getResponsiveSize(20),
     justifyContent: 'space-between',
   },
   halfCard: {
     flex: 1,
   },
   liveCard: {
-  borderWidth: 3,
-  top: 130,
+  borderWidth: getResponsiveSize(3),
+  top: getResponsiveSize(130),
   borderColor: 'rgba(4, 28, 85, 0.95)',
 
   // shadow bottom
   shadowColor: 'rgba(255, 255, 255, 1)',
   shadowOffset: { width: 0, height: 0 }, // ↓ vers le bas
   shadowOpacity: 0.6,
-  shadowRadius: 4,
+  shadowRadius: getResponsiveSize(4),
 },
   liveContent: {
     alignItems: 'center',
@@ -407,19 +408,19 @@ const styles = StyleSheet.create({
   },
   liveIconWrapper: {
     backgroundColor: 'rgba(4, 28, 85, 0.95)',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 16,
-    marginBottom: 10,
+    borderTopLeftRadius: getResponsiveSize(24),
+    borderTopRightRadius: getResponsiveSize(24),
+    padding: getResponsiveSize(16),
+    marginBottom: getResponsiveSize(10),
     alignItems: 'center',
     justifyContent: 'center',
     width: '95%',
     flexDirection: 'row',
-    gap: 5,
+    gap: getResponsiveSize(5),
   },
   liveText: {
     color: 'rgba(4, 28, 85, 0.95)',
-    fontSize: 18,
+    fontSize: getResponsiveSize(18),
     fontWeight: 'bold',
     // textShadowColor: 'rgba(4, 28, 85, 1)',
     // textShadowOffset: { width: 2, height: 2 },

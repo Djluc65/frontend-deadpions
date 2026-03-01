@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
 import { playButtonSound } from '../utils/soundManager';
+import { getResponsiveSize } from '../utils/responsive';
 
 const CustomAlert = ({ visible, title, message, buttons = [], onClose }) => {
   return (
@@ -51,42 +52,42 @@ const styles = StyleSheet.create({
   alertContent: {
     width: '80%',
     backgroundColor: '#041c55',
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: getResponsiveSize(20),
+    padding: getResponsiveSize(20),
     alignItems: 'center',
     shadowColor: '#f1c40f',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 3,
-    shadowRadius: 3,
+    shadowRadius: getResponsiveSize(3),
     elevation: 5,
-    borderWidth: 1,
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f1c40f',
   },
   alertTitle: {
-    fontSize: 22,
+    fontSize: getResponsiveSize(22),
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: getResponsiveSize(10),
     color: '#fff',
     textAlign: 'center'
   },
   alertMessage: {
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     color: '#ccc',
-    marginBottom: 20,
+    marginBottom: getResponsiveSize(20),
     textAlign: 'center'
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     width: '100%',
-    gap: 15,
+    gap: getResponsiveSize(15),
     flexWrap: 'wrap'
   },
   button: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    minWidth: 100,
+    paddingVertical: getResponsiveSize(12),
+    paddingHorizontal: getResponsiveSize(20),
+    borderRadius: getResponsiveSize(10),
+    minWidth: getResponsiveSize(100),
     alignItems: 'center',
     flex: 1,
   },
@@ -102,7 +103,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     textAlign: 'center',
   },
   innerShadow: {
@@ -111,8 +112,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 20,
-    borderWidth: 4,
+    borderRadius: getResponsiveSize(20),
+    borderWidth: getResponsiveSize(4),
     borderColor: 'rgba(0, 0, 0, 0.3)',
   },
 });

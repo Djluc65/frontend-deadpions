@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { socket } from '../utils/socket';
 import { translations } from '../utils/translations';
 import { playButtonSound } from '../utils/soundManager';
+import { getResponsiveSize } from '../utils/responsive';
 
 import { updateUser } from '../redux/slices/authSlice';
 
@@ -132,7 +133,7 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
     >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => { playButtonSound(); navigation.goBack(); }} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={30} color="#fff" />
+          <Ionicons name="arrow-back" size={getResponsiveSize(30)} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.title}>Jeu en Ligne</Text>
         <View style={styles.coinContainer}>
@@ -144,7 +145,7 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
         {!enAttenteMatch ? (
           <View style={styles.containerTimes}>
               <Text style={styles.subtitle}>Choisissez votre mise :</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: 20 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: getResponsiveSize(20) }}>
                     {(() => {
                         const availableBets = montantsDisponibles.filter(b => b <= (user?.coins || 0));
                         const effectiveBets = availableBets.length > 0 ? availableBets : [100];
@@ -161,30 +162,30 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
                                         if (canGoPrev) setMontantPari(effectiveBets[currentIndex - 1]);
                                     }}
                                     disabled={!canGoPrev}
-                                    style={{ padding: 10, opacity: !canGoPrev ? 0.3 : 1 }}
+                                    style={{ padding: getResponsiveSize(10), opacity: !canGoPrev ? 0.3 : 1 }}
                                 >
-                                    <Ionicons name="remove-circle-outline" size={40} color="#fff" />
+                                    <Ionicons name="remove-circle-outline" size={getResponsiveSize(40)} color="#fff" />
                                 </TouchableOpacity>
                                 
                                 <View style={{ 
                                     flexDirection: 'row', 
                                     alignItems: 'center', 
                                     justifyContent: 'center',
-                                    width: 140,
-                                    height: 50,
+                                    width: getResponsiveSize(140),
+                                    height: getResponsiveSize(50),
                                     overflow: 'hidden',
                                     backgroundColor: 'rgba(0,0,0,0.3)',
-                                    borderRadius: 25,
-                                    marginHorizontal: 10,
-                                    borderWidth: 1,
+                                    borderRadius: getResponsiveSize(25),
+                                    marginHorizontal: getResponsiveSize(10),
+                                    borderWidth: getResponsiveSize(1),
                                     borderColor: 'rgba(241, 196, 15, 0.3)'
                                 }}>
                                     <Text 
                                         style={{ 
                                             color: '#f1c40f', 
-                                            fontSize: 14, 
+                                            fontSize: getResponsiveSize(14), 
                                             opacity: 0.5, 
-                                            width: 70, 
+                                            width: getResponsiveSize(70), 
                                             textAlign: 'center'
                                         }}
                                         numberOfLines={1}
@@ -196,13 +197,13 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
                                     <Text 
                                         style={{ 
                                             color: '#f1c40f', 
-                                            fontSize: 22, 
+                                            fontSize: getResponsiveSize(22), 
                                             fontWeight: 'bold', 
-                                            width: 120,
+                                            width: getResponsiveSize(120),
                                             textAlign: 'center',
                                             textShadowColor: 'rgba(0, 0, 0, 0.75)',
-                                            textShadowOffset: {width: -1, height: 1},
-                                            textShadowRadius: 10
+                                            textShadowOffset: {width: getResponsiveSize(-1), height: getResponsiveSize(1)},
+                                            textShadowRadius: getResponsiveSize(10)
                                         }}
                                         numberOfLines={1}
                                         adjustsFontSizeToFit
@@ -214,9 +215,9 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
                                     <Text 
                                         style={{ 
                                             color: '#f1c40f', 
-                                            fontSize: 14, 
+                                            fontSize: getResponsiveSize(14), 
                                             opacity: 0.5, 
-                                            width: 70, 
+                                            width: getResponsiveSize(70), 
                                             textAlign: 'center' 
                                         }}
                                         numberOfLines={1}
@@ -232,16 +233,16 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
                                         if (canGoNext) setMontantPari(effectiveBets[currentIndex + 1]);
                                     }}
                                     disabled={!canGoNext}
-                                    style={{ padding: 10, opacity: !canGoNext ? 0.3 : 1 }}
+                                    style={{ padding: getResponsiveSize(10), opacity: !canGoNext ? 0.3 : 1 }}
                                 >
-                                    <Ionicons name="add-circle-outline" size={40} color="#fff" />
+                                    <Ionicons name="add-circle-outline" size={getResponsiveSize(40)} color="#fff" />
                                 </TouchableOpacity>
                             </>
                         );
                     })()}
                 </View>
 
-                <Text style={[styles.subtitle, { marginTop: 10 }]}>Temps par coup :</Text>
+                <Text style={[styles.subtitle, { marginTop: getResponsiveSize(10) }]}>Temps par coup :</Text>
                 <View style={styles.grid}>
                   {timeOptions.map((option) => (
                     <TouchableOpacity
@@ -291,55 +292,55 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
-    paddingTop: 50,
+    padding: getResponsiveSize(20),
+    paddingTop: getResponsiveSize(50),
     backgroundColor: 'rgba(4, 28, 85, 0.9)',
   },
   backButton: {
-    padding: 5,
+    padding: getResponsiveSize(5),
   },
   title: {
-    fontSize: 24,
+    fontSize: getResponsiveSize(24),
     fontWeight: 'bold',
     color: '#fff',
   },
   coinContainer: {
     backgroundColor: 'rgba(0,0,0,0.3)',
-    padding: 8,
-    borderRadius: 15,
+    padding: getResponsiveSize(8),
+    borderRadius: getResponsiveSize(15),
   },
   coinText: {
     color: '#f1c40f',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
   },
   content: {
     flex: 1,
-    padding: 20,
+    padding: getResponsiveSize(20),
     justifyContent: 'center',
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     color: '#f1c40f',
     alignSelf: 'flex-start',
-    marginBottom: 10,
+    marginBottom: getResponsiveSize(10),
     fontWeight: 'bold',
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 10,
-    paddingBottom: 20,
+    gap: getResponsiveSize(10),
+    paddingBottom: getResponsiveSize(20),
   },
   betButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    borderWidth: 1,
+    paddingVertical: getResponsiveSize(8),
+    paddingHorizontal: getResponsiveSize(12),
+    borderRadius: getResponsiveSize(20),
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f1c40f',
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    marginBottom: 10,
+    marginBottom: getResponsiveSize(10),
   },
   selectedBet: {
     backgroundColor: '#f1c40f',
@@ -351,6 +352,7 @@ const styles = StyleSheet.create({
   },
   betText: {
     color: '#fff',
+    fontSize: getResponsiveSize(14),
   },
   selectedBetText: {
     color: '#041c55',
@@ -361,40 +363,40 @@ const styles = StyleSheet.create({
   },
   playButton: {
     backgroundColor: '#2ecc71',
-    padding: 12,
-    borderRadius: 10,
+    padding: getResponsiveSize(12),
+    borderRadius: getResponsiveSize(10),
     alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 40,
-    minWidth: 120,
+    marginTop: getResponsiveSize(20),
+    marginBottom: getResponsiveSize(40),
+    minWidth: getResponsiveSize(120),
   },
   playButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: 'bold',
   },
   secondaryButton: {
     backgroundColor: '#ccc',
-    marginRight: 10,
+    marginRight: getResponsiveSize(10),
   },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     width: '100%',
-    marginTop: 20,
-    marginBottom: 40,
+    marginTop: getResponsiveSize(20),
+    marginBottom: getResponsiveSize(40),
   },
   waitingContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(0,0,0,0.7)',
-    padding: 30,
-    borderRadius: 20,
+    padding: getResponsiveSize(30),
+    borderRadius: getResponsiveSize(20),
   },
   waitingText: {
     color: '#fff',
-    fontSize: 22,
-    marginTop: 20,
+    fontSize: getResponsiveSize(22),
+    marginTop: getResponsiveSize(20),
     fontWeight: 'bold',
   },
   // selectionContainer: {
@@ -408,41 +410,41 @@ const styles = StyleSheet.create({
   containerTimes: {
     width: '100%',
     backgroundColor: '#041c55',
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: getResponsiveSize(20),
+    padding: getResponsiveSize(20),
     alignItems: 'center',
     shadowColor: '#f1c40f',
     shadowOffset: {
       width: 0,
-      height: 0,
+      height: getResponsiveSize(2),
     },
-    shadowOpacity: 3,
-    shadowRadius: 3,
+    shadowOpacity: 0.3,
+    shadowRadius: getResponsiveSize(3),
     elevation: 5,
-    borderWidth: 1,
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f1c40f',
   },
   timerText: {
     color: '#f1c40f',
-    fontSize: 40,
+    fontSize: getResponsiveSize(40),
     fontWeight: 'bold',
-    marginVertical: 20,
+    marginVertical: getResponsiveSize(20),
   },
   infoText: {
     color: '#ccc',
-    fontSize: 16,
-    marginBottom: 30,
+    fontSize: getResponsiveSize(16),
+    marginBottom: getResponsiveSize(30),
   },
   cancelButton: {
     backgroundColor: '#e74c3c',
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 25,
+    paddingVertical: getResponsiveSize(12),
+    paddingHorizontal: getResponsiveSize(30),
+    borderRadius: getResponsiveSize(25),
   },
   cancelButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
   },
 });
 

@@ -7,6 +7,8 @@ import { socket } from '../utils/socket';
 import { API_URL } from '../config';
 import { getAvatarSource as getBaseAvatarSource } from '../utils/avatarUtils';
 
+import { getResponsiveSize } from '../utils/responsive';
+
 // Helper pour les avatars
 const getAvatarSource = (avatar) => {
     const source = getBaseAvatarSource(avatar);
@@ -97,7 +99,7 @@ const LiveListScreen = () => {
                       {item.status === 'waiting' ? 'EN ATTENTE' : 'EN DIRECT'}
                   </Text>
               </View>
-              <View style={[styles.badge, { backgroundColor: item.betAmount > 0 ? 'rgba(241, 196, 15, 0.1)' : 'rgba(59, 130, 246, 0.1)', borderColor: item.betAmount > 0 ? '#f1c40f' : '#3b82f6', borderWidth: 1 }]}>
+              <View style={[styles.badge, { backgroundColor: item.betAmount > 0 ? 'rgba(241, 196, 15, 0.1)' : 'rgba(59, 130, 246, 0.1)', borderColor: item.betAmount > 0 ? '#f1c40f' : '#3b82f6', borderWidth: getResponsiveSize(1) }]}>
                   <Text style={[styles.badgeText, { color: item.betAmount > 0 ? '#f1c40f' : '#3b82f6' }]}>
                       {item.betAmount > 0 ? `${item.betAmount} 💰` : 'Amical'}
                   </Text>
@@ -128,7 +130,7 @@ const LiveListScreen = () => {
                     </>
                  ) : (
                     <View style={styles.waitingSlot}>
-                        <Ionicons name="help-outline" size={24} color="#6b7280" />
+                        <Ionicons name="help-outline" size={getResponsiveSize(24)} color="#6b7280" />
                         <Text style={styles.waitingText}>En attente...</Text>
                     </View>
                  )}
@@ -144,7 +146,7 @@ const LiveListScreen = () => {
             <Text style={[styles.joinButtonText, canJoin && styles.joinButtonTextActive]}>
                 {isParticipant ? 'RETOURNER À LA PARTIE' : canJoin ? 'REJOINDRE (JOUEUR)' : 'REGARDER LE MATCH'}
             </Text>
-            <Ionicons name={canJoin ? "game-controller" : "eye"} size={16} color={canJoin ? "#fff" : "#fff"} />
+            <Ionicons name={canJoin ? "game-controller" : "eye"} size={getResponsiveSize(16)} color={canJoin ? "#fff" : "#fff"} />
         </TouchableOpacity>
       </TouchableOpacity>
     );
@@ -158,7 +160,7 @@ const LiveListScreen = () => {
       <View style={styles.header}>
         <Text style={styles.title}>Salles Live</Text>
         <View style={styles.searchContainer}>
-            <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
+            <Ionicons name="search" size={getResponsiveSize(20)} color="#9ca3af" style={styles.searchIcon} />
             <TextInput
                 style={styles.searchInput}
                 placeholder="Rechercher un joueur..."
@@ -197,7 +199,7 @@ const LiveListScreen = () => {
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
             <View style={styles.emptyState}>
-                <Ionicons name="videocam-off-outline" size={48} color="rgba(255,255,255,0.3)" />
+                <Ionicons name="videocam-off-outline" size={getResponsiveSize(48)} color="rgba(255,255,255,0.3)" />
                 <Text style={styles.emptyText}>Aucun live en cours</Text>
             </View>
         }
@@ -209,47 +211,47 @@ const LiveListScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 50,
+    paddingTop: getResponsiveSize(50),
   },
   header: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    paddingHorizontal: getResponsiveSize(20),
+    marginBottom: getResponsiveSize(20),
   },
   title: {
-    fontSize: 28,
+    fontSize: getResponsiveSize(28),
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 15,
+    marginBottom: getResponsiveSize(15),
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    height: 50,
-    marginBottom: 15,
-    borderWidth: 1,
+    borderRadius: getResponsiveSize(12),
+    paddingHorizontal: getResponsiveSize(15),
+    height: getResponsiveSize(50),
+    marginBottom: getResponsiveSize(15),
+    borderWidth: getResponsiveSize(1),
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   searchIcon: {
-    marginRight: 10,
+    marginRight: getResponsiveSize(10),
   },
   searchInput: {
     flex: 1,
     color: '#fff',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
   },
   filters: {
     flexDirection: 'row',
-    gap: 10,
+    gap: getResponsiveSize(10),
   },
   filterChip: {
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 20,
+    paddingVertical: getResponsiveSize(6),
+    paddingHorizontal: getResponsiveSize(16),
+    borderRadius: getResponsiveSize(20),
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
+    borderWidth: getResponsiveSize(1),
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   filterChipActive: {
@@ -258,7 +260,7 @@ const styles = StyleSheet.create({
   },
   filterText: {
     color: '#d1d5db',
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     fontWeight: '500',
   },
   filterTextActive: {
@@ -266,60 +268,60 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 100,
+    paddingHorizontal: getResponsiveSize(20),
+    paddingBottom: getResponsiveSize(100),
   },
   card: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: getResponsiveSize(16),
+    padding: getResponsiveSize(16),
+    marginBottom: getResponsiveSize(16),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: getResponsiveSize(2) },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: getResponsiveSize(4),
+    elevation: getResponsiveSize(3),
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: getResponsiveSize(15),
   },
   badgeContainer: {
     flexDirection: 'row',
-    gap: 8,
+    gap: getResponsiveSize(8),
   },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: getResponsiveSize(8),
+    paddingVertical: getResponsiveSize(4),
+    borderRadius: getResponsiveSize(8),
   },
   badgeWaiting: {
     backgroundColor: 'rgba(245, 158, 11, 0.2)',
-    borderWidth: 1,
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f59e0b',
   },
   badgeLive: {
     backgroundColor: 'rgba(239, 68, 68, 0.2)',
-    borderWidth: 1,
+    borderWidth: getResponsiveSize(1),
     borderColor: '#ef4444',
   },
   indicator: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: getResponsiveSize(6),
+    height: getResponsiveSize(6),
+    borderRadius: getResponsiveSize(3),
     backgroundColor: '#ef4444',
-    marginRight: 6,
+    marginRight: getResponsiveSize(6),
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: getResponsiveSize(10),
     fontWeight: 'bold',
   },
   spectators: {
-    fontSize: 12,
+    fontSize: getResponsiveSize(12),
     color: '#6b7280',
     fontWeight: '600',
   },
@@ -327,80 +329,80 @@ const styles = StyleSheet.create({
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 15,
-      paddingHorizontal: 10,
+      marginBottom: getResponsiveSize(15),
+      paddingHorizontal: getResponsiveSize(10),
   },
   playerInfo: {
       alignItems: 'center',
       width: '40%',
   },
   avatarSmall: {
-      width: 50,
-      height: 50,
-      borderRadius: 25,
-      marginBottom: 8,
-      borderWidth: 2,
+      width: getResponsiveSize(50),
+      height: getResponsiveSize(50),
+      borderRadius: getResponsiveSize(25),
+      marginBottom: getResponsiveSize(8),
+      borderWidth: getResponsiveSize(2),
       borderColor: '#e5e7eb',
   },
   playerName: {
-      fontSize: 14,
+      fontSize: getResponsiveSize(14),
       fontWeight: 'bold',
       color: '#1f2937',
       textAlign: 'center',
   },
   playerCountry: {
-      fontSize: 12,
-      marginTop: 2,
+      fontSize: getResponsiveSize(12),
+      marginTop: getResponsiveSize(2),
   },
   vsContainer: {
       justifyContent: 'center',
       alignItems: 'center',
   },
   vsText: {
-      fontSize: 20,
+      fontSize: getResponsiveSize(20),
       fontWeight: '900',
       color: '#ef4444',
       fontStyle: 'italic',
   },
   divider: {
-    height: 1,
+    height: getResponsiveSize(1),
     backgroundColor: '#f3f4f6',
-    marginBottom: 12,
+    marginBottom: getResponsiveSize(12),
   },
   joinButton: {
     backgroundColor: '#041c55',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 8,
-    gap: 8,
+    paddingVertical: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(8),
+    gap: getResponsiveSize(8),
   },
   joinButtonActive: {
     backgroundColor: '#2563eb', // Bleu plus vif pour rejoindre
     shadowColor: '#2563eb',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: getResponsiveSize(2) },
     shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: getResponsiveSize(4),
+    elevation: getResponsiveSize(3),
   },
   joinButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 12,
+    fontSize: getResponsiveSize(12),
   },
   joinButtonTextActive: {
-    fontSize: 13,
+    fontSize: getResponsiveSize(13),
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 50,
+    paddingTop: getResponsiveSize(50),
   },
   emptyText: {
     color: 'rgba(255, 255, 255, 0.5)',
-    marginTop: 10,
-    fontSize: 16,
+    marginTop: getResponsiveSize(10),
+    fontSize: getResponsiveSize(16),
   },
 });
 

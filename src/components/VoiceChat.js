@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, TouchableOpacity, StyleSheet, Alert, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { getResponsiveSize } from '../utils/responsive';
 import { 
     RTCPeerConnection, 
     RTCIceCandidate, 
@@ -202,7 +203,7 @@ const VoiceChat = ({ gameId, userId, socket, isSpectator = false }) => {
             >
                 <Ionicons 
                     name={isMuted ? "mic-off" : "mic"} 
-                    size={24} 
+                    size={getResponsiveSize(24)} 
                     color="white" 
                 />
                 {connectedPeers > 0 && (
@@ -221,15 +222,15 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     button: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
+        width: getResponsiveSize(44),
+        height: getResponsiveSize(44),
+        borderRadius: getResponsiveSize(22),
         justifyContent: 'center',
         alignItems: 'center',
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: getResponsiveSize(2) },
         shadowOpacity: 0.25,
-        shadowRadius: 3.84,
+        shadowRadius: getResponsiveSize(3.84),
         elevation: 5,
     },
     disabled: {
@@ -243,25 +244,25 @@ const styles = StyleSheet.create({
         backgroundColor: '#3b82f6', // Blue
     },
     connected: {
-        borderWidth: 2,
+        borderWidth: getResponsiveSize(2),
         borderColor: '#10b981', // Green border when connected to someone
     },
     peerBadge: {
         position: 'absolute',
-        top: -5,
-        right: -5,
+        top: getResponsiveSize(-5),
+        right: getResponsiveSize(-5),
         backgroundColor: '#10b981',
-        borderRadius: 10,
-        width: 20,
-        height: 20,
+        borderRadius: getResponsiveSize(10),
+        width: getResponsiveSize(20),
+        height: getResponsiveSize(20),
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 1,
+        borderWidth: getResponsiveSize(1),
         borderColor: '#fff'
     },
     peerCount: {
         color: '#fff',
-        fontSize: 10,
+        fontSize: getResponsiveSize(10),
         fontWeight: 'bold'
     }
 });

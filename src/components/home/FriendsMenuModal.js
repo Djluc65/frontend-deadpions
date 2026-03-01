@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import { Modal, Pressable, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { playButtonSound } from '../../utils/soundManager';
+import { getResponsiveSize } from '../../utils/responsive';
 
 const FriendsMenuModal = memo(({ 
   visible, 
@@ -29,22 +30,22 @@ const FriendsMenuModal = memo(({
                 onNavigateToLiveConfig();
             }}
           >
-            <Ionicons name="radio-outline" size={24} color="#ef4444" style={{ marginRight: 10 }} />
+            <Ionicons name="radio-outline" size={getResponsiveSize(24)} color="#ef4444" style={{ marginRight: getResponsiveSize(10) }} />
             <Text style={styles.menuButtonText}>Créer une Salle Live</Text>
-            <View style={{ backgroundColor: '#ef4444', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginLeft: 10 }}>
-                <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>LIVE</Text>
+            <View style={{ backgroundColor: '#ef4444', paddingHorizontal: getResponsiveSize(6), paddingVertical: getResponsiveSize(2), borderRadius: getResponsiveSize(4), marginLeft: getResponsiveSize(10) }}>
+                <Text style={{ color: '#fff', fontSize: getResponsiveSize(10), fontWeight: 'bold' }}>LIVE</Text>
             </View>
           </TouchableOpacity>
 
           {/* Bouton pour Jouer avec un ami (Privé) */}
           <TouchableOpacity 
-            style={[styles.menuButton, { backgroundColor:  '#041c55', marginTop: 15 }]}
+            style={[styles.menuButton, { backgroundColor:  '#041c55', marginTop: getResponsiveSize(15) }]}
             onPress={() => {
                 playButtonSound();
                 onOpenFriendConfig();
             }}
           >
-            <Ionicons name="add-circle" size={24} color="#fff" style={{ marginRight: 10 }} />
+            <Ionicons name="add-circle" size={getResponsiveSize(24)} color="#fff" style={{ marginRight: getResponsiveSize(10) }} />
             <Text style={styles.menuButtonText}>Jouer avec un ami</Text>
           </TouchableOpacity>
 
@@ -74,8 +75,8 @@ const styles = StyleSheet.create({
   friendsModalContent: {
     width: '80%',
     backgroundColor: '#041c55',
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: getResponsiveSize(20),
+    padding: getResponsiveSize(20),
     alignItems: 'center',
     shadowColor: '#f1c40f',
     shadowOffset: {
@@ -83,29 +84,29 @@ const styles = StyleSheet.create({
       height: 0,
     },
     shadowOpacity: 3,
-    shadowRadius: 3,
+    shadowRadius: getResponsiveSize(3),
     elevation: 5,
-    borderWidth: 1,
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f1c40f',
   },
   friendsModalTitle: {
-    fontSize: 24,
+    fontSize: getResponsiveSize(24),
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: getResponsiveSize(20),
     color: '#fff',
   },
   menuButton: {
     flexDirection: 'row',
     backgroundColor: '#041c55',
     shadowOpacity: 0.8,
-    shadowRadius: 4,
+    shadowRadius: getResponsiveSize(4),
     elevation: 5,
-    borderWidth: 3,
+    borderWidth: getResponsiveSize(3),
     borderColor: '#f1c40f',
     shadowColor: '#f1c40f',
     shadowOffset: {width: 0, height: 0},
-    padding: 15,
-    borderRadius: 12,
+    padding: getResponsiveSize(15),
+    borderRadius: getResponsiveSize(12),
     alignItems: 'center',
     width: '100%',
     justifyContent: 'center',
@@ -113,14 +114,14 @@ const styles = StyleSheet.create({
   menuButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
   },
   closeButton: {
     backgroundColor: '#eb4141ff',
-    borderRadius: 20,
-    padding: 10,
-    paddingHorizontal: 30,
-    marginTop: 10,
+    borderRadius: getResponsiveSize(20),
+    padding: getResponsiveSize(10),
+    paddingHorizontal: getResponsiveSize(30),
+    marginTop: getResponsiveSize(10),
   },
   closeButtonText: {
     color: 'white',
@@ -133,8 +134,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 20,
-    borderWidth: 4,
+    borderRadius: getResponsiveSize(20),
+    borderWidth: getResponsiveSize(4),
     borderColor: 'rgba(0, 0, 0, 0.3)',
   },
 });

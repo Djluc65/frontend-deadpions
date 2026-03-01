@@ -3,6 +3,7 @@ import { View, Text, Modal, StyleSheet, TouchableOpacity, Alert } from 'react-na
 import { useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import socket from '../services/socket';
+import { getResponsiveSize } from '../utils/responsive';
 
 // Composant global qui écoute les invitations de partie (socket) partout dans l'application
 const GlobalInviteListener = () => {
@@ -235,32 +236,32 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.5)',
     },
     modalView: {
-        margin: 20,
+        margin: getResponsiveSize(20),
         backgroundColor: 'white',
-        borderRadius: 20,
-        padding: 35,
+        borderRadius: getResponsiveSize(20),
+        padding: getResponsiveSize(35),
         alignItems: 'center',
         shadowColor: '#000',
         shadowOffset: {
             width: 0,
-            height: 2,
+            height: getResponsiveSize(2),
         },
         shadowOpacity: 0.25,
-        shadowRadius: 4,
+        shadowRadius: getResponsiveSize(4),
         elevation: 5,
         width: '80%',
     },
     modalTitle: {
-        fontSize: 20,
+        fontSize: getResponsiveSize(20),
         fontWeight: 'bold',
-        marginBottom: 15,
+        marginBottom: getResponsiveSize(15),
         textAlign: 'center',
     },
     modalText: {
-        fontSize: 16,
-        marginBottom: 20,
+        fontSize: getResponsiveSize(16),
+        marginBottom: getResponsiveSize(20),
         textAlign: 'center',
-        lineHeight: 24,
+        lineHeight: getResponsiveSize(24),
     },
     buttonContainer: {
         flexDirection: 'row',
@@ -268,10 +269,10 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     button: {
-        borderRadius: 10,
-        padding: 10,
+        borderRadius: getResponsiveSize(10),
+        padding: getResponsiveSize(10),
         elevation: 2,
-        minWidth: 100,
+        minWidth: getResponsiveSize(100),
     },
     buttonAccept: {
         backgroundColor: '#2196F3',

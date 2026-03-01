@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import { API_URL } from '../config';
 import { getAvatarSource } from '../utils/avatarUtils';
+import { getResponsiveSize } from '../utils/responsive';
 
 const PlayerProfileCard = ({ player, isMe, style }) => {
   if (!player) return null;
@@ -27,12 +28,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.6)',
-    borderRadius: 30,
-    padding: 5,
-    paddingRight: 15,
-    marginHorizontal: 5,
-    minWidth: 120,
-    borderWidth: 1,
+    borderRadius: getResponsiveSize(30),
+    padding: getResponsiveSize(5),
+    paddingRight: getResponsiveSize(15),
+    marginHorizontal: getResponsiveSize(5),
+    minWidth: getResponsiveSize(120),
+    borderWidth: getResponsiveSize(1),
     borderColor: 'rgba(255,255,255,0.1)',
   },
   meCard: {
@@ -42,11 +43,11 @@ const styles = StyleSheet.create({
       borderColor: '#FF5252',
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 8,
-    borderWidth: 1,
+    width: getResponsiveSize(40),
+    height: getResponsiveSize(40),
+    borderRadius: getResponsiveSize(20),
+    marginRight: getResponsiveSize(8),
+    borderWidth: getResponsiveSize(1),
     borderColor: '#fff',
   },
   info: {
@@ -54,12 +55,12 @@ const styles = StyleSheet.create({
   },
   pseudo: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: getResponsiveSize(12),
     fontWeight: 'bold',
   },
   coins: {
     color: '#FFD700',
-    fontSize: 11,
+    fontSize: getResponsiveSize(11),
     fontWeight: 'bold',
   },
 });

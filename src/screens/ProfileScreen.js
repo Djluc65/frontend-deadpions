@@ -15,6 +15,7 @@ import { COUNTRIES } from '../utils/countries';
 import { PREMIUM_AVATARS, getAvatarSource } from '../utils/avatarUtils';
 import TransactionService from '../services/TransactionService';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getResponsiveSize } from '../utils/responsive';
 
 const { width } = Dimensions.get('window');
 
@@ -254,7 +255,7 @@ const ProfileScreen = ({ navigation }) => {
       const source = getAvatarSource(selectedAvatar);
       return <Image source={source} style={styles.avatarImage} />;
     }
-    return <Ionicons name="person-circle-outline" size={100} color="#fff" />;
+    return <Ionicons name="person-circle-outline" size={getResponsiveSize(100)} color="#fff" />;
   };
 
   return (
@@ -266,11 +267,11 @@ const ProfileScreen = ({ navigation }) => {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
             <TouchableOpacity onPress={() => { playButtonSound(); navigation.goBack(); }} style={styles.backButton}>
-                <Ionicons name="arrow-back" size={24} color="#fff" />
+                <Ionicons name="arrow-back" size={getResponsiveSize(24)} color="#fff" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Mon Profil</Text>
             <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-                <Ionicons name="log-out-outline" size={24} color="#ff6b6b" />
+                <Ionicons name="log-out-outline" size={getResponsiveSize(24)} color="#ff6b6b" />
             </TouchableOpacity>
         </View>
 
@@ -284,7 +285,7 @@ const ProfileScreen = ({ navigation }) => {
                             {renderAvatar()}
                             {isEditing && (
                                 <View style={styles.editIconBadge}>
-                                    <Ionicons name="camera" size={16} color="#fff" />
+                                    <Ionicons name="camera" size={getResponsiveSize(16)} color="#fff" />
                                 </View>
                             )}
                         </View>
@@ -304,7 +305,7 @@ const ProfileScreen = ({ navigation }) => {
                     )}
 
                     <Text style={styles.pseudoText}>
-                        {user?.pseudo} {selectedCountry && <Text style={{fontSize: 20}}>{selectedCountry}</Text>}
+                        {user?.pseudo} {selectedCountry && <Text style={{fontSize: getResponsiveSize(20)}}>{selectedCountry}</Text>}
                     </Text>
                     <Text style={styles.emailText}>{user?.email}</Text>
                 </View>
@@ -328,12 +329,25 @@ const ProfileScreen = ({ navigation }) => {
 
             {/* Actions Menu */}
             <View style={styles.menuContainer}>
+                <TouchableOpacity style={styles.menuItem} onPress={() => { playButtonSound(); navigation.navigate('PremiumPions'); }}>
+                    <View style={[styles.iconBox, { backgroundColor: 'rgba(155, 89, 182, 0.2)' }]}>
+                        <MaterialCommunityIcons name="chess-pawn" size={getResponsiveSize(24)} color="#9b59b6" />
+                    </View>
+                    <View style={{flex: 1}}>
+                        <Text style={[styles.menuText, { flex: 0 }]}>Personnaliser mon Pion</Text>
+                        <Text style={{ fontSize: getResponsiveSize(12), color: '#aaa', marginTop: 2 }}>
+                            {user?.pawnSkin ? `Skin: ${user.pawnSkin.charAt(0).toUpperCase() + user.pawnSkin.slice(1)}` : 'Skin par défaut'}
+                        </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={getResponsiveSize(20)} color="#ccc" />
+                </TouchableOpacity>
+
                 <TouchableOpacity style={styles.menuItem} onPress={() => { playButtonSound(); setShowHistoryModal(true); }}>
                     <View style={[styles.iconBox, { backgroundColor: 'rgba(52, 152, 219, 0.2)' }]}>
-                        <MaterialCommunityIcons name="history" size={24} color="#3498db" />
+                        <MaterialCommunityIcons name="history" size={getResponsiveSize(24)} color="#3498db" />
                     </View>
                     <Text style={styles.menuText}>Historique des transactions</Text>
-                    <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                    <Ionicons name="chevron-forward" size={getResponsiveSize(20)} color="#ccc" />
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.menuItem} onPress={() => {
@@ -342,10 +356,10 @@ const ProfileScreen = ({ navigation }) => {
                     if (isEditing) handleSave(); // Save on toggle off if needed, but better to use specific button
                 }}>
                     <View style={[styles.iconBox, { backgroundColor: 'rgba(46, 204, 113, 0.2)' }]}>
-                        <Ionicons name={isEditing ? "save-outline" : "create-outline"} size={24} color="#2ecc71" />
+                        <Ionicons name={isEditing ? "save-outline" : "create-outline"} size={getResponsiveSize(24)} color="#2ecc71" />
                     </View>
                     <Text style={styles.menuText}>{isEditing ? "Sauvegarder les modifications" : "Modifier mon profil"}</Text>
-                    <Ionicons name="chevron-forward" size={20} color="#ccc" />
+                    <Ionicons name="chevron-forward" size={getResponsiveSize(20)} color="#ccc" />
                 </TouchableOpacity>
             </View>
 
@@ -367,7 +381,7 @@ const ProfileScreen = ({ navigation }) => {
                         <Text style={styles.countrySelectText}>
                             {selectedCountry ? `Drapeau actuel: ${selectedCountry}` : 'Choisir un pays'}
                         </Text>
-                        <Ionicons name="chevron-down" size={20} color="#ccc" />
+                        <Ionicons name="chevron-down" size={getResponsiveSize(20)} color="#ccc" />
                     </TouchableOpacity>
 
                     <Button title="Enregistrer" onPress={handleSave} style={styles.saveButton} />
@@ -378,16 +392,16 @@ const ProfileScreen = ({ navigation }) => {
             <View style={styles.dangerZone}>
                 <Text style={styles.dangerTitle}>Zone de danger</Text>
                 <TouchableOpacity style={styles.dangerButton} onPress={handleDeactivate}>
-                    <Ionicons name="pause-circle-outline" size={20} color="#f39c12" />
+                    <Ionicons name="pause-circle-outline" size={getResponsiveSize(20)} color="#f39c12" />
                     <Text style={[styles.dangerButtonText, { color: '#f39c12' }]}>Désactiver mon compte</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.dangerButton} onPress={handleDelete}>
-                    <Ionicons name="trash-outline" size={20} color="#e74c3c" />
+                    <Ionicons name="trash-outline" size={getResponsiveSize(20)} color="#e74c3c" />
                     <Text style={[styles.dangerButtonText, { color: '#e74c3c' }]}>Supprimer mon compte</Text>
                 </TouchableOpacity>
             </View>
             
-            <View style={{ height: 40 }} />
+            <View style={{ height: getResponsiveSize(40) }} />
         </ScrollView>
       </SafeAreaView>
 
@@ -398,17 +412,17 @@ const ProfileScreen = ({ navigation }) => {
                 <View style={styles.modalHeader}>
                     <Text style={styles.modalTitle}>Historique</Text>
                     <TouchableOpacity onPress={() => setShowHistoryModal(false)} style={styles.closeButton}>
-                        <Ionicons name="close" size={24} color="#fff" />
+                        <Ionicons name="close" size={getResponsiveSize(24)} color="#fff" />
                     </TouchableOpacity>
                 </View>
                 
                 {transactions.length === 0 ? (
                     <View style={styles.emptyState}>
-                        <MaterialCommunityIcons name="clipboard-text-off-outline" size={60} color="#555" />
+                        <MaterialCommunityIcons name="clipboard-text-off-outline" size={getResponsiveSize(60)} color="#555" />
                         <Text style={styles.emptyText}>Aucune transaction récente</Text>
                     </View>
                 ) : (
-                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: getResponsiveSize(20) }}>
                         {(() => {
                             const today = new Date().toDateString();
                             const yesterday = new Date(Date.now() - 86400000).toDateString();
@@ -431,7 +445,7 @@ const ProfileScreen = ({ navigation }) => {
                                                     backgroundColor: tx.type === 'CREDIT' ? 'rgba(76, 175, 80, 0.1)' : 
                                                                     (tx.type === 'REMBOURSEMENT' || tx.type === 'REFUND') ? 'rgba(33, 150, 243, 0.1)' : 'rgba(244, 67, 54, 0.1)' 
                                                 }]}>
-                                                    <Text style={{ fontSize: 18 }}>
+                                                    <Text style={{ fontSize: getResponsiveSize(18) }}>
                                                         {tx.type === 'CREDIT' ? '💰' : (tx.type === 'REMBOURSEMENT' || tx.type === 'REFUND') ? '↩️' : '🛒'}
                                                     </Text>
                                                 </View>
@@ -466,14 +480,14 @@ const ProfileScreen = ({ navigation }) => {
             <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Changer d'avatar</Text>
                 <TouchableOpacity onPress={() => setShowAvatarModal(false)} style={styles.closeButton}>
-                    <Ionicons name="close" size={24} color="#fff" />
+                    <Ionicons name="close" size={getResponsiveSize(24)} color="#fff" />
                 </TouchableOpacity>
             </View>
             <ScrollView showsVerticalScrollIndicator={false}>
               
               <TouchableOpacity style={styles.uploadOption} onPress={pickImage}>
                 <View style={styles.uploadIconCircle}>
-                    <Ionicons name="images-outline" size={24} color="#fff" />
+                    <Ionicons name="images-outline" size={getResponsiveSize(24)} color="#fff" />
                 </View>
                 <Text style={styles.uploadText}>Choisir depuis la galerie</Text>
               </TouchableOpacity>
@@ -495,7 +509,7 @@ const ProfileScreen = ({ navigation }) => {
                         <Image source={avatar.source} style={styles.gridAvatar} />
                         {(!user?.isPremium && !user?.isEarlyAccess) && (
                             <View style={styles.lockedOverlay}>
-                                <Ionicons name="lock-closed" size={20} color="#f1c40f" />
+                                <Ionicons name="lock-closed" size={getResponsiveSize(20)} color="#f1c40f" />
                             </View>
                         )}
                     </View>
@@ -514,7 +528,7 @@ const ProfileScreen = ({ navigation }) => {
             <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Choisir votre pays</Text>
                 <TouchableOpacity onPress={() => setShowCountryModal(false)} style={styles.closeButton}>
-                    <Ionicons name="close" size={24} color="#fff" />
+                    <Ionicons name="close" size={getResponsiveSize(24)} color="#fff" />
                 </TouchableOpacity>
             </View>
             
@@ -522,7 +536,7 @@ const ProfileScreen = ({ navigation }) => {
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder="Rechercher un pays..."
-              style={{ marginBottom: 15 }}
+              style={{ marginBottom: getResponsiveSize(15) }}
             />
 
             <FlatList
@@ -553,38 +567,38 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-    paddingTop: 20,
+    paddingTop: getResponsiveSize(20),
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 10,
+    paddingHorizontal: getResponsiveSize(20),
+    paddingBottom: getResponsiveSize(10),
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: getResponsiveSize(20),
     color: '#fff',
     fontWeight: 'bold',
     fontFamily: 'Roboto', 
   },
   backButton: {
-    padding: 8,
+    padding: getResponsiveSize(8),
   },
   logoutButton: {
-    padding: 8,
+    padding: getResponsiveSize(8),
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingHorizontal: getResponsiveSize(20),
+    paddingBottom: getResponsiveSize(40),
   },
   profileCard: {
     backgroundColor: '#041c55',
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: getResponsiveSize(20),
+    padding: getResponsiveSize(20),
     alignItems: 'center',
-    marginBottom: 20,
-    borderWidth: 1,
+    marginBottom: getResponsiveSize(20),
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f1c40f',
     shadowColor: '#f1c40f',
     shadowOffset: {
@@ -592,22 +606,22 @@ const styles = StyleSheet.create({
       height: 0,
     },
     shadowOpacity: 0.5,
-    shadowRadius: 5,
-    elevation: 5,
+    shadowRadius: getResponsiveSize(5),
+    elevation: getResponsiveSize(5),
   },
   avatarContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: getResponsiveSize(20),
   },
   avatarWrapper: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 3,
+    width: getResponsiveSize(100),
+    height: getResponsiveSize(100),
+    borderRadius: getResponsiveSize(50),
+    borderWidth: getResponsiveSize(3),
     borderColor: '#3498db',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: getResponsiveSize(10),
     overflow: 'hidden',
   },
   avatarEditable: {
@@ -623,38 +637,38 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.6)',
     width: '100%',
-    height: 30,
+    height: getResponsiveSize(30),
     justifyContent: 'center',
     alignItems: 'center',
   },
   premiumBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginBottom: 8,
+    paddingHorizontal: getResponsiveSize(12),
+    paddingVertical: getResponsiveSize(4),
+    borderRadius: getResponsiveSize(12),
+    marginBottom: getResponsiveSize(8),
   },
   premiumText: {
     color: '#000',
     fontWeight: 'bold',
-    fontSize: 10,
+    fontSize: getResponsiveSize(10),
   },
   pseudoText: {
-    fontSize: 24,
+    fontSize: getResponsiveSize(24),
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 4,
+    marginBottom: getResponsiveSize(4),
   },
   emailText: {
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     color: '#aaa',
   },
   statsGrid: {
     flexDirection: 'row',
     width: '100%',
     justifyContent: 'space-around',
-    marginTop: 10,
-    paddingTop: 15,
-    borderTopWidth: 1,
+    marginTop: getResponsiveSize(10),
+    paddingTop: getResponsiveSize(15),
+    borderTopWidth: getResponsiveSize(1),
     borderTopColor: 'rgba(255,255,255,0.1)',
   },
   statItem: {
@@ -662,26 +676,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statBorder: {
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
+    borderLeftWidth: getResponsiveSize(1),
+    borderRightWidth: getResponsiveSize(1),
     borderColor: 'rgba(255,255,255,0.1)',
   },
   statValue: {
-    fontSize: 20,
+    fontSize: getResponsiveSize(20),
     fontWeight: 'bold',
     color: '#fff',
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: getResponsiveSize(12),
     color: '#888',
-    marginTop: 4,
+    marginTop: getResponsiveSize(4),
   },
   menuContainer: {
     backgroundColor: '#041c55',
-    borderRadius: 16,
-    padding: 10,
-    marginBottom: 20,
-    borderWidth: 1,
+    borderRadius: getResponsiveSize(16),
+    padding: getResponsiveSize(10),
+    marginBottom: getResponsiveSize(20),
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f1c40f',
     shadowColor: '#f1c40f',
     shadowOffset: {
@@ -689,36 +703,36 @@ const styles = StyleSheet.create({
       height: 0,
     },
     shadowOpacity: 0.5,
-    shadowRadius: 5,
-    elevation: 5,
+    shadowRadius: getResponsiveSize(5),
+    elevation: getResponsiveSize(5),
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,
+    paddingVertical: getResponsiveSize(15),
+    paddingHorizontal: getResponsiveSize(10),
+    borderBottomWidth: getResponsiveSize(1),
     borderBottomColor: 'rgba(255,255,255,0.05)',
   },
   iconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: getResponsiveSize(40),
+    height: getResponsiveSize(40),
+    borderRadius: getResponsiveSize(10),
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
+    marginRight: getResponsiveSize(15),
   },
   menuText: {
     flex: 1,
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     color: '#fff',
   },
   editForm: {
     backgroundColor: '#041c55',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    borderWidth: 1,
+    borderRadius: getResponsiveSize(16),
+    padding: getResponsiveSize(20),
+    marginBottom: getResponsiveSize(20),
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f1c40f',
     shadowColor: '#f1c40f',
     shadowOffset: {
@@ -726,44 +740,44 @@ const styles = StyleSheet.create({
       height: 0,
     },
     shadowOpacity: 0.5,
-    shadowRadius: 5,
-    elevation: 5,
+    shadowRadius: getResponsiveSize(5),
+    elevation: getResponsiveSize(5),
   },
   sectionHeader: {
-    fontSize: 18,
+    fontSize: getResponsiveSize(18),
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 15,
+    marginBottom: getResponsiveSize(15),
   },
   inputLabel: {
     color: '#ccc',
-    marginBottom: 8,
-    fontSize: 14,
+    marginBottom: getResponsiveSize(8),
+    fontSize: getResponsiveSize(14),
   },
   inputContainer: {
-    marginBottom: 15,
+    marginBottom: getResponsiveSize(15),
   },
   countrySelectButton: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.1)',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 20,
+    padding: getResponsiveSize(15),
+    borderRadius: getResponsiveSize(10),
+    marginBottom: getResponsiveSize(20),
   },
   countrySelectText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
   },
   saveButton: {
-    marginTop: 10,
+    marginTop: getResponsiveSize(10),
   },
   dangerZone: {
-    marginTop: 20,
-    padding: 20,
-    borderRadius: 16,
-    borderWidth: 1,
+    marginTop: getResponsiveSize(20),
+    padding: getResponsiveSize(20),
+    borderRadius: getResponsiveSize(16),
+    borderWidth: getResponsiveSize(1),
     backgroundColor: '#041c55',
     borderColor: '#f1c40f',
     shadowColor: '#f1c40f',
@@ -777,18 +791,18 @@ const styles = StyleSheet.create({
   },
   dangerTitle: {
     color: '#e74c3c',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: 'bold',
-    marginBottom: 15,
+    marginBottom: getResponsiveSize(15),
   },
   dangerButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: getResponsiveSize(12),
   },
   dangerButtonText: {
-    marginLeft: 10,
-    fontSize: 16,
+    marginLeft: getResponsiveSize(10),
+    fontSize: getResponsiveSize(16),
     fontWeight: '500',
   },
   
@@ -800,9 +814,9 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: '#1e1e1e',
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
-    padding: 20,
+    borderTopLeftRadius: getResponsiveSize(25),
+    borderTopRightRadius: getResponsiveSize(25),
+    padding: getResponsiveSize(20),
     maxHeight: '85%',
     minHeight: '50%',
   },
@@ -810,36 +824,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
-    borderBottomWidth: 1,
+    marginBottom: getResponsiveSize(20),
+    borderBottomWidth: getResponsiveSize(1),
     borderBottomColor: 'rgba(255,255,255,0.1)',
-    paddingBottom: 15,
+    paddingBottom: getResponsiveSize(15),
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: getResponsiveSize(20),
     fontWeight: 'bold',
     color: '#fff',
   },
   closeButton: {
-    padding: 5,
+    padding: getResponsiveSize(5),
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 40,
+    padding: getResponsiveSize(40),
   },
   emptyText: {
     color: '#888',
-    marginTop: 10,
-    fontSize: 16,
+    marginTop: getResponsiveSize(10),
+    fontSize: getResponsiveSize(16),
   },
   historyGroup: {
-    marginBottom: 20,
+    marginBottom: getResponsiveSize(20),
   },
   historyDateHeader: {
     color: '#888',
-    fontSize: 14,
-    marginBottom: 10,
+    fontSize: getResponsiveSize(14),
+    marginBottom: getResponsiveSize(10),
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
@@ -847,33 +861,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.05)',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 8,
+    padding: getResponsiveSize(12),
+    borderRadius: getResponsiveSize(12),
+    marginBottom: getResponsiveSize(8),
   },
   txIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: getResponsiveSize(40),
+    height: getResponsiveSize(40),
+    borderRadius: getResponsiveSize(20),
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: getResponsiveSize(12),
   },
   txDetails: {
     flex: 1,
   },
   txReason: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: '500',
-    marginBottom: 2,
+    marginBottom: getResponsiveSize(2),
   },
   txDate: {
     color: '#888',
-    fontSize: 12,
+    fontSize: getResponsiveSize(12),
   },
   txAmount: {
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: 'bold',
   },
   
@@ -882,42 +896,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(52, 152, 219, 0.1)',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 20,
+    padding: getResponsiveSize(15),
+    borderRadius: getResponsiveSize(12),
+    marginBottom: getResponsiveSize(20),
   },
   uploadIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: getResponsiveSize(40),
+    height: getResponsiveSize(40),
+    borderRadius: getResponsiveSize(20),
     backgroundColor: '#3498db',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
+    marginRight: getResponsiveSize(15),
   },
   uploadText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: '500',
   },
   separator: {
     color: '#888',
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     fontWeight: 'bold',
-    marginBottom: 15,
-    marginTop: 10,
+    marginBottom: getResponsiveSize(15),
+    marginTop: getResponsiveSize(10),
   },
   avatarGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: getResponsiveSize(20),
   },
   avatarGridItem: {
-    width: (width - 60) / 3,
-    height: (width - 60) / 3,
-    marginBottom: 10,
-    borderRadius: 12,
+    width: (width - getResponsiveSize(60)) / 3,
+    height: (width - getResponsiveSize(60)) / 3,
+    marginBottom: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(12),
     overflow: 'hidden',
     backgroundColor: 'rgba(255,255,255,0.05)',
   },
@@ -935,18 +949,18 @@ const styles = StyleSheet.create({
   
   // Country Modal
   countryItem: {
-    width: (width - 60) / 3,
+    width: (width - getResponsiveSize(60)) / 3,
     alignItems: 'center',
-    marginBottom: 20,
-    padding: 5,
+    marginBottom: getResponsiveSize(20),
+    padding: getResponsiveSize(5),
   },
   countryFlag: {
-    fontSize: 32,
-    marginBottom: 5,
+    fontSize: getResponsiveSize(32),
+    marginBottom: getResponsiveSize(5),
   },
   countryName: {
     color: '#ccc',
-    fontSize: 12,
+    fontSize: getResponsiveSize(12),
     textAlign: 'center',
   },
 });

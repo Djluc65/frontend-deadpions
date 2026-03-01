@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../config';
+import { getResponsiveSize } from '../utils/responsive';
 
 const AssistantScreen = ({ navigation }) => {
   const token = useSelector(state => state.auth.token);
@@ -110,16 +111,16 @@ const AssistantScreen = ({ navigation }) => {
     >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#fff" />
+          <Ionicons name="arrow-back" size={getResponsiveSize(28)} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Assistant DeadPions</Text>
-        <View style={{ width: 28 }} /> 
+        <View style={{ width: getResponsiveSize(28) }} /> 
       </View>
 
       <KeyboardAvoidingView 
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.container}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
+        keyboardVerticalOffset={Platform.OS === "ios" ? getResponsiveSize(10) : 0}
       >
         <FlatList
           ref={flatListRef}
@@ -148,7 +149,7 @@ const AssistantScreen = ({ navigation }) => {
             {isLoading ? (
               <ActivityIndicator size="small" color="#041c55" />
             ) : (
-              <Ionicons name="send" size={24} color="#041c55" />
+              <Ionicons name="send" size={getResponsiveSize(24)} color="#041c55" />
             )}
           </TouchableOpacity>
         </View>
@@ -165,49 +166,49 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingTop: getResponsiveSize(Platform.OS === 'ios' ? 60 : 40),
+    paddingHorizontal: getResponsiveSize(20),
+    paddingBottom: getResponsiveSize(20),
     backgroundColor: 'rgba(4, 28, 85, 0.9)',
-    borderBottomWidth: 1,
+    borderBottomWidth: getResponsiveSize(1),
     borderBottomColor: '#f1c40f',
   },
   backButton: {
-    padding: 5,
+    padding: getResponsiveSize(5),
   },
   headerTitle: {
     color: '#fff',
-    fontSize: 20,
+    fontSize: getResponsiveSize(20),
     fontWeight: 'bold',
   },
   container: {
     flex: 1,
   },
   messagesList: {
-    padding: 20,
-    paddingBottom: 20,
+    padding: getResponsiveSize(20),
+    paddingBottom: getResponsiveSize(20),
   },
   messageBubble: {
     maxWidth: '80%',
-    padding: 12,
-    borderRadius: 15,
-    marginBottom: 10,
+    padding: getResponsiveSize(12),
+    borderRadius: getResponsiveSize(15),
+    marginBottom: getResponsiveSize(10),
   },
   userBubble: {
     alignSelf: 'flex-end',
     backgroundColor: '#f1c40f',
-    borderBottomRightRadius: 2,
+    borderBottomRightRadius: getResponsiveSize(2),
   },
   aiBubble: {
     alignSelf: 'flex-start',
     backgroundColor: 'rgba(4, 28, 85, 0.8)',
-    borderWidth: 1,
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f1c40f',
-    borderBottomLeftRadius: 2,
+    borderBottomLeftRadius: getResponsiveSize(2),
   },
   messageText: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: getResponsiveSize(16),
+    lineHeight: getResponsiveSize(22),
   },
   userText: {
     color: '#041c55',
@@ -217,9 +218,9 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: 'row',
-    padding: 15,
+    padding: getResponsiveSize(15),
     backgroundColor: 'rgba(4, 28, 85, 0.95)',
-    borderTopWidth: 1,
+    borderTopWidth: getResponsiveSize(1),
     borderTopColor: '#f1c40f',
     alignItems: 'center',
   },
@@ -227,17 +228,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     color: '#fff',
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    marginRight: 10,
-    maxHeight: 100,
+    borderRadius: getResponsiveSize(20),
+    paddingHorizontal: getResponsiveSize(15),
+    paddingVertical: getResponsiveSize(10),
+    marginRight: getResponsiveSize(10),
+    maxHeight: getResponsiveSize(100),
   },
   sendButton: {
     backgroundColor: '#f1c40f',
-    width: 45,
-    height: 45,
-    borderRadius: 22.5,
+    width: getResponsiveSize(45),
+    height: getResponsiveSize(45),
+    borderRadius: getResponsiveSize(22.5),
     justifyContent: 'center',
     alignItems: 'center',
   },

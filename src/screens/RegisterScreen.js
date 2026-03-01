@@ -5,6 +5,7 @@ import { loginSuccess } from '../redux/slices/authSlice';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import { API_URL } from '../config';
+import { getResponsiveSize } from '../utils/responsive';
 
 const RegisterScreen = ({ navigation }) => {
   const [pseudo, setPseudo] = useState('');
@@ -85,7 +86,12 @@ const RegisterScreen = ({ navigation }) => {
       >
         <View style={styles.container}>
           <Text style={styles.title}>Inscription</Text>
-          <Input placeholder="Pseudo" value={pseudo} onChangeText={setPseudo} />
+          <Input 
+            placeholder="Pseudo" 
+            value={pseudo} 
+            onChangeText={setPseudo} 
+            maxLength={7}
+          />
           <Input 
             placeholder="Email" 
             value={email} 
@@ -117,14 +123,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
-    padding: 20,
+    padding: getResponsiveSize(20),
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   title: {
-    fontSize: 32,
+    fontSize: getResponsiveSize(32),
     color: '#fff',
     fontWeight: 'bold',
-    marginBottom: 30,
+    marginBottom: getResponsiveSize(30),
     textAlign: 'center',
   },
 });

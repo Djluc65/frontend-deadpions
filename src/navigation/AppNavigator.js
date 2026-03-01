@@ -19,6 +19,7 @@ import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import InfoScreen from '../screens/InfoScreen';
 import AssistantScreen from '../screens/AssistantScreen';
+import PremiumPionsScreen from '../screens/PremiumPionsScreen';
 
 const Stack = createStackNavigator();
 
@@ -47,6 +48,7 @@ function AppNavigator() {
         <Stack.Screen name="Game" component={GameScreen} />
         <Stack.Screen name="Info" component={InfoScreen} />
         <Stack.Screen name="Assistant" component={AssistantScreen} />
+        <Stack.Screen name="PremiumPions" component={PremiumPionsScreen} />
       </Stack.Navigator>
       <GlobalInviteListener />
     </>

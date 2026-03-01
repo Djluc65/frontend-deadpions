@@ -2,6 +2,8 @@ import React from 'react';
 import { View, ActivityIndicator, StyleSheet, Modal, Text } from 'react-native';
 import { useSelector } from 'react-redux';
 
+import { getResponsiveSize } from '../../utils/responsive';
+
 /**
  * Composant de chargement global connecté au Redux Store.
  * Affiche un overlay semi-transparent avec un spinner et un message optionnel.
@@ -39,20 +41,20 @@ const styles = StyleSheet.create({
     zIndex: 9999,
   },
   contentContainer: {
-    padding: 20,
-    borderRadius: 10,
+    padding: getResponsiveSize(20),
+    borderRadius: getResponsiveSize(10),
     alignItems: 'center',
     justifyContent: 'center',
   },
   text: {
-    marginTop: 15,
+    marginTop: getResponsiveSize(15),
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: '600',
     textAlign: 'center',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: -1, height: 1 },
-    textShadowRadius: 10
+    textShadowOffset: { width: getResponsiveSize(-1), height: getResponsiveSize(1) },
+    textShadowRadius: getResponsiveSize(10)
   }
 });
 

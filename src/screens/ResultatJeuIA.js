@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native
 import { CommonActions } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { getResponsiveSize } from '../utils/responsive';
 
 const ResultatJeuIA = ({ route, navigation }) => {
   const { victoire, difficulte, configIA } = route.params;
@@ -107,85 +108,85 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.8)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20
+    padding: getResponsiveSize(20)
   },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 30,
+    borderRadius: getResponsiveSize(24),
+    padding: getResponsiveSize(30),
     width: '100%',
-    maxWidth: 400,
+    maxWidth: getResponsiveSize(400),
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: getResponsiveSize(4) },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowRadius: getResponsiveSize(8),
     elevation: 8
   },
   emoji: {
-    fontSize: 60,
-    marginBottom: 20
+    fontSize: getResponsiveSize(60),
+    marginBottom: getResponsiveSize(20)
   },
   titre: {
-    fontSize: 32,
+    fontSize: getResponsiveSize(32),
     fontWeight: 'bold',
     color: '#111827',
-    marginBottom: 10
+    marginBottom: getResponsiveSize(10)
   },
   message: {
-    fontSize: 18,
+    fontSize: getResponsiveSize(18),
     color: '#4b5563',
     textAlign: 'center',
-    marginBottom: 30
+    marginBottom: getResponsiveSize(30)
   },
   statsContainer: {
     backgroundColor: '#f3f4f6',
-    padding: 20,
-    borderRadius: 16,
+    padding: getResponsiveSize(20),
+    borderRadius: getResponsiveSize(16),
     width: '100%',
     alignItems: 'center',
-    marginBottom: 30
+    marginBottom: getResponsiveSize(30)
   },
   statsLabel: {
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     color: '#6b7280',
     textTransform: 'uppercase',
     fontWeight: '600',
-    marginBottom: 8
+    marginBottom: getResponsiveSize(8)
   },
   statsTaux: {
-    fontSize: 36,
+    fontSize: getResponsiveSize(36),
     fontWeight: 'bold',
     color: '#3b82f6',
-    marginBottom: 4
+    marginBottom: getResponsiveSize(4)
   },
   statsParties: {
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     color: '#9ca3af'
   },
   boutons: {
     width: '100%',
-    gap: 12
+    gap: getResponsiveSize(12)
   },
   boutonRejouer: {
     backgroundColor: '#3b82f6',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: getResponsiveSize(16),
+    borderRadius: getResponsiveSize(12),
     alignItems: 'center'
   },
   boutonMenu: {
     backgroundColor: '#f3f4f6',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: getResponsiveSize(16),
+    borderRadius: getResponsiveSize(12),
     alignItems: 'center'
   },
   boutonTexte: {
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: 'bold',
     color: '#fff'
   },
   boutonTexteMenu: {
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: 'bold',
     color: '#374151'
   }

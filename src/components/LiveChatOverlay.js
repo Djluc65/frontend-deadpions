@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Keyboard
 import { Ionicons } from '@expo/vector-icons';
 import EmojiAnimation from './EmojiAnimation';
 import { getEmojiSource } from '../utils/emojis';
+import { getResponsiveSize } from '../utils/responsive';
 
 const { width, height } = Dimensions.get('window');
 
@@ -79,7 +80,7 @@ const LiveChatOverlay = ({
                                 getEmojiSource(item.contenu) ? (
                                     <EmojiAnimation
                                         source={getEmojiSource(item.contenu)}
-                                        style={{ width: 24, height: 24 }}
+                                        style={{ width: getResponsiveSize(24), height: getResponsiveSize(24) }}
                                     />
                                 ) : (
                                     <Text style={styles.messageEmoji}>{item.contenu}</Text>
@@ -155,7 +156,7 @@ const FloatingEmoji = ({ emoji, startX }) => {
     useEffect(() => {
         Animated.parallel([
             Animated.timing(translateY, {
-                toValue: -300,
+                toValue: -getResponsiveSize(300),
                 duration: 2000,
                 useNativeDriver: true
             }),
@@ -174,7 +175,7 @@ const FloatingEmoji = ({ emoji, startX }) => {
             styles.floatingEmojiContainer,
             {
                 left: startX,
-                bottom: 100,
+                bottom: getResponsiveSize(100),
                 transform: [{ translateY }],
                 opacity
             }
@@ -182,7 +183,7 @@ const FloatingEmoji = ({ emoji, startX }) => {
             {source ? (
                  <EmojiAnimation
                     source={source}
-                    style={{ width: 60, height: 60 }}
+                    style={{ width: getResponsiveSize(60), height: getResponsiveSize(60) }}
                 />
             ) : (
                 <Text style={styles.floatingEmojiText}>{emoji}</Text>
@@ -202,94 +203,94 @@ const styles = StyleSheet.create({
     },
     messagesContainer: {
         position: 'absolute',
-        bottom: 100, // Just above input bar
-        left: 20,
+        bottom: getResponsiveSize(100), // Just above input bar
+        left: getResponsiveSize(20),
         width: width * 0.6,
-        height: 150,
+        height: getResponsiveSize(150),
         justifyContent: 'flex-end',
     },
     messageList: {
         flexGrow: 0,
     },
     messageListContent: {
-        paddingBottom: 5,
+        paddingBottom: getResponsiveSize(5),
     },
     messageRow: {
         flexDirection: 'row',
-        marginBottom: 4,
+        marginBottom: getResponsiveSize(4),
         alignItems: 'center',
         backgroundColor: 'rgba(0,0,0,0.3)',
         alignSelf: 'flex-start',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 10,
+        paddingHorizontal: getResponsiveSize(8),
+        paddingVertical: getResponsiveSize(4),
+        borderRadius: getResponsiveSize(10),
     },
     messageAuthor: {
         color: '#f1c40f',
         fontWeight: 'bold',
-        fontSize: 12,
+        fontSize: getResponsiveSize(12),
     },
     messageText: {
         color: '#fff',
-        fontSize: 14,
+        fontSize: getResponsiveSize(14),
     },
     messageEmoji: {
-        fontSize: 20,
+        fontSize: getResponsiveSize(20),
     },
     inputWrapper: {
         position: 'absolute',
-        bottom: 20,
-        left: 90, // Space for Menu Button (Left 20 + Width 60 + Margin 10)
-        right: 80, // Space for Audio Button (Right 20 + Width 44 + Margin 16)
+        bottom: getResponsiveSize(20),
+        left: getResponsiveSize(90), // Space for Menu Button (Left 20 + Width 60 + Margin 10)
+        right: getResponsiveSize(80), // Space for Audio Button (Right 20 + Width 44 + Margin 16)
         zIndex: 60,
     },
     inputBar: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: 'rgba(0,0,0,0.6)',
-        borderRadius: 25,
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderWidth: 1,
+        borderRadius: getResponsiveSize(25),
+        paddingHorizontal: getResponsiveSize(10),
+        paddingVertical: getResponsiveSize(5),
+        borderWidth: getResponsiveSize(1),
         borderColor: 'rgba(255,255,255,0.2)',
     },
     input: {
         flex: 1,
         color: '#fff',
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        fontSize: 14,
+        paddingHorizontal: getResponsiveSize(10),
+        paddingVertical: getResponsiveSize(8),
+        fontSize: getResponsiveSize(14),
     },
     sendButton: {
-        padding: 8,
+        padding: getResponsiveSize(8),
     },
     emojiButton: {
-        padding: 8,
+        padding: getResponsiveSize(8),
     },
     quickReactionsPanel: {
         flexDirection: 'row',
         backgroundColor: 'rgba(0,0,0,0.8)',
-        borderRadius: 20,
-        padding: 10,
-        marginBottom: 10,
+        borderRadius: getResponsiveSize(20),
+        padding: getResponsiveSize(10),
+        marginBottom: getResponsiveSize(10),
         alignSelf: 'center',
         justifyContent: 'center',
     },
     reactionButton: {
-        paddingHorizontal: 10,
+        paddingHorizontal: getResponsiveSize(10),
     },
     reactionText: {
-        fontSize: 24,
+        fontSize: getResponsiveSize(24),
     },
     floatingEmojiContainer: {
         position: 'absolute',
         zIndex: 100,
     },
     floatingEmojiText: {
-        fontSize: 30,
+        fontSize: getResponsiveSize(30),
         textShadowColor: 'rgba(0, 0, 0, 0.75)',
-        textShadowOffset: {width: -1, height: 1},
-        textShadowRadius: 10
+        textShadowOffset: {width: -getResponsiveSize(1), height: getResponsiveSize(1)},
+        textShadowRadius: getResponsiveSize(10)
     }
 });
 

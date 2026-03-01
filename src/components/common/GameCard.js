@@ -1,10 +1,11 @@
 import React, { memo } from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { getResponsiveSize } from '../../utils/responsive';
 
 const GameCard = memo(({ title, onPress, color, children, style, onPlaySound }) => (
   <TouchableOpacity
     style={[styles.card, { borderColor: color }, style]}
-    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+    hitSlop={{ top: getResponsiveSize(10), bottom: getResponsiveSize(10), left: getResponsiveSize(10), right: getResponsiveSize(10) }}
     onPress={async () => {
       if (onPlaySound) await onPlaySound();
       if (onPress) onPress();
@@ -20,16 +21,16 @@ const GameCard = memo(({ title, onPress, color, children, style, onPlaySound }) 
 
 const styles = StyleSheet.create({
   card: {
-    height: 120,
+    height: getResponsiveSize(120),
     width: '48%',
-    borderRadius: 15,
-    borderWidth: 2,
+    borderRadius: getResponsiveSize(15),
+    borderWidth: getResponsiveSize(2),
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 1)',
   },
   cardTitle: {
-    fontSize: 24,
+    fontSize: getResponsiveSize(24),
     fontWeight: 'bold',
     textAlign: 'center',
   },

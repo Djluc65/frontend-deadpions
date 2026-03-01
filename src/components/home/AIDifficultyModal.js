@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import { Modal, Pressable, ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { playButtonSound } from '../../utils/soundManager';
+import { getResponsiveSize } from '../../utils/responsive';
 
 const AIDifficultyModal = memo(({
   visible,
@@ -27,9 +28,9 @@ const AIDifficultyModal = memo(({
         onRequestClose={onClose}
     >
         <Pressable style={styles.modalOverlay} onPress={() => { playButtonSound(); onClose(); }}>
-            <Pressable style={[styles.friendsModalContent, { maxHeight: '90%', backgroundColor: '#041c55', borderColor: '#f1c40f', borderWidth: 1 }]} onPress={() => {}}>
+            <Pressable style={[styles.friendsModalContent, { maxHeight: '90%', backgroundColor: '#041c55', borderColor: '#f1c40f', borderWidth: getResponsiveSize(1) }]} onPress={() => {}}>
                 <ScrollView contentContainerStyle={{ alignItems: 'center', width: '100%' }} style={{ width: '100%' }}>
-                    <Text style={[styles.friendsModalTitle, { color: '#f1c40f', textShadowColor: 'rgba(241, 196, 15, 0.5)', textShadowRadius: 10, marginBottom: 30 }]}>Options de jeu</Text>
+                    <Text style={[styles.friendsModalTitle, { color: '#f1c40f', textShadowColor: 'rgba(241, 196, 15, 0.5)', textShadowRadius: getResponsiveSize(10), marginBottom: getResponsiveSize(30) }]}>Options de jeu</Text>
 
                     {/* MODE DE JEU */}
                     <Text style={styles.friendsLabel}>Mode de jeu:</Text>
@@ -78,14 +79,14 @@ const AIDifficultyModal = memo(({
 
                                 return (
                                     <>
-                                        <TouchableOpacity onPress={() => { playButtonSound(); canGoPrev && setAiBet(effectiveBets[currentIndex - 1]); }} disabled={!canGoPrev} style={{ padding: 10, opacity: !canGoPrev ? 0.3 : 1 }}>
-                                            <Ionicons name="remove-circle" size={40} color="#f1c40f" />
+                                        <TouchableOpacity onPress={() => { playButtonSound(); canGoPrev && setAiBet(effectiveBets[currentIndex - 1]); }} disabled={!canGoPrev} style={{ padding: getResponsiveSize(10), opacity: !canGoPrev ? 0.3 : 1 }}>
+                                            <Ionicons name="remove-circle" size={getResponsiveSize(40)} color="#f1c40f" />
                                         </TouchableOpacity>
                                         <View style={styles.betValueContainer}>
                                             <Text style={styles.betValueText}>{aiBet.toLocaleString()}</Text>
                                         </View>
-                                        <TouchableOpacity onPress={() => { playButtonSound(); canGoNext && setAiBet(effectiveBets[currentIndex + 1]); }} disabled={!canGoNext} style={{ padding: 10, opacity: !canGoNext ? 0.3 : 1 }}>
-                                            <Ionicons name="add-circle" size={40} color="#f1c40f" />
+                                        <TouchableOpacity onPress={() => { playButtonSound(); canGoNext && setAiBet(effectiveBets[currentIndex + 1]); }} disabled={!canGoNext} style={{ padding: getResponsiveSize(10), opacity: !canGoNext ? 0.3 : 1 }}>
+                                            <Ionicons name="add-circle" size={getResponsiveSize(40)} color="#f1c40f" />
                                         </TouchableOpacity>
                                     </>
                                 );
@@ -110,17 +111,17 @@ const AIDifficultyModal = memo(({
                     </View>
 
                     <TouchableOpacity 
-                        style={[styles.friendsCloseButton, { backgroundColor: '#f1c40f', width: '100%', borderRadius: 15, paddingVertical: 15, marginTop: 20 }]}
+                        style={[styles.friendsCloseButton, { backgroundColor: '#f1c40f', width: '100%', borderRadius: getResponsiveSize(15), paddingVertical: getResponsiveSize(15), marginTop: getResponsiveSize(20) }]}
                         onPress={() => { playButtonSound(); onNext(); }}
                     >
-                        <Text style={[styles.friendsCloseButtonText, { color: '#000', fontWeight: 'bold', fontSize: 18 }]}>Suivant</Text>
+                        <Text style={[styles.friendsCloseButtonText, { color: '#000', fontWeight: 'bold', fontSize: getResponsiveSize(18) }]}>Suivant</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity 
-                        style={{ marginTop: 15, padding: 10 }}
+                        style={{ marginTop: getResponsiveSize(15), padding: getResponsiveSize(10) }}
                         onPress={() => { playButtonSound(); onClose(); }}
                     >
-                        <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 16 }}>Annuler</Text>
+                        <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: getResponsiveSize(16) }}>Annuler</Text>
                     </TouchableOpacity>
                 </ScrollView>
             </Pressable>
@@ -139,8 +140,8 @@ const styles = StyleSheet.create({
   friendsModalContent: {
     width: '80%',
     backgroundColor: '#041c55',
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: getResponsiveSize(20),
+    padding: getResponsiveSize(20),
     alignItems: 'center',
     shadowColor: '#f1c40f',
     shadowOffset: {
@@ -148,39 +149,39 @@ const styles = StyleSheet.create({
       height: 0,
     },
     shadowOpacity: 3,
-    shadowRadius: 3,
+    shadowRadius: getResponsiveSize(3),
     elevation: 5,
-    borderWidth: 1,
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f1c40f',
   },
   friendsModalTitle: {
-    fontSize: 24,
+    fontSize: getResponsiveSize(24),
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: getResponsiveSize(20),
     color: '#fff',
   },
   friendsLabel: {
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     color: '#f1c40f',
     alignSelf: 'flex-start',
-    marginBottom: 10,
+    marginBottom: getResponsiveSize(10),
     fontWeight: 'bold',
   },
   optionsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 20,
+    gap: getResponsiveSize(10),
+    marginBottom: getResponsiveSize(20),
     width: '100%',
   },
   friendsOptionButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 15,
-    borderRadius: 15,
-    borderWidth: 1,
+    paddingVertical: getResponsiveSize(12),
+    paddingHorizontal: getResponsiveSize(15),
+    borderRadius: getResponsiveSize(15),
+    borderWidth: getResponsiveSize(1),
     borderColor: 'rgba(241, 196, 15, 0.5)',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    marginBottom: 5,
+    marginBottom: getResponsiveSize(5),
   },
   friendsOptionButtonActive: {
     backgroundColor: '#f1c40f',
@@ -188,12 +189,12 @@ const styles = StyleSheet.create({
     shadowColor: '#f1c40f',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
-    shadowRadius: 8,
+    shadowRadius: getResponsiveSize(8),
     elevation: 5,
   },
   friendsOptionText: {
     color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: '500',
   },
   friendsOptionTextActive: {
@@ -202,45 +203,45 @@ const styles = StyleSheet.create({
   },
   friendsCloseButton: {
     backgroundColor: '#f1c40f',
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 30,
-    marginTop: 5,
+    paddingVertical: getResponsiveSize(15),
+    paddingHorizontal: getResponsiveSize(30),
+    borderRadius: getResponsiveSize(30),
+    marginTop: getResponsiveSize(5),
     width: '100%',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 5,
+    shadowRadius: getResponsiveSize(5),
     elevation: 6,
   },
   friendsCloseButtonText: {
     color: '#041c55',
     fontWeight: 'bold',
-    fontSize: 18,
+    fontSize: getResponsiveSize(18),
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
   betContainer: {
     width: '100%',
     backgroundColor: '#041c55',
-    borderRadius: 20,
-    padding: 4,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)'
+    borderRadius: getResponsiveSize(20),
+    padding: getResponsiveSize(4),
+    marginBottom: getResponsiveSize(20),
+    borderWidth: getResponsiveSize(1),
+          borderColor: 'rgba(255,255,255,0.1)'
   },
   betLabel: {
     color: 'rgba(255,255,255,0.8)',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     textAlign: 'center'
   },
   betValueContainer: {
-    width: 140, 
-    height: 50, 
+    width: getResponsiveSize(140), 
+    height: getResponsiveSize(50), 
     backgroundColor: 'rgba(0,0,0,0.3)', 
-    borderRadius: 25, 
-    marginHorizontal: 10, 
+    borderRadius: getResponsiveSize(25), 
+    marginHorizontal: getResponsiveSize(10), 
     borderWidth: 1, 
     borderColor: '#f1c40f',
     alignItems: 'center',
@@ -248,7 +249,7 @@ const styles = StyleSheet.create({
   },
   betValueText: {
     color: '#f1c40f', 
-    fontSize: 22, 
+    fontSize: getResponsiveSize(22), 
     fontWeight: 'bold'
   }
 });

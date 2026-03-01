@@ -1,12 +1,11 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { useSelector, useDispatch } from 'react-redux';
 import { updateAccessToken, logout } from '../redux/slices/authSlice';
 import { API_URL } from '../config';
 import { Asset } from 'expo-asset';
-
-const { width, height } = Dimensions.get('window');
+import { getResponsiveSize, isTablet, SCREEN_WIDTH, SCREEN_HEIGHT } from '../utils/responsive';
 
 const WaitingScreen = ({ navigation }) => {
   const { token, refreshToken } = useSelector((state) => state.auth);
@@ -104,12 +103,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logo: {
-    width: width * 0.8,
-    height: width * 0.8,
-    bottom: height * 0.2,
+    width: isTablet ? SCREEN_WIDTH * 0.5 : SCREEN_WIDTH * 0.8,
+    height: isTablet ? SCREEN_WIDTH * 0.5 : SCREEN_WIDTH * 0.8,
+    bottom: SCREEN_HEIGHT * 0.2,
   },
   loader: {
-    marginTop: 50,
+    marginTop: getResponsiveSize(50),
   },
 });
 

@@ -24,6 +24,7 @@ import { API_URL } from '../config';
 import socket from '../services/socket';
 import { setNotificationsCount } from '../redux/slices/socialSlice';
 import { getAvatarSource } from '../utils/avatarUtils';
+import { getResponsiveSize, isTablet } from '../utils/responsive';
 
 const SocialScreen = ({ navigation }) => {
   // --- STATE ---
@@ -611,7 +612,7 @@ const SocialScreen = ({ navigation }) => {
       </View>
       <View style={styles.headerButtons}>
         <TouchableOpacity style={styles.iconButton} onPress={() => setIsAddFriendVisible(true)}>
-          <Ionicons name="person-add" size={24} color="#fff" />
+          <Ionicons name="person-add" size={getResponsiveSize(24)} color="#fff" />
         </TouchableOpacity>
       </View>
     </View>
@@ -657,7 +658,7 @@ const SocialScreen = ({ navigation }) => {
 
   const renderSearchBar = () => (
     <View style={styles.searchContainer}>
-      <Ionicons name="search" size={20} color="#ccc" style={styles.searchIcon} />
+      <Ionicons name="search" size={getResponsiveSize(20)} color="#ccc" style={styles.searchIcon} />
       <TextInput
         style={styles.searchInput}
         placeholder={`Rechercher dans ${
@@ -732,14 +733,14 @@ const SocialScreen = ({ navigation }) => {
             <View style={styles.friendActions}>
               {item.currentGame ? (
                   <TouchableOpacity 
-                    style={[styles.actionButton, { backgroundColor: '#3498db', marginRight: 5 }]}
+                    style={[styles.actionButton, { backgroundColor: '#3498db', marginRight: getResponsiveSize(5) }]}
                     onPress={() => handleJoinSpectator(item)}
                   >
-                    <Ionicons name="eye" size={20} color="#fff" />
+                    <Ionicons name="eye" size={getResponsiveSize(20)} color="#fff" />
                   </TouchableOpacity>
               ) : (
                   <TouchableOpacity 
-                    style={[styles.actionButton, { backgroundColor: '#f39c12', marginRight: 5 }]}
+                    style={[styles.actionButton, { backgroundColor: '#f39c12', marginRight: getResponsiveSize(5) }]}
                     onPress={() => {
                         setSelectedFriend(item);
                         setInviteBet(100);
@@ -747,20 +748,20 @@ const SocialScreen = ({ navigation }) => {
                         setInviteConfigVisible(true);
                     }}
                   >
-                    <Ionicons name="game-controller" size={20} color="#fff" />
+                    <Ionicons name="game-controller" size={getResponsiveSize(20)} color="#fff" />
                   </TouchableOpacity>
               )}
               <TouchableOpacity 
                 style={styles.actionButton}
                 onPress={() => navigation.navigate('Chat', { friendId: item.id, friendName: item.name, friendAvatar: item.avatar })}
               >
-                <Ionicons name="chatbubble-ellipses-outline" size={20} color="#fff" />
+                <Ionicons name="chatbubble-ellipses-outline" size={getResponsiveSize(20)} color="#fff" />
               </TouchableOpacity>
               <TouchableOpacity style={styles.actionButton} onPress={() => handleBlockFriend(item)}>
-                <Ionicons name="ban-outline" size={20} color="#e74c3c" />
+                <Ionicons name="ban-outline" size={getResponsiveSize(20)} color="#e74c3c" />
               </TouchableOpacity>
               <TouchableOpacity style={styles.actionButton} onPress={() => handleRemoveFriend(item)}>
-                <Ionicons name="trash-outline" size={20} color="#e74c3c" />
+                <Ionicons name="trash-outline" size={getResponsiveSize(20)} color="#e74c3c" />
               </TouchableOpacity>
             </View>
           </View>
@@ -792,10 +793,10 @@ const SocialScreen = ({ navigation }) => {
                     </View>
                     <View style={styles.requestActions}>
                       <TouchableOpacity style={[styles.requestButton, styles.acceptButton]} onPress={() => handleAcceptRequest(item)}>
-                        <Ionicons name="checkmark" size={20} color="#fff" />
+                        <Ionicons name="checkmark" size={getResponsiveSize(20)} color="#fff" />
                       </TouchableOpacity>
                       <TouchableOpacity style={[styles.requestButton, styles.declineButton]} onPress={() => handleDeclineRequest(item.id)}>
-                        <Ionicons name="close" size={20} color="#fff" />
+                        <Ionicons name="close" size={getResponsiveSize(20)} color="#fff" />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -805,7 +806,7 @@ const SocialScreen = ({ navigation }) => {
 
             {/* Sent Requests */}
             {filteredSent.length > 0 && (
-              <View style={{ marginTop: 20 }}>
+              <View style={{ marginTop: getResponsiveSize(20) }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                   <Text style={styles.sectionTitle}>Envoyées ({filteredSent.length})</Text>
                   <TouchableOpacity style={styles.cancelLatestButton} onPress={handleCancelLatestRequest}>
@@ -820,7 +821,7 @@ const SocialScreen = ({ navigation }) => {
                       <Text style={styles.requestDate}>Envoyé {item.date}</Text>
                     </View>
                     <TouchableOpacity style={styles.cancelButton} onPress={() => handleCancelRequest(item.id)}>
-                      <Ionicons name="close-circle-outline" size={24} color="#e74c3c" />
+                      <Ionicons name="close-circle-outline" size={getResponsiveSize(24)} color="#e74c3c" />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -849,7 +850,7 @@ const SocialScreen = ({ navigation }) => {
           {renderSearchBar()}
           
           <View style={styles.contentContainer}>
-            {loading && <ActivityIndicator size="large" color="#f1c40f" style={{ marginTop: 20 }} />}
+            {loading && <ActivityIndicator size="large" color="#f1c40f" style={{ marginTop: getResponsiveSize(20) }} />}
             {!loading && activeTab === 'discussions' && renderDiscussions()}
             {!loading && activeTab === 'friends' && renderFriends()}
             {!loading && activeTab === 'requests' && renderRequests()}
@@ -979,9 +980,9 @@ const SocialScreen = ({ navigation }) => {
           >
             <View style={styles.modalOverlay}>
               <View style={styles.modalContent}>
-                <ActivityIndicator size="large" color="#041c55" style={{ marginBottom: 20 }} />
+                <ActivityIndicator size="large" color="#041c55" style={{ marginBottom: getResponsiveSize(20) }} />
                 <Text style={styles.modalTitle}>En attente de l'adversaire...</Text>
-                <Text style={{ textAlign: 'center', marginBottom: 20, color: '#666' }}>
+                <Text style={{ textAlign: 'center', marginBottom: getResponsiveSize(20), color: '#666' }}>
                   La partie commencera dès que {selectedFriend?.name || 'l\'ami'} acceptera l'invitation.
                 </Text>
                 
@@ -1044,50 +1045,50 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    marginTop: 10,
+    paddingHorizontal: getResponsiveSize(20),
+    paddingVertical: getResponsiveSize(15),
+    marginTop: getResponsiveSize(10),
   },
   coinContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
+    paddingHorizontal: getResponsiveSize(12),
+    paddingVertical: getResponsiveSize(6),
+    borderRadius: getResponsiveSize(20),
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f1c40f',
   },
   coinIcon: {
-    fontSize: 16,
-    marginRight: 5,
+    fontSize: getResponsiveSize(16),
+    marginRight: getResponsiveSize(5),
   },
   coinText: {
     color: '#f1c40f',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
   },
   headerButtons: {
     flexDirection: 'row',
-    gap: 10,
+    gap: getResponsiveSize(10),
   },
   iconButton: {
     backgroundColor: 'rgba(255,255,255,0.2)',
-    padding: 8,
-    borderRadius: 20,
+    padding: getResponsiveSize(8),
+    borderRadius: getResponsiveSize(20),
   },
   
   // Tabs
   tabContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 10,
-    marginBottom: 10,
+    paddingHorizontal: getResponsiveSize(10),
+    marginBottom: getResponsiveSize(10),
   },
   tab: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: getResponsiveSize(10),
     alignItems: 'center',
-    borderBottomWidth: 2,
+    borderBottomWidth: getResponsiveSize(2),
     borderBottomColor: 'transparent',
     flexDirection: 'row',
     justifyContent: 'center',
@@ -1097,7 +1098,7 @@ const styles = StyleSheet.create({
   },
   tabText: {
     color: '#ccc',
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     fontWeight: '600',
   },
   activeTabText: {
@@ -1106,14 +1107,14 @@ const styles = StyleSheet.create({
   },
   badge: {
     backgroundColor: '#e74c3c',
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginLeft: 5,
+    borderRadius: getResponsiveSize(10),
+    paddingHorizontal: getResponsiveSize(6),
+    paddingVertical: getResponsiveSize(2),
+    marginLeft: getResponsiveSize(5),
   },
   badgeText: {
     color: '#fff',
-    fontSize: 10,
+    fontSize: getResponsiveSize(10),
     fontWeight: 'bold',
   },
 
@@ -1122,35 +1123,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.15)',
-    marginHorizontal: 15,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    marginBottom: 15,
-    height: 40,
+    marginHorizontal: getResponsiveSize(15),
+    borderRadius: getResponsiveSize(10),
+    paddingHorizontal: getResponsiveSize(10),
+    marginBottom: getResponsiveSize(15),
+    height: getResponsiveSize(40),
   },
   searchIcon: {
-    marginRight: 10,
+    marginRight: getResponsiveSize(10),
   },
   searchInput: {
     flex: 1,
     color: '#fff',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
   },
 
   // Content
   contentContainer: {
     flex: 1,
-    paddingBottom: 80, // Space for bottom tab navigator
+    paddingBottom: getResponsiveSize(80), // Space for bottom tab navigator
   },
   listContent: {
-    paddingHorizontal: 15,
-    paddingBottom: 20,
+    paddingHorizontal: getResponsiveSize(15),
+    paddingBottom: getResponsiveSize(20),
   },
   emptyText: {
     color: '#aaa',
     textAlign: 'center',
-    marginTop: 50,
-    fontSize: 16,
+    marginTop: getResponsiveSize(50),
+    fontSize: getResponsiveSize(16),
     fontStyle: 'italic',
   },
 
@@ -1158,17 +1159,17 @@ const styles = StyleSheet.create({
   chatItem: {
     flexDirection: 'row',
     backgroundColor: 'rgba(255,255,255,0.05)',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 10,
+    padding: getResponsiveSize(12),
+    borderRadius: getResponsiveSize(12),
+    marginBottom: getResponsiveSize(10),
     alignItems: 'center',
   },
   avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 12,
-    borderWidth: 1,
+    width: getResponsiveSize(50),
+    height: getResponsiveSize(50),
+    borderRadius: getResponsiveSize(25),
+    marginRight: getResponsiveSize(12),
+    borderWidth: getResponsiveSize(1),
     borderColor: 'rgba(255,255,255,0.3)',
   },
   chatInfo: {
@@ -1177,16 +1178,16 @@ const styles = StyleSheet.create({
   chatHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: getResponsiveSize(4),
   },
   chatName: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: 'bold',
   },
   chatTime: {
     color: '#aaa',
-    fontSize: 12,
+    fontSize: getResponsiveSize(12),
   },
   chatFooter: {
     flexDirection: 'row',
@@ -1195,13 +1196,13 @@ const styles = StyleSheet.create({
   },
   lastMessage: {
     color: '#888',
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     flex: 1,
-    marginRight: 10,
+    marginRight: getResponsiveSize(10),
   },
   unreadChatItem: {
     backgroundColor: '#e0f2fe',
-    borderLeftWidth: 4,
+    borderLeftWidth: getResponsiveSize(4),
     borderLeftColor: '#3b82f6',
   },
   unreadChatName: {
@@ -1217,21 +1218,21 @@ const styles = StyleSheet.create({
   },
   unreadBadge: {
     backgroundColor: '#3b82f6',
-    borderRadius: 10,
-    width: 20,
-    height: 20,
+    borderRadius: getResponsiveSize(10),
+    width: getResponsiveSize(20),
+    height: getResponsiveSize(20),
     alignItems: 'center',
     justifyContent: 'center',
   },
   unreadBadgeText: {
     color: '#fff',
-    fontSize: 10,
+    fontSize: getResponsiveSize(10),
     fontWeight: 'bold',
   },
   lastRead: {
     color: '#666',
-    fontSize: 10,
-    marginTop: 4,
+    fontSize: getResponsiveSize(10),
+    marginTop: getResponsiveSize(4),
     alignSelf: 'flex-start',
   },
 
@@ -1239,23 +1240,23 @@ const styles = StyleSheet.create({
   friendItem: {
     flexDirection: 'row',
     backgroundColor: 'rgba(255,255,255,0.08)',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 10,
+    padding: getResponsiveSize(12),
+    borderRadius: getResponsiveSize(12),
+    marginBottom: getResponsiveSize(10),
     alignItems: 'center',
   },
   friendAvatarContainer: {
     position: 'relative',
-    marginRight: 12,
+    marginRight: getResponsiveSize(12),
   },
   statusIndicator: {
     position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 2,
+    bottom: getResponsiveSize(2),
+    right: getResponsiveSize(2),
+    width: getResponsiveSize(12),
+    height: getResponsiveSize(12),
+    borderRadius: getResponsiveSize(6),
+    borderWidth: getResponsiveSize(2),
     borderColor: '#041c55',
   },
   friendInfo: {
@@ -1263,39 +1264,39 @@ const styles = StyleSheet.create({
   },
   friendName: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: 'bold',
   },
   friendActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: getResponsiveSize(8),
   },
   actionButton: {
-    padding: 8,
+    padding: getResponsiveSize(8),
     backgroundColor: 'rgba(0,0,0,0.2)',
-    borderRadius: 20,
+    borderRadius: getResponsiveSize(20),
   },
   lastSeen: {
     color: '#aaa',
-    fontSize: 12,
-    marginTop: 2,
+    fontSize: getResponsiveSize(12),
+    marginTop: getResponsiveSize(2),
   },
 
   // Request Item
   sectionTitle: {
     color: '#f1c40f',
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     fontWeight: 'bold',
-    marginBottom: 10,
-    marginTop: 5,
+    marginBottom: getResponsiveSize(10),
+    marginTop: getResponsiveSize(5),
     textTransform: 'uppercase',
   },
   requestItem: {
     flexDirection: 'row',
     backgroundColor: 'rgba(255,255,255,0.05)',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 10,
+    padding: getResponsiveSize(12),
+    borderRadius: getResponsiveSize(12),
+    marginBottom: getResponsiveSize(10),
     alignItems: 'center',
   },
   requestInfo: {
@@ -1303,21 +1304,21 @@ const styles = StyleSheet.create({
   },
   requestName: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: 'bold',
   },
   requestDate: {
     color: '#aaa',
-    fontSize: 12,
+    fontSize: getResponsiveSize(12),
   },
   requestActions: {
     flexDirection: 'row',
-    gap: 10,
+    gap: getResponsiveSize(10),
   },
   requestButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: getResponsiveSize(36),
+    height: getResponsiveSize(36),
+    borderRadius: getResponsiveSize(18),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1328,18 +1329,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#e74c3c',
   },
   cancelButton: {
-    padding: 5,
+    padding: getResponsiveSize(5),
   },
   cancelLatestButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingVertical: getResponsiveSize(6),
+    paddingHorizontal: getResponsiveSize(10),
     backgroundColor: 'rgba(231, 76, 60, 0.2)',
-    borderRadius: 8,
+    borderRadius: getResponsiveSize(8),
   },
   cancelLatestText: {
     color: '#e74c3c',
     fontWeight: 'bold',
-    fontSize: 12,
+    fontSize: getResponsiveSize(12),
   },
 
   // Modal
@@ -1351,40 +1352,40 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: '#fff',
-    width: '80%',
-    padding: 20,
-    borderRadius: 15,
+    width: isTablet ? '50%' : '80%',
+    padding: getResponsiveSize(20),
+    borderRadius: getResponsiveSize(15),
     alignItems: 'center',
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: getResponsiveSize(18),
     fontWeight: 'bold',
-    marginBottom: 15,
+    marginBottom: getResponsiveSize(15),
     color: '#041c55',
   },
   modalInput: {
     width: '100%',
-    borderWidth: 1,
+    borderWidth: getResponsiveSize(1),
     borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 20,
-    fontSize: 16,
+    borderRadius: getResponsiveSize(8),
+    padding: getResponsiveSize(10),
+    marginBottom: getResponsiveSize(20),
+    fontSize: getResponsiveSize(16),
   },
   modalButtons: {
     flexDirection: 'row',
-    gap: 15,
+    gap: getResponsiveSize(15),
   },
   modalButtonCancel: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+    paddingVertical: getResponsiveSize(10),
+    paddingHorizontal: getResponsiveSize(20),
+    borderRadius: getResponsiveSize(8),
     backgroundColor: '#95a5a6',
   },
   modalButtonConfirm: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+    paddingVertical: getResponsiveSize(10),
+    paddingHorizontal: getResponsiveSize(20),
+    borderRadius: getResponsiveSize(8),
     backgroundColor: '#041c55',
   },
   modalButtonText: {
@@ -1394,24 +1395,24 @@ const styles = StyleSheet.create({
 
   // Invite Config
   label: {
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: 'bold',
     color: '#041c55',
-    marginBottom: 8,
+    marginBottom: getResponsiveSize(8),
     alignSelf: 'flex-start',
   },
   optionsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
+    gap: getResponsiveSize(8),
+    marginBottom: getResponsiveSize(16),
     justifyContent: 'center',
   },
   optionButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
+    paddingVertical: getResponsiveSize(8),
+    paddingHorizontal: getResponsiveSize(12),
+    borderRadius: getResponsiveSize(8),
+    borderWidth: getResponsiveSize(1),
     borderColor: '#041c55',
     backgroundColor: '#fff',
   },
@@ -1426,11 +1427,11 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   inviteDetails: {
-      fontSize: 16,
+      fontSize: getResponsiveSize(16),
       color: '#333',
-      marginBottom: 20,
+      marginBottom: getResponsiveSize(20),
       textAlign: 'center',
-      lineHeight: 24,
+      lineHeight: getResponsiveSize(24),
   },
 });
 

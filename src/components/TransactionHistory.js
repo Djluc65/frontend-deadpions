@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
 import TransactionService from '../services/TransactionService';
+import { getResponsiveSize } from '../utils/responsive';
 
 const TransactionHistory = () => {
     const [transactions, setTransactions] = useState([]);
@@ -60,17 +61,17 @@ const TransactionHistory = () => {
 
 const styles = StyleSheet.create({
     container: {
-        marginTop: 20,
+        marginTop: getResponsiveSize(20),
         backgroundColor: 'rgba(255,255,255,0.1)',
-        borderRadius: 15,
-        padding: 15,
-        maxHeight: 300,
+        borderRadius: getResponsiveSize(15),
+        padding: getResponsiveSize(15),
+        maxHeight: getResponsiveSize(300),
     },
     title: {
         color: '#fff',
-        fontSize: 18,
+        fontSize: getResponsiveSize(18),
         fontWeight: 'bold',
-        marginBottom: 10,
+        marginBottom: getResponsiveSize(10),
     },
     list: {
         width: '100%',
@@ -79,28 +80,28 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 10,
-        borderBottomWidth: 1,
+        paddingVertical: getResponsiveSize(10),
+        borderBottomWidth: getResponsiveSize(1),
         borderBottomColor: 'rgba(255,255,255,0.1)',
     },
     reason: {
         color: '#fff',
-        fontSize: 14,
+        fontSize: getResponsiveSize(14),
         fontWeight: '600',
     },
     date: {
         color: '#ccc',
-        fontSize: 12,
+        fontSize: getResponsiveSize(12),
     },
     amount: {
-        fontSize: 16,
+        fontSize: getResponsiveSize(16),
         fontWeight: 'bold',
     },
     empty: {
         color: '#aaa',
         fontStyle: 'italic',
         textAlign: 'center',
-        marginTop: 10,
+        marginTop: getResponsiveSize(10),
     }
 });
 

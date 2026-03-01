@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Modal, View, Text, TouchableOpacity } from 'react-native';
+import { getResponsiveSize } from '../utils/responsive';
 
 const NextMatchModal = ({
   visible,
@@ -68,7 +69,7 @@ const NextMatchModal = ({
             backgroundColor: 'rgba(0, 0, 0, 0.5)',
             justifyContent: 'center',
             alignItems: 'center',
-            paddingHorizontal: 20
+            paddingHorizontal: getResponsiveSize(20)
           },
           containerStyle
         ]}
@@ -80,14 +81,14 @@ const NextMatchModal = ({
               width: '90%',
               backgroundColor: '#041c55',
               borderColor: '#f1c40f',
-              borderWidth: 2,
+              borderWidth: getResponsiveSize(2),
               shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
+              shadowOffset: { width: 0, height: getResponsiveSize(2) },
               shadowOpacity: 0.25,
-              shadowRadius: 4,
+              shadowRadius: getResponsiveSize(4),
               elevation: 5,
-              padding: 20,
-              borderRadius: 10,
+              padding: getResponsiveSize(20),
+              borderRadius: getResponsiveSize(10),
               alignItems: 'center'
             },
             cardStyle

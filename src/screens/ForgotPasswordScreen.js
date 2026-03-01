@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ImageBackground, Alert, TouchableOpacity, Touch
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import { API_URL } from '../config';
+import { getResponsiveSize } from '../utils/responsive';
 
 const ForgotPasswordScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
@@ -95,24 +96,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
-    padding: 20,
+    padding: getResponsiveSize(20),
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   title: {
-    fontSize: 28,
+    fontSize: getResponsiveSize(28),
     color: '#fff',
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: getResponsiveSize(10),
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     color: '#ccc',
-    marginBottom: 30,
+    marginBottom: getResponsiveSize(30),
     textAlign: 'center',
   },
   backButton: {
-    marginTop: 20,
+    marginTop: getResponsiveSize(20),
     alignItems: 'center',
   },
   backButtonText: {

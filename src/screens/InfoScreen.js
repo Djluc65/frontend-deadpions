@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, ImageBackground, TouchableOpacity, 
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
 import { translations } from '../utils/translations';
+import { getResponsiveSize } from '../utils/responsive';
 
 const InfoScreen = ({ navigation }) => {
   const settings = useSelector(state => state.settings || { language: 'fr' });
@@ -64,10 +65,10 @@ const InfoScreen = ({ navigation }) => {
     >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#fff" />
+          <Ionicons name="arrow-back" size={getResponsiveSize(28)} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Informations</Text>
-        <View style={{ width: 28 }} /> 
+        <View style={{ width: getResponsiveSize(28) }} /> 
       </View>
 
       <ScrollView contentContainerStyle={styles.container}>
@@ -84,7 +85,7 @@ const InfoScreen = ({ navigation }) => {
         {sections.map((section, index) => (
           <View key={index} style={styles.card}>
             <View style={styles.cardHeader}>
-              <Ionicons name={section.icon} size={24} color="#f1c40f" style={styles.icon} />
+              <Ionicons name={section.icon} size={getResponsiveSize(24)} color="#f1c40f" style={styles.icon} />
               <Text style={styles.cardTitle}>{section.title}</Text>
             </View>
             {section.content && (
@@ -93,12 +94,12 @@ const InfoScreen = ({ navigation }) => {
             {section.action && (
               <TouchableOpacity style={styles.actionButton} onPress={section.action}>
                 <Text style={styles.actionButtonText}>{section.actionLabel}</Text>
-                <Ionicons name="chevron-forward" size={16} color="#041c55" />
+                <Ionicons name="chevron-forward" size={getResponsiveSize(16)} color="#041c55" />
               </TouchableOpacity>
             )}
             {section.subActions && section.subActions.map((sub, idx) => (
-              <TouchableOpacity key={idx} style={[styles.actionButton, { marginTop: 10 }]} onPress={() => openLink(sub.link)}>
-                <Ionicons name={sub.icon} size={20} color="#041c55" style={{marginRight: 10}} />
+              <TouchableOpacity key={idx} style={[styles.actionButton, { marginTop: getResponsiveSize(10) }]} onPress={() => openLink(sub.link)}>
+                <Ionicons name={sub.icon} size={getResponsiveSize(20)} color="#041c55" style={{marginRight: getResponsiveSize(10)}} />
                 <Text style={styles.actionButtonText}>{sub.label}</Text>
               </TouchableOpacity>
             ))}
@@ -121,104 +122,104 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingTop: getResponsiveSize(Platform.OS === 'ios' ? 60 : 40),
+    paddingHorizontal: getResponsiveSize(20),
+    paddingBottom: getResponsiveSize(20),
     backgroundColor: 'rgba(4, 28, 85, 0.9)',
-    borderBottomWidth: 1,
+    borderBottomWidth: getResponsiveSize(1),
     borderBottomColor: '#f1c40f',
   },
   backButton: {
-    padding: 5,
+    padding: getResponsiveSize(5),
   },
   headerTitle: {
     color: '#fff',
-    fontSize: 20,
+    fontSize: getResponsiveSize(20),
     fontWeight: 'bold',
   },
   container: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: getResponsiveSize(20),
+    paddingBottom: getResponsiveSize(40),
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: getResponsiveSize(30),
   },
   logo: {
-    width: 100,
-    height: 100,
-    marginBottom: 10,
+    width: getResponsiveSize(100),
+    height: getResponsiveSize(100),
+    marginBottom: getResponsiveSize(10),
   },
   appName: {
     color: '#f1c40f',
-    fontSize: 28,
+    fontSize: getResponsiveSize(28),
     fontWeight: 'bold',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: -1, height: 1 },
-    textShadowRadius: 10,
+    textShadowOffset: { width: getResponsiveSize(-1), height: getResponsiveSize(1) },
+    textShadowRadius: getResponsiveSize(10),
   },
   version: {
     color: '#bdc3c7',
-    fontSize: 14,
-    marginTop: 5,
+    fontSize: getResponsiveSize(14),
+    marginTop: getResponsiveSize(5),
   },
   card: {
     backgroundColor: 'rgba(4, 28, 85, 0.8)',
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 20,
-    borderWidth: 1,
+    borderRadius: getResponsiveSize(15),
+    padding: getResponsiveSize(20),
+    marginBottom: getResponsiveSize(20),
+    borderWidth: getResponsiveSize(1),
     borderColor: 'rgba(241, 196, 15, 0.3)',
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: getResponsiveSize(2),
     },
     shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowRadius: getResponsiveSize(3.84),
     elevation: 5,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: getResponsiveSize(10),
   },
   icon: {
-    marginRight: 10,
+    marginRight: getResponsiveSize(10),
   },
   cardTitle: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: getResponsiveSize(18),
     fontWeight: 'bold',
   },
   cardContent: {
     color: '#ecf0f1',
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: getResponsiveSize(15),
+    lineHeight: getResponsiveSize(22),
   },
   actionButton: {
     backgroundColor: '#f1c40f',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 8,
-    marginTop: 15,
+    paddingVertical: getResponsiveSize(10),
+    paddingHorizontal: getResponsiveSize(15),
+    borderRadius: getResponsiveSize(8),
+    marginTop: getResponsiveSize(15),
     alignSelf: 'flex-start',
   },
   actionButtonText: {
     color: '#041c55',
     fontWeight: 'bold',
-    marginRight: 5,
+    marginRight: getResponsiveSize(5),
   },
   footer: {
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: getResponsiveSize(20),
   },
   copyright: {
     color: '#7f8c8d',
-    fontSize: 12,
+    fontSize: getResponsiveSize(12),
   },
 });
 

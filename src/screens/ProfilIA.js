@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { getResponsiveSize } from '../utils/responsive';
 
 const ProfilIA = ({ difficulte, enReflexion = false, message = '', containerStyle, score }) => {
     const [pulse] = useState(new Animated.Value(1));
@@ -118,7 +119,7 @@ const ProfilIA = ({ difficulte, enReflexion = false, message = '', containerStyl
                     
                     {/* Badge Level */}
                     <View style={[styles.badge, { backgroundColor: config.couleur }]}>
-                        <Ionicons name={config.icon} size={10} color="#fff" />
+                        <Ionicons name={config.icon} size={getResponsiveSize(10)} color="#fff" />
                     </View>
                 </View>
 
@@ -142,8 +143,8 @@ const ProfilIA = ({ difficulte, enReflexion = false, message = '', containerStyl
                 </View>
 
                 {score !== undefined && (
-                    <View style={{ marginLeft: 'auto', paddingLeft: 10, justifyContent: 'center' }}>
-                        <Text style={{ fontSize: 24, fontWeight: 'bold', color: config.couleur }}>
+                    <View style={{ marginLeft: 'auto', paddingLeft: getResponsiveSize(10), justifyContent: 'center' }}>
+                        <Text style={{ fontSize: getResponsiveSize(24), fontWeight: 'bold', color: config.couleur }}>
                             {score}
                         </Text>
                     </View>
@@ -156,16 +157,16 @@ const ProfilIA = ({ difficulte, enReflexion = false, message = '', containerStyl
 const styles = StyleSheet.create({
     container: {
         backgroundColor: '#ffffff',
-        borderRadius: 12,
-        padding: 8,
-        paddingHorizontal: 12,
-        borderWidth: 1,
+        borderRadius: getResponsiveSize(12),
+        padding: getResponsiveSize(8),
+        paddingHorizontal: getResponsiveSize(12),
+        borderWidth: getResponsiveSize(1),
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: getResponsiveSize(2) },
         shadowOpacity: 0.1,
-        shadowRadius: 3,
+        shadowRadius: getResponsiveSize(3),
         elevation: 3,
-        minWidth: 160
+        minWidth: getResponsiveSize(160)
     },
     headerRow: {
         flexDirection: 'row',
@@ -173,43 +174,43 @@ const styles = StyleSheet.create({
     },
     avatarWrapper: {
         position: 'relative',
-        marginRight: 12,
+        marginRight: getResponsiveSize(12),
     },
     avatarContainer: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
+        width: getResponsiveSize(44),
+        height: getResponsiveSize(44),
+        borderRadius: getResponsiveSize(22),
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 1,
+        borderWidth: getResponsiveSize(1),
     },
     avatarEmoji: {
-        fontSize: 24
+        fontSize: getResponsiveSize(24)
     },
     loadingRing: {
         position: 'absolute',
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        borderWidth: 2,
+        width: getResponsiveSize(48),
+        height: getResponsiveSize(48),
+        borderRadius: getResponsiveSize(24),
+        borderWidth: getResponsiveSize(2),
         borderTopColor: 'transparent',
         borderRightColor: 'transparent',
     },
     badge: {
         position: 'absolute',
-        bottom: -2,
-        right: -2,
-        width: 16,
-        height: 16,
-        borderRadius: 8,
+        bottom: getResponsiveSize(-2),
+        right: getResponsiveSize(-2),
+        width: getResponsiveSize(16),
+        height: getResponsiveSize(16),
+        borderRadius: getResponsiveSize(8),
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 1,
+        borderWidth: getResponsiveSize(1),
         borderColor: '#fff'
     },
     badgeText: {
         color: '#fff',
-        fontSize: 10,
+        fontSize: getResponsiveSize(10),
         fontWeight: 'bold'
     },
     infoContainer: {
@@ -217,21 +218,21 @@ const styles = StyleSheet.create({
         justifyContent: 'center'
     },
     nom: {
-        fontSize: 14,
+        fontSize: getResponsiveSize(14),
         fontWeight: 'bold',
-        marginBottom: 2
+        marginBottom: getResponsiveSize(2)
     },
     statusRow: {
         flexDirection: 'row',
         alignItems: 'center'
     },
     statusText: {
-        fontSize: 12,
+        fontSize: getResponsiveSize(12),
         fontWeight: '600',
         fontStyle: 'italic'
     },
     description: {
-        fontSize: 12,
+        fontSize: getResponsiveSize(12),
         color: '#6b7280'
     }
 });

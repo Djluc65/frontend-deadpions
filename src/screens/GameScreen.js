@@ -27,20 +27,25 @@ import PlayerProfileCard from '../components/PlayerProfileCard';
 import CustomAlert from '../components/CustomAlert';
 import VersusAnimation from '../components/VersusAnimation';
 import NextMatchModal from '../components/NextMatchModal';
+import FlyingEmoji from '../components/FlyingEmoji';
+import PionSVG from '../components/PionSVG';
 
-const { width, height } = Dimensions.get('window');
+import { isTablet, getResponsiveSize, SCREEN_WIDTH, SCREEN_HEIGHT } from '../utils/responsive';
+
+const width = SCREEN_WIDTH;
+const height = SCREEN_HEIGHT;
 
 // Configuration du plateau
 const COLS = 13; // A à M
 const ROWS = 19; // 1 à 19
-const PADDING_LEFT = 35; // Espace pour les numéros
-const PADDING_TOP = 35; // Espace pour les lettres
-const PADDING_RIGHT = 35;
-const PADDING_BOTTOM = 150;
+const PADDING_LEFT = getResponsiveSize(35); // Espace pour les numéros
+const PADDING_TOP = getResponsiveSize(35); // Espace pour les lettres
+const PADDING_RIGHT = getResponsiveSize(35);
+const PADDING_BOTTOM = getResponsiveSize(150);
 
 // Calcul de la taille des cellules pour tenir en largeur
 const AVAILABLE_WIDTH = width - PADDING_LEFT - PADDING_RIGHT;
-const CELL_SIZE = (AVAILABLE_WIDTH / (COLS - 1)) + 5; // +5px comme demandé
+const CELL_SIZE = (AVAILABLE_WIDTH / (COLS - 1)) + getResponsiveSize(5); // +5px (responsive) comme demandé
 
 const BOARD_WIDTH = Math.max(width, PADDING_LEFT + (COLS - 1) * CELL_SIZE + PADDING_RIGHT);
 const BOARD_HEIGHT = PADDING_TOP + (ROWS - 1) * CELL_SIZE + PADDING_BOTTOM;
@@ -82,7 +87,7 @@ const getCouleurChrono = (tempsRestant, tempsTotal) => {
 
 const AnimatedG = Animated.createAnimatedComponent(G);
 
-const Pawn = ({ color, x, y, r, opacity = 1, onPress }) => {
+const Pawn = ({ color, x, y, r, opacity = 1, onPress, skin }) => {
     const scale = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -93,6 +98,22 @@ const Pawn = ({ color, x, y, r, opacity = 1, onPress }) => {
             useNativeDriver: true,
         }).start();
     }, []);
+
+    if (skin) {
+        // Map 'black' -> 'red', 'white' -> 'blue' for PionSVG colors
+        const displayColor = color === 'black' ? 'red' : 'blue';
+        return (
+            <AnimatedG 
+                style={{ transform: [{ translateX: x }, { translateY: y }, { scale }] }}
+                opacity={opacity}
+                onPress={onPress}
+            >
+                <G x={-r} y={-r}>
+                   <PionSVG type={skin} color={displayColor} size={r * 2} />
+                </G>
+            </AnimatedG>
+        );
+    }
 
     if (color === 'black') {
         return (
@@ -244,7 +265,7 @@ const GameScreen = ({ navigation, route }) => {
       ? (opponent?.pseudo || route.params?.opponent?.pseudo || 'Adversaire')
       : ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite)
         ? (playersData?.white?.pseudo || 'En attente...')
-        : (playersData?.black?.pseudo || 'Joueur 2'),
+        : (playersData?.black?.pseudo || ((mode === 'online_custom' || mode === 'live' || mode === 'spectator') ? 'En attente...' : 'Joueur 2')),
     avatar: mode === 'online'
       ? (opponent?.avatar || route.params?.opponent?.avatar)
       : ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite)
@@ -273,6 +294,18 @@ const GameScreen = ({ navigation, route }) => {
         ? (getPlayerId(playersData?.black)?.toString() === currentUserId?.toString() ? 'white' : 'black')
         : (mode === 'spectator' || mode === 'online_custom' || mode === 'live') ? (isLocalPlayerWhite ? 'black' : 'white') : 'white'
   };
+
+  const getSkin = (stoneColor) => {
+    if (player1.color === stoneColor) {
+      return user?.pawnSkin;
+    }
+    if (player2.color === stoneColor) {
+      const opponentData = stoneColor === 'black' ? playersData?.black : playersData?.white;
+      return opponentData?.pawnSkin;
+    }
+    return null;
+  };
+
 
   // Custom Alert State
   const [customAlert, setCustomAlert] = useState({ visible: false, title: '', message: '', buttons: [] });
@@ -402,6 +435,40 @@ const GameScreen = ({ navigation, route }) => {
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [showGameMenu, setShowGameMenu] = useState(false);
   const [activeModal, setActiveModal] = useState(null); // 'chat', 'emoji', null
+  const [flyingEmojis, setFlyingEmojis] = useState([]);
+
+  const triggerFlyingEmoji = (emoji, senderId) => {
+    // Only in PVP modes (Online, Live, Spectator)
+    if (mode !== 'online' && mode !== 'online_custom' && mode !== 'live' && mode !== 'spectator') return;
+
+    // Determine positions
+    // Player 1 (Left) - Player 2 (Right)
+    const player1Pos = { x: SCREEN_WIDTH * 0.25, y: getResponsiveSize(100) };
+    const player2Pos = { x: SCREEN_WIDTH * 0.75, y: getResponsiveSize(100) };
+    
+    let start, end;
+    
+    // Check if sender is Player 1
+    // Note: player1.id might be string or number
+    if (senderId?.toString() === player1.id?.toString()) {
+        start = player1Pos;
+        end = player2Pos;
+    } else if (senderId?.toString() === player2.id?.toString()) {
+        start = player2Pos;
+        end = player1Pos;
+    } else {
+        // Fallback or ignore (e.g. spectator chat)
+        return;
+    }
+    
+    const id = Date.now().toString() + Math.random().toString(36).substr(2, 5);
+    setFlyingEmojis(prev => [...prev, { id, emoji, start, end }]);
+    
+    // Cleanup after animation (1.5s + buffer)
+    setTimeout(() => {
+        setFlyingEmojis(prev => prev.filter(e => e.id !== id));
+    }, 2000);
+  };
   const [chatMessages, setChatMessages] = useState([]);
   const [bubbles, setBubbles] = useState({ player1: null, player2: null });
   const [rematchRequested, setRematchRequested] = useState(false);
@@ -905,6 +972,9 @@ const GameScreen = ({ navigation, route }) => {
     };
 
     const handleMessageEmoji = (data) => {
+        // Trigger Flying Emoji
+        triggerFlyingEmoji(data.emoji, data.senderId);
+
         const msgId = data.id || Date.now().toString() + Math.random().toString(36).substr(2, 5);
         
         const nouveauMessage = {
@@ -1288,6 +1358,11 @@ const GameScreen = ({ navigation, route }) => {
       };
       socket.emit(socketMsg.type, msgToSend);
       
+      // Trigger Flying Emoji if it's an emoji
+      if (socketMsg.type === 'MESSAGE_EMOJI') {
+          triggerFlyingEmoji(socketMsg.emoji, user?._id || user?.id);
+      }
+
       const content = socketMsg.type === 'MESSAGE_TEXTE' ? socketMsg.message : socketMsg.emoji;
       const type = socketMsg.type === 'MESSAGE_TEXTE' ? 'text' : 'emoji';
       
@@ -1417,9 +1492,9 @@ const GameScreen = ({ navigation, route }) => {
                   <Text style={styles.modalPseudo}>Inviter un joueur</Text>
                   
                   {/* Onglets */}
-                  <View style={{flexDirection: 'row', marginBottom: 15, borderBottomWidth: 1, borderBottomColor: '#333'}}>
+                  <View style={{flexDirection: 'row', marginBottom: getResponsiveSize(15), borderBottomWidth: 1, borderBottomColor: '#333'}}>
                       <TouchableOpacity 
-                          style={{flex: 1, padding: 10, alignItems: 'center', borderBottomWidth: inviteMode === 'friends' ? 2 : 0, borderBottomColor: '#f1c40f'}}
+                          style={{flex: 1, padding: getResponsiveSize(10), alignItems: 'center', borderBottomWidth: inviteMode === 'friends' ? 2 : 0, borderBottomColor: '#f1c40f'}}
                           onPress={() => {
                               playButtonSound();
                               setInviteMode('friends');
@@ -1428,7 +1503,7 @@ const GameScreen = ({ navigation, route }) => {
                           <Text style={{color: inviteMode === 'friends' ? '#f1c40f' : '#ccc', fontWeight: 'bold'}}>Amis</Text>
                       </TouchableOpacity>
                       <TouchableOpacity 
-                          style={{flex: 1, padding: 10, alignItems: 'center', borderBottomWidth: inviteMode === 'online' ? 2 : 0, borderBottomColor: '#f1c40f'}}
+                          style={{flex: 1, padding: getResponsiveSize(10), alignItems: 'center', borderBottomWidth: inviteMode === 'online' ? 2 : 0, borderBottomColor: '#f1c40f'}}
                           onPress={() => {
                               playButtonSound();
                               setInviteMode('online');
@@ -1438,7 +1513,7 @@ const GameScreen = ({ navigation, route }) => {
                       </TouchableOpacity>
                   </View>
 
-                  <Text style={{color:'#ccc', marginBottom: 10}}>
+                  <Text style={{color:'#ccc', marginBottom: getResponsiveSize(10)}}>
                       {inviteMode === 'friends' ? 'Amis en ligne :' : 'Tous les joueurs en ligne :'}
                   </Text>
                   
@@ -1458,7 +1533,7 @@ const GameScreen = ({ navigation, route }) => {
                                   style={{
                                       flexDirection: 'row', 
                                       alignItems: 'center', 
-                                      padding: 10, 
+                                      padding: getResponsiveSize(10), 
                                       borderBottomWidth: 1, 
                                       borderBottomColor: '#333',
                                       width: '100%'
@@ -1471,23 +1546,23 @@ const GameScreen = ({ navigation, route }) => {
                                   <View style={{position: 'relative'}}>
                                      <Image 
                                         source={item.avatar ? getAvatarSource(item.avatar) : { uri: 'https://i.pravatar.cc/150' }} 
-                                        style={{width: 40, height: 40, borderRadius: 20, marginRight: 10}} 
+                                        style={{width: getResponsiveSize(40), height: getResponsiveSize(40), borderRadius: getResponsiveSize(20), marginRight: getResponsiveSize(10)}} 
                                      />
                                      <View style={{
                                          position: 'absolute', 
                                          bottom: 0, 
-                                         right: 10, 
-                                         width: 10, 
-                                         height: 10, 
-                                         borderRadius: 5, 
+                                         right: getResponsiveSize(10), 
+                                         width: getResponsiveSize(10), 
+                                         height: getResponsiveSize(10), 
+                                         borderRadius: getResponsiveSize(5), 
                                          backgroundColor: '#2ecc71',
                                          borderWidth: 1,
                                          borderColor: '#000'
                                      }} />
                                   </View>
                                   <View style={{flex: 1}}>
-                                      <Text style={{color: '#fff', fontSize: 16}}>{item.pseudo}</Text>
-                                      {item.country && <Text style={{color: '#888', fontSize: 12}}>{item.country}</Text>}
+                                      <Text style={{color: '#fff', fontSize: getResponsiveSize(16)}}>{item.pseudo}</Text>
+                                      {item.country && <Text style={{color: '#888', fontSize: getResponsiveSize(12)}}>{item.country}</Text>}
                                   </View>
                                   <Ionicons name="paper-plane-outline" size={24} color="#f1c40f" />
                               </TouchableOpacity>
@@ -1612,7 +1687,7 @@ const GameScreen = ({ navigation, route }) => {
                  )}
                  <Text style={styles.modalPseudo}>{selectedProfile?.pseudo}</Text>
                  {selectedProfile?.level && (
-                    <Text style={{color: '#f59e0b', fontSize: 16, marginBottom: 5, fontWeight: 'bold'}}>
+                    <Text style={{color: '#f59e0b', fontSize: getResponsiveSize(16), marginBottom: 5, fontWeight: 'bold'}}>
                         Niveau {selectedProfile.level}
                     </Text>
                  )}
@@ -1620,7 +1695,7 @@ const GameScreen = ({ navigation, route }) => {
                  
                  {(mode === 'online' || mode === 'live' || mode === 'spectator') && selectedProfile?.id && selectedProfile.id !== (user?._id || user?.id) && (
                      <TouchableOpacity style={styles.friendButton} onPress={() => { playButtonSound(); handleSendFriendRequest(); }}>
-                        <Ionicons name="person-add" size={20} color="white" style={{marginRight: 8}} />
+                        <Ionicons name="person-add" size={getResponsiveSize(20)} color="white" style={{marginRight: getResponsiveSize(8)}} />
                         <Text style={styles.friendButtonText}>Demander en ami</Text>
                      </TouchableOpacity>
                  )}
@@ -1648,13 +1723,13 @@ const GameScreen = ({ navigation, route }) => {
           <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 999 }]}>
               <View style={{ alignItems: 'center', justifyContent: 'center' }}>
                   <ActivityIndicator size="large" color="#f1c40f" style={{ marginBottom: 20 }} />
-                  <Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold', marginBottom: 10 }}>En attente d'un adversaire...</Text>
-                  <Text style={{ color: '#ccc', fontSize: 16, textAlign: 'center', maxWidth: '80%', marginBottom: 30 }}>
+                  <Text style={{ color: '#fff', fontSize: getResponsiveSize(20), fontWeight: 'bold', marginBottom: 10 }}>En attente d'un adversaire...</Text>
+                  <Text style={{ color: '#ccc', fontSize: getResponsiveSize(16), textAlign: 'center', maxWidth: '80%', marginBottom: 30 }}>
                       Invitez un ami ou attendez qu'un joueur rejoigne la salle.
                   </Text>
                   
                   <TouchableOpacity 
-                      style={[styles.closeButton, { backgroundColor: '#e74c3c', width: 200 }]}
+                      style={[styles.closeButton, { backgroundColor: '#e74c3c', width: getResponsiveSize(200) }]}
                       onPress={() => {
                            playButtonSound();
                            if (params.gameId) {
@@ -1684,14 +1759,14 @@ const GameScreen = ({ navigation, route }) => {
             style={[
                 styles.playerContainer, 
                 isCurrent && styles.activePlayer,
-                { height: 100 }
+                { height: getResponsiveSize(100) }
             ]}
             activeOpacity={1}
         >
              {isCurrent && !gameOver && (
                 <Animated.View style={{ 
                     position: 'absolute', 
-                    top: -25, 
+                    top: getResponsiveSize(-25), 
                     left: 0, 
                     right: 0, 
                     alignItems: 'center',
@@ -1710,8 +1785,8 @@ const GameScreen = ({ navigation, route }) => {
             <Text style={[
                 styles.playerName, 
                 { 
-                    bottom: 35, 
-                    right: 25, 
+                    bottom: getResponsiveSize(35), 
+                    right: getResponsiveSize(25), 
                     marginTop: 0, 
                     marginBottom: 5, 
                     width: '100%', 
@@ -1722,33 +1797,33 @@ const GameScreen = ({ navigation, route }) => {
             <View style={{ marginTop: 0, alignItems: 'center', justifyContent: 'center' }}>
                 {player.color === 'black' ? (
                     <View style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: 10,
+                        width: getResponsiveSize(20),
+                        height: getResponsiveSize(20),
+                        borderRadius: getResponsiveSize(10),
                         borderWidth: 2,
                         borderColor: '#FF0000',
                         backgroundColor: "#ffffffff", 
                         justifyContent: 'center',
                         alignItems: 'center',
-                        left: 42,
-                        top: 3,
+                        left: getResponsiveSize(42),
+                        top: getResponsiveSize(3),
                     }}>
-                        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF0000' }} />
+                        <View style={{ width: getResponsiveSize(8), height: getResponsiveSize(8), borderRadius: getResponsiveSize(4), backgroundColor: '#FF0000' }} />
                     </View>
                 ) : (
                     <View style={{ 
-                        width: 22, 
-                        height: 22, 
-                        borderRadius: 11,
+                        width: getResponsiveSize(22), 
+                        height: getResponsiveSize(22), 
+                        borderRadius: getResponsiveSize(11),
                         borderWidth: 1,
                         borderColor: "#0000FF",
                         justifyContent: 'center', 
                         alignItems: 'center', 
                         backgroundColor: "#ffffffff", 
-                        left: 42,
-                        top: 3,
+                        left: getResponsiveSize(42),
+                        top: getResponsiveSize(3),
                     }}>
-                        <Ionicons name="close" size={20} color="#0000FF"  />
+                        <Ionicons name="close" size={getResponsiveSize(20)} color="#0000FF"  />
                     </View>
                 )}
             </View>
@@ -1756,9 +1831,9 @@ const GameScreen = ({ navigation, route }) => {
             {timeControl && (
                 <View style={{ position: 'absolute', bottom: 5, width: '100%', alignItems: 'center' }}>
                     <View style={[styles.chronoPrincipal, { bottom: 0, marginTop: 0 }]}>
-                        <Text style={[styles.chronoPrincipalTexte, { color: getCouleurChrono(isCurrent ? timeLeft : timeControl, timeControl), fontSize: 12, marginBottom: 2 }]}>
-                            ⏱️ {formatTemps(isCurrent ? timeLeft : timeControl)}
-                        </Text>
+                    <Text style={[styles.chronoPrincipalTexte, { color: getCouleurChrono(isCurrent ? timeLeft : timeControl, timeControl), fontSize: getResponsiveSize(12), marginBottom: 2 }]}>
+                        ⏱️ {formatTemps(isCurrent ? timeLeft : timeControl)}
+                    </Text>
                         <View style={[styles.progressBar, { height: 4 }]}>
                             <View style={[
                                 styles.progressFill, 
@@ -1777,19 +1852,19 @@ const GameScreen = ({ navigation, route }) => {
                                     <View 
                                         key={i} 
                                         style={{
-                                            width: 8, 
-                                            height: 8, 
-                                            borderRadius: 4, 
+                                            width: getResponsiveSize(8), 
+                                            height: getResponsiveSize(8), 
+                                            borderRadius: getResponsiveSize(4), 
                                             backgroundColor: i < (timeouts[player.color] || 0) ? '#FFD700' : '#4ade80', // Yellow : Green
-                                            marginHorizontal: 2,
-                                            borderWidth: 0.5,
+                                            marginHorizontal: getResponsiveSize(2),
+                                            borderWidth: getResponsiveSize(0.5),
                                             borderColor: 'rgba(0,0,0,0.2)'
                                         }} 
                                     />
                                 ))}
                               </View>
                               {(localConfig?.mode === 'tournament' || tournamentTotalGames > 1) && (
-                                  <Text style={{ color: '#FFD700', fontSize: 10, fontWeight: 'bold', marginTop: 3 }}>
+                                  <Text style={{ color: '#FFD700', fontSize: getResponsiveSize(10), fontWeight: 'bold', marginTop: 3 }}>
                                       🏆 {tournamentScore[player.color] || 0}
                                   </Text>
                               )}
@@ -1805,7 +1880,7 @@ const GameScreen = ({ navigation, route }) => {
       style={[
           styles.playerContainer, 
           isCurrent && styles.activePlayer,
-           (mode === 'online' || mode === 'online_custom' || mode === 'live' || mode === 'spectator' || mode === 'ai' || mode === 'local') && { height: 132 }
+           (mode === 'online' || mode === 'online_custom' || mode === 'live' || mode === 'spectator' || mode === 'ai' || mode === 'local') && { height: getResponsiveSize(132) }
           // mode === 'online' && { 
           //     height: 180, // Increased height for better spacing
           //     justifyContent: 'flex-start', 
@@ -1850,8 +1925,8 @@ const GameScreen = ({ navigation, route }) => {
       <Text style={[
           styles.playerName,
           (mode === 'online' || mode === 'online_custom' || mode === 'live' || mode === 'spectator' || mode === 'ai' || mode === 'local') && { 
-              bottom: 35, 
-              right: 25, 
+              bottom: getResponsiveSize(35), 
+              right: getResponsiveSize(25), 
               marginTop: 0,
               marginBottom: 5,
               width: '100%',
@@ -1864,8 +1939,8 @@ const GameScreen = ({ navigation, route }) => {
               styles.playerCoinsContainer,
               { 
                   position: 'relative', 
-                  bottom: 35, 
-                  right: 25, 
+                  bottom: getResponsiveSize(35), 
+                  right: getResponsiveSize(25), 
                   marginTop: 0, 
                   marginBottom: 5,
                   width: '100%' 
@@ -1874,7 +1949,7 @@ const GameScreen = ({ navigation, route }) => {
               {player?.coins != null && (
                   <Text style={styles.playerCoinsText}>💰 {Number(player.coins).toLocaleString()}</Text>
               )}
-              <Text style={[styles.playerCoinsText, { fontSize: 11, color: '#e5e7eb', marginTop: 2 }]}>
+              <Text style={[styles.playerCoinsText, { fontSize: getResponsiveSize(11), color: '#e5e7eb', marginTop: 2 }]}>
                   Coups: {board.filter(p => p.player === player.color).length}
               </Text>
           </View>
@@ -1884,38 +1959,38 @@ const GameScreen = ({ navigation, route }) => {
       <View style={{ marginTop: 0, alignItems: 'center', justifyContent: 'center' }}>
           {player.color === 'black' ? (
               <View style={{
-                width: 20,
-                height: 20,
-                borderRadius: 10,
+                width: getResponsiveSize(20),
+                height: getResponsiveSize(20),
+                borderRadius: getResponsiveSize(10),
                 borderWidth: 2,
                 borderColor: '#FF0000',
                 backgroundColor: "#ffffffff", 
                 justifyContent: 'center',
                 alignItems: 'center',
-                left: 42,
-                top: 3,
+                left: getResponsiveSize(42),
+                top: getResponsiveSize(3),
               }}>
                   <View style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: 4,
+                      width: getResponsiveSize(8),
+                      height: getResponsiveSize(8),
+                      borderRadius: getResponsiveSize(4),
                       backgroundColor: '#FF0000',
                   }} />
               </View>
           ) : (
               <View style={{ 
-                width: 22, 
-                height: 22, 
-                borderRadius: 11,
+                width: getResponsiveSize(22), 
+                height: getResponsiveSize(22), 
+                borderRadius: getResponsiveSize(11),
                 borderWidth: 1,
                 borderColor: "#0000FF",
                 justifyContent: 'center', 
                 alignItems: 'center', 
                 backgroundColor: "#ffffffff", 
-                left: 42,
-                top: 3,
+                left: getResponsiveSize(42),
+                top: getResponsiveSize(3),
                 }}>
-                  <Ionicons name="close" size={20} color="#0000FF"  />
+                  <Ionicons name="close" size={getResponsiveSize(20)} color="#0000FF"  />
               </View>
           )}
       </View>
@@ -1948,17 +2023,17 @@ const GameScreen = ({ navigation, route }) => {
                   <View style={{ flexDirection: 'row' }}>
                     {[...Array(5)].map((_, i) => (
                         <View 
-                            key={i} 
-                            style={{
-                                width: 8, 
-                                height: 8, 
-                                borderRadius: 4, 
-                                backgroundColor: i < (timeouts[player.color] || 0) ? '#FFD700' : '#4ade80', // Yellow : Green
-                                marginHorizontal: 2,
-                                borderWidth: 0.5,
-                                borderColor: 'rgba(0,0,0,0.2)'
-                            }} 
-                        />
+                                        key={i} 
+                                        style={{
+                                            width: getResponsiveSize(8), 
+                                            height: getResponsiveSize(8), 
+                                            borderRadius: getResponsiveSize(4), 
+                                            backgroundColor: i < (timeouts[player.color] || 0) ? '#FFD700' : '#4ade80', // Yellow : Green
+                                            marginHorizontal: getResponsiveSize(2),
+                                            borderWidth: getResponsiveSize(0.5),
+                                            borderColor: 'rgba(0,0,0,0.2)'
+                                        }} 
+                                    />
                     ))}
                   </View>
               </View>
@@ -3211,10 +3286,12 @@ const GameScreen = ({ navigation, route }) => {
   // Minuteur multi‑modes (Local, IA, En ligne / Live / Spectateur)
   useEffect(() => {
     const validModes = ['local', 'ai', 'online', 'online_custom', 'live', 'spectator'];
-    if (!validModes.includes(mode) || !timeControl || gameOver || waitingForNextRound || !currentPlayer) return;
+    // Ajout de la vérification isWaitingState pour ne pas démarrer le timer dans la salle d'attente
+    if (!validModes.includes(mode) || !timeControl || gameOver || waitingForNextRound || !currentPlayer || isWaitingState) return;
 
-    // Pour les modes réseau, attendre que les joueurs soient chargés
-    if ((mode === 'online' || mode === 'online_custom' || mode === 'live' || mode === 'spectator') && !playersData) return;
+    // Pour les modes réseau, attendre que les 2 joueurs soient présents
+    if ((mode === 'online' || mode === 'online_custom' || mode === 'live' || mode === 'spectator') && 
+        (!playersData || !playersData.white || !playersData.black)) return;
 
     timeoutHandledRef.current = false;
 
@@ -3248,6 +3325,7 @@ const GameScreen = ({ navigation, route }) => {
     gameOver,
     waitingForNextRound,
     currentPlayer,
+    isWaitingState,
     playersData,
     handleLocalTimeout,
     handleAiTimeout,
@@ -3365,25 +3443,25 @@ const GameScreen = ({ navigation, route }) => {
             pointerEvents="box-none"
           >
               <View 
-                style={[styles.resultCard, (type === 'online' || type === 'live' || type === 'ia') && { padding: 16, width: '90%' }]}
+                style={[styles.resultCard, (type === 'online' || type === 'live' || type === 'ia') && { padding: getResponsiveSize(16), width: '90%' }]}
                 pointerEvents={mode === 'spectator' ? 'none' : 'auto'}
               >
-              <Text style={[styles.emojiResult, (type === 'online' || type === 'live' || type === 'ia' || type === 'ai') && { fontSize: 40, marginBottom: 5 }]}>
+              <Text style={[styles.emojiResult, (type === 'online' || type === 'live' || type === 'ia' || type === 'ai') && { fontSize: getResponsiveSize(40), marginBottom: getResponsiveSize(5) }]}>
                 {isDraw || isTournamentDraw ? '🤝' : (victoire ? '🏆' : '😢')}
               </Text>
-              <Text style={[styles.titreResult, (type === 'online' || type === 'live' || type === 'ia' || type === 'ai') && { fontSize: 24, marginBottom: 5 }]}>
+              <Text style={[styles.titreResult, (type === 'online' || type === 'live' || type === 'ia' || type === 'ai') && { fontSize: getResponsiveSize(24), marginBottom: getResponsiveSize(5) }]}>
                 {isDraw || isTournamentDraw ? 'MATCH NUL' : (victoire ? 'VICTOIRE !' : 'DÉFAITE')}
               </Text>
               
               {(type === 'live' || type === 'online' || type === 'online_custom' || type === 'ai' || type === 'ia') && resultData?.isTournament && (
-                  <Text style={{ color: '#f1c40f', fontWeight: 'bold', textAlign: 'center', marginBottom: 8 }}>
+                  <Text style={{ color: '#f1c40f', fontWeight: 'bold', textAlign: 'center', marginBottom: getResponsiveSize(8) }}>
                       Score: {(tournamentScore?.black ?? 0)} - {(tournamentScore?.white ?? 0)}
                   </Text>
               )}
               
               {(type === 'online' || type === 'live' || type === 'ia' || type === 'ai') && (
                   <>
-                      <Text style={[styles.adversaireResult, { marginBottom: 10 }]}>Contre {adversaire?.pseudo || 'Adversaire'}</Text>
+                      <Text style={[styles.adversaireResult, { marginBottom: getResponsiveSize(10) }]}>Contre {adversaire?.pseudo || 'Adversaire'}</Text>
                           
                           {raisonVictoire === 'timeout_adverse' && (
                               <View style={styles.raisonContainer}>
@@ -3404,20 +3482,20 @@ const GameScreen = ({ navigation, route }) => {
                           )}
 
                           {(isDraw || isTournamentDraw) ? (
-                              <View style={[styles.gainsContainer, { padding: 10, marginBottom: 10, backgroundColor: '#34495e' }]}>
+                              <View style={[styles.gainsContainer, { padding: getResponsiveSize(10), marginBottom: getResponsiveSize(10), backgroundColor: '#34495e' }]}>
                                   <Text style={styles.gainsLabel}>Mise remboursée :</Text>
-                                  <Text style={[styles.gainsMontant, { fontSize: 24, color: '#ecf0f1' }]}>🪙 {Number(gains ?? 0).toLocaleString()}</Text>
+                                  <Text style={[styles.gainsMontant, { fontSize: getResponsiveSize(24), color: '#ecf0f1' }]}>🪙 {Number(gains ?? 0).toLocaleString()}</Text>
                               </View>
                           ) : (
                               victoire ? (
-                                  <View style={[styles.gainsContainer, { padding: 10, marginBottom: 10 }]}>
+                                  <View style={[styles.gainsContainer, { padding: getResponsiveSize(10), marginBottom: getResponsiveSize(10) }]}>
                                       <Text style={styles.gainsLabel}>Vous avez gagné :</Text>
-                                      <Text style={[styles.gainsMontant, { fontSize: 24 }]}>+🪙 {Number(gains ?? 0).toLocaleString()}</Text>
+                                      <Text style={[styles.gainsMontant, { fontSize: getResponsiveSize(24) }]}>+🪙 {Number(gains ?? 0).toLocaleString()}</Text>
                                   </View>
                               ) : (
-                                  <View style={[styles.perteContainer, { padding: 10, marginBottom: 10 }]}>
+                                  <View style={[styles.perteContainer, { padding: getResponsiveSize(10), marginBottom: getResponsiveSize(10) }]}>
                                       <Text style={styles.perteLabel}>Vous avez perdu :</Text>
-                                      <Text style={[styles.perteMontant, { fontSize: 24 }]}>-🪙 {Number(montantPari ?? 0).toLocaleString()}</Text>
+                                      <Text style={[styles.perteMontant, { fontSize: getResponsiveSize(24) }]}>-🪙 {Number(montantPari ?? 0).toLocaleString()}</Text>
                                   </View>
                               )
                           )}
@@ -3442,7 +3520,7 @@ const GameScreen = ({ navigation, route }) => {
                        </Text>
                   )}
 
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 12 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: getResponsiveSize(12) }}>
                       {type === 'online' && mode !== 'spectator' && (
                         <TouchableOpacity 
                             style={[
@@ -3639,7 +3717,7 @@ const GameScreen = ({ navigation, route }) => {
     // Case 1: Live, Online, AI, Local -> Enhanced Menu
     if (mode === 'live' || mode === 'online_custom' || mode === 'online' || mode === 'ai' || mode === 'ia' || mode === 'local') {
         const isLocal = mode === 'local';
-        const fabStyle = isLocal ? { left: undefined, right: 20 } : {};
+        const fabStyle = isLocal ? { left: undefined, right: getResponsiveSize(20) } : {};
         
         // Identify if current user is the Creator of the Live Room
         const isLiveCreator = mode === 'live' && (params.roomConfig?.createur?._id || params.roomConfig?.createur?.id) === (user?._id || user?.id);
@@ -3649,7 +3727,7 @@ const GameScreen = ({ navigation, route }) => {
                 {showGameMenu && (
                     <View style={[styles.liveMenuContainer, isLocal ? { left: undefined, right: 0, alignItems: 'flex-end' } : {}]}>
                         <TouchableOpacity 
-                            style={[styles.menuFab, fabStyle, { bottom: 170, backgroundColor: '#e74c3c' }]} 
+                            style={[styles.menuFab, fabStyle, { bottom: getResponsiveSize(170), backgroundColor: '#e74c3c' }]} 
                             onPress={() => {
                                 playButtonSound();
                                 setShowGameMenu(false);
@@ -3699,7 +3777,7 @@ const GameScreen = ({ navigation, route }) => {
                         </TouchableOpacity>
 
                         <TouchableOpacity 
-                            style={[styles.menuFab, fabStyle, { bottom: 100, backgroundColor: isSoundEnabled ? '#3b82f6' : '#95a5a6' }]} 
+                            style={[styles.menuFab, fabStyle, { bottom: getResponsiveSize(100), backgroundColor: isSoundEnabled ? '#3b82f6' : '#95a5a6' }]} 
                             onPress={() => {
                                 playButtonSound();
                                 dispatch(toggleSound());
@@ -3789,15 +3867,15 @@ const GameScreen = ({ navigation, route }) => {
              <View style={[styles.headerIA, { justifyContent: localConfig?.mode === 'tournament' ? 'space-between' : 'flex-end', alignItems: 'center' }]}>
                  {localConfig?.mode === 'tournament' && (
                      <View style={{ backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 }}>
-                         <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16, textAlign: 'center' }}>
+                         <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: getResponsiveSize(16), textAlign: 'center' }}>
                              Match {tournamentGameNumber} / {tournamentTotalGames}
                          </Text>
                          <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 2 }}>
-                             <Text style={{ color: '#f1c40f', fontSize: 12, fontWeight: 'bold' }}>
+                             <Text style={{ color: '#f1c40f', fontSize: getResponsiveSize(12), fontWeight: 'bold' }}>
                                  {tournamentScore[player1.color] || 0}
                              </Text>
-                             <Text style={{ color: '#fff', fontSize: 12, marginHorizontal: 4 }}>-</Text>
-                             <Text style={{ color: '#f1c40f', fontSize: 12, fontWeight: 'bold' }}>
+                             <Text style={{ color: '#fff', fontSize: getResponsiveSize(12), marginHorizontal: 4 }}>-</Text>
+                             <Text style={{ color: '#f1c40f', fontSize: getResponsiveSize(12), fontWeight: 'bold' }}>
                                  {tournamentScore[player2.color] || 0}
                              </Text>
                          </View>
@@ -3823,7 +3901,7 @@ const GameScreen = ({ navigation, route }) => {
                               )}
                           </View>
                           {(mode === 'online_custom' || mode === 'online' || mode === 'live' || mode === 'ai') && tournamentTotalGames > 1 && (
-                              <Text style={{ color: '#f1c40f', fontWeight: 'bold', fontSize: 14 }}>
+                              <Text style={{ color: '#f1c40f', fontWeight: 'bold', fontSize: getResponsiveSize(14) }}>
                                   {tournamentScore[player1.color] || 0}
                               </Text>
                           )}
@@ -3833,7 +3911,7 @@ const GameScreen = ({ navigation, route }) => {
                       <Text style={styles.vsText}>VS</Text>
                       {(mode === 'online_custom' || mode === 'online' || mode === 'live' || mode === 'ai') && tournamentTotalGames > 1 && (
                           <View style={{ marginTop: 2, alignItems: 'center' }}>
-                              <Text style={{ color: '#ccc', fontSize: 10 }}>
+                              <Text style={{ color: '#ccc', fontSize: getResponsiveSize(10) }}>
                                   Match {tournamentGameNumber}/{tournamentTotalGames}
                               </Text>
                           </View>
@@ -3847,7 +3925,7 @@ const GameScreen = ({ navigation, route }) => {
                               )}
                           </View>
                           {(mode === 'online_custom' || mode === 'online' || mode === 'live' || mode === 'ai') && tournamentTotalGames > 1 && (
-                              <Text style={{ color: '#f1c40f', fontWeight: 'bold', fontSize: 14 }}>
+                              <Text style={{ color: '#f1c40f', fontWeight: 'bold', fontSize: getResponsiveSize(14) }}>
                                   {tournamentScore[player2.color] || 0}
                               </Text>
                           )}
@@ -3936,8 +4014,8 @@ const GameScreen = ({ navigation, route }) => {
                         <React.Fragment key={`v-${i}`}>
                             <SvgText
                                 x={x}
-                                y={PADDING_TOP - 2}
-                                fontSize="10"
+                                y={PADDING_TOP - getResponsiveSize(2)}
+                                fontSize={getResponsiveSize(10)}
                                 fontWeight="bold"
                                 fill={isRedCol ? "red" : "#000000ff"}
                                 textAnchor="middle"
@@ -3946,8 +4024,8 @@ const GameScreen = ({ navigation, route }) => {
                             </SvgText>
                             <SvgText
                                 x={x}
-                                y={PADDING_TOP + (ROWS - 1) * CELL_SIZE + 9}
-                                fontSize="10"
+                                y={PADDING_TOP + (ROWS - 1) * CELL_SIZE + getResponsiveSize(9)}
+                                fontSize={getResponsiveSize(10)}
                                 fontWeight="bold"
                                 fill={isRedCol ? "red" : "#000000ff"}
                                 textAnchor="middle"
@@ -3973,9 +4051,9 @@ const GameScreen = ({ navigation, route }) => {
                     return (
                         <React.Fragment key={`h-${i}`}>
                             <SvgText
-                                x={PADDING_LEFT - 3}
-                                y={y + 3}
-                                fontSize="10"
+                                x={PADDING_LEFT - getResponsiveSize(3)}
+                                y={y + getResponsiveSize(3)}
+                                fontSize={getResponsiveSize(10)}
                                 fontWeight="bold"
                                 fill={isRedRow ? "red" : "#000000ff"}
                                 textAnchor="start"
@@ -3983,9 +4061,9 @@ const GameScreen = ({ navigation, route }) => {
                                 {i + 1}
                             </SvgText>
                             <SvgText
-                                x={PADDING_LEFT + (COLS - 1) * CELL_SIZE + 3}
-                                y={y + 3}
-                                fontSize="10"
+                                x={PADDING_LEFT + (COLS - 1) * CELL_SIZE + getResponsiveSize(3)}
+                                y={y + getResponsiveSize(3)}
+                                fontSize={getResponsiveSize(10)}
                                 fontWeight="bold"
                                 fill={isRedRow ? "red" : "#000000ff"}
                                 textAnchor="end"
@@ -4052,6 +4130,7 @@ const GameScreen = ({ navigation, route }) => {
                         x={cx}
                         y={cy}
                         r={r}
+                        skin={getSkin(stone.player)}
                       />
                   );
                 })}
@@ -4098,6 +4177,7 @@ const GameScreen = ({ navigation, route }) => {
                                 y={cy}
                                 r={r}
                                 opacity={0.5}
+                                skin={getSkin(currentPlayer)}
                                 onPress={() => handlePress(selectedCell.row, selectedCell.col)}
                             />
                         );
@@ -4174,17 +4254,17 @@ const GameScreen = ({ navigation, route }) => {
             {/* Waiting Overlay */}
             {((isWaitingState && mode !== 'live') || (mode === 'live' && !player2.id)) && !gameOver && (
                 <View style={[styles.modalOverlay, { zIndex: 50, justifyContent: 'center', paddingBottom: 0 }]}>
-                    <View style={{ backgroundColor: 'rgba(0,0,0,0.8)', padding: 20, borderRadius: 15, alignItems: 'center', width: '80%' }}>
-                        <ActivityIndicator size="large" color="#f1c40f" style={{ marginBottom: 15 }} />
-                        <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>En attente d'un adversaire...</Text>
-                        <Text style={{ color: '#ccc', fontSize: 14, textAlign: 'center' }}>
+                    <View style={{ backgroundColor: 'rgba(0,0,0,0.8)', padding: getResponsiveSize(20), borderRadius: getResponsiveSize(15), alignItems: 'center', width: '80%' }}>
+                        <ActivityIndicator size="large" color="#f1c40f" style={{ marginBottom: getResponsiveSize(15) }} />
+                        <Text style={{ color: '#fff', fontSize: getResponsiveSize(18), fontWeight: 'bold', marginBottom: getResponsiveSize(10) }}>En attente d'un adversaire...</Text>
+                        <Text style={{ color: '#ccc', fontSize: getResponsiveSize(14), textAlign: 'center' }}>
                             {mode === 'live' ? "La partie commencera dès qu'un joueur rejoindra la salle." : "Invitez un ami pour commencer la partie"}
                         </Text>
                         
                         {mode === 'live' && (
-                            <View style={{ width: '100%', alignItems: 'center', marginTop: 20 }}>
+                            <View style={{ width: '100%', alignItems: 'center', marginTop: getResponsiveSize(20) }}>
                                 <TouchableOpacity 
-                                    style={{ width: '100%', padding: 12, backgroundColor: '#2ecc71', borderRadius: 8, marginBottom: 10, alignItems: 'center' }}
+                                    style={{ width: '100%', padding: getResponsiveSize(12), backgroundColor: '#2ecc71', borderRadius: getResponsiveSize(8), marginBottom: getResponsiveSize(10), alignItems: 'center' }}
                                     onPress={() => {
                                         setInviteMode('online');
                                         setShowInviteModal(true);
@@ -4194,7 +4274,7 @@ const GameScreen = ({ navigation, route }) => {
                                 </TouchableOpacity>
 
                                 <TouchableOpacity 
-                                    style={{ width: '100%', padding: 12, backgroundColor: 'rgba(255, 59, 48, 0.8)', borderRadius: 8, alignItems: 'center' }}
+                                    style={{ width: '100%', padding: getResponsiveSize(12), backgroundColor: 'rgba(255, 59, 48, 0.8)', borderRadius: getResponsiveSize(8), alignItems: 'center' }}
                                     onPress={() => {
                                         if (navigation.canGoBack()) {
                                             navigation.goBack();
@@ -4214,10 +4294,10 @@ const GameScreen = ({ navigation, route }) => {
             {/* Invite Friend FAB - Only while waiting in Custom Online */}
             {(mode === 'online_custom' && isWaitingState) && !gameOver && (
                 <TouchableOpacity 
-                    style={[styles.menuFab, { bottom: 240, backgroundColor: '#2ecc71' }]} 
+                    style={[styles.menuFab, { bottom: getResponsiveSize(240), backgroundColor: '#2ecc71' }]} 
                     onPress={() => setShowInviteModal(true)}
                 >
-                    <Ionicons name="person-add" size={30} color="#fff" />
+                    <Ionicons name="person-add" size={getResponsiveSize(30)} color="#fff" />
                 </TouchableOpacity>
             )}
 
@@ -4228,7 +4308,7 @@ const GameScreen = ({ navigation, route }) => {
                 style={styles.chatFab}
                 onPress={() => setActiveModal('chat')}
             >
-                <Ionicons name="chatbox-ellipses" size={30} color="#fff" />
+                <Ionicons name="chatbox-ellipses" size={getResponsiveSize(30)} color="#fff" />
             </TouchableOpacity>
             )}
 
@@ -4238,7 +4318,7 @@ const GameScreen = ({ navigation, route }) => {
                 style={styles.emojiFab}
                 onPress={() => setActiveModal('emoji')}
             >
-                <Ionicons name="happy" size={30} color="#fff" />
+                <Ionicons name="happy" size={getResponsiveSize(30)} color="#fff" />
             </TouchableOpacity>
             )}
 
@@ -4300,7 +4380,7 @@ const GameScreen = ({ navigation, route }) => {
                                 {activeModal === 'chat' ? 'Discussion' : 'Réactions'}
                             </Text>
                             <TouchableOpacity onPress={() => setActiveModal(null)}>
-                                <Ionicons name="close-circle" size={30} color="#ef4444" />
+                                <Ionicons name="close-circle" size={getResponsiveSize(30)} color="#ef4444" />
                             </TouchableOpacity>
                         </View>
                         <ChatEnLigne
@@ -4321,9 +4401,9 @@ const GameScreen = ({ navigation, route }) => {
       {mode === 'local' && (
         <View style={{ 
             position: 'absolute', 
-            bottom: -5, 
+            bottom: getResponsiveSize(-5), 
             width: '100%', 
-            padding: 20, 
+            padding: getResponsiveSize(20), 
             flexDirection: 'row',
             justifyContent: 'flex-start'
         }}>
@@ -4350,8 +4430,8 @@ const GameScreen = ({ navigation, route }) => {
         messageStyle={[styles.alertMessage, mode === 'live' ? { textAlign: 'center' } : null]}
         timerStyle={{
           color: '#fbbf24',
-          fontSize: 18,
-          marginVertical: 10,
+          fontSize: getResponsiveSize(18),
+          marginVertical: getResponsiveSize(10),
           textAlign: 'center',
           fontWeight: 'bold'
         }}
@@ -4373,6 +4453,15 @@ const GameScreen = ({ navigation, route }) => {
           visible={mode !== 'local' && showVersusAnim}
           onFinish={() => setShowVersusAnim(false)}
       />
+
+      {flyingEmojis.map(fe => (
+          <FlyingEmoji 
+              key={fe.id} 
+              emoji={fe.emoji} 
+              start={fe.start} 
+              end={fe.end} 
+          />
+      ))}
     </ImageBackground>
   );
 };
@@ -4380,7 +4469,7 @@ const GameScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   spectatorOverlay: {
       position: 'absolute',
-      top: 50,
+      top: getResponsiveSize(50),
       left: 0,
       right: 0,
       alignItems: 'center',
@@ -4390,38 +4479,38 @@ const styles = StyleSheet.create({
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: 'rgba(0,0,0,0.5)',
-      borderRadius: 20,
-      padding: 10,
+      borderRadius: getResponsiveSize(20),
+      padding: getResponsiveSize(10),
   },
   vsText: {
       color: '#fff',
       fontWeight: 'bold',
-      marginHorizontal: 10,
-      fontSize: 16,
+      marginHorizontal: getResponsiveSize(10),
+      fontSize: getResponsiveSize(16),
       fontStyle: 'italic',
   },
   spectatorList: {
-      marginTop: 10,
+      marginTop: getResponsiveSize(10),
       alignItems: 'center',
   },
   spectatorLabel: {
       color: '#aaa',
-      fontSize: 10,
-      marginBottom: 2,
+      fontSize: getResponsiveSize(10),
+      marginBottom: getResponsiveSize(2),
   },
   spectatorHeaderPills: {
       position: 'absolute',
-      top: 10,
+      top: getResponsiveSize(10),
       alignSelf: 'center',
       flexDirection: 'row',
-      gap: 8,
+      gap: getResponsiveSize(8),
       zIndex: 15
   },
   spectatorPill: {
       backgroundColor: 'rgba(0,0,0,0.6)',
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 20,
+      paddingHorizontal: getResponsiveSize(12),
+      paddingVertical: getResponsiveSize(6),
+      borderRadius: getResponsiveSize(20),
       borderWidth: 1,
       borderColor: 'rgba(255,255,255,0.2)'
   },
@@ -4432,11 +4521,11 @@ const styles = StyleSheet.create({
   spectatorNoteContainer: {
       width: '100%',
       alignItems: 'center',
-      marginBottom: 10
+      marginBottom: getResponsiveSize(10)
   },
   spectatorNote: {
       color: '#e5e7eb',
-      fontSize: 14,
+      fontSize: getResponsiveSize(14),
       fontStyle: 'italic'
   },
   background: {
@@ -4445,30 +4534,30 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   header: {
-    paddingTop: 40,
-    marginBottom: 10,
+    paddingTop: getResponsiveSize(40),
+    marginBottom: getResponsiveSize(10),
     zIndex: 10
   },
   headerPVP: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: getResponsiveSize(10),
     backgroundColor: 'rgba(0,0,0,0.3)',
-    paddingBottom: 10,
+    paddingBottom: getResponsiveSize(10),
   },
   headerIA: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingHorizontal: getResponsiveSize(20),
+    paddingTop: getResponsiveSize(10),
     width: '100%',
   },
   backButton: {
-    padding: 8,
+    padding: getResponsiveSize(8),
     backgroundColor: 'rgba(4, 28, 85, 0.5)',
-    borderRadius: 10,
-    marginRight: 10,
+    borderRadius: getResponsiveSize(10),
+    marginRight: getResponsiveSize(10),
   },
 
 
@@ -4481,16 +4570,16 @@ const styles = StyleSheet.create({
   playerContainer: {
     position: 'relative',
     alignItems: 'center',
-    padding: 5,
-    borderRadius: 10,
+    padding: getResponsiveSize(5),
+    borderRadius: getResponsiveSize(10),
     width: width * 0.3,
-    height: 125,
+    height: getResponsiveSize(125),
     borderWidth: 1,
     borderColor: '#f1c40f6c',
     backgroundColor: 'rgba(4, 28, 85, 0.95)',
   },
   activePlayer: {
-    height: 125,
+    height: getResponsiveSize(125),
     backgroundColor: 'rgba(4, 28, 85, 0.95)',
     borderWidth: 1,
     borderColor: '#f1c40f',
@@ -4502,13 +4591,13 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     position: 'relative',
-    marginBottom: 5,
-    left: 20,
+    marginBottom: getResponsiveSize(5),
+    left: getResponsiveSize(20),
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: getResponsiveSize(40),
+    height: getResponsiveSize(40),
+    borderRadius: getResponsiveSize(20),
     borderWidth: 1,
     borderColor: '#ffffffff',
   },
@@ -4516,61 +4605,61 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: -5,
     right: -5,
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
   },
   playerName: {
     color: '#fff',
     fontWeight: 'bold',
-    bottom: 45,
-    right: 20,
-    fontSize: 12,
-    marginTop: 5,
-    maxWidth: 80,
+    bottom: getResponsiveSize(45),
+    right: getResponsiveSize(20),
+    fontSize: getResponsiveSize(12),
+    marginTop: getResponsiveSize(5),
+    maxWidth: getResponsiveSize(80),
     textAlign: 'center',
   },
   voiceContainer: {
     position: 'absolute',
-    top: 100, // Ajustez selon votre layout
-    right: 10,
+    top: getResponsiveSize(100), // Ajustez selon votre layout
+    right: getResponsiveSize(10),
     zIndex: 20,
   },
   playerCoinsContainer: {
     position: 'absolute',
-    bottom: 25,
-    right: 20,
+    bottom: getResponsiveSize(25),
+    right: getResponsiveSize(20),
     alignItems: 'center',
     justifyContent: 'center',
-    width: 80,
+    width: getResponsiveSize(80),
   },
   playerCoinsText: {
     color: '#FFD700',
-    fontSize: 10,
+    fontSize: getResponsiveSize(10),
     fontWeight: 'bold',
     textAlign: 'center',
   },
   timer: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     fontWeight: 'bold',
-    marginTop: 4,
+    marginTop: getResponsiveSize(4),
     backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
+    paddingHorizontal: getResponsiveSize(8),
+    paddingVertical: getResponsiveSize(2),
+    borderRadius: getResponsiveSize(10),
   },
   timerWarning: {
     color: '#e74c3c',
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
   },
   colorIndicator: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: getResponsiveSize(10),
+    height: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(5),
   },
   vsText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 18,
+    fontSize: getResponsiveSize(18),
   },
   boardContainer: {
     flex: 1,
@@ -4578,28 +4667,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   footer: {
-    padding: 20,
+    padding: getResponsiveSize(20),
     backgroundColor: 'rgba(0,0,0,0.5)',
     alignItems: 'center',
   },
   playerInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: getResponsiveSize(10),
   },
   turnText: {
     color: '#fff',
-    fontSize: 18,
-    marginRight: 10,
+    fontSize: getResponsiveSize(18),
+    marginRight: getResponsiveSize(10),
   },
   playerIndicator: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: getResponsiveSize(20),
+    height: getResponsiveSize(20),
+    borderRadius: getResponsiveSize(10),
   },
   hintText: {
     color: '#ccc',
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
   },
   // Nouveaux styles pour IA
   joueurContainer: {
@@ -4607,15 +4696,15 @@ const styles = StyleSheet.create({
     flex: 1
   },
   joueurLabel: {
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     fontWeight: '600',
     color: '#6b7280',
-    marginBottom: 4
+    marginBottom: getResponsiveSize(4)
   },
   avatarJoueur: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: getResponsiveSize(50),
+    height: getResponsiveSize(50),
+    borderRadius: getResponsiveSize(25),
     backgroundColor: '#e5e7eb',
     justifyContent: 'center',
     alignItems: 'center',
@@ -4623,13 +4712,13 @@ const styles = StyleSheet.create({
     borderColor: '#3b82f6'
   },
   avatarJoueurTexte: {
-    fontSize: 24
+    fontSize: getResponsiveSize(24)
   },
   vs: {
-    fontSize: 20,
+    fontSize: getResponsiveSize(20),
     fontWeight: 'bold',
     color: '#9ca3af',
-    marginHorizontal: 8
+    marginHorizontal: getResponsiveSize(8)
   },
   profilIAContainer: {
      flex: 0.5
@@ -4637,16 +4726,16 @@ const styles = StyleSheet.create({
   },
   tourIndicateur: {
     backgroundColor: '#dbeafe',
-    padding: 8,
-    borderRadius: 8,
-    marginHorizontal: 20,
+    padding: getResponsiveSize(8),
+    borderRadius: getResponsiveSize(8),
+    marginHorizontal: getResponsiveSize(20),
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: getResponsiveSize(10),
     borderWidth: 1,
     borderColor: '#3b82f6'
   },
   tourTexte: {
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: 'bold',
     color: '#1d4ed8'
   },
@@ -4654,26 +4743,26 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: '50%',
     left: '50%',
-    transform: [{ translateX: -150 }, { translateY: -50 }],
+    transform: [{ translateX: getResponsiveSize(-150) }, { translateY: getResponsiveSize(-50) }],
     backgroundColor: 'rgba(0, 0, 0, 0.9)',
-    padding: 24,
-    borderRadius: 16,
-    width: 300,
+    padding: getResponsiveSize(24),
+    borderRadius: getResponsiveSize(16),
+    width: getResponsiveSize(300),
     zIndex: 20
   },
   gameOverText: {
-    fontSize: 24,
+    fontSize: getResponsiveSize(24),
     fontWeight: 'bold',
     color: '#fff',
     textAlign: 'center'
   },
   footerIA: {
     position: 'absolute',
-    bottom: 30,
-    left: 20,
+    bottom: getResponsiveSize(30),
+    left: getResponsiveSize(20),
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    padding: 10,
-    borderRadius: 20,
+    padding: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(20),
     elevation: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -4693,54 +4782,54 @@ const styles = StyleSheet.create({
   },
   avatarContainerBig: {
     position: 'relative',
-    marginRight: 10,
+    marginRight: getResponsiveSize(10),
   },
   avatarBig: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: getResponsiveSize(50),
+    height: getResponsiveSize(50),
+    borderRadius: getResponsiveSize(25),
     borderWidth: 2,
     borderColor: '#3b82f6',
   },
   flagBig: {
     position: 'absolute',
-    bottom: -2,
-    right: -2,
-    fontSize: 18,
+    bottom: getResponsiveSize(-2),
+    right: getResponsiveSize(-2),
+    fontSize: getResponsiveSize(18),
     backgroundColor: '#fff',
-    borderRadius: 8,
+    borderRadius: getResponsiveSize(8),
     overflow: 'hidden',
   },
   textContainer: {
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: getResponsiveSize(10),
     flexShrink: 1,
   },
   pseudoBig: {
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: 'bold',
     color: '#111827',
-    marginBottom: 2,
+    marginBottom: getResponsiveSize(2),
   },
   turnTextSmall: {
-    fontSize: 12,
+    fontSize: getResponsiveSize(12),
     color: '#6b7280',
     fontWeight: '500',
   },
   pawnIndicatorContainer: {
-    width: 40,
-    height: 40,
+    width: getResponsiveSize(40),
+    height: getResponsiveSize(40),
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f3f4f6',
-    borderRadius: 12,
+    borderRadius: getResponsiveSize(12),
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
   pawnRedCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: getResponsiveSize(24),
+    height: getResponsiveSize(24),
+    borderRadius: getResponsiveSize(12),
     borderWidth: 3,
     borderColor: '#FF0000',
   },
@@ -4749,7 +4838,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     shadowColor: '#FFD700',
     shadowOpacity: 0.8,
-    shadowRadius: 10,
+    shadowRadius: getResponsiveSize(10),
     elevation: 15
   },
   modalOverlay: {
@@ -4760,71 +4849,71 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: '#041c55',
-    padding: 20,
-    borderRadius: 20,
+    padding: getResponsiveSize(20),
+    borderRadius: getResponsiveSize(20),
     alignItems: 'center',
-    width: '80%',
+    width: isTablet ? '50%' : '80%',
     shadowColor: '#f1c40f',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 3,
-    shadowRadius: 3,
+    shadowOpacity: 0.3,
+    shadowRadius: getResponsiveSize(3),
     elevation: 5,
     borderWidth: 1,
     borderColor: '#f1c40f',
   },
   modalAvatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 10,
+    width: getResponsiveSize(100),
+    height: getResponsiveSize(100),
+    borderRadius: getResponsiveSize(50),
+    marginBottom: getResponsiveSize(10),
     borderWidth: 2,
     borderColor: '#eee',
   },
   modalPseudo: {
-    fontSize: 24,
+    fontSize: getResponsiveSize(24),
     fontWeight: 'bold',
-    marginBottom: 5,
+    marginBottom: getResponsiveSize(5),
     color: '#fff',
   },
   modalFlag: {
-    fontSize: 30,
-    marginBottom: 20,
+    fontSize: getResponsiveSize(30),
+    marginBottom: getResponsiveSize(20),
   },
   friendButton: {
     flexDirection: 'row',
     backgroundColor: '#3b82f6',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 25,
-    marginTop: 10,
+    paddingHorizontal: getResponsiveSize(20),
+    paddingVertical: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(25),
+    marginTop: getResponsiveSize(10),
     alignItems: 'center',
   },
   friendButtonText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
   },
   closeButton: {
-    marginTop: 20,
-    padding: 10,
+    marginTop: getResponsiveSize(20),
+    padding: getResponsiveSize(10),
   },
   closeButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
   },
   flagOutsideRight: {
-    fontSize: 30,
-    marginLeft: 10,
+    fontSize: getResponsiveSize(30),
+    marginLeft: getResponsiveSize(10),
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: {width: -1, height: 1},
-    textShadowRadius: 10
+    textShadowRadius: getResponsiveSize(10)
   },
   flagOutsideLeft: {
-    fontSize: 30,
-    marginRight: 10,
+    fontSize: getResponsiveSize(30),
+    marginRight: getResponsiveSize(10),
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: {width: -1, height: 1},
-    textShadowRadius: 10
+    textShadowRadius: getResponsiveSize(10)
   },
   gameMenuOverlay: {
     flex: 1,
@@ -4834,25 +4923,26 @@ const styles = StyleSheet.create({
   },
   menuContent: {
     backgroundColor: '#041c55',
-    padding: 20,
-    borderRadius: 20,
+    padding: getResponsiveSize(20),
+    borderRadius: getResponsiveSize(20),
     width: '70%',
-    marginLeft: 20,
-    marginBottom: 110,
+    maxWidth: getResponsiveSize(300),
+    marginLeft: getResponsiveSize(20),
+    marginBottom: getResponsiveSize(110),
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowRadius: getResponsiveSize(4),
     elevation: 5,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 15,
+    paddingVertical: getResponsiveSize(15),
   },
   menuText: {
-    fontSize: 18,
-    marginLeft: 15,
+    fontSize: getResponsiveSize(18),
+    marginLeft: getResponsiveSize(15),
     color: '#ffffffff',
     fontWeight: '500',
   },
@@ -4864,55 +4954,55 @@ const styles = StyleSheet.create({
   closeMenuText: {
     color: '#ff0000ff',
     
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     textAlign: 'center',
     width: '100%',
     fontWeight: 'bold',
   },
   timeoutsContainer: {
-    marginTop: 2,
-    bottom: 15,
+    marginTop: getResponsiveSize(2),
+    bottom: getResponsiveSize(15),
     alignItems: 'center',
     justifyContent: 'center',
   },
   timeoutsTexte: {
-    fontSize: 10,
+    fontSize: getResponsiveSize(10),
     fontWeight: '600',
     color: '#991b1b',
   },
   chronoPrincipal: {
-    marginTop: 8,
+    marginTop: getResponsiveSize(8),
     width: '100%',
     alignItems: 'center',
-    bottom: 25,
+    bottom: getResponsiveSize(25),
   },
   chronoPrincipalTexte: {
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: getResponsiveSize(4),
   },
   progressBar: {
     width: '80%',
-    height: 6,
+    height: getResponsiveSize(6),
     backgroundColor: '#e5e7eb',
-    borderRadius: 4,
+    borderRadius: getResponsiveSize(4),
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: getResponsiveSize(4),
   },
   avertissementIA: {
       backgroundColor: '#fef3c7',
-      padding: 8,
-      borderRadius: 8,
-      marginTop: 8,
+      padding: getResponsiveSize(8),
+      borderRadius: getResponsiveSize(8),
+      marginTop: getResponsiveSize(8),
       borderWidth: 2,
       borderColor: '#f59e0b'
   },
   avertissementTexte: {
-      fontSize: 12,
+      fontSize: getResponsiveSize(12),
       fontWeight: '600',
       color: '#92400e',
       textAlign: 'center'
@@ -4927,27 +5017,27 @@ const styles = StyleSheet.create({
       justifyContent: 'center',
       alignItems: 'center',
       zIndex: 1000,
-      borderRadius: 10,
+      borderRadius: getResponsiveSize(10),
   },
   waitingText: {
       color: '#ffffffc9',
-      fontSize: 18,
+      fontSize: getResponsiveSize(18),
       fontWeight: 'bold',
-      marginTop: 20,
-      top: 30,
+      marginTop: getResponsiveSize(20),
+      top: getResponsiveSize(30),
   },
 
   indicator: {
-    top: 30,
+    top: getResponsiveSize(30),
   },
   // Chat Styles
   chatFab: {
     position: 'absolute',
-    bottom: 20,
-    right: 90,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    bottom: getResponsiveSize(20),
+    right: getResponsiveSize(90),
+    width: getResponsiveSize(60),
+    height: getResponsiveSize(60),
+    borderRadius: getResponsiveSize(30),
     backgroundColor: '#3b82f6',
     alignItems: 'center',
     justifyContent: 'center',
@@ -4955,16 +5045,16 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
-    shadowRadius: 3,
+    shadowRadius: getResponsiveSize(3),
     zIndex: 100
   },
   emojiFab: {
     position: 'absolute',
-    bottom: 20,
-    right: 20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    bottom: getResponsiveSize(20),
+    right: getResponsiveSize(20),
+    width: getResponsiveSize(60),
+    height: getResponsiveSize(60),
+    borderRadius: getResponsiveSize(30),
     backgroundColor: '#eab308',
     alignItems: 'center',
     justifyContent: 'center',
@@ -4972,22 +5062,22 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
-    shadowRadius: 3,
+    shadowRadius: getResponsiveSize(3),
     zIndex: 100
   },
   voiceContainer: {
     position: 'absolute',
-    bottom: 28,
-    right: 20,
+    bottom: getResponsiveSize(28),
+    right: getResponsiveSize(20),
     zIndex: 100,
   },
   menuFab: {
     position: 'absolute',
-    bottom: 20,
-    left: 20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    bottom: getResponsiveSize(20),
+    left: getResponsiveSize(20),
+    width: getResponsiveSize(60),
+    height: getResponsiveSize(60),
+    borderRadius: getResponsiveSize(30),
     backgroundColor: '#4b5563',
     alignItems: 'center',
     justifyContent: 'center',
@@ -4995,7 +5085,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
-    shadowRadius: 3,
+    shadowRadius: getResponsiveSize(3),
     zIndex: 100
   },
   liveMenuContainer: {
@@ -5009,13 +5099,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
     alignItems: 'center',
-    paddingBottom: 100,
+    paddingBottom: getResponsiveSize(100),
   },
   chatModalContent: {
     backgroundColor: '#fff',
-    borderRadius: 20,
-    width: '80%',
-    height: 300,
+    borderRadius: getResponsiveSize(20),
+    width: isTablet ? '50%' : '80%',
+    height: getResponsiveSize(300),
     elevation: 10,
     overflow: 'hidden'
   },
@@ -5023,26 +5113,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingLeft: 15,
-    paddingRight: 15,
+    paddingLeft: getResponsiveSize(15),
+    paddingRight: getResponsiveSize(15),
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
     backgroundColor: '#f3f4f6',
   },
   chatModalTitle: {
-    fontSize: 18,
+    fontSize: getResponsiveSize(18),
     fontWeight: 'bold',
     color: '#1f2937'
   },
   bubbleContainer: {
     position: 'absolute',
-    bottom: -50,
+    bottom: -getResponsiveSize(50),
     backgroundColor: '#fff',
-    borderRadius: 15,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    minWidth: 50,
-    maxWidth: 200,
+    borderRadius: getResponsiveSize(15),
+    paddingHorizontal: getResponsiveSize(12),
+    paddingVertical: getResponsiveSize(8),
+    minWidth: getResponsiveSize(50),
+    maxWidth: getResponsiveSize(200),
     elevation: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
@@ -5056,13 +5146,13 @@ const styles = StyleSheet.create({
   },
   bubbleText: {
     color: '#1f2937',
-    fontSize: 18,
+    fontSize: getResponsiveSize(18),
     fontWeight: 'bold',
     textAlign: 'center',
     // fontWeight: '500',
   },
   bubbleEmoji: {
-    fontSize: 28,
+    fontSize: getResponsiveSize(28),
   },
   // Result Modal Styles
   modalOverlay: {
@@ -5073,21 +5163,21 @@ const styles = StyleSheet.create({
     top: 0,
     justifyContent: 'flex-end',
     alignItems: 'center',
-    paddingBottom: 20,
+    paddingBottom: getResponsiveSize(20),
     zIndex: 1000,
   },
   resultCard: {
     backgroundColor: '#041c55',
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: getResponsiveSize(20),
+    padding: getResponsiveSize(24),
     alignItems: 'center',
-    width: '95%',
-    maxWidth: 500,
+    width: isTablet ? '60%' : '95%',
+    maxWidth: getResponsiveSize(500),
     elevation: 5,
     shadowColor: '#f1c40f',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 3,
-    shadowRadius: 3,
+    shadowOpacity: 0.3,
+    shadowRadius: getResponsiveSize(3),
     borderWidth: 1,
     borderColor: '#f1c40f',
     overflow: 'hidden',
@@ -5098,73 +5188,73 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 20,
-    borderWidth: 4,
+    borderRadius: getResponsiveSize(20),
+    borderWidth: getResponsiveSize(4),
     borderColor: 'rgba(0, 0, 0, 0.3)',
     zIndex: 10,
   },
   emojiResult: {
-    fontSize: 60,
-    marginBottom: 10,
+    fontSize: getResponsiveSize(60),
+    marginBottom: getResponsiveSize(10),
   },
   titreResult: {
-    fontSize: 28,
+    fontSize: getResponsiveSize(28),
     fontWeight: 'bold',
     color: '#f1c40f',
-    marginBottom: 10,
+    marginBottom: getResponsiveSize(10),
   },
   adversaireResult: {
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     color: '#ffffffff',
-    marginBottom: 20,
+    marginBottom: getResponsiveSize(20),
   },
   messageResult: {
-    fontSize: 18,
+    fontSize: getResponsiveSize(18),
     color: '#4b5563',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: getResponsiveSize(20),
   },
   gainsContainer: {
     backgroundColor: '#f1c40fff',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: getResponsiveSize(12),
+    padding: getResponsiveSize(16),
     width: '100%',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: getResponsiveSize(20),
   },
   gainsLabel: {
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     color: '#ffffffff',
-    marginBottom: 4,
+    marginBottom: getResponsiveSize(4),
   },
   gainsMontant: {
-    fontSize: 32,
+    fontSize: getResponsiveSize(32),
     fontWeight: 'bold',
     color: '#ffffffff',
   },
   perteContainer: {
     backgroundColor: '#f1c40fff',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: getResponsiveSize(12),
+    padding: getResponsiveSize(16),
     width: '100%',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: getResponsiveSize(20),
   },
   perteLabel: {
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     color: '#ffffffff',
-    marginBottom: 4,
+    marginBottom: getResponsiveSize(4),
   },
   perteMontant: {
-    fontSize: 32,
+    fontSize: getResponsiveSize(32),
     fontWeight: 'bold',
     color: '#ffffffff',
   },
   raisonContainer: {
     backgroundColor: '#ecfccb',
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 10,
+    padding: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(8),
+    marginBottom: getResponsiveSize(10),
     width: '100%',
     alignItems: 'center',
   },
@@ -5172,7 +5262,7 @@ const styles = StyleSheet.create({
       backgroundColor: '#fee2e2',
   },
   raisonTexte: {
-      fontSize: 14,
+      fontSize: getResponsiveSize(14),
       fontWeight: '600',
       color: '#3f6212',
       textAlign: 'center'
@@ -5182,53 +5272,53 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     backgroundColor: '#f3f4f6',
-    padding: 16,
-    borderRadius: 16,
+    padding: getResponsiveSize(16),
+    borderRadius: getResponsiveSize(16),
     width: '100%',
     alignItems: 'center',
-    marginBottom: 20
+    marginBottom: getResponsiveSize(20)
   },
   statsLabel: {
-    fontSize: 12,
+    fontSize: getResponsiveSize(12),
     color: '#6b7280',
     textTransform: 'uppercase',
     fontWeight: '600',
-    marginBottom: 4
+    marginBottom: getResponsiveSize(4)
   },
   statsTaux: {
-    fontSize: 28,
+    fontSize: getResponsiveSize(28),
     fontWeight: 'bold',
     color: '#3b82f6',
-    marginBottom: 2
+    marginBottom: getResponsiveSize(2)
   },
   statsParties: {
-    fontSize: 12,
+    fontSize: getResponsiveSize(12),
     color: '#9ca3af'
   },
   boutonsResult: {
     flexDirection: 'row',
-    gap: 12,
+    gap: getResponsiveSize(12),
     width: '100%',
   },
   boutonRejouer: {
     flex: 1,
     backgroundColor: '#3b82f6',
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: getResponsiveSize(12),
+    borderRadius: getResponsiveSize(12),
     alignItems: 'center',
     justifyContent: 'center',
   },
   boutonMenuResult: {
     flex: 1,
     backgroundColor: '#6b7280',
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: getResponsiveSize(12),
+    borderRadius: getResponsiveSize(12),
     alignItems: 'center',
     justifyContent: 'center',
   },
   boutonTexteResult: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: 'bold',
     textAlign: 'center',
   },
@@ -5242,32 +5332,32 @@ const styles = StyleSheet.create({
    customAlertContainer: { 
      width: "85%", 
      backgroundColor: "#1e1e1e", 
-     borderRadius: 15, 
-     padding: 20, 
+     borderRadius: getResponsiveSize(15), 
+     padding: getResponsiveSize(20), 
      alignItems: "center", 
      borderWidth: 2, 
      borderColor: "#FFD700",
-     top: 320 
+     top: getResponsiveSize(320) 
    }, 
  
    alertTitle: { 
-     fontSize: 18, 
+     fontSize: getResponsiveSize(18), 
      fontWeight: "bold", 
      color: "#FFD700", 
-     marginBottom: 10 
+     marginBottom: getResponsiveSize(10) 
    }, 
  
    alertMessage: { 
      color: "#fff", 
      textAlign: "center", 
-     marginBottom: 20 
+     marginBottom: getResponsiveSize(20) 
    }, 
  
    nextMatchButton: { 
      backgroundColor: "#FFD700", 
-     paddingVertical: 10, 
-     paddingHorizontal: 25, 
-     borderRadius: 10 
+     paddingVertical: getResponsiveSize(10), 
+     paddingHorizontal: getResponsiveSize(25), 
+     borderRadius: getResponsiveSize(10) 
    }, 
  
    nextMatchButtonText: { 

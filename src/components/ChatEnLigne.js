@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import EmojiAnimation from './EmojiAnimation';
 import { emojisDisponibles, getEmojiSource } from '../utils/emojis';
+import { getResponsiveSize } from '../utils/responsive';
 
 const ChatEnLigne = ({ 
   matchId, 
@@ -16,18 +17,12 @@ const ChatEnLigne = ({
   const [lastMessageTime, setLastMessageTime] = useState(0);
   
   const scrollViewRef = useRef(null);
-  const emojiScrollViewRef = useRef(null);
   
   // Scroll automatique vers le bas (Chat Texte)
   useEffect(() => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
   }, [messages]);
 
-  // Scroll automatique vers le bas (Historique Emojis)
-  useEffect(() => {
-      emojiScrollViewRef.current?.scrollToEnd({ animated: true });
-  }, [messages]);
-  
   // Envoyer un message texte
   const envoyerMessageTexte = () => {
     if (!messageInput.trim()) return;
@@ -173,46 +168,8 @@ const ChatEnLigne = ({
       {/* CHAT EMOJIS (Droite) */}
       {(displayMode === 'full' || displayMode === 'emoji') && (
       <View style={styles.chatEmojis}>
-
-        {/* Historique des emojis envoyés */}
-        <ScrollView 
-          ref={emojiScrollViewRef}
-          style={styles.emojiHistorique}
-          contentContainerStyle={styles.emojiHistoriqueContent}
-        >
-          {messages.filter(m => m.type === 'emoji').length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyTexte}>Aucune réaction</Text>
-            </View>
-          ) : (
-            messages.filter(m => m.type === 'emoji').map(msg => {
-              const source = getEmojiSource(msg.contenu);
-              return (
-              <View
-                key={msg.id}
-                style={[
-                  styles.emojiHistoriqueItem,
-                  msg.estMoi ? styles.emojiHistoriqueItemMoi : styles.emojiHistoriqueItemAutre
-                ]}
-              >
-                {source ? (
-                    <EmojiAnimation
-                        source={source}
-                        style={{ width: 24, height: 24 }}
-                    />
-                ) : (
-                    <Text style={styles.emojiHistoriqueEmoji}>{msg.contenu}</Text>
-                )}
-                <Text style={styles.emojiHistoriqueAuteur}>
-                  {msg.estMoi ? 'Vous' : msg.auteur}
-                </Text>
-              </View>
-            )})
-          )}
-        </ScrollView>
-        
         {/* Grille d'emojis cliquables */}
-        <View style={styles.emojiGrid}>
+        <ScrollView style={styles.emojiGridContainer} contentContainerStyle={styles.emojiGrid}>
           {emojisDisponibles.map(emojiData => (
             <TouchableOpacity
               key={emojiData.id}
@@ -229,7 +186,7 @@ const ChatEnLigne = ({
               />
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
       </View>
       )}
     </View>
@@ -240,7 +197,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     flex: 1,
-    borderTopWidth: 2,
+    borderTopWidth: getResponsiveSize(2),
     borderTopColor: '#e5e7eb',
     backgroundColor: '#fff'
   },
@@ -248,17 +205,17 @@ const styles = StyleSheet.create({
   // === CHAT TEXTE ===
   chatTexte: {
     flex: 1,
-    borderRightWidth: 1,
+    borderRightWidth: getResponsiveSize(1),
     borderRightColor: '#e5e7eb'
   },
    chatHeader: {
     backgroundColor: '#f3f4f6',
-    padding: 5,
-    borderBottomWidth: 1,
+    padding: getResponsiveSize(5),
+    borderBottomWidth: getResponsiveSize(1),
     borderBottomColor: '#e5e7eb'
   },
   chatTitre: {
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: 'bold',
     color: '#111827'
   },
@@ -267,25 +224,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9fafb'
   },
   messagesContent: {
-    padding: 12
+    padding: getResponsiveSize(12)
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40
+    paddingVertical: getResponsiveSize(40)
   },
   emptyTexte: {
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     color: '#9ca3af',
     fontWeight: '600',
-    marginBottom: 4
+    marginBottom: getResponsiveSize(4)
   },
   emptySubTexte: {
-    fontSize: 12,
+    fontSize: getResponsiveSize(12),
     color: '#d1d5db'
   },
   messageItem: {
-    marginBottom: 12
+    marginBottom: getResponsiveSize(12)
   },
   messageItemMoi: {
     alignItems: 'flex-end'
@@ -294,15 +251,15 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start'
   },
   messageAuteur: {
-    fontSize: 11,
+    fontSize: getResponsiveSize(11),
     color: '#6b7280',
-    marginBottom: 4,
-    marginLeft: 8
+    marginBottom: getResponsiveSize(4),
+    marginLeft: getResponsiveSize(8)
   },
   messageBulle: {
     maxWidth: '80%',
-    borderRadius: 12,
-    padding: 10
+    borderRadius: getResponsiveSize(12),
+    padding: getResponsiveSize(10)
   },
   messageBulleMoi: {
     backgroundColor: '#3b82f6'
@@ -311,7 +268,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e5e7eb'
   },
   messageTexte: {
-    fontSize: 14
+    fontSize: getResponsiveSize(14)
   },
   messageTexteMoi: {
     color: '#fff'
@@ -320,15 +277,15 @@ const styles = StyleSheet.create({
     color: '#111827'
   },
   messageHeure: {
-    fontSize: 10,
+    fontSize: getResponsiveSize(10),
     color: '#9ca3af',
-    marginTop: 4,
-    marginHorizontal: 8
+    marginTop: getResponsiveSize(4),
+    marginHorizontal: getResponsiveSize(8)
   },
   inputContainer: {
     flexDirection: 'row',
-    padding: 12,
-    borderTopWidth: 1,
+    padding: getResponsiveSize(12),
+    borderTopWidth: getResponsiveSize(1),
     borderTopColor: '#e5e7eb',
     backgroundColor: '#fff',
     alignItems: 'center'
@@ -336,18 +293,18 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     backgroundColor: '#f3f4f6',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 8,
-    maxHeight: 80,
-    fontSize: 14,
+    borderRadius: getResponsiveSize(20),
+    paddingHorizontal: getResponsiveSize(16),
+    paddingVertical: getResponsiveSize(8),
+    marginRight: getResponsiveSize(8),
+    maxHeight: getResponsiveSize(80),
+    fontSize: getResponsiveSize(14),
     color: '#111827'
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: getResponsiveSize(40),
+    height: getResponsiveSize(40),
+    borderRadius: getResponsiveSize(20),
     backgroundColor: '#3b82f6',
     justifyContent: 'center',
     alignItems: 'center'
@@ -356,47 +313,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#d1d5db'
   },
   sendButtonTexte: {
-    fontSize: 20
+    fontSize: getResponsiveSize(20)
   },
   
   // === CHAT EMOJIS ===
   chatEmojis: {
-    flex: 1
-  },
-  emojiHistorique: {
     flex: 1,
-    backgroundColor: '#f9fafb'
+    backgroundColor: '#fff'
   },
-  emojiHistoriqueContent: {
-    padding: 12,
-    alignItems: 'center'
-  },
-  emojiHistoriqueItem: {
-    marginBottom: 12,
-    alignItems: 'center'
-  },
-  emojiHistoriqueItemMoi: {
-    alignSelf: 'flex-end'
-  },
-  emojiHistoriqueItemAutre: {
-    alignSelf: 'flex-start'
-  },
-  emojiHistoriqueEmoji: {
-    fontSize: 40,
-    marginBottom: 4
-  },
-  emojiHistoriqueAuteur: {
-    fontSize: 10,
-    color: '#6b7280',
-    fontWeight: '600'
+  emojiGridContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderTopWidth: getResponsiveSize(1),
+    borderTopColor: '#e5e7eb',
   },
   emojiGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    padding: 8,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+    padding: getResponsiveSize(8),
     justifyContent: 'space-around'
   },
   emojiButton: {
@@ -404,8 +338,8 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
-    borderRadius: 8,
+    marginBottom: getResponsiveSize(8),
+    borderRadius: getResponsiveSize(8),
     backgroundColor: '#f3f4f6',
     overflow: 'hidden'
   },
@@ -414,7 +348,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.1 }]
   },
   emojiTexte: {
-    fontSize: 28
+    fontSize: getResponsiveSize(28)
   }
 });
 

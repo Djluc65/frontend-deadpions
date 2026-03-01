@@ -9,6 +9,7 @@ import { loginStart, loginSuccess, loginFailure } from '../redux/slices/authSlic
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import { API_URL } from '../config';
+import { getResponsiveSize } from '../utils/responsive';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -187,18 +188,17 @@ const LoginScreen = ({ navigation }) => {
             }}
             disabled={!request}
           >
-            <AntDesign name="google" size={24} color="black" />
+            <AntDesign name="google" size={getResponsiveSize(24)} color="black" />
             <Text style={styles.googleButtonText}>Se connecter avec Google</Text>
           </TouchableOpacity>
 
           <Button 
             title="S'inscrire" 
             onPress={() => navigation.navigate('Register')} 
-            style={{ backgroundColor: 'transparent', borderWidth: 1, borderColor: '#fff' }}
+            style={{ backgroundColor: 'transparent', borderWidth: getResponsiveSize(1), borderColor: '#fff' }}
           />
-
           {!API_URL.includes('railway') && (
-            <Text style={{ color: '#00ff00', textAlign: 'center', marginTop: 20, fontWeight: 'bold' }}>
+            <Text style={{ color: '#00ff00', textAlign: 'center', marginTop: getResponsiveSize(20), fontWeight: 'bold' }}>
               🔌 MODE LOCAL ({API_URL})
             </Text>
           )}
@@ -217,40 +217,41 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
-    padding: 20,
+    padding: getResponsiveSize(20),
     backgroundColor: 'rgba(0,0,0,0.5)', // Overlay for better readability
   },
   title: {
-    fontSize: 32,
+    fontSize: getResponsiveSize(32),
     color: '#fff',
     fontWeight: 'bold',
-    marginBottom: 30,
+    marginBottom: getResponsiveSize(30),
     textAlign: 'center',
   },
   forgotPasswordContainer: {
     alignSelf: 'flex-end',
-    marginBottom: 20,
-    marginTop: -10,
+    marginBottom: getResponsiveSize(15),
+    marginTop: getResponsiveSize(-10),
   },
   forgotPasswordText: {
     color: '#fff',
     textDecorationLine: 'underline',
+    fontSize: getResponsiveSize(14),
   },
   googleButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 8,
-    marginTop: 15,
-    marginBottom: 15,
+    padding: getResponsiveSize(15),
+    borderRadius: getResponsiveSize(8),
+    marginTop: getResponsiveSize(15),
+    marginBottom: getResponsiveSize(15),
   },
   googleButtonText: {
     color: '#000',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: 'bold',
-    marginLeft: 10,
+    marginLeft: getResponsiveSize(10),
   },
 });
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { playButtonSound } from '../../utils/soundManager';
+import { getResponsiveSize } from '../../utils/responsive';
 
 const Button = ({ title, onPress, loading, style, textStyle }) => {
   const handlePress = async () => {
@@ -26,15 +27,15 @@ const Button = ({ title, onPress, loading, style, textStyle }) => {
 const styles = StyleSheet.create({
   button: {
     backgroundColor: '#3498db',
-    padding: 15,
-    borderRadius: 8,
+    padding: getResponsiveSize(15),
+    borderRadius: getResponsiveSize(8),
     alignItems: 'center',
-    marginVertical: 10,
+    marginVertical: getResponsiveSize(10),
     width: '100%',
   },
   text: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: 'bold',
   },
 });

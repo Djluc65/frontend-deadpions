@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Image, Animated, Dimensions } from 'react-native';
 import { getAvatarSource } from '../utils/avatarUtils';
+import { getResponsiveSize } from '../utils/responsive';
 
 const { width, height } = Dimensions.get('window');
 
@@ -127,7 +128,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-around',
         width: '100%',
-        paddingHorizontal: 20,
+        paddingHorizontal: getResponsiveSize(20),
     },
     playerContainer: {
         alignItems: 'center',
@@ -135,17 +136,17 @@ const styles = StyleSheet.create({
         width: width * 0.35,
     },
     avatarContainer: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        borderWidth: 3,
+        width: getResponsiveSize(100),
+        height: getResponsiveSize(100),
+        borderRadius: getResponsiveSize(50),
+        borderWidth: getResponsiveSize(3),
         overflow: 'hidden',
-        marginBottom: 10,
+        marginBottom: getResponsiveSize(10),
         elevation: 10,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 5 },
+        shadowOffset: { width: 0, height: getResponsiveSize(5) },
         shadowOpacity: 0.5,
-        shadowRadius: 5,
+        shadowRadius: getResponsiveSize(5),
         backgroundColor: '#ccc',
     },
     avatar: {
@@ -155,11 +156,11 @@ const styles = StyleSheet.create({
     },
     pseudo: {
         color: '#fff',
-        fontSize: 16,
+        fontSize: getResponsiveSize(16),
         fontWeight: 'bold',
         textShadowColor: 'rgba(0,0,0,0.5)',
-        textShadowOffset: { width: 1, height: 1 },
-        textShadowRadius: 3,
+        textShadowOffset: { width: getResponsiveSize(1), height: getResponsiveSize(1) },
+        textShadowRadius: getResponsiveSize(3),
         textAlign: 'center',
     },
     vsContainer: {
@@ -169,11 +170,11 @@ const styles = StyleSheet.create({
     },
     vsText: {
         color: '#f1c40f',
-        fontSize: 48,
+        fontSize: getResponsiveSize(48),
         fontWeight: '900',
         fontStyle: 'italic',
         textShadowColor: '#d35400',
-        textShadowOffset: { width: 2, height: 2 },
+        textShadowOffset: { width: getResponsiveSize(2), height: getResponsiveSize(2) },
         textShadowRadius: 0,
     }
 });

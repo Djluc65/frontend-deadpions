@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
 import { playButtonSound } from '../utils/soundManager';
+import { getResponsiveSize } from '../utils/responsive';
 
 const { width } = Dimensions.get('window');
 
@@ -163,7 +164,7 @@ const ConfigurationJeuIA = ({ navigation }) => {
             <Text style={styles.niveauTitre}>{niveau.titre}</Text>
             <Text style={styles.niveauDesc}>{niveau.description}</Text>
             {niveau.id === 'difficile' && !user?.isPremium && !user?.isEarlyAccess && (
-                 <Text style={{color: '#f1c40f', fontSize: 12, marginTop: 4}}>🔒 Premium Requis</Text>
+                 <Text style={{color: '#f1c40f', fontSize: getResponsiveSize(12), marginTop: getResponsiveSize(4)}}>🔒 Premium Requis</Text>
             )}
             <Text style={styles.niveauTaux}>
               IA gagne à {niveau.tauxVictoire}
@@ -180,7 +181,7 @@ const ConfigurationJeuIA = ({ navigation }) => {
           </View>
           {difficulte === niveau.id && (
             <View style={[styles.selectedIndicator, { backgroundColor: '#f1c40f' }]}>
-              <Ionicons name="checkmark" size={16} color="#041c55" />
+              <Ionicons name="checkmark" size={getResponsiveSize(16)} color="#041c55" />
             </View>
           )}
         </TouchableOpacity>
@@ -193,7 +194,7 @@ const ConfigurationJeuIA = ({ navigation }) => {
       {/* Bet Amount - Styled like Online */}
       <View style={styles.option}>
         <Text style={styles.optionLabel}>Mise (coins)</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: 10 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: getResponsiveSize(10) }}>
             <TouchableOpacity 
                 onPress={() => {
                     playButtonSound();
@@ -201,9 +202,9 @@ const ConfigurationJeuIA = ({ navigation }) => {
                     if (currentIndex > 0) setBetAmount(BET_OPTIONS[currentIndex - 1]);
                 }}
                 disabled={BET_OPTIONS.indexOf(betAmount) <= 0}
-                style={{ padding: 10, opacity: BET_OPTIONS.indexOf(betAmount) <= 0 ? 0.3 : 1 }}
+                style={{ padding: getResponsiveSize(10), opacity: BET_OPTIONS.indexOf(betAmount) <= 0 ? 0.3 : 1 }}
             >
-                <Ionicons name="remove-circle-outline" size={40} color="#fff" />
+                <Ionicons name="remove-circle-outline" size={getResponsiveSize(40)} color="#fff" />
             </TouchableOpacity>
             
             <View style={styles.betDisplay}>
@@ -219,9 +220,9 @@ const ConfigurationJeuIA = ({ navigation }) => {
                     if (currentIndex < BET_OPTIONS.length - 1) setBetAmount(BET_OPTIONS[currentIndex + 1]);
                 }}
                 disabled={BET_OPTIONS.indexOf(betAmount) >= BET_OPTIONS.length - 1}
-                style={{ padding: 10, opacity: BET_OPTIONS.indexOf(betAmount) >= BET_OPTIONS.length - 1 ? 0.3 : 1 }}
+                style={{ padding: getResponsiveSize(10), opacity: BET_OPTIONS.indexOf(betAmount) >= BET_OPTIONS.length - 1 ? 0.3 : 1 }}
             >
-                <Ionicons name="add-circle-outline" size={40} color="#fff" />
+                <Ionicons name="add-circle-outline" size={getResponsiveSize(40)} color="#fff" />
             </TouchableOpacity>
         </View>
       </View>
@@ -270,12 +271,12 @@ const ConfigurationJeuIA = ({ navigation }) => {
               <Text style={[
                 styles.optionButtonText,
                 couleurJoueur === opt.id && styles.optionButtonTextActive
-              ]}>
-                <Text style={opt.iconColor ? { color: opt.iconColor, fontSize: 16 } : { fontSize: 16 }}>
+            ]}>
+                <Text style={opt.iconColor ? { color: opt.iconColor, fontSize: getResponsiveSize(16) } : { fontSize: getResponsiveSize(16) }}>
                   {opt.icon}
                 </Text>
                 {' ' + opt.label}
-              </Text>
+            </Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -300,7 +301,7 @@ const ConfigurationJeuIA = ({ navigation }) => {
               ]}>
                 {v.label}
               </Text>
-              {vitesseIA === v.id && <Ionicons name="checkmark-circle" size={20} color="#041c55" />}
+              {vitesseIA === v.id && <Ionicons name="checkmark-circle" size={getResponsiveSize(20)} color="#041c55" />}
             </TouchableOpacity>
           ))}
         </View>
@@ -348,7 +349,7 @@ const ConfigurationJeuIA = ({ navigation }) => {
         {/* HEADER */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={30} color="#fff" />
+            <Ionicons name="arrow-back" size={getResponsiveSize(30)} color="#fff" />
           </TouchableOpacity>
           <View>
             <Text style={styles.titre}>Configuration IA</Text>
@@ -407,53 +408,53 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
-    paddingTop: 50,
+    padding: getResponsiveSize(20),
+    paddingTop: getResponsiveSize(50),
     backgroundColor: 'rgba(4, 28, 85, 0.9)',
   },
   coinContainer: {
     backgroundColor: 'rgba(0,0,0,0.3)',
-    padding: 8,
-    borderRadius: 15,
+    padding: getResponsiveSize(8),
+    borderRadius: getResponsiveSize(15),
   },
   coinText: {
     color: '#f1c40f',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
   },
   backButton: {
-    padding: 5,
+    padding: getResponsiveSize(5),
   },
   titre: {
-    fontSize: 24,
+    fontSize: getResponsiveSize(24),
     fontWeight: 'bold',
     color: '#fff',
   },
   sousTitre: {
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     color: '#f1c40f',
   },
   tabContainer: {
     flexDirection: 'row',
-    marginHorizontal: 16,
-    marginBottom: 16,
+    marginHorizontal: getResponsiveSize(16),
+    marginBottom: getResponsiveSize(16),
     backgroundColor: 'rgba(0,0,0,0.3)',
-    borderRadius: 12,
-    padding: 4,
-    borderWidth: 1,
+    borderRadius: getResponsiveSize(12),
+    padding: getResponsiveSize(4),
+    borderWidth: getResponsiveSize(1),
     borderColor: 'rgba(241, 196, 15, 0.3)'
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: getResponsiveSize(12),
     alignItems: 'center',
-    borderRadius: 8
+    borderRadius: getResponsiveSize(8)
   },
   activeTab: {
     backgroundColor: '#f1c40f',
   },
   tabText: {
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     fontWeight: '600',
     color: '#ccc'
   },
@@ -465,104 +466,104 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 20
+    paddingHorizontal: getResponsiveSize(16),
+    paddingBottom: getResponsiveSize(20)
   },
   tabContent: {
-    gap: 16
+    gap: getResponsiveSize(16)
   },
   niveauCard: {
     backgroundColor: '#041c55',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: getResponsiveSize(16),
+    padding: getResponsiveSize(16),
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f1c40f',
     shadowColor: '#f1c40f',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
-    shadowRadius: 5,
+    shadowRadius: getResponsiveSize(5),
     elevation: 5
   },
   niveauCardActive: {
       backgroundColor: 'rgba(4, 28, 85, 0.8)',
       borderColor: '#f1c40f',
-      borderWidth: 2,
+      borderWidth: getResponsiveSize(2),
   },
   niveauEmoji: {
-    fontSize: 40,
-    marginRight: 16
+    fontSize: getResponsiveSize(40),
+    marginRight: getResponsiveSize(16)
   },
   niveauInfo: {
     flex: 1
   },
   niveauTitre: {
-    fontSize: 18,
+    fontSize: getResponsiveSize(18),
     fontWeight: 'bold',
     color: '#f1c40f',
-    marginBottom: 4
+    marginBottom: getResponsiveSize(4)
   },
   niveauDesc: {
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     color: '#fff',
-    marginBottom: 4
+    marginBottom: getResponsiveSize(4)
   },
   niveauTaux: {
-    fontSize: 12,
+    fontSize: getResponsiveSize(12),
     color: '#ccc',
     fontStyle: 'italic'
   },
   selectedIndicator: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: getResponsiveSize(24),
+    height: getResponsiveSize(24),
+    borderRadius: getResponsiveSize(12),
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
+    marginLeft: getResponsiveSize(8),
     backgroundColor: '#f1c40f'
   },
   statsContainer: {
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
+    marginTop: getResponsiveSize(8),
+    paddingTop: getResponsiveSize(8),
+    borderTopWidth: getResponsiveSize(1),
     borderTopColor: 'rgba(241, 196, 15, 0.3)'
   },
   statsTexte: {
-    fontSize: 12,
+    fontSize: getResponsiveSize(12),
     fontWeight: '600',
     color: '#f1c40f'
   },
   option: {
     backgroundColor: '#041c55',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
+    borderRadius: getResponsiveSize(16),
+    padding: getResponsiveSize(16),
+    marginBottom: getResponsiveSize(12),
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f1c40f',
     shadowColor: '#f1c40f',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.3,
-    shadowRadius: 3,
+    shadowRadius: getResponsiveSize(3),
     elevation: 3
   },
   optionLabel: {
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: 'bold',
     color: '#f1c40f',
-    marginBottom: 12
+    marginBottom: getResponsiveSize(12)
   },
   buttonGroup: {
     flexDirection: 'row',
-    gap: 8
+    gap: getResponsiveSize(8)
   },
   optionButton: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 10,
+    paddingVertical: getResponsiveSize(12),
+    paddingHorizontal: getResponsiveSize(8),
+    borderRadius: getResponsiveSize(10),
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f1c40f',
     alignItems: 'center',
     justifyContent: 'center'
@@ -572,7 +573,7 @@ const styles = StyleSheet.create({
     borderColor: '#f1c40f'
   },
   optionButtonText: {
-    fontSize: 13,
+    fontSize: getResponsiveSize(13),
     fontWeight: '600',
     color: '#fff',
     textAlign: 'center'
@@ -581,14 +582,14 @@ const styles = StyleSheet.create({
     color: '#041c55'
   },
   pickerContainer: {
-    gap: 8
+    gap: getResponsiveSize(8)
   },
   vitesseOption: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
+    paddingVertical: getResponsiveSize(12),
+    paddingHorizontal: getResponsiveSize(16),
+    borderRadius: getResponsiveSize(10),
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f1c40f',
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -599,7 +600,7 @@ const styles = StyleSheet.create({
     borderColor: '#f1c40f'
   },
   vitesseTexte: {
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     fontWeight: '600',
     color: '#fff'
   },
@@ -608,22 +609,22 @@ const styles = StyleSheet.create({
   },
   switchOption: {
     backgroundColor: '#041c55',
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: getResponsiveSize(20),
+    padding: getResponsiveSize(16),
+    marginBottom: getResponsiveSize(12),
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f1c40f',
     shadowColor: '#f1c40f',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 3,
-    shadowRadius: 3,
+    shadowOpacity: 0.3,
+    shadowRadius: getResponsiveSize(3),
     elevation: 3
   },
   switchLabel: {
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: 'bold',
     color: '#f1c40f'
   },
@@ -632,24 +633,24 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 16,
+    padding: getResponsiveSize(16),
     backgroundColor: 'rgba(4, 28, 85, 0.9)',
-    borderTopWidth: 1,
+    borderTopWidth: getResponsiveSize(1),
     borderTopColor: '#f1c40f'
   },
   boutonLancer: {
     backgroundColor: '#2ecc71',
-    paddingVertical: 16,
-    borderRadius: 10,
+    paddingVertical: getResponsiveSize(16),
+    borderRadius: getResponsiveSize(10),
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: getResponsiveSize(4) },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowRadius: getResponsiveSize(8),
     elevation: 8
   },
   boutonLancerTexte: {
-    fontSize: 18,
+    fontSize: getResponsiveSize(18),
     fontWeight: 'bold',
     color: '#fff'
   },
@@ -657,24 +658,24 @@ const styles = StyleSheet.create({
       flexDirection: 'row', 
       alignItems: 'center', 
       justifyContent: 'center',
-      width: 140,
-      height: 50,
+      width: getResponsiveSize(140),
+      height: getResponsiveSize(50),
       overflow: 'hidden',
       backgroundColor: 'rgba(0,0,0,0.3)',
-      borderRadius: 25,
-      marginHorizontal: 10,
-      borderWidth: 1,
+      borderRadius: getResponsiveSize(25),
+      marginHorizontal: getResponsiveSize(10),
+      borderWidth: getResponsiveSize(1),
       borderColor: 'rgba(241, 196, 15, 0.3)'
   },
   betDisplayText: {
       color: '#f1c40f', 
-      fontSize: 22, 
+      fontSize: getResponsiveSize(22), 
       fontWeight: 'bold', 
-      width: 120,
+      width: getResponsiveSize(120),
       textAlign: 'center',
       textShadowColor: 'rgba(0, 0, 0, 0.75)',
-      textShadowOffset: {width: -1, height: 1},
-      textShadowRadius: 10
+      textShadowOffset: {width: getResponsiveSize(-1), height: getResponsiveSize(1)},
+      textShadowRadius: getResponsiveSize(10)
   }
 });
 

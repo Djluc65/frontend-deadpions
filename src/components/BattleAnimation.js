@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Animated, StyleSheet, Dimensions, Easing } from 'react-native';
 import { Svg, Defs, LinearGradient, Stop, Path, Polygon, Circle } from 'react-native-svg';
+import { getResponsiveSize } from '../utils/responsive';
 
 const { width } = Dimensions.get('window');
 
@@ -8,7 +9,7 @@ const { width } = Dimensions.get('window');
 const LION_IMG = require('../../assets/avatars2/lion2.png');
 const TIGER_IMG = require('../../assets/avatars2/tigre.png');
 
-const AVATAR_SIZE = 65; // Légèrement plus grand pour une meilleure visibilité
+const AVATAR_SIZE = getResponsiveSize(65); // Légèrement plus grand pour une meilleure visibilité
 
 // --- Composants d'effets visuels ---
 
@@ -37,11 +38,11 @@ const FireBreath = ({ anim }) => (
   <Animated.View style={[
     styles.breathContainer, 
     { 
-      left: AVATAR_SIZE - 10, 
+      left: AVATAR_SIZE - getResponsiveSize(10), 
       opacity: anim,
       transform: [
         { scaleX: anim },
-        { translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [-30, 0] }) }
+        { translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [-getResponsiveSize(30), 0] }) }
       ]
     }
   ]}>
@@ -66,11 +67,11 @@ const IceBreath = ({ anim }) => (
   <Animated.View style={[
     styles.breathContainer, 
     { 
-      right: AVATAR_SIZE - 20, 
+      right: AVATAR_SIZE - getResponsiveSize(20), 
       opacity: anim,
       transform: [
         { scaleX: anim },
-        { translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }
+        { translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [getResponsiveSize(30), 0] }) }
       ]
     }
   ]}>
@@ -212,16 +213,16 @@ const BattleAnimation = () => {
 
   // Mouvement: Des bords vers le centre
   // Distance: (Largeur écran / 2) - (Taille avatar) - (Marge de sécurité)
-  const maxTravel = (width / 2) - AVATAR_SIZE - 20; 
+  const maxTravel = (width / 2) - AVATAR_SIZE - getResponsiveSize(20); 
   
   const lionTranslateX = moveAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [-maxTravel * 0.5, 30], // Départ plus à gauche, fin près du centre
+    outputRange: [-maxTravel * 0.5, getResponsiveSize(30)], // Départ plus à gauche, fin près du centre
   });
 
   const tigerTranslateX = moveAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [maxTravel * 0.5, -30], // Départ plus à droite, fin près du centre
+    outputRange: [maxTravel * 0.5, -getResponsiveSize(30)], // Départ plus à droite, fin près du centre
   });
 
   // Mise à l'échelle des têtes (Pop)
@@ -303,25 +304,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center', // Alignement central
     alignItems: 'center',
-    height: 120,
+    height: getResponsiveSize(120),
     width: '100%',
-    marginTop: 20,
-    marginBottom: 10,
-    top: 120,
+    marginTop: getResponsiveSize(20),
+    marginBottom: getResponsiveSize(10),
+    top: getResponsiveSize(120),
     overflow: 'visible', // Permettre aux effets de dépasser
   },
   fighterContainer: {
-    width: AVATAR_SIZE + 10,
-    height: AVATAR_SIZE + 10,
+    width: AVATAR_SIZE + getResponsiveSize(10),
+    height: AVATAR_SIZE + getResponsiveSize(10),
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
-    marginHorizontal: 10, // Espacement initial
+    marginHorizontal: getResponsiveSize(10), // Espacement initial
   },
   centerZone: {
     position: 'absolute',
-    width: 60,
-    height: 60,
+    width: getResponsiveSize(60),
+    height: getResponsiveSize(60),
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 30, // Au-dessus de tout
@@ -337,7 +338,7 @@ const styles = StyleSheet.create({
     height: AVATAR_SIZE,
     borderRadius: AVATAR_SIZE / 2,
     overflow: 'hidden',
-    borderWidth: 2,
+    borderWidth: getResponsiveSize(2),
     borderColor: 'rgba(255,255,255,0.9)',
     zIndex: 2,
     backgroundColor: '#1a1a1a',
@@ -348,45 +349,45 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    width: AVATAR_SIZE + 6,
-    height: AVATAR_SIZE + 6,
-    borderRadius: (AVATAR_SIZE + 6) / 2,
+    width: AVATAR_SIZE + getResponsiveSize(6),
+    height: AVATAR_SIZE + getResponsiveSize(6),
+    borderRadius: (AVATAR_SIZE + getResponsiveSize(6)) / 2,
     zIndex: 1,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
-    shadowRadius: 10,
+    shadowRadius: getResponsiveSize(10),
     elevation: 5,
   },
   lionBadge: {
     backgroundColor: 'rgba(220, 20, 60, 0.4)',
-    borderWidth: 1,
+    borderWidth: getResponsiveSize(1),
     borderColor: '#ff4d4d',
     shadowColor: '#ff0000',
   },
   tigerBadge: {
     backgroundColor: 'rgba(30, 144, 255, 0.4)',
-    borderWidth: 1,
+    borderWidth: getResponsiveSize(1),
     borderColor: '#4da6ff',
     shadowColor: '#0066ff',
   },
   glowContainer: {
     position: 'absolute',
-    width: AVATAR_SIZE + 20,
-    height: AVATAR_SIZE + 20,
-    borderRadius: (AVATAR_SIZE + 20) / 2,
+    width: AVATAR_SIZE + getResponsiveSize(20),
+    height: AVATAR_SIZE + getResponsiveSize(20),
+    borderRadius: (AVATAR_SIZE + getResponsiveSize(20)) / 2,
     zIndex: 0,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
-    shadowRadius: 15,
+    shadowRadius: getResponsiveSize(15),
     elevation: 8,
     shadowColor: '#fff',
   },
   breathContainer: {
     position: 'absolute',
-    top: AVATAR_SIZE / 2 - 25, // Centré verticalement par rapport à l'avatar
+    top: AVATAR_SIZE / 2 - getResponsiveSize(25), // Centré verticalement par rapport à l'avatar
     zIndex: 20,
-    width: 100,
-    height: 50,
+    width: getResponsiveSize(100),
+    height: getResponsiveSize(50),
     justifyContent: 'center',
     overflow: 'visible',
   },

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useCoinsContext } from '../context/CoinsContext';
+import { getResponsiveSize } from '../utils/responsive';
 
 const SyncIndicator = () => {
     const { isLoading, lastSync } = useCoinsContext();
@@ -33,7 +34,7 @@ const SyncIndicator = () => {
         <View style={styles.syncIndicator}>
             {isLoading ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <ActivityIndicator size="small" color="#FFD700" style={{ marginRight: 5 }} />
+                    <ActivityIndicator size="small" color="#FFD700" style={{ marginRight: getResponsiveSize(5) }} />
                     <Text style={styles.syncText}>Sync...</Text>
                 </View>
             ) : (
@@ -49,16 +50,16 @@ const styles = StyleSheet.create({
     syncIndicator: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 5,
-        paddingHorizontal: 10,
+        paddingVertical: getResponsiveSize(5),
+        paddingHorizontal: getResponsiveSize(10),
         backgroundColor: 'rgba(0,0,0,0.3)',
-        borderRadius: 15,
+        borderRadius: getResponsiveSize(15),
         alignSelf: 'center',
-        marginVertical: 5
+        marginVertical: getResponsiveSize(5)
     },
     syncText: {
         color: '#FFD700',
-        fontSize: 10,
+        fontSize: getResponsiveSize(10),
         fontWeight: 'bold'
     }
 });

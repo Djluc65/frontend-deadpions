@@ -6,6 +6,7 @@ import { socket } from '../../utils/socket';
 import { playButtonSound } from '../../utils/soundManager';
 import { BET_OPTIONS, ONLINE_TIME_OPTIONS } from '../../utils/constants';
 import { logout } from '../../redux/slices/authSlice';
+import { getResponsiveSize } from '../../utils/responsive';
 
 const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
     const dispatch = useDispatch();
@@ -20,6 +21,8 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
     const [audioLobbyActif, setAudioLobbyActif] = useState(true);
     const [reactionsActives, setReactionsActives] = useState(true);
     const [tempsParCoup, setTempsParCoup] = useState(30);
+    const [startingSide, setStartingSide] = useState('random');
+    const [hostColor, setHostColor] = useState('random');
     const [isTournament, setIsTournament] = useState(false);
     const [tournamentGames, setTournamentGames] = useState(2);
     const [betAmount, setBetAmount] = useState(100);
@@ -153,7 +156,9 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                 modeSpectateur: modeSpectateur,
                 isTournament: isTournament,
                 tournamentGames: tournamentGames,
-                betAmount: betAmount
+                betAmount: betAmount,
+                startingSide: startingSide,
+                hostColor: hostColor
             }
         };
 
@@ -169,16 +174,16 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
         const canGoNext = currentIndex < effectiveBets.length - 1;
 
         return (
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: getResponsiveSize(10) }}>
                 <TouchableOpacity 
                     onPress={() => {
                         playButtonSound();
                         if (canGoPrev) setBetAmount(effectiveBets[currentIndex - 1]);
                     }}
                     disabled={!canGoPrev}
-                    style={{ padding: 10, opacity: !canGoPrev ? 0.3 : 1 }}
+                    style={{ padding: getResponsiveSize(10), opacity: !canGoPrev ? 0.3 : 1 }}
                 >
-                    <Ionicons name="remove-circle-outline" size={40} color="#fff" />
+                    <Ionicons name="remove-circle-outline" size={getResponsiveSize(40)} color="#fff" />
                 </TouchableOpacity>
                 
                 <View style={styles.betDisplay}>
@@ -201,9 +206,9 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                         if (canGoNext) setBetAmount(effectiveBets[currentIndex + 1]);
                     }}
                     disabled={!canGoNext}
-                    style={{ padding: 10, opacity: !canGoNext ? 0.3 : 1 }}
+                    style={{ padding: getResponsiveSize(10), opacity: !canGoNext ? 0.3 : 1 }}
                 >
-                    <Ionicons name="add-circle-outline" size={40} color="#fff" />
+                    <Ionicons name="add-circle-outline" size={getResponsiveSize(40)} color="#fff" />
                 </TouchableOpacity>
             </View>
         );
@@ -236,7 +241,7 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
 
                         {sallePrivee && (
                             <TextInput
-                                style={[styles.input, { marginTop: 10 }]}
+                                style={[styles.input, { marginTop: getResponsiveSize(10) }]}
                                 placeholder="Mot de passe"
                                 placeholderTextColor="rgba(255,255,255,0.5)"
                                 value={motDePasse}
@@ -294,6 +299,44 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                                     onPress={() => setTempsParCoup(opt.value)}
                                 >
                                     <Text style={[styles.friendsOptionText, tempsParCoup === opt.value && styles.friendsOptionTextActive]}>
+                                        {opt.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        <Text style={styles.friendsLabel}>Qui commence ?</Text>
+                        <View style={styles.optionsRow}>
+                            {[
+                                { label: 'Moi', value: 'host' },
+                                { label: 'Adversaire', value: 'guest' },
+                                { label: 'Aléatoire', value: 'random' }
+                            ].map(opt => (
+                                <TouchableOpacity 
+                                    key={opt.value} 
+                                    style={[styles.friendsOptionButton, startingSide === opt.value && styles.friendsOptionButtonActive]}
+                                    onPress={() => { playButtonSound(); setStartingSide(opt.value); }}
+                                >
+                                    <Text style={[styles.friendsOptionText, startingSide === opt.value && styles.friendsOptionTextActive]}>
+                                        {opt.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        <Text style={styles.friendsLabel}>Ma couleur :</Text>
+                        <View style={styles.optionsRow}>
+                            {[
+                                { label: 'Bleu', value: 'white' },
+                                { label: 'Rouge', value: 'black' },
+                                { label: 'Aléatoire', value: 'random' }
+                            ].map(opt => (
+                                <TouchableOpacity 
+                                    key={opt.value} 
+                                    style={[styles.friendsOptionButton, hostColor === opt.value && styles.friendsOptionButtonActive]}
+                                    onPress={() => { playButtonSound(); setHostColor(opt.value); }}
+                                >
+                                    <Text style={[styles.friendsOptionText, hostColor === opt.value && styles.friendsOptionTextActive]}>
                                         {opt.label}
                                     </Text>
                                 </TouchableOpacity>
@@ -360,7 +403,7 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                     {isCreating ? (
                         <View style={{ alignItems: 'center', width: '100%' }}>
                             <Text style={styles.friendsModalTitle}>Création de la salle...</Text>
-                            <ActivityIndicator size="large" color="#f1c40f" style={{ marginVertical: 20 }} />
+                            <ActivityIndicator size="large" color="#f1c40f" style={{ marginVertical: getResponsiveSize(20) }} />
                             <Text style={styles.betInfo}>Veuillez patienter</Text>
                         </View>
                     ) : (
@@ -408,18 +451,18 @@ const styles = StyleSheet.create({
     friendsModalContent: {
         width: '90%',
         backgroundColor: '#041c55',
-        borderRadius: 25,
-        padding: 25,
+        borderRadius: getResponsiveSize(25),
+        padding: getResponsiveSize(25),
         alignItems: 'center',
         borderWidth: 2,
         borderColor: '#f1c40f',
         shadowColor: "#000",
         shadowOffset: {
             width: 0,
-            height: 10,
+            height: getResponsiveSize(10),
         },
         shadowOpacity: 0.51,
-        shadowRadius: 13.16,
+        shadowRadius: getResponsiveSize(13.16),
         elevation: 20,
         position: 'relative',
         overflow: 'hidden',
@@ -433,23 +476,23 @@ const styles = StyleSheet.create({
         bottom: 0,
         borderWidth: 2,
         borderColor: 'rgba(255, 255, 255, 0.1)',
-        borderRadius: 23,
+        borderRadius: getResponsiveSize(23),
     },
     friendsModalTitle: {
-        fontSize: 24, 
+        fontSize: getResponsiveSize(24), 
         fontWeight: 'bold',
         color: '#f1c40f',
-        marginBottom: 5,
+        marginBottom: getResponsiveSize(5),
         textAlign: 'center',
         textTransform: 'uppercase',
         textShadowColor: 'rgba(0, 0, 0, 0.75)',
-        textShadowOffset: { width: -1, height: 1 },
-        textShadowRadius: 10
+        textShadowOffset: { width: getResponsiveSize(-1), height: getResponsiveSize(1) },
+        textShadowRadius: getResponsiveSize(10)
     },
     stepIndicator: {
         color: 'rgba(255, 255, 255, 0.6)',
-        fontSize: 14,
-        marginBottom: 15,
+        fontSize: getResponsiveSize(14),
+        marginBottom: getResponsiveSize(15),
         fontWeight: '600',
     },
     stepContainer: {
@@ -457,27 +500,27 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     friendsLabel: {
-        fontSize: 16,
+        fontSize: getResponsiveSize(16),
         color: '#fff',
-        marginBottom: 8,
-        marginTop: 12,
+        marginBottom: getResponsiveSize(8),
+        marginTop: getResponsiveSize(12),
         fontWeight: 'bold',
         alignSelf: 'flex-start',
-        marginLeft: 10
+        marginLeft: getResponsiveSize(10)
     },
     optionsRow: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'center',
-        marginBottom: 5,
+        marginBottom: getResponsiveSize(5),
     },
     friendsOptionButton: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-        borderWidth: 1,
+        paddingHorizontal: getResponsiveSize(12),
+        paddingVertical: getResponsiveSize(6),
+        borderRadius: getResponsiveSize(20),
+        borderWidth: getResponsiveSize(1),
         borderColor: '#f1c40f',
-        margin: 4,
+        margin: getResponsiveSize(4),
         backgroundColor: 'transparent',
     },
     friendsOptionButtonActive: {
@@ -485,7 +528,7 @@ const styles = StyleSheet.create({
     },
     friendsOptionText: {
         color: '#f1c40f',
-        fontSize: 12,
+        fontSize: getResponsiveSize(12),
         fontWeight: 'bold',
     },
     friendsOptionTextActive: {
@@ -495,15 +538,15 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         width: '100%',
-        marginTop: 20,
-        marginBottom: 20
+        marginTop: getResponsiveSize(20),
+        marginBottom: getResponsiveSize(20)
     },
     modalButtonCancel: {
         flex: 1,
         backgroundColor: '#e74c3c',
-        padding: 15,
-        borderRadius: 15,
-        marginRight: 10,
+        padding: getResponsiveSize(15),
+        borderRadius: getResponsiveSize(15),
+        marginRight: getResponsiveSize(10),
         alignItems: 'center',
         borderWidth: 1,
         borderColor: '#c0392b',
@@ -511,9 +554,9 @@ const styles = StyleSheet.create({
     modalButtonConfirm: {
         flex: 1,
         backgroundColor: '#2ecc71',
-        padding: 15,
-        borderRadius: 15,
-        marginLeft: 10,
+        padding: getResponsiveSize(15),
+        borderRadius: getResponsiveSize(15),
+        marginLeft: getResponsiveSize(10),
         alignItems: 'center',
         borderWidth: 1,
         borderColor: '#27ae60',
@@ -521,69 +564,69 @@ const styles = StyleSheet.create({
     modalButtonText: {
         color: '#fff',
         fontWeight: 'bold',
-        fontSize: 16,
+        fontSize: getResponsiveSize(16),
         textTransform: 'uppercase',
     },
     betInfo: {
         color: '#fff',
-        fontSize: 16,
-        marginBottom: 20,
+        fontSize: getResponsiveSize(16),
+        marginBottom: getResponsiveSize(20),
         fontWeight: 'bold'
     },
     betDisplay: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        width: 140,
-        height: 50,
+        width: getResponsiveSize(140),
+        height: getResponsiveSize(50),
         overflow: 'hidden',
         backgroundColor: 'rgba(0,0,0,0.3)',
-        borderRadius: 25,
-        marginHorizontal: 10,
+        borderRadius: getResponsiveSize(25),
+        marginHorizontal: getResponsiveSize(10),
         borderWidth: 1,
         borderColor: 'rgba(241, 196, 15, 0.3)'
     },
     betSmallText: {
         color: '#f1c40f',
-        fontSize: 14,
+        fontSize: getResponsiveSize(14),
         opacity: 0.5,
-        width: 70,
+        width: getResponsiveSize(70),
         textAlign: 'center'
     },
     betMainText: {
         color: '#f1c40f',
-        fontSize: 22,
+        fontSize: getResponsiveSize(22),
         fontWeight: 'bold',
-        width: 120,
+        width: getResponsiveSize(120),
         textAlign: 'center',
         textShadowColor: 'rgba(0, 0, 0, 0.75)',
         textShadowOffset: {width: -1, height: 1},
-        textShadowRadius: 10
+        textShadowRadius: getResponsiveSize(10)
     },
     input: {
         width: '95%',
         backgroundColor: 'rgba(0,0,0,0.3)',
         borderWidth: 1,
         borderColor: '#f1c40f',
-        borderRadius: 15,
-        padding: 12,
+        borderRadius: getResponsiveSize(15),
+        padding: getResponsiveSize(12),
         color: '#fff',
-        fontSize: 16,
-        marginBottom: 5,
+        fontSize: getResponsiveSize(16),
+        marginBottom: getResponsiveSize(5),
     },
     switchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         width: '90%',
-        marginVertical: 5,
+        marginVertical: getResponsiveSize(5),
         backgroundColor: 'rgba(0,0,0,0.2)',
-        padding: 10,
-        borderRadius: 15,
+        padding: getResponsiveSize(10),
+        borderRadius: getResponsiveSize(15),
     },
     switchLabel: {
         color: '#fff',
-        fontSize: 16,
+        fontSize: getResponsiveSize(16),
         fontWeight: 'bold',
     }
 });

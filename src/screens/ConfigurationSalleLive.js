@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { socket } from '../utils/socket';
 import { playButtonSound } from '../utils/soundManager';
+import { getResponsiveSize } from '../utils/responsive';
 
 /**
  * Écran de configuration pour la création d'une salle live.
@@ -419,7 +420,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
                                 disabled={!canGoPrev}
                                 style={[styles.betButton, { opacity: !canGoPrev ? 0.3 : 1 }]}
                             >
-                                <Ionicons name="remove-circle-outline" size={40} color="#fff" />
+                                <Ionicons name="remove-circle-outline" size={getResponsiveSize(40)} color="#fff" />
                             </TouchableOpacity>
                             
                             <View style={styles.betDisplay}>
@@ -457,7 +458,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
                                 disabled={!canGoNext}
                                 style={[styles.betButton, { opacity: !canGoNext ? 0.3 : 1 }]}
                             >
-                                <Ionicons name="add-circle-outline" size={40} color="#fff" />
+                                <Ionicons name="add-circle-outline" size={getResponsiveSize(40)} color="#fff" />
                             </TouchableOpacity>
                         </>
                     );
@@ -502,7 +503,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
             </TouchableOpacity>
         </View>
         
-        <View style={{ height: 40 }} />
+        <View style={{ height: getResponsiveSize(40) }} />
         </ScrollView>
     </ImageBackground>
   );
@@ -519,17 +520,17 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#041c55',
-    paddingVertical: 30,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    marginBottom: 20,
+    paddingVertical: getResponsiveSize(30),
+    paddingHorizontal: getResponsiveSize(20),
+    borderBottomLeftRadius: getResponsiveSize(30),
+    borderBottomRightRadius: getResponsiveSize(30),
+    marginBottom: getResponsiveSize(20),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: getResponsiveSize(4) },
     shadowOpacity: 0.3,
-    shadowRadius: 5,
+    shadowRadius: getResponsiveSize(5),
     elevation: 8,
-    borderBottomWidth: 1,
+    borderBottomWidth: getResponsiveSize(1),
     borderBottomColor: '#f1c40f',
   },
   headerContent: {
@@ -539,124 +540,124 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(239, 68, 68, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginBottom: 10,
-    borderWidth: 1,
+    paddingHorizontal: getResponsiveSize(12),
+    paddingVertical: getResponsiveSize(6),
+    borderRadius: getResponsiveSize(20),
+    marginBottom: getResponsiveSize(10),
+    borderWidth: getResponsiveSize(1),
     borderColor: '#ef4444',
   },
   liveIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: getResponsiveSize(8),
+    height: getResponsiveSize(8),
+    borderRadius: getResponsiveSize(4),
     backgroundColor: '#ef4444',
-    marginRight: 8,
+    marginRight: getResponsiveSize(8),
   },
   liveBadgeLargeTexte: {
     color: '#ef4444',
     fontWeight: 'bold',
-    fontSize: 12,
-    letterSpacing: 1,
+    fontSize: getResponsiveSize(12),
+    letterSpacing: getResponsiveSize(1),
   },
   titre: {
-    fontSize: 28,
+    fontSize: getResponsiveSize(28),
     fontWeight: 'bold',
     color: '#ffffff',
-    marginBottom: 5,
+    marginBottom: getResponsiveSize(5),
     textAlign: 'center',
   },
   sousTitre: {
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     color: '#d1d5db',
     textAlign: 'center',
     maxWidth: '80%',
   },
   sectionCard: {
     backgroundColor: '#041c55',
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 16,
-    padding: 20,
+    marginHorizontal: getResponsiveSize(20),
+    marginBottom: getResponsiveSize(20),
+    borderRadius: getResponsiveSize(16),
+    padding: getResponsiveSize(20),
     shadowColor: '#f1c40f',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 5,
-    borderWidth: 1,
+    shadowRadius: getResponsiveSize(3),
+    elevation: getResponsiveSize(5),
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f1c40f',
   },
   sectionTitre: {
-    fontSize: 18,
+    fontSize: getResponsiveSize(18),
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 15,
-    borderBottomWidth: 1,
+    marginBottom: getResponsiveSize(15),
+    borderBottomWidth: getResponsiveSize(1),
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-    paddingBottom: 10,
+    paddingBottom: getResponsiveSize(10),
   },
   inputGroup: {
-    marginBottom: 15,
+    marginBottom: getResponsiveSize(15),
   },
   label: {
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     fontWeight: '600',
     color: '#f1c40f',
-    marginBottom: 8,
+    marginBottom: getResponsiveSize(8),
   },
   input: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f1c40f',
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 16,
+    borderRadius: getResponsiveSize(10),
+    padding: getResponsiveSize(12),
+    fontSize: getResponsiveSize(16),
     color: '#fff',
   },
   textArea: {
-    minHeight: 80,
+    minHeight: getResponsiveSize(80),
     textAlignVertical: 'top',
   },
   helperText: {
-    fontSize: 12,
+    fontSize: getResponsiveSize(12),
     color: '#9ca3af',
-    marginTop: 4,
+    marginTop: getResponsiveSize(4),
     textAlign: 'right',
   },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
-    paddingVertical: 5,
+    marginBottom: getResponsiveSize(20),
+    paddingVertical: getResponsiveSize(5),
   },
   switchInfo: {
     flex: 1,
-    paddingRight: 10,
+    paddingRight: getResponsiveSize(10),
   },
   switchLabel: {
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: '600',
     color: '#f1c40f',
-    marginBottom: 2,
+    marginBottom: getResponsiveSize(2),
   },
   switchDescription: {
-    fontSize: 13,
+    fontSize: getResponsiveSize(13),
     color: '#d1d5db',
   },
   optionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: getResponsiveSize(8),
   },
   optionChip: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f1c40f',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    minWidth: 60,
+    paddingVertical: getResponsiveSize(8),
+    paddingHorizontal: getResponsiveSize(12),
+    borderRadius: getResponsiveSize(20),
+    minWidth: getResponsiveSize(60),
     alignItems: 'center',
   },
   optionChipActive: {
@@ -664,7 +665,7 @@ const styles = StyleSheet.create({
     borderColor: '#f1c40f',
   },
   optionChipTexte: {
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     color: '#fff',
     fontWeight: '500',
   },
@@ -674,14 +675,14 @@ const styles = StyleSheet.create({
   },
   modeContainer: {
     flexDirection: 'row',
-    gap: 10,
+    gap: getResponsiveSize(10),
   },
   modeButton: {
     flex: 1,
-    padding: 15,
+    padding: getResponsiveSize(15),
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: getResponsiveSize(12),
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f1c40f',
     alignItems: 'center',
   },
@@ -690,93 +691,93 @@ const styles = StyleSheet.create({
     borderColor: '#f1c40f',
   },
   modeButtonTexte: {
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 5,
+    marginBottom: getResponsiveSize(5),
   },
   modeButtonTexteActive: {
     color: '#041c55',
   },
   modeDescription: {
-    fontSize: 12,
+    fontSize: getResponsiveSize(12),
     color: '#d1d5db',
     textAlign: 'center',
   },
   footer: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    paddingHorizontal: getResponsiveSize(20),
+    marginBottom: getResponsiveSize(20),
   },
   boutonCreer: {
     backgroundColor: '#ef4444',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
-    borderRadius: 16,
+    padding: getResponsiveSize(16),
+    borderRadius: getResponsiveSize(16),
     shadowColor: '#ef4444',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: getResponsiveSize(4) },
     shadowOpacity: 0.3,
-    shadowRadius: 5,
+    shadowRadius: getResponsiveSize(5),
     elevation: 8,
-    borderWidth: 2,
+    borderWidth: getResponsiveSize(2),
     borderColor: '#fff',
   },
   boutonCreerTexte: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: getResponsiveSize(18),
     fontWeight: 'bold',
-    marginRight: 10,
+    marginRight: getResponsiveSize(10),
   },
   liveBadgeSmall: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: 4,
-    borderRadius: 4,
+    padding: getResponsiveSize(4),
+    borderRadius: getResponsiveSize(4),
   },
   liveIndicatorSmall: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: getResponsiveSize(6),
+    height: getResponsiveSize(6),
+    borderRadius: getResponsiveSize(3),
     backgroundColor: '#fff',
   },
   betContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 10,
+    marginVertical: getResponsiveSize(10),
   },
   betButton: {
-    padding: 10,
+    padding: getResponsiveSize(10),
   },
   betDisplay: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    width: 280,
-    height: 50,
+    width: getResponsiveSize(280),
+    height: getResponsiveSize(50),
     overflow: 'hidden',
     backgroundColor: 'rgba(0,0,0,0.3)',
-    borderRadius: 25,
-    marginHorizontal: 10,
-    borderWidth: 1,
+    borderRadius: getResponsiveSize(25),
+    marginHorizontal: getResponsiveSize(10),
+    borderWidth: getResponsiveSize(1),
     borderColor: 'rgba(241, 196, 15, 0.3)',
   },
   betTextSmall: {
     color: '#f1c40f',
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     opacity: 0.5,
-    width: 70,
+    width: getResponsiveSize(70),
     textAlign: 'center',
   },
   betTextLarge: {
     color: '#f1c40f',
-    fontSize: 22,
+    fontSize: getResponsiveSize(22),
     fontWeight: 'bold',
-    width: 120,
+    width: getResponsiveSize(120),
     textAlign: 'center',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: {width: -1, height: 1},
-    textShadowRadius: 10,
+    textShadowOffset: {width: getResponsiveSize(-1), height: getResponsiveSize(1)},
+    textShadowRadius: getResponsiveSize(10),
   },
 });
 

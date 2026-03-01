@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { toggleMusic, toggleSound, setLanguage } from '../../redux/slices/settingsSlice';
 import { translations } from '../../utils/translations';
 import { playButtonSound } from '../../utils/soundManager';
+import { getResponsiveSize } from '../../utils/responsive';
 
 const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
   const dispatch = useDispatch();
@@ -55,7 +56,7 @@ const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
             <View style={styles.languageContainer}>
               <TouchableOpacity 
                 style={[styles.langButton, settings.language === 'fr' && styles.langButtonActive]}
-                hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                hitSlop={{ top: getResponsiveSize(15), bottom: getResponsiveSize(15), left: getResponsiveSize(15), right: getResponsiveSize(15) }}
                 onPress={() => {
                   playButtonSound();
                   handlePlaySound();
@@ -66,7 +67,7 @@ const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.langButton, settings.language === 'en' && styles.langButtonActive]}
-                hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                hitSlop={{ top: getResponsiveSize(15), bottom: getResponsiveSize(15), left: getResponsiveSize(15), right: getResponsiveSize(15) }}
                 onPress={() => {
                   playButtonSound();
                   handlePlaySound();
@@ -86,13 +87,13 @@ const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
               navigation.navigate('Info');
             }}
           >
-            <Ionicons name="information-circle-outline" size={24} color="#f1c40f" />
+            <Ionicons name="information-circle-outline" size={getResponsiveSize(24)} color="#f1c40f" />
             <Text style={styles.infoButtonText}>{settings.language === 'en' ? 'About & Rules' : 'Infos & Règles'}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.closeButton}
-            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+            hitSlop={{ top: getResponsiveSize(15), bottom: getResponsiveSize(15), left: getResponsiveSize(15), right: getResponsiveSize(15) }}
             onPress={() => {
               playButtonSound();
               handlePlaySound();
@@ -117,21 +118,21 @@ const styles = StyleSheet.create({
   modalContent: {
     width: '80%',
     backgroundColor: '#041c55',
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: getResponsiveSize(20),
+    padding: getResponsiveSize(20),
     alignItems: 'center',
     shadowColor: '#f1c40f',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 3,
-    shadowRadius: 3,
+    shadowRadius: getResponsiveSize(3),
     elevation: 5,
-    borderWidth: 1,
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f1c40f',
   },
   modalTitle: {
-    fontSize: 24,
+    fontSize: getResponsiveSize(24),
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: getResponsiveSize(20),
     color: '#fff',
   },
   settingRow: {
@@ -139,21 +140,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
-    marginBottom: 20,
-    paddingHorizontal: 10,
+    marginBottom: getResponsiveSize(20),
+    paddingHorizontal: getResponsiveSize(10),
   },
   settingText: {
-    fontSize: 18,
+    fontSize: getResponsiveSize(18),
     color: '#fff',
   },
   languageContainer: {
     flexDirection: 'row',
-    gap: 10,
+    gap: getResponsiveSize(10),
   },
   langButton: {
-    padding: 8,
-    borderRadius: 5,
-    borderWidth: 1,
+    padding: getResponsiveSize(8),
+    borderRadius: getResponsiveSize(5),
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f1c40f',
   },
   langButtonActive: {
@@ -169,26 +170,26 @@ const styles = StyleSheet.create({
   infoButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
-    padding: 10,
-    borderWidth: 1,
+    marginBottom: getResponsiveSize(20),
+    padding: getResponsiveSize(10),
+    borderWidth: getResponsiveSize(1),
     borderColor: '#f1c40f',
-    borderRadius: 10,
+    borderRadius: getResponsiveSize(10),
     width: '100%',
     justifyContent: 'center',
   },
   infoButtonText: {
     color: '#fff',
-    marginLeft: 10,
+    marginLeft: getResponsiveSize(10),
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
   },
   closeButton: {
     backgroundColor: '#eb4141ff',
-    borderRadius: 20,
-    padding: 10,
-    paddingHorizontal: 30,
-    marginTop: 10,
+    borderRadius: getResponsiveSize(20),
+    padding: getResponsiveSize(10),
+    paddingHorizontal: getResponsiveSize(30),
+    marginTop: getResponsiveSize(10),
   },
   closeButtonText: {
     color: 'white',

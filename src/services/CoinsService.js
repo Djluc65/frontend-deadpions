@@ -233,7 +233,21 @@ class CoinsService {
         
         try {
             const pending = await TransactionService.getPendingTransactions();
-            if (pending.length === 0) return { ok: true, skipped: true };
+            
+            // Filtrer les transactions valides (éviter erreur 500)
+            const validTransactions = pending.filter(t => 
+                t && t.id && t.type && t.montant !== undefined && 
+                t.soldeAvant !== undefined && t.soldeApres !== undefined
+            );
+
+            if (validTransactions.length === 0) {
+                // Si on a des transactions mais aucune valide, on les marque comme synchronisées pour ne plus bloquer
+                if (pending.length > 0) {
+                    const ids = pending.map(t => t.id).filter(Boolean);
+                    if (ids.length > 0) await TransactionService.markAsSynced(ids);
+                }
+                return { ok: true, skipped: true };
+            }
 
             const response = await fetch(`${API_URL}/transactions/sync`, {
                 method: 'POST',
@@ -241,12 +255,13 @@ class CoinsService {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ transactions: pending })
+                body: JSON.stringify({ transactions: validTransactions })
             });
 
             if (response.ok) {
                 const data = await response.json();
-                const syncedIds = pending.map(t => t.id);
+                // Marquer TOUTES les transactions initiales comme traitées (valides + invalides)
+                const syncedIds = pending.map(t => t.id).filter(Boolean);
                 await TransactionService.markAsSynced(syncedIds);
                 if (data.serverBalance !== undefined) {
                     await AsyncStorage.setItem(this.STORAGE_KEY_COINS, data.serverBalance.toString());

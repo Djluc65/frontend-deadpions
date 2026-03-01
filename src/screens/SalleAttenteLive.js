@@ -6,6 +6,7 @@ import { socket } from '../utils/socket';
 import { API_URL } from '../config';
 import { playButtonSound } from '../utils/soundManager';
 import { getAvatarSource as getBaseAvatarSource } from '../utils/avatarUtils';
+import { getResponsiveSize, isTablet } from '../utils/responsive';
 
 /**
  * Écran de la salle d'attente pour les jeux en direct.
@@ -276,7 +277,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
             style={[styles.background, { justifyContent: 'center', alignItems: 'center' }]}
           >
               <ActivityIndicator size="large" color="#f1c40f" />
-              <Text style={{ color: '#fff', marginTop: 20 }}>Chargement de la salle...</Text>
+              <Text style={{ color: '#fff', marginTop: getResponsiveSize(20) }}>Chargement de la salle...</Text>
           </ImageBackground>
       );
   }
@@ -291,7 +292,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
           onPress={() => { playButtonSound(); handleBackPress(); }} 
           style={styles.backButton}
         >
-          <Ionicons name="arrow-back" size={28} color="#fff" />
+          <Ionicons name="arrow-back" size={getResponsiveSize(28)} color="#fff" />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
             <Text style={styles.headerTitle}>{configSalle.nom}</Text>
@@ -301,7 +302,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
             </View>
         </View>
         <TouchableOpacity onPress={() => { playButtonSound(); handleShare(); }} style={styles.shareButton}>
-            <Ionicons name="share-social-outline" size={24} color="#fff" />
+            <Ionicons name="share-social-outline" size={getResponsiveSize(24)} color="#fff" />
         </TouchableOpacity>
       </View>
 
@@ -316,7 +317,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
                         {configSalle.createur.avatar ? (
                             <Image source={getAvatarSource(configSalle.createur.avatar)} style={styles.avatarImage} />
                         ) : (
-                            <Ionicons name="person-circle-outline" size={50} color="#374151" />
+                            <Ionicons name="person-circle-outline" size={getResponsiveSize(50)} color="#374151" />
                         )}
                         {configSalle.createur.pays && (
                             <Text style={styles.flag}>{configSalle.createur.pays}</Text>
@@ -340,7 +341,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
                                 {opponent.avatar ? (
                                     <Image source={getAvatarSource(opponent.avatar)} style={styles.avatarImage} />
                                 ) : (
-                                    <Ionicons name="person-circle-outline" size={50} color="#374151" />
+                                    <Ionicons name="person-circle-outline" size={getResponsiveSize(50)} color="#374151" />
                                 )}
                                 {opponent.country && (
                                     <Text style={styles.flag}>{opponent.country}</Text>
@@ -355,15 +356,15 @@ const SalleAttenteLive = ({ route, navigation }) => {
                         <View style={styles.waitingOpponent}>
                             {isCreator ? (
                                 <TouchableOpacity onPress={() => { playButtonSound(); handleOpenInviteModal(); }} style={styles.inviteButton}>
-                                    <View style={[styles.avatarImage, styles.avatarPlaceholder, { borderColor: '#10b981', borderStyle: 'solid', borderWidth: 2 }]}>
-                                        <Ionicons name="add" size={32} color="#10b981" />
+                                    <View style={[styles.avatarImage, styles.avatarPlaceholder, { borderColor: '#10b981', borderStyle: 'solid', borderWidth: getResponsiveSize(2) }]}>
+                                        <Ionicons name="add" size={getResponsiveSize(32)} color="#10b981" />
                                     </View>
-                                    <Text style={[styles.waitingTextSmall, { color: '#10b981', fontWeight: 'bold', marginTop: 4 }]}>Inviter</Text>
+                                    <Text style={[styles.waitingTextSmall, { color: '#10b981', fontWeight: 'bold', marginTop: getResponsiveSize(4) }]}>Inviter</Text>
                                 </TouchableOpacity>
                             ) : (
                                 <>
                                     <View style={[styles.avatarImage, styles.avatarPlaceholder]}>
-                                        <Ionicons name="help" size={30} color="#9ca3af" />
+                                        <Ionicons name="help" size={getResponsiveSize(30)} color="#9ca3af" />
                                     </View>
                                     <Text style={styles.waitingTextSmall}>En attente...</Text>
                                 </>
@@ -377,19 +378,19 @@ const SalleAttenteLive = ({ route, navigation }) => {
             
             <View style={styles.paramsGrid}>
                 <View style={styles.paramItem}>
-                    <Ionicons name="cash-outline" size={20} color="#f1c40f" />
+                    <Ionicons name="cash-outline" size={getResponsiveSize(20)} color="#f1c40f" />
                     <Text style={[styles.paramText, { color: '#f1c40f' }]}>
                         {configSalle.parametres.betAmount ? `${configSalle.parametres.betAmount.toLocaleString()} 🪙` : 'Gratuit'}
                     </Text>
                 </View>
                 <View style={styles.paramItem}>
-                    <Ionicons name="time-outline" size={20} color="#9ca3af" />
+                    <Ionicons name="time-outline" size={getResponsiveSize(20)} color="#9ca3af" />
                     <Text style={styles.paramText}>
                         {configSalle.parametres.tempsParCoup === 0 ? 'Illimité' : `${configSalle.parametres.tempsParCoup}s`}
                     </Text>
                 </View>
                 <View style={styles.paramItem}>
-                    <Ionicons name="people-outline" size={20} color="#9ca3af" />
+                    <Ionicons name="people-outline" size={getResponsiveSize(20)} color="#9ca3af" />
                     <Text style={styles.paramText}>
                         {spectateurs.length}/{configSalle.parametres.limitSpectateurs}
                     </Text>
@@ -423,13 +424,13 @@ const SalleAttenteLive = ({ route, navigation }) => {
                     style={styles.stopButton} 
                     onPress={handleStopLive}
                 >
-                    <Ionicons name="stop-circle-outline" size={24} color="#ef4444" />
+                    <Ionicons name="stop-circle-outline" size={getResponsiveSize(24)} color="#ef4444" />
                     <Text style={styles.stopButtonText}>Arrêter le Live</Text>
                 </TouchableOpacity>
             </View>
         )}
         
-        <View style={{ height: 100 }} />
+        <View style={{ height: getResponsiveSize(100) }} />
       </ScrollView>
 
       {/* Actions de pied de page */}
@@ -443,12 +444,12 @@ const SalleAttenteLive = ({ route, navigation }) => {
               <Ionicons name="person-add" size={24} color="#fff" style={{ marginLeft: 10 }} />
             </TouchableOpacity> */}
             <TouchableOpacity 
-              style={[styles.mainButton, { flex: 1, marginLeft: 8, opacity: opponent ? 1 : 0.6 }]}
+              style={[styles.mainButton, { flex: 1, marginLeft: getResponsiveSize(8), opacity: opponent ? 1 : 0.6 }]}
               onPress={handleStartGame}
               disabled={!opponent}
             >
               <Text style={styles.mainButtonText}>LANCER LA PARTIE</Text>
-              <Ionicons name="play" size={24} color="#fff" style={{ marginLeft: 10 }} />
+              <Ionicons name="play" size={getResponsiveSize(24)} color="#fff" style={{ marginLeft: getResponsiveSize(10) }} />
             </TouchableOpacity>
           </View>
         ) : (
@@ -470,12 +471,12 @@ const SalleAttenteLive = ({ route, navigation }) => {
                 <View style={styles.modalHeader}>
                     <Text style={styles.modalTitle}>Inviter un ami</Text>
                     <TouchableOpacity onPress={() => setInviteModalVisible(false)} style={styles.closeButton}>
-                        <Ionicons name="close" size={24} color="#374151" />
+                        <Ionicons name="close" size={getResponsiveSize(24)} color="#374151" />
                     </TouchableOpacity>
                 </View>
 
                 {loadingFriends ? (
-                    <ActivityIndicator size="large" color="#4f46e5" style={{ marginVertical: 20 }} />
+                    <ActivityIndicator size="large" color="#4f46e5" style={{ marginVertical: getResponsiveSize(20) }} />
                 ) : (
                     <FlatList
                         data={friends}
@@ -489,7 +490,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
                                     {item.avatar ? (
                                         <Image source={getAvatarSource(item.avatar)} style={styles.friendAvatar} />
                                     ) : (
-                                        <Ionicons name="person-circle-outline" size={40} color="#9ca3af" />
+                                        <Ionicons name="person-circle-outline" size={getResponsiveSize(40)} color="#9ca3af" />
                                     )}
                                     <View>
                                         <Text style={styles.friendPseudo}>{item.pseudo}</Text>
@@ -525,9 +526,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingTop: getResponsiveSize(50),
+    paddingHorizontal: getResponsiveSize(20),
+    paddingBottom: getResponsiveSize(20),
     backgroundColor: 'rgba(4, 28, 85, 0.9)',
   },
   headerTitleContainer: {
@@ -535,83 +536,83 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: '#fff',
-    fontSize: 20,
+    fontSize: getResponsiveSize(20),
     fontWeight: 'bold',
   },
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(239, 68, 68, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    marginTop: 4,
-    borderWidth: 1,
+    paddingHorizontal: getResponsiveSize(8),
+    paddingVertical: getResponsiveSize(2),
+    borderRadius: getResponsiveSize(10),
+    marginTop: getResponsiveSize(4),
+    borderWidth: getResponsiveSize(1),
     borderColor: '#ef4444',
   },
   liveIndicator: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: getResponsiveSize(6),
+    height: getResponsiveSize(6),
+    borderRadius: getResponsiveSize(3),
     backgroundColor: '#ef4444',
-    marginRight: 6,
+    marginRight: getResponsiveSize(6),
   },
   liveText: {
     color: '#ef4444',
-    fontSize: 10,
+    fontSize: getResponsiveSize(10),
     fontWeight: 'bold',
   },
   backButton: {
-    padding: 8,
+    padding: getResponsiveSize(8),
   },
   shareButton: {
-    padding: 8,
+    padding: getResponsiveSize(8),
   },
   content: {
     flex: 1,
-    padding: 20,
+    padding: getResponsiveSize(20),
   },
   card: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 20,
+    borderRadius: getResponsiveSize(20),
+    padding: getResponsiveSize(20),
+    marginBottom: getResponsiveSize(20),
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: getResponsiveSize(4) },
     shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5,
+    shadowRadius: getResponsiveSize(5),
+    elevation: getResponsiveSize(5),
   },
   playersContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 15,
+    marginBottom: getResponsiveSize(15),
   },
   playerSide: {
     flex: 1,
     alignItems: 'center',
   },
   roleLabel: {
-    fontSize: 12,
+    fontSize: getResponsiveSize(12),
     color: '#6b7280',
-    marginBottom: 8,
+    marginBottom: getResponsiveSize(8),
     fontWeight: '600',
     textTransform: 'uppercase',
   },
   vsContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: getResponsiveSize(40),
+    height: getResponsiveSize(40),
+    borderRadius: getResponsiveSize(20),
     backgroundColor: '#ef4444',
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: 10,
+    marginHorizontal: getResponsiveSize(10),
     transform: [{ rotate: '15deg' }],
   },
   vsText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     fontWeight: '900',
     fontStyle: 'italic',
   },
@@ -627,15 +628,15 @@ const styles = StyleSheet.create({
     borderColor: '#9ca3af',
   },
   waitingTextSmall: {
-    fontSize: 12,
+    fontSize: getResponsiveSize(12),
     color: '#9ca3af',
-    marginTop: 5,
+    marginTop: getResponsiveSize(5),
     fontStyle: 'italic',
   },
   label: {
-    fontSize: 12,
+    fontSize: getResponsiveSize(12),
     color: '#6b7280',
-    marginBottom: 5,
+    marginBottom: getResponsiveSize(5),
     fontWeight: '600',
   },
   userRow: {
@@ -644,112 +645,112 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     position: 'relative',
-    marginBottom: 8,
+    marginBottom: getResponsiveSize(8),
   },
   avatarImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 2,
+    width: getResponsiveSize(60),
+    height: getResponsiveSize(60),
+    borderRadius: getResponsiveSize(30),
+    borderWidth: getResponsiveSize(2),
     borderColor: '#e5e7eb',
   },
   flag: {
     position: 'absolute',
-    bottom: -2,
-    right: -2,
-    fontSize: 20,
+    bottom: getResponsiveSize(-2),
+    right: getResponsiveSize(-2),
+    fontSize: getResponsiveSize(20),
     backgroundColor: '#fff',
-    borderRadius: 10,
+    borderRadius: getResponsiveSize(10),
     overflow: 'hidden',
-    padding: 2,
+    padding: getResponsiveSize(2),
   },
   userInfo: {
     flex: 1,
   },
   pseudo: {
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     fontWeight: 'bold',
     color: '#111827',
-    marginBottom: 4,
+    marginBottom: getResponsiveSize(4),
     textAlign: 'center',
   },
   level: {
-    fontSize: 10,
+    fontSize: getResponsiveSize(10),
     color: '#fff',
     backgroundColor: '#f59e0b',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
+    paddingHorizontal: getResponsiveSize(8),
+    paddingVertical: getResponsiveSize(2),
+    borderRadius: getResponsiveSize(10),
     overflow: 'hidden',
   },
   divider: {
-    height: 1,
+    height: getResponsiveSize(1),
     backgroundColor: '#e5e7eb',
-    marginVertical: 15,
+    marginVertical: getResponsiveSize(15),
   },
   paramsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 15,
+    marginBottom: getResponsiveSize(15),
   },
   paramItem: {
     alignItems: 'center',
-    gap: 5,
+    gap: getResponsiveSize(5),
   },
   paramText: {
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     fontWeight: '600',
     color: '#374151',
   },
   description: {
-    fontSize: 14,
+    fontSize: getResponsiveSize(14),
     color: '#4b5563',
     fontStyle: 'italic',
     textAlign: 'center',
-    marginTop: 10,
+    marginTop: getResponsiveSize(10),
   },
   sectionHeader: {
-    marginBottom: 15,
+    marginBottom: getResponsiveSize(15),
   },
   sectionTitle: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: getResponsiveSize(18),
     fontWeight: 'bold',
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 40,
+    padding: getResponsiveSize(40),
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 20,
-    borderWidth: 1,
+    borderRadius: getResponsiveSize(20),
+    borderWidth: getResponsiveSize(1),
     borderColor: 'rgba(255, 255, 255, 0.2)',
     borderStyle: 'dashed',
   },
   emptyStateText: {
     color: 'rgba(255, 255, 255, 0.6)',
-    marginTop: 10,
+    marginTop: getResponsiveSize(10),
   },
   spectatorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
+    padding: getResponsiveSize(10),
     backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 8,
-    marginBottom: 8,
+    borderRadius: getResponsiveSize(8),
+    marginBottom: getResponsiveSize(8),
   },
   specAvatar: {
-    fontSize: 20,
-    marginRight: 10,
+    fontSize: getResponsiveSize(20),
+    marginRight: getResponsiveSize(10),
   },
   specName: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: getResponsiveSize(16),
   },
   footer: {
-    padding: 20,
+    padding: getResponsiveSize(20),
     backgroundColor: 'rgba(4, 28, 85, 0.95)',
-    borderTopWidth: 1,
+    borderTopWidth: getResponsiveSize(1),
     borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
   mainButton: {
@@ -757,19 +758,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 16,
+    paddingVertical: getResponsiveSize(16),
+    borderRadius: getResponsiveSize(16),
     shadowColor: '#ef4444',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: getResponsiveSize(4) },
     shadowOpacity: 0.4,
-    shadowRadius: 8,
+    shadowRadius: getResponsiveSize(8),
     elevation: 6,
   },
   mainButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: getResponsiveSize(18),
     fontWeight: 'bold',
-    letterSpacing: 1,
+    letterSpacing: getResponsiveSize(1),
   },
   inviteButton: {
       alignItems: 'center',
@@ -786,39 +787,39 @@ const styles = StyleSheet.create({
   },
   modalContent: {
       backgroundColor: '#fff',
-      width: '90%',
+      width: isTablet ? '50%' : '90%',
       maxHeight: '80%',
-      borderRadius: 20,
-      padding: 20,
+      borderRadius: getResponsiveSize(20),
+      padding: getResponsiveSize(20),
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
+      shadowOffset: { width: 0, height: getResponsiveSize(4) },
       shadowOpacity: 0.3,
-      shadowRadius: 5,
-      elevation: 5,
+      shadowRadius: getResponsiveSize(5),
+    elevation: getResponsiveSize(5),
   },
   modalHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 20,
-      borderBottomWidth: 1,
+      marginBottom: getResponsiveSize(20),
+      borderBottomWidth: getResponsiveSize(1),
       borderBottomColor: '#f3f4f6',
-      paddingBottom: 15,
+      paddingBottom: getResponsiveSize(15),
   },
   modalTitle: {
-      fontSize: 20,
+      fontSize: getResponsiveSize(20),
       fontWeight: 'bold',
       color: '#111827',
   },
   closeButton: {
-      padding: 5,
+      padding: getResponsiveSize(5),
   },
   friendItem: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingVertical: 12,
-      borderBottomWidth: 1,
+      paddingVertical: getResponsiveSize(12),
+      borderBottomWidth: getResponsiveSize(1),
       borderBottomColor: '#f3f4f6',
   },
   friendInfo: {
@@ -827,62 +828,62 @@ const styles = StyleSheet.create({
       flex: 1,
   },
   friendAvatar: {
-      width: 50,
-      height: 50,
-      borderRadius: 25,
-      marginRight: 15,
+      width: getResponsiveSize(50),
+      height: getResponsiveSize(50),
+      borderRadius: getResponsiveSize(25),
+      marginRight: getResponsiveSize(15),
       backgroundColor: '#f3f4f6',
   },
   friendPseudo: {
-      fontSize: 16,
+      fontSize: getResponsiveSize(16),
       fontWeight: 'bold',
       color: '#1f2937',
-      marginBottom: 2,
+      marginBottom: getResponsiveSize(2),
   },
   friendStatus: {
-      fontSize: 12,
+      fontSize: getResponsiveSize(12),
   },
   inviteAction: {
       backgroundColor: '#10b981',
-      paddingHorizontal: 15,
-      paddingVertical: 8,
-      borderRadius: 20,
+      paddingHorizontal: getResponsiveSize(15),
+      paddingVertical: getResponsiveSize(8),
+      borderRadius: getResponsiveSize(20),
   },
   inviteActionText: {
       color: '#fff',
-      fontSize: 14,
+      fontSize: getResponsiveSize(14),
       fontWeight: 'bold',
   },
   emptyText: {
       textAlign: 'center',
       color: '#6b7280',
-      marginTop: 20,
-      fontSize: 16,
+      marginTop: getResponsiveSize(20),
+      fontSize: getResponsiveSize(16),
   },
   waitingText: {
       color: 'white',
-      fontSize: 16,
-      bottom: 3,
-      left: 120
+      fontSize: getResponsiveSize(16),
+      bottom: getResponsiveSize(3),
+      left: getResponsiveSize(120)
   },
   footerActions: {
-    marginTop: 20,
+    marginTop: getResponsiveSize(20),
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: getResponsiveSize(20),
   },
   stopButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: getResponsiveSize(20),
+    paddingVertical: getResponsiveSize(10),
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderRadius: 20,
-    borderWidth: 1,
+    borderRadius: getResponsiveSize(20),
+    borderWidth: getResponsiveSize(1),
     borderColor: 'rgba(239, 68, 68, 0.3)',
   },
   stopButtonText: {
     color: '#ef4444',
-    marginLeft: 8,
+    marginLeft: getResponsiveSize(8),
     fontWeight: 'bold',
   }
 });

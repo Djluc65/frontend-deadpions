@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { API_URL } from '../../config';
 import { getAvatarSource } from '../../utils/avatarUtils';
+import { getResponsiveSize } from '../../utils/responsive';
 
 // Composant réutilisable optimisé pour la réactivité tactile
 const HeaderTouchable = ({ onPress, onPlaySound, children, style, hitSlop }) => {
@@ -26,9 +27,9 @@ const HeaderTouchable = ({ onPress, onPlaySound, children, style, hitSlop }) => 
     <Pressable
       onPress={handlePress}
       // Zone tactile étendue (HitSlop)
-      hitSlop={hitSlop || { top: 20, bottom: 20, left: 20, right: 20 }}
+      hitSlop={hitSlop || { top: getResponsiveSize(20), bottom: getResponsiveSize(20), left: getResponsiveSize(20), right: getResponsiveSize(20) }}
       // Maintient l'état pressé même si le doigt glisse un peu en dehors
-      pressRetentionOffset={{ top: 20, bottom: 20, left: 20, right: 20 }}
+      pressRetentionOffset={{ top: getResponsiveSize(20), bottom: getResponsiveSize(20), left: getResponsiveSize(20), right: getResponsiveSize(20) }}
       // Ripple Android
       android_ripple={{ 
         color: 'rgba(255, 255, 255, 0.15)', 
@@ -59,14 +60,14 @@ const HomeHeader = memo(({ user, t, navigation, onSearch, onSettings, onPlaySoun
         <HeaderTouchable 
           onPress={() => navigation.navigate('Profile')}
           onPlaySound={onPlaySound}
-          hitSlop={{ top: 30, bottom: 30, left: 30, right: 30 }}
+          hitSlop={{ top: getResponsiveSize(30), bottom: getResponsiveSize(30), left: getResponsiveSize(30), right: getResponsiveSize(30) }}
         >
           {(() => {
             const source = getAvatarSource(user?.avatar);
             return source ? (
               <Image source={source} style={styles.avatar} />
             ) : (
-              <Ionicons name="person-circle-outline" size={45} color="#fff" />
+              <Ionicons name="person-circle-outline" size={getResponsiveSize(45)} color="#fff" />
             );
           })()}
         </HeaderTouchable>
@@ -75,7 +76,7 @@ const HomeHeader = memo(({ user, t, navigation, onSearch, onSettings, onPlaySoun
           <HeaderTouchable 
             onPress={() => navigation.navigate('Profile')}
             onPlaySound={onPlaySound}
-            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+            hitSlop={{ top: getResponsiveSize(15), bottom: getResponsiveSize(15), left: getResponsiveSize(15), right: getResponsiveSize(15) }}
           >
             <Text style={styles.welcome}>{user?.pseudo || t.welcome}</Text>
           </HeaderTouchable>
@@ -87,19 +88,19 @@ const HomeHeader = memo(({ user, t, navigation, onSearch, onSettings, onPlaySoun
         <HeaderTouchable 
           onPress={onSearch}
           onPlaySound={onPlaySound}
-          hitSlop={{ top: 30, bottom: 30, left: 30, right: 30 }}
+          hitSlop={{ top: getResponsiveSize(30), bottom: getResponsiveSize(30), left: getResponsiveSize(30), right: getResponsiveSize(30) }}
           style={styles.iconButton}
         >
-          <Ionicons name="search-outline" size={28} color="#fff" />
+          <Ionicons name="search-outline" size={getResponsiveSize(28)} color="#fff" />
         </HeaderTouchable>
         
         <HeaderTouchable 
           onPress={onSettings}
           onPlaySound={onPlaySound}
-          hitSlop={{ top: 30, bottom: 30, left: 30, right: 30 }}
+          hitSlop={{ top: getResponsiveSize(30), bottom: getResponsiveSize(30), left: getResponsiveSize(30), right: getResponsiveSize(30) }}
           style={styles.iconButton}
         >
-          <Ionicons name="settings-outline" size={28} color="#fff" />
+          <Ionicons name="settings-outline" size={getResponsiveSize(28)} color="#fff" />
         </HeaderTouchable>
         
 
@@ -113,10 +114,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    paddingTop: 50,
+    padding: getResponsiveSize(20),
+    paddingTop: getResponsiveSize(50),
     backgroundColor: 'rgba(4, 28, 85, 0.95)',
-    borderBottomWidth: 1,
+    borderBottomWidth: getResponsiveSize(1),
     borderBottomColor: '#f1c40f',
     zIndex: 1000, // Assure que le header est au-dessus du contenu scrollable
     elevation: 5, // Pour Android
@@ -124,38 +125,38 @@ const styles = StyleSheet.create({
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: getResponsiveSize(10),
   },
   avatar: {
-    width: 45,
-    height: 45,
-    borderRadius: 22.5,
-    borderWidth: 2,
+    width: getResponsiveSize(45),
+    height: getResponsiveSize(45),
+    borderRadius: getResponsiveSize(22.5),
+    borderWidth: getResponsiveSize(2),
     borderColor: '#fff',
   },
   userText: {
     justifyContent: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: getResponsiveSize(10),
   },
   welcome: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: getResponsiveSize(18),
     fontWeight: 'bold',
   },
   coins: {
     color: '#f1c40f',
-    fontSize: 18,
+    fontSize: getResponsiveSize(18),
     fontWeight: 'bold',
   },
   headerIcons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 15,
+    gap: getResponsiveSize(15),
   },
   iconButton: {
-    padding: 8, // Augmenté pour atteindre ~44px avec l'icône de 28px
+    padding: getResponsiveSize(8), // Augmenté pour atteindre ~44px avec l'icône de 28px
   },
 });
 
