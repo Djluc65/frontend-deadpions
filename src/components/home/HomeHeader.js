@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { View, Text, Pressable, Image, StyleSheet, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { API_URL } from '../../config';
 import { getAvatarSource } from '../../utils/avatarUtils';
@@ -102,8 +102,6 @@ const HomeHeader = memo(({ user, t, navigation, onSearch, onSettings, onPlaySoun
         >
           <Ionicons name="settings-outline" size={getResponsiveSize(28)} color="#fff" />
         </HeaderTouchable>
-        
-
       </View>
     </View>
   );

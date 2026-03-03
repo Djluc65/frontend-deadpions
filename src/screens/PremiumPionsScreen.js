@@ -26,8 +26,9 @@ const { width } = Dimensions.get('window');
 // ─── Types & Configuration ────────────────────────────────────────────────────────────
 
 const PION_TYPES = [
-  { id: 'skull',   label: 'Skull',   labelFR: 'Tête de Mort', emoji: '💀', isPremium: false },
-  { id: 'bull',    label: 'Bull',    labelFR: 'Tête de Taureau', emoji: '🐂', isPremium: true },
+  { id: 'skull',      label: 'Skull',       labelFR: 'Tête de Mort', emoji: '💀', isPremium: false },
+  { id: 'neon_skull', label: 'Neon Skull',  labelFR: 'Crâne Néon',   emoji: '☠️', isPremium: true },
+  { id: 'bull',       label: 'Bull',        labelFR: 'Tête de Taureau', emoji: '🐂', isPremium: true },
   { id: 'lion',    label: 'Lion',    labelFR: 'Tête de Lion', emoji: '🦁', isPremium: true },
   { id: 'dragon',  label: 'Dragon',  labelFR: 'Tête de Dragon', emoji: '🐲', isPremium: true },
   { id: 'wolf',    label: 'Wolf',    labelFR: 'Tête de Loup', emoji: '🐺', isPremium: true },

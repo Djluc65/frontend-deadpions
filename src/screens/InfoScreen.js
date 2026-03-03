@@ -43,8 +43,8 @@ const InfoScreen = ({ navigation }) => {
           icon: "mail" 
         },
         { 
-          label: "WhatsApp: +33 7 52 97 77 11", 
-          link: "https://wa.me/33752977711", 
+          label: "WhatsApp: +33 7 58 57 11 87", 
+          link: "https://wa.me/33758571187", 
           icon: "logo-whatsapp" 
         }
       ]

@@ -25,7 +25,18 @@ let WebRTC = {
 // 'WebRTCModule' is the standard name for react-native-webrtc native module
 const isNativeAvailable = !!NativeModules.WebRTCModule;
 
-if (Platform.OS === 'web') {
+if (Platform.OS === 'ios') {
+  // Explicitly disable WebRTC on iOS to prevent crashes and permission errors
+  console.log("WebRTC disabled on iOS");
+  WebRTC = {
+    RTCPeerConnection: class {},
+    RTCIceCandidate: class {},
+    RTCSessionDescription: class {},
+    RTCView: () => null,
+    mediaDevices: null,
+    isAvailable: false
+  };
+} else if (Platform.OS === 'web') {
   WebRTC = {
     RTCPeerConnection: window.RTCPeerConnection || window.webkitRTCPeerConnection || window.mozRTCPeerConnection,
     RTCIceCandidate: window.RTCIceCandidate || window.webkitRTCIceCandidate || window.mozRTCIceCandidate,

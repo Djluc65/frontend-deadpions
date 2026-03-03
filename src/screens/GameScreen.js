@@ -36,7 +36,7 @@ const width = SCREEN_WIDTH;
 const height = SCREEN_HEIGHT;
 
 // Configuration du plateau
-const COLS = 13; // A à M
+const COLS = isTablet ? 20 : 15; // A à M (13) ou A à S (19) sur iPad
 const ROWS = 19; // 1 à 19
 const PADDING_LEFT = getResponsiveSize(35); // Espace pour les numéros
 const PADDING_TOP = getResponsiveSize(35); // Espace pour les lettres
@@ -45,12 +45,18 @@ const PADDING_BOTTOM = getResponsiveSize(150);
 
 // Calcul de la taille des cellules pour tenir en largeur
 const AVAILABLE_WIDTH = width - PADDING_LEFT - PADDING_RIGHT;
-const CELL_SIZE = (AVAILABLE_WIDTH / (COLS - 1)) + getResponsiveSize(5); // +5px (responsive) comme demandé
+const WIDTH_CELL_SIZE = (AVAILABLE_WIDTH / (COLS - 1)) + getResponsiveSize(5);
+
+// Sur iPad, on limite la taille des cellules pour que le plateau tienne en hauteur
+// (Hauteur écran - Header estimé - Paddings) / Nombre de lignes
+const HEIGHT_CELL_SIZE = (height - 220 - PADDING_TOP - PADDING_BOTTOM) / (ROWS - 1);
+
+const CELL_SIZE = isTablet ? Math.min(WIDTH_CELL_SIZE, HEIGHT_CELL_SIZE) : WIDTH_CELL_SIZE;
 
 const BOARD_WIDTH = Math.max(width, PADDING_LEFT + (COLS - 1) * CELL_SIZE + PADDING_RIGHT);
 const BOARD_HEIGHT = PADDING_TOP + (ROWS - 1) * CELL_SIZE + PADDING_BOTTOM;
 
-const LETTERS = 'ABCDEFGHIJKLM'.split('');
+const LETTERS = 'ABCDEFGHIJKLMNOPQRST'.split('');
 
 const GradientArrow = ({ size }) => (
     <Svg width={size} height={size} viewBox="0 0 100 100">
@@ -116,6 +122,7 @@ const Pawn = ({ color, x, y, r, opacity = 1, onPress, skin }) => {
     }
 
     if (color === 'black') {
+        const reducedR = r * 0.8; // Réduction de taille pour pion rouge
         return (
             <AnimatedG 
                 style={{ transform: [{ translateX: x }, { translateY: y }, { scale }] }}
@@ -123,15 +130,15 @@ const Pawn = ({ color, x, y, r, opacity = 1, onPress, skin }) => {
                 onPress={onPress}
             >
                 {/* Shadow */}
-                <Circle cx={0} cy={2} r={r} fill="black" opacity={0.2} />
+                <Circle cx={0} cy={2} r={reducedR} fill="black" opacity={0.2} />
                 {/* Main Body */}
-                <Circle cx={0} cy={0} r={r} fill="url(#redGradient)" stroke="#500000" strokeWidth={1} />
+                <Circle cx={0} cy={0} r={reducedR} fill="url(#redGradient)" stroke="#500000" strokeWidth={1} />
                 {/* Shine/Highlight */}
-                <Circle cx={-r*0.3} cy={-r*0.3} r={r*0.4} fill="white" opacity={0.3} />
+                <Circle cx={-reducedR*0.3} cy={-reducedR*0.3} r={reducedR*0.4} fill="white" opacity={0.3} />
             </AnimatedG>
         );
     } else {
-        const s = r * 0.9; 
+        const s = r * 0.9 * 0.8; // Réduction de taille pour pion bleu
         return (
             <AnimatedG 
                 style={{ transform: [{ translateX: x }, { translateY: y }, { scale }] }}
@@ -2268,6 +2275,50 @@ const GameScreen = ({ navigation, route }) => {
     return null;
   };
 
+  const checkDraw = (boardToCheck) => {
+    // Cas 1 : plateau plein
+    if (boardToCheck.length === ROWS * COLS) return true;
+    
+    // Optimisation : ne vérifier l'impasse que si le plateau est suffisamment rempli
+    // (par exemple > 60%) pour éviter des calculs inutiles en début de partie
+    if (boardToCheck.length < ROWS * COLS * 0.6) return false;
+
+    // Créer une Map pour un accès O(1)
+    const boardMap = new Map();
+    boardToCheck.forEach(s => boardMap.set(`${s.row},${s.col}`, s.player));
+
+    // Cas 2 : aucun joueur ne peut plus aligner 5
+    const canWin = (player) => {
+      const directions = [[0,1],[1,0],[1,1],[1,-1]];
+      for (let row = 0; row < ROWS; row++) {
+        for (let col = 0; col < COLS; col++) {
+          for (let [dx, dy] of directions) {
+            let canAlign = true;
+            for (let k = 0; k < 5; k++) {
+              const r = row + dx * k;
+              const c = col + dy * k;
+              
+              if (r < 0 || r >= ROWS || c < 0 || c >= COLS) { 
+                  canAlign = false; 
+                  break; 
+              }
+              
+              const cellPlayer = boardMap.get(`${r},${c}`);
+              if (cellPlayer && cellPlayer !== player) {
+                  canAlign = false; 
+                  break; 
+              }
+            }
+            if (canAlign) return true;
+          }
+        }
+      }
+      return false;
+    };
+
+    return !canWin('black') && !canWin('white');
+  };
+
   const playSound = async (player) => {
     if (isSoundEnabled === false) return;
     try {
@@ -2520,6 +2571,89 @@ const GameScreen = ({ navigation, route }) => {
                            setShowResultModal(true);
                        }
                    }
+                }, 500);
+            } else if (checkDraw(newBoard)) {
+                setGameOver(true);
+                setIaEnReflexion(false);
+                setTimeout(() => {
+                 updateStatsIA(configIA.difficulte, false);
+                 
+                 let newScore = { ...tournamentScore };
+                 let isTournament = configIA.mode === 'tournament';
+                 let tournamentOver = false;
+                 let nextGameNumber = tournamentGameNumber;
+
+                  if (isTournament) {
+                      if (tournamentGameNumber >= tournamentTotalGames) {
+                          tournamentOver = true;
+                      } else {
+                           const userColor = iaColors.joueur;
+                           const iaColor = iaColors.ia;
+                          const scoreUser = newScore[userColor];
+                          const scoreIA = newScore[iaColor];
+                          const remainingGames = tournamentTotalGames - tournamentGameNumber;
+                          
+                          if (Math.abs(scoreUser - scoreIA) > remainingGames) {
+                              tournamentOver = true;
+                          }
+                      }
+                 }
+
+                 if (!tournamentOver) {
+                     nextGameNumber += 1;
+                 }
+
+                 // Alternate starting player for tournament
+                 let nextPremierJoueur = configIA.premierJoueur;
+                 if (isTournament && !tournamentOver) {
+                      nextPremierJoueur = configIA.premierJoueur === 'ia' ? 'me' : 'ia';
+                 }
+
+                 const nextConfigIA = {
+                     ...configIA,
+                     premierJoueur: nextPremierJoueur,
+                     tournamentSettings: isTournament ? {
+                         totalGames: tournamentTotalGames,
+                         gameNumber: tournamentOver ? 1 : nextGameNumber,
+                         score: tournamentOver ? { black: 0, white: 0 } : newScore
+                     } : null
+                 };
+
+                 if (params.betAmount > 0) {
+                     refund(params.betAmount, 'Remboursement Match Nul IA', { gameId: params.gameId || 'local_ia' })
+                         .catch(err => console.error('Erreur remboursement IA:', err));
+                 }
+
+                 if (isTournament && !tournamentOver) {
+                     const userColor = iaColors.joueur;
+                     const iaColor = iaColors.ia;
+                     const scoreUser = newScore[userColor] || 0;
+                     const scoreIA = newScore[iaColor] || 0;
+                     setNextAiConfig(nextConfigIA);
+                     setAlertData({
+                         title: `Match ${tournamentGameNumber} terminé`,
+                         message: `Score: ${scoreUser} - ${scoreIA}\nProchain: Match ${nextGameNumber}/${tournamentTotalGames}`
+                     });
+                     setNextMatchVisible(true);
+                 } else {
+                     setResultData({
+                         victoire: false,
+                         winnerColor: null,
+                         reason: 'draw',
+                         gains: params.betAmount || 0,
+                         montantPari: params.betAmount || 0,
+                         adversaire: { pseudo: 'Ordinateur (IA)' },
+                         difficulte: configIA.difficulte,
+                         configIA: nextConfigIA,
+                         type: 'ia',
+                         isTournament,
+                         tournamentScore: newScore,
+                         tournamentOver,
+                         gameNumber: tournamentGameNumber,
+                         totalGames: tournamentTotalGames
+                     });
+                     setShowResultModal(true);
+                 }
                 }, 500);
             } else {
                 setCurrentPlayer(currentPlayer === 'black' ? 'white' : 'black');
@@ -2855,7 +2989,7 @@ const GameScreen = ({ navigation, route }) => {
       return;
     }
 
-    if (newBoard.length === ROWS * COLS) {
+    if (checkDraw(newBoard)) {
         setGameOver(true);
         if (mode === 'local') {
              setTimeout(() => {
@@ -3104,7 +3238,13 @@ const GameScreen = ({ navigation, route }) => {
         return updated;
       }
 
-      const move = calculerCoupIA(board, 'facile', player);
+      let move;
+      if (board.length === 0) {
+        move = { row: Math.floor(ROWS / 2), col: Math.floor(COLS / 2) };
+      } else {
+        move = calculerCoupIA(board, 'facile', player);
+      }
+
       if (move) {
         jouerCoupLocalOuIAParTimer(move.row, move.col, player);
       }
@@ -3220,7 +3360,8 @@ const GameScreen = ({ navigation, route }) => {
             type: 'ia',
             winnerColor,
             difficulte: configIA?.difficulte,
-            timeouts: updated
+            timeouts: updated,
+            configIA: configIA
           });
           setShowResultModal(true);
         }
@@ -3229,7 +3370,13 @@ const GameScreen = ({ navigation, route }) => {
       }
 
       const difficulte = configIA?.difficulte || 'moyen';
-      const move = calculerCoupIA(board, difficulte, humanColor);
+      let move;
+      if (board.length === 0) {
+        move = { row: Math.floor(ROWS / 2), col: Math.floor(COLS / 2) };
+      } else {
+        move = calculerCoupIA(board, difficulte, humanColor);
+      }
+      
       if (move) {
         jouerCoupLocalOuIAParTimer(move.row, move.col, humanColor);
       }
@@ -3253,7 +3400,13 @@ const GameScreen = ({ navigation, route }) => {
     if (!myColor) return;
     if (currentPlayer !== myColor) return;
 
-    const move = calculerCoupIA(board, 'moyen', myColor);
+    let move;
+    if (board.length === 0) {
+      move = { row: Math.floor(ROWS / 2), col: Math.floor(COLS / 2) };
+    } else {
+      move = calculerCoupIA(board, 'moyen', myColor);
+    }
+
     if (!move) return;
 
     if (socket.connected) {
@@ -3667,7 +3820,13 @@ const GameScreen = ({ navigation, route }) => {
                                       } else if (type === 'ia' || type === 'ai') {
                                           isRematching.current = true;
                                           AudioController.setRematchMode(true);
-                                          navigation.replace('Game', { modeJeu: 'ia', configIA: resultData.configIA, betAmount: montantPari });
+                                          
+                                          let nextConfig = resultData.configIA || configIA;
+                                          if (!isTournament) {
+                                              nextConfig = { ...nextConfig, mode: 'simple', tournamentSettings: null };
+                                          }
+                                          
+                                          navigation.replace('Game', { modeJeu: 'ia', configIA: nextConfig, betAmount: montantPari });
                                       } else if (type === 'local') {
                                           isRematching.current = true;
                                           AudioController.setRematchMode(true);
@@ -3961,7 +4120,7 @@ const GameScreen = ({ navigation, route }) => {
       )}
 
       <View 
-        style={[styles.boardContainer, (mode === 'online' || mode === 'live') && { marginTop: gameOver ? -50 : (nextMatchVisible ? 0 : 70) }]} 
+        style={[styles.boardContainer, (mode === 'online' || mode === 'live') && !isTablet && { marginTop: gameOver ? -50 : (nextMatchVisible ? 0 : 70) }]} 
         onLayout={(e) => containerDimensions.current = e.nativeEvent.layout}
         pointerEvents={mode === 'spectator' ? 'none' : 'auto'}
       >
@@ -4009,7 +4168,8 @@ const GameScreen = ({ navigation, route }) => {
                 {/* Lignes verticales et Lettres (A-R) */}
                 {Array.from({ length: COLS }).map((_, i) => {
                     const x = PADDING_LEFT + i * CELL_SIZE;
-                    const isRedCol = [0, 6, 12].includes(i);
+                    // Ajouter la dernière colonne (COLS - 1) aux colonnes rouges
+                    const isRedCol = [0, 7, 14, COLS - 1].includes(i);
                     return (
                         <React.Fragment key={`v-${i}`}>
                             <SvgText
@@ -4534,9 +4694,10 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   header: {
-    paddingTop: getResponsiveSize(40),
+    paddingTop: isTablet ? getResponsiveSize(80) : getResponsiveSize(40), // Augmenté pour iPad
     marginBottom: getResponsiveSize(10),
-    zIndex: 10
+    zIndex: 10,
+    ...(isTablet && { flexShrink: 0 }),
   },
   headerPVP: {
     flexDirection: 'row',
@@ -4544,6 +4705,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSize(10),
     backgroundColor: 'rgba(0,0,0,0.3)',
     paddingBottom: getResponsiveSize(10),
+    ...(isTablet && { minHeight: 160 }), // Modification: Suppression de maxHeight et overflow hidden pour afficher tout le profil
   },
   headerIA: {
     flexDirection: 'row',
@@ -4572,7 +4734,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: getResponsiveSize(5),
     borderRadius: getResponsiveSize(10),
-    width: width * 0.3,
+    width: isTablet ? width * 0.20 : width * 0.3,
     height: getResponsiveSize(125),
     borderWidth: 1,
     borderColor: '#f1c40f6c',

@@ -203,6 +203,48 @@ function SerpentFace({ color }) {
   );
 }
 
+function NeonSkullFace({ color }) {
+  const c = PION_COLORS[color];
+  const accent = color === 'red' ? '#00FFFF' : '#FF0055'; // Contrast accent
+
+  return (
+    <G>
+      {/* Dark background for contrast */}
+      <Circle cx="24" cy="24" r="16" fill="#050505" />
+      
+      {/* Glowing Ring */}
+      <Circle cx="24" cy="24" r="13" stroke={c.light} strokeWidth="1.5" fill="none" />
+      <Circle cx="24" cy="24" r="13" stroke={c.glow} strokeWidth="3" fill="none" opacity="0.6" />
+      
+      {/* Cyber Accents (Cross) */}
+      <Path d="M6 6 L12 12" stroke={c.dark} strokeWidth="2" strokeLinecap="round" opacity="0.8" />
+      <Path d="M42 6 L36 12" stroke={c.dark} strokeWidth="2" strokeLinecap="round" opacity="0.8" />
+      <Path d="M6 42 L12 36" stroke={c.dark} strokeWidth="2" strokeLinecap="round" opacity="0.8" />
+      <Path d="M42 42 L36 36" stroke={c.dark} strokeWidth="2" strokeLinecap="round" opacity="0.8" />
+
+      {/* Skull shape - slightly more angular/futuristic */}
+      <Path d="M24 13 C15 13, 11 18, 11 24 C11 29, 13 32, 15 34 L15 38 L21 38 L21 36 L27 36 L27 38 L33 38 L33 34 C35 32, 37 29, 37 24 C37 18, 33 13, 24 13Z" fill="#E0E0E0" />
+      
+      {/* Eyes - Sharp and glowing */}
+      <Path d="M15 23 L19 21 L21 26 L17 28 Z" fill="#000" />
+      <Path d="M33 23 L29 21 L27 26 L31 28 Z" fill="#000" />
+      
+      {/* Glowing pupils */}
+      <Circle cx="18" cy="24.5" r="1" fill={c.light} />
+      <Circle cx="30" cy="24.5" r="1" fill={c.light} />
+
+      {/* Nose */}
+      <Path d="M24 29 L22.5 32 L25.5 32 Z" fill="#000" />
+      
+      {/* Teeth/Mouth lines */}
+      <Path d="M19 35 L19 38" stroke="#000" strokeWidth="1" />
+      <Path d="M22 35 L22 38" stroke="#000" strokeWidth="1" />
+      <Path d="M26 35 L26 38" stroke="#000" strokeWidth="1" />
+      <Path d="M29 35 L29 38" stroke="#000" strokeWidth="1" />
+    </G>
+  );
+}
+
 export default function PionSVG({
   type,
   color,
@@ -216,6 +258,7 @@ export default function PionSVG({
 
   const FaceComponent = {
     skull: SkullFace,
+    neon_skull: NeonSkullFace,
     bull: BullFace,
     lion: LionFace,
     dragon: DragonFace,
@@ -223,8 +266,11 @@ export default function PionSVG({
     serpent: SerpentFace,
   }[safeType] || SkullFace;
 
+  // Si aucun type spécial n'est défini (cas normal croix bleu / rond rouge), on réduit la taille
+  const displaySize = (!type && (color === 'red' || color === 'blue' || color === 'black' || color === 'white')) ? size * 0.8 : size;
+
   return (
-    <Svg width={size} height={size} viewBox="0 0 48 48">
+    <Svg width={displaySize} height={displaySize} viewBox="0 0 48 48">
       <Defs>
         <RadialGradient id={glowId} cx="50%" cy="50%" r="50%">
           <Stop offset="0%" stopColor={c.light} stopOpacity="0.4" />

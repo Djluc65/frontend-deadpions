@@ -12,6 +12,12 @@ import { queryClient } from './src/utils/queryClient';
 import { StripeProviderWrapper } from './src/components/StripeProviderWrapper';
 import LoadingSpinner from './src/components/common/LoadingSpinner';
 import { CoinsProvider } from './src/context/CoinsContext';
+import * as SplashScreen from 'expo-splash-screen';
+
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync().catch(() => {
+  /* reloading the app might trigger some race conditions, ignore them */
+});
 
 const linking = {
   prefixes: [Linking.createURL('/'), 'deadpions://'],

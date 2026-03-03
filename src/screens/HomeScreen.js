@@ -24,6 +24,7 @@ import OnlineGameSetup from '../components/home/OnlineGameSetup';
 import FriendsGameSetup from '../components/home/FriendsGameSetup';
 import LiveGameSetup from '../components/home/LiveGameSetup';
 import BattleAnimation from '../components/BattleAnimation';
+import UserSearchModal from '../components/home/UserSearchModal';
 
 // Components imported above
 
@@ -33,6 +34,7 @@ const HomeScreen = ({ navigation }) => {
   const user = useSelector(state => state.auth.user);
   const settings = useSelector(state => state.settings || { isMusicEnabled: true, isSoundEnabled: true, language: 'fr' });
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [searchVisible, setSearchVisible] = useState(false);
   const spinValue = useRef(new Animated.Value(0)).current;
   const pulseValue = useRef(new Animated.Value(1)).current;
   
@@ -202,6 +204,11 @@ const HomeScreen = ({ navigation }) => {
         onClose={() => setSettingsVisible(false)} 
         handlePlaySound={handlePlaySound} 
       />
+      <UserSearchModal
+        visible={searchVisible}
+        onClose={() => setSearchVisible(false)}
+        navigation={navigation}
+      />
       <FriendsGameSetup 
         visible={friendsMenuVisible} 
         onClose={() => setFriendsMenuVisible(false)} 
@@ -239,7 +246,7 @@ const HomeScreen = ({ navigation }) => {
         user={user} 
         t={t} 
         navigation={navigation} 
-        onSearch={() => console.log('Search clicked')} 
+        onSearch={() => setSearchVisible(true)}
         onSettings={() => setSettingsVisible(true)} 
         onPlaySound={handlePlaySound} 
       />
@@ -251,12 +258,18 @@ const HomeScreen = ({ navigation }) => {
             styles.logo, 
             { 
               transform: [{ scale: pulseValue }],
-              width: isTablet ? width * 0.5 : width * 0.8,
-              height: isTablet ? width * 0.5 : width * 0.8,
+              width: isTablet ? width * 0.5 : width * 0.7,
+              height: isTablet ? width * 0.5 : width * 0.7,
             }
           ]}
           resizeMode="contain"
         />
+        
+        {/* <View style={{ alignItems: 'center', marginTop: -getResponsiveSize(30) }}>
+           <Text style={styles.mainTitle}>DEAD<Text style={styles.titleBlue}>PIONS</Text></Text>
+           <Text style={styles.subTitle}>GOMOKU BATTLE</Text>
+        </View> */}
+
         
         {/* Early Access Banner */}
         {/* {user?.isEarlyAccess && (
@@ -369,7 +382,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    bottom: getResponsiveSize(45),
+    bottom: getResponsiveSize(70),
   },
   logo: {
     // Taille dynamique dans le composant
@@ -425,6 +438,30 @@ const styles = StyleSheet.create({
     // textShadowColor: 'rgba(4, 28, 85, 1)',
     // textShadowOffset: { width: 2, height: 2 },
     // textShadowRadius: 1,
+  },
+  mainTitle: {
+    fontSize: getResponsiveSize(42),
+    fontWeight: '900',
+    color: '#FFF',
+    letterSpacing: 4,
+    textTransform: 'uppercase',
+    textShadowColor: 'rgba(0, 0, 0, 0.9)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
+  },
+  titleBlue: {
+    color: '#0088FF',
+  },
+  subTitle: {
+    fontSize: getResponsiveSize(16),
+    color: '#f1c40f',
+    letterSpacing: 6,
+    textTransform: 'uppercase',
+    marginTop: getResponsiveSize(5),
+    fontWeight: 'bold',
+    textShadowColor: 'rgba(0, 0, 0, 0.9)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
 });
 

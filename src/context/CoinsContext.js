@@ -67,11 +67,20 @@ export const CoinsProvider = ({ children }) => {
         try {
             // 1. D'abord synchroniser les transactions locales en attente (Push)
             // Cela permet de mettre à jour le serveur avec nos gains/pertes locaux
-            await syncTransactions();
+            const syncResult = await syncTransactions();
+
+            // Si la synchro échoue (et qu'il y avait des transactions), on arrête là 
+            // pour éviter d'écraser les données locales avec un solde serveur obsolète
+            if (!syncResult.success) {
+                console.warn('Sync transactions failed, skipping reconciliation to preserve local state');
+                return;
+            }
 
             // 2. Ensuite, récupérer la vérité terrain du serveur (Pull)
             // Cela assure que nous avons le solde final (incluant ce qu'on vient de pousser + d'autres changements)
-            const balance = await CoinsService.reconcileBalance(user?.id, token);
+            // Utiliser le token potentiellement rafraîchi
+            const balance = await CoinsService.reconcileBalance(user?.id, syncResult.token);
+            
             if (balance !== null && user && user.coins !== balance) {
                 dispatch(updateUser({ coins: balance }));
             }
@@ -88,10 +97,13 @@ export const CoinsProvider = ({ children }) => {
     const refreshBalance = syncBalance;
 
     const syncTransactions = async () => {
-        if (!token || isSyncing) return;
+        if (!token || isSyncing) return { success: false, token };
+        let currentToken = token;
+        
         try {
             setIsSyncing(true);
-            const res = await CoinsService.synchroniser(token);
+            let res = await CoinsService.synchroniser(currentToken);
+            
             if (res && res.ok === false && res.status === 401 && refreshToken) {
                 try {
                     const refreshResponse = await fetch(`${API_URL}/auth/refresh-token`, {
@@ -101,15 +113,21 @@ export const CoinsProvider = ({ children }) => {
                     });
                     if (refreshResponse.ok) {
                         const data = await refreshResponse.json();
-                        dispatch(updateAccessToken(data.token));
-                        await CoinsService.synchroniser(data.token);
+                        currentToken = data.token;
+                        dispatch(updateAccessToken(currentToken));
+                        // Réessayer avec le nouveau token
+                        res = await CoinsService.synchroniser(currentToken);
                     }
                 } catch (e) {
                     console.error('Erreur refresh token:', e);
+                    return { success: false, token: currentToken };
                 }
             }
+            
+            return { success: res?.ok || false, token: currentToken };
         } catch (error) {
             console.error('Erreur syncTransactions:', error);
+            return { success: false, token: currentToken };
         } finally {
             setIsSyncing(false);
         }

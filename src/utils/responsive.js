@@ -30,7 +30,7 @@ const getResponsiveWidth = (percentage, maxWidth = null) => {
 // This prevents elements from becoming cartoonishly large on iPad
 const getResponsiveSize = (size) => {
   if (isTablet) {
-    return size * 1.5; // Scale up a bit for tablet, but not linearly with width
+    return size * 1.2; // Scale up a bit for tablet, but not linearly with width
   }
   return normalize(size);
 };

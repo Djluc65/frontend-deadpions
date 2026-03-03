@@ -24,7 +24,8 @@ const SalleAttenteLive = ({ route, navigation }) => {
   // --- États locaux ---
   const [spectateurs, setSpectateurs] = useState(configSalle && Array.isArray(configSalle.spectateurs) ? configSalle.spectateurs : []); // Liste des spectateurs présents
   const [isCreator, setIsCreator] = useState(false); // Vérifie si l'utilisateur est le créateur de la salle
-  const [opponent, setOpponent] = useState(null); // Joueur adverse (Blanc)
+  const [opponent, setOpponent] = useState(null); // Joueur adverse (le challenger)
+  const [creatorColor, setCreatorColor] = useState('black'); // Couleur de l'hôte (par défaut noir)
   const [loading, setLoading] = useState(!configSalle);
   
   // Invitation State
@@ -84,7 +85,11 @@ const SalleAttenteLive = ({ route, navigation }) => {
 
           const handlePlayerJoined = (data) => {
               console.log('Player joined:', data);
-              if (data.role === 'white') {
+              // Si le joueur qui rejoint n'est pas le créateur, c'est l'adversaire
+              const creatorId = (configSalle?.createur?._id || configSalle?.createur?.id) || (user?._id || user?.id);
+              const joinedId = data.player._id || data.player.id;
+              
+              if (creatorId && joinedId !== creatorId) {
                   setOpponent(data.player);
               }
           };
@@ -92,16 +97,41 @@ const SalleAttenteLive = ({ route, navigation }) => {
           const handleLiveRoomJoined = (data) => {
               console.log('Live room joined data:', data);
               
-              if (!configSalle && data.config) {
+              let currentConfig = configSalle;
+              if (!currentConfig && data.config) {
                   setConfigSalle(data.config);
                   setLoading(false);
+                  currentConfig = data.config;
               }
 
-              if (data.players && data.players.white) {
-                  setOpponent(data.players.white);
-              }
               if (data.spectators) {
                   setSpectateurs(data.spectators);
+              }
+
+              // Déterminer la couleur du créateur et l'adversaire
+              if (data.players && currentConfig && currentConfig.createur) {
+                  const creatorId = currentConfig.createur._id || currentConfig.createur.id;
+                  
+                  // Vérifier si le créateur est blanc
+                  if (data.players.white && (data.players.white._id || data.players.white.id) === creatorId) {
+                      setCreatorColor('white');
+                      // L'adversaire est noir (s'il existe et n'est pas le créateur)
+                      if (data.players.black && (data.players.black._id || data.players.black.id) !== creatorId) {
+                          setOpponent(data.players.black);
+                      } else {
+                          setOpponent(null);
+                      }
+                  } 
+                  // Sinon vérifier s'il est noir
+                  else if (data.players.black && (data.players.black._id || data.players.black.id) === creatorId) {
+                      setCreatorColor('black');
+                      // L'adversaire est blanc (s'il existe et n'est pas le créateur)
+                      if (data.players.white && (data.players.white._id || data.players.white.id) !== creatorId) {
+                          setOpponent(data.players.white);
+                      } else {
+                          setOpponent(null);
+                      }
+                  }
               }
           };
 
@@ -312,7 +342,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
             <View style={styles.playersContainer}>
                 {/* Creator Side */}
                 <View style={styles.playerSide}>
-                    <Text style={styles.roleLabel}>Hôte (Noir)</Text>
+                    <Text style={styles.roleLabel}>Hôte ({creatorColor === 'white' ? 'Blanc' : 'Noir'})</Text>
                     <View style={styles.avatarContainer}>
                         {configSalle.createur.avatar ? (
                             <Image source={getAvatarSource(configSalle.createur.avatar)} style={styles.avatarImage} />
@@ -334,7 +364,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
 
                 {/* Opponent Side */}
                 <View style={styles.playerSide}>
-                    <Text style={styles.roleLabel}>Adversaire (Blanc)</Text>
+                    <Text style={styles.roleLabel}>Adversaire ({creatorColor === 'white' ? 'Noir' : 'Blanc'})</Text>
                     {opponent ? (
                         <>
                             <View style={styles.avatarContainer}>

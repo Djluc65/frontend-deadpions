@@ -35,6 +35,7 @@
     "expo-linear-gradient": "~15.0.8",
     "expo-linking": "~8.0.11",
     "expo-screen-orientation": "~9.0.8",
+    "expo-splash-screen": "^55.0.10",
     "expo-status-bar": "~2.0.1",
     "expo-web-browser": "^15.0.10",
     "lottie-react-native": "~7.3.1",

@@ -6,20 +6,39 @@ import { updateAccessToken, logout } from '../redux/slices/authSlice';
 import { API_URL } from '../config';
 import { Asset } from 'expo-asset';
 import { getResponsiveSize, isTablet, SCREEN_WIDTH, SCREEN_HEIGHT } from '../utils/responsive';
+import * as SplashScreen from 'expo-splash-screen';
 
 const WaitingScreen = ({ navigation }) => {
   const { token, refreshToken } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
 
   useEffect(() => {
+    // Hide splash screen once WaitingScreen is mounted
+    const hideSplash = async () => {
+      try {
+        await SplashScreen.hideAsync();
+      } catch (e) {
+        // ignore error
+      }
+    };
+    hideSplash();
+  }, []);
+
+  useEffect(() => {
     const initializeApp = async () => {
       const startTime = Date.now();
 
       // 1. Préchargement des assets critiques en parallèle
-      const assetPromises = [
-        Asset.loadAsync(require('../../assets/images/Background2-4.png')),
-        Asset.loadAsync(require('../../assets/images/LogoDeadPions2.png')),
-      ];
+      const loadAssets = async () => {
+          try {
+            await Promise.all([
+                Asset.loadAsync(require('../../assets/images/Background2-4.png')),
+                Asset.loadAsync(require('../../assets/images/LogoDeadPions2.png')),
+            ]);
+          } catch (e) {
+              console.warn("Erreur chargement assets:", e);
+          }
+      };
 
       // 2. Vérification Auth
       const authPromise = (async () => {
@@ -52,7 +71,7 @@ const WaitingScreen = ({ navigation }) => {
 
       // Attendre la fin des deux (Assets + Auth)
       const [_, authResult] = await Promise.all([
-          Promise.all(assetPromises),
+          loadAssets(),
           authPromise
       ]);
       
@@ -96,6 +115,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     height: '100%',
+    backgroundColor: '#000000', // Fallback color to ensure white spinner is visible if image loads slowly
   },
   container: {
     flex: 1,
