@@ -3674,7 +3674,7 @@ const GameScreen = ({ navigation, route }) => {
                   )}
 
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: getResponsiveSize(12) }}>
-                      {type === 'online' && mode !== 'spectator' && (
+                      {(type === 'online' || type === 'online_custom') && mode !== 'spectator' && (
                         <TouchableOpacity 
                             style={[
                                 styles.boutonRejouer, 
@@ -3692,12 +3692,15 @@ const GameScreen = ({ navigation, route }) => {
                                       showAlert('Solde insuffisant', 'Vous n\'avez pas assez de coins pour rejouer.', [{ text: 'OK', style: 'cancel' }]);
                                       return;
                                   }
+                                  
+                                  // Pour online_custom, si le tournoi est fini, le créateur peut vouloir relancer
+                                  // Mais l'action par défaut ici est request_rematch
                                   setRematchRequested(true);
                                   socket.emit('request_rematch', { gameId: params.gameId });
                               }}
                           >
                               <Text style={styles.boutonTexteResult}>
-                                  {rematchRequested ? 'Demande envoyée...' : (isTournament ? '🔄 Nouveau Tournoi' : (victoire ? '🔄 Rejouer' : '🔄 Revanche (Même mise)'))}
+                                  {rematchRequested ? 'Demande envoyée...' : (isTournament && tournamentOver ? '🔄 Nouveau Tournoi' : (victoire ? '🔄 Rejouer' : '🔄 Revanche (Même mise)'))}
                               </Text>
                           </TouchableOpacity>
                       )}

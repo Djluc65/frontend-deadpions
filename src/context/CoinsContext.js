@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
@@ -17,6 +17,7 @@ export const CoinsProvider = ({ children }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [lastSync, setLastSync] = useState(null);
     const [feedback, setFeedback] = useState({ visible: false, amount: 0 });
+    const isSyncingRef = useRef(false);
 
     // Initialisation et écouteurs
     useEffect(() => {
@@ -63,6 +64,14 @@ export const CoinsProvider = ({ children }) => {
 
     const syncBalance = async () => {
         if (!token) return;
+        
+        // Éviter les appels simultanés (ex: montage initial + focus screen)
+        if (isSyncingRef.current) {
+            console.log('SyncBalance ignoré : synchronisation déjà en cours');
+            return;
+        }
+
+        isSyncingRef.current = true;
         setIsLoading(true);
         try {
             // 1. D'abord synchroniser les transactions locales en attente (Push)
@@ -90,6 +99,7 @@ export const CoinsProvider = ({ children }) => {
             console.error('Erreur syncBalance:', error);
         } finally {
             setIsLoading(false);
+            isSyncingRef.current = false;
         }
     };
 

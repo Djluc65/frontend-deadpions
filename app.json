@@ -68,7 +68,8 @@
           "merchantIdentifier": "merchant.com.deadpions",
           "enableGooglePay": true
         }
-      ]
+      ],
+      "expo-apple-authentication"
     ],
     "extra": {
       "eas": {

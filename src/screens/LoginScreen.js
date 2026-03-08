@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { AntDesign } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { loginStart, loginSuccess, loginFailure } from '../redux/slices/authSlice';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
@@ -25,6 +26,22 @@ const LoginScreen = ({ navigation }) => {
     iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
     androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
   });
+
+  const [isAppleAuthAvailable, setIsAppleAuthAvailable] = useState(false);
+
+  useEffect(() => {
+    const checkAppleAuthAvailability = async () => {
+      try {
+        const isAvailable = await AppleAuthentication.isAvailableAsync();
+        console.log('Apple Auth Available:', isAvailable);
+        setIsAppleAuthAvailable(isAvailable);
+      } catch (error) {
+        console.log('Error checking Apple Auth availability:', error);
+        setIsAppleAuthAvailable(false);
+      }
+    };
+    checkAppleAuthAvailability();
+  }, []);
 
   useEffect(() => {
     if (response?.type === 'success') {
@@ -83,6 +100,75 @@ const LoginScreen = ({ navigation }) => {
       console.error(error);
       dispatch(loginFailure(error.message));
       Alert.alert('Erreur', 'Impossible de se connecter au serveur');
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      dispatch(loginStart());
+
+      // Envoyer le token d'identité au backend
+      const res = await fetch(`${API_URL}/auth/apple-login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          identityToken: credential.identityToken,
+          user: credential.user, // ID stable de l'utilisateur
+          email: credential.email,
+          fullName: credential.fullName,
+        }),
+      });
+
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        // Fallback si le backend n'est pas encore prêt : on simule une erreur ou on gère gracieusement
+        throw new Error("Le service de connexion Apple n'est pas encore disponible sur le serveur.");
+      }
+
+      const data = await res.json();
+
+      if (res.ok) {
+        dispatch(loginSuccess({
+          user: {
+            _id: data._id,
+            email: data.email,
+            pseudo: data.pseudo,
+            coins: data.coins,
+            avatar: data.avatar,
+            country: data.country,
+            stats: data.stats,
+            isPremium: data.isPremium,
+            isEarlyAccess: data.isEarlyAccess,
+            earlyAccessEndDate: data.earlyAccessEndDate,
+            subscriptionEndDate: data.subscriptionEndDate,
+            dailyCreatedRooms: data.dailyCreatedRooms
+          },
+          token: data.token,
+          refreshToken: data.refreshToken
+        }));
+        navigation.replace('Home');
+      } else {
+        dispatch(loginFailure(data.message));
+        Alert.alert('Erreur', data.message || "Erreur lors de la connexion Apple");
+      }
+
+    } catch (e) {
+      if (e.code === 'ERR_CANCELED') {
+        // L'utilisateur a annulé, on ne fait rien
+        return;
+      }
+      console.error(e);
+      dispatch(loginFailure(e.message));
+      Alert.alert('Erreur', e.message || "Impossible de se connecter avec Apple");
     }
   };
 
@@ -181,6 +267,16 @@ const LoginScreen = ({ navigation }) => {
 
           <Button title="Se connecter" onPress={handleLogin} />
           
+          {isAppleAuthAvailable && (
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+              cornerRadius={getResponsiveSize(8)}
+              style={styles.appleButton}
+              onPress={handleAppleLogin}
+            />
+          )}
+
           <TouchableOpacity 
             style={styles.googleButton} 
             onPress={() => {
@@ -236,6 +332,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     textDecorationLine: 'underline',
     fontSize: getResponsiveSize(14),
+  },
+  appleButton: {
+    width: '100%',
+    height: getResponsiveSize(50), // Matches typical button height
+    marginTop: getResponsiveSize(15),
+    marginBottom: getResponsiveSize(5), // Slight spacing before Google button
   },
   googleButton: {
     flexDirection: 'row',

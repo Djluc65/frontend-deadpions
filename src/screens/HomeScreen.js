@@ -38,13 +38,19 @@ const HomeScreen = ({ navigation }) => {
   const spinValue = useRef(new Animated.Value(0)).current;
   const pulseValue = useRef(new Animated.Value(1)).current;
   
-  const { syncBalance } = useCoinsContext();
+  const { syncBalance, isSyncing, lastSync } = useCoinsContext();
 
   useFocusEffect(
     useCallback(() => {
       // Synchroniser les coins à chaque fois que l'écran d'accueil est affiché
-      syncBalance();
-    }, [])
+      // On évite de synchroniser si une synchronisation est déjà en cours ou a été faite récemment (< 2s)
+      // Cela empêche le double rechargement au démarrage
+      const shouldSync = !isSyncing && (!lastSync || Date.now() - lastSync > 2000);
+      
+      if (shouldSync) {
+        syncBalance();
+      }
+    }, [isSyncing, lastSync, syncBalance])
   );
 
   const t = translations[settings.language] || translations.fr;

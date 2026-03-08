@@ -232,13 +232,15 @@ const styles = StyleSheet.create({
   friendsLabel: {
     fontSize: getResponsiveSize(14),
     color: '#f1c40f',
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
+    textAlign: 'center',
     marginBottom: getResponsiveSize(5),
     fontWeight: 'bold',
   },
   optionsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'center',
     gap: getResponsiveSize(8),
     marginBottom: getResponsiveSize(15),
     width: '100%',

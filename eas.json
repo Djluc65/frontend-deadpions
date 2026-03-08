@@ -16,7 +16,14 @@
       }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://backend-deadpions-production.up.railway.app/api",
+        "EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY": "pk_live_51SyDTfE3G9WWgZTjwzwLkV7CQTUAAeeiUULV0MF7Sq1rwWti5unkpRirRXvrWhbZx1UkFiZpsyDKWXuauFlAh0Ug00Oq69qYjb",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "982071763340-okgi0fqf93jc4f9a10s184cjfvjfllkm.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "982071763340-pte2blufa0q5q2q7imspvo6jnp9jjtrn.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "982071763340-juep8lchntjqcbfi1jg7cq6i383a6esq.apps.googleusercontent.com"
+      }
     },
     "production-simulator": {
       "extends": "production",
@@ -26,7 +33,14 @@
     },
     "production": {
       "distribution": "store",
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://backend-deadpions-production.up.railway.app/api",
+        "EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY": "pk_live_51SyDTfE3G9WWgZTjwzwLkV7CQTUAAeeiUULV0MF7Sq1rwWti5unkpRirRXvrWhbZx1UkFiZpsyDKWXuauFlAh0Ug00Oq69qYjb",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "982071763340-okgi0fqf93jc4f9a10s184cjfvjfllkm.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "982071763340-pte2blufa0q5q2q7imspvo6jnp9jjtrn.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "982071763340-juep8lchntjqcbfi1jg7cq6i383a6esq.apps.googleusercontent.com"
+      }
     }
   },
   "submit": {

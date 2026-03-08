@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ImageBackground, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useSelector, useDispatch } from 'react-redux';
@@ -18,6 +18,7 @@ const ShopScreen = () => {
   const dispatch = useDispatch();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const [loading, setLoading] = useState(false);
+  const isIOS = Platform.OS === 'ios';
 
   const COIN_PACKS = [
     { id: 'pack_beginner', coins: 50000, price: '1,99 €', label: 'Débutant' },
@@ -29,10 +30,18 @@ const ShopScreen = () => {
   ];
 
   const handleBuyPremium = async () => {
+      if (isIOS) {
+        Alert.alert("Info", "Les achats sont disponibles uniquement sur notre site web pour le moment.");
+        return;
+      }
       await handleBuyCoins('pack_premium_unlock', 0, '4,99 €', 'Pions Premium Unlock');
   };
 
   const handleSubscription = (plan) => {
+    if (isIOS) {
+        Alert.alert("Info", "Les abonnements sont gérés via notre site web.");
+        return;
+    }
     Alert.alert(
       "Abonnement DeadPions+",
       `Vous avez choisi l'offre ${plan}. Cette fonctionnalité sera bientôt disponible avec les paiements réels (Stripe/Apple/Google).`,
@@ -242,21 +251,29 @@ const ShopScreen = () => {
 
             <View style={styles.subscriptionContainer}>
               {/* Offre Mensuelle */}
-              <TouchableOpacity style={styles.subCard} onPress={() => handleSubscription('Mensuel (2,99€)')}>
-                <Text style={styles.subPrice}>2,99 €</Text>
+              <TouchableOpacity 
+                style={styles.subCard} 
+                onPress={() => handleSubscription('Mensuel (2,99€)')}
+                disabled={isIOS}
+              >
+                <Text style={styles.subPrice}>{isIOS ? 'WEB' : '2,99 €'}</Text>
                 <Text style={styles.subPeriod}>/ mois</Text>
-                <Text style={styles.subDetail}>Flexible</Text>
+                <Text style={styles.subDetail}>{isIOS ? 'Sur le site' : 'Flexible'}</Text>
               </TouchableOpacity>
 
               {/* Offre Annuelle */}
-              <TouchableOpacity style={[styles.subCard, styles.bestValueCard]} onPress={() => handleSubscription('Annuel (19,99€)')}>
+              <TouchableOpacity 
+                style={[styles.subCard, styles.bestValueCard]} 
+                onPress={() => handleSubscription('Annuel (19,99€)')}
+                disabled={isIOS}
+              >
                 <View style={styles.bestValueBadge}>
                   <Text style={styles.bestValueText}>MEILLEURE OFFRE</Text>
                 </View>
-                <Text style={[styles.subPrice, styles.highlightText]}>19,99 €</Text>
+                <Text style={[styles.subPrice, styles.highlightText]}>{isIOS ? 'WEB' : '19,99 €'}</Text>
                 <Text style={[styles.subPeriod, styles.highlightText]}>/ an</Text>
-                <Text style={[styles.subDetail, styles.highlightText]}>~1,66 € / mois</Text>
-                <Text style={[styles.saveText]}>-45%</Text>
+                <Text style={[styles.subDetail, styles.highlightText]}>{isIOS ? 'Sur le site' : '~1,66 € / mois'}</Text>
+                {!isIOS && <Text style={[styles.saveText]}>-45%</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -327,11 +344,11 @@ const ShopScreen = () => {
                   )}
                   <Text style={styles.coinAmount}>{pack.coins.toLocaleString()}</Text>
                   <Text style={styles.coinLabel}>Coins</Text>
-                  <View style={[styles.priceButton, loading && { opacity: 0.7 }]}>
+                  <View style={[styles.priceButton, loading && { opacity: 0.7 }, isIOS && { backgroundColor: '#888' }]}>
                     {loading ? (
                         <ActivityIndicator size="small" color="white" />
                     ) : (
-                        <Text style={styles.priceText}>{pack.price}</Text>
+                        <Text style={styles.priceText}>{isIOS ? 'Sur le Web' : pack.price}</Text>
                     )}
                   </View>
                 </TouchableOpacity>
