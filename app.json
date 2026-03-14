@@ -3,6 +3,7 @@
     "name": "DeadPions",
     "slug": "deadpions",
     "version": "1.0.0",
+    "newArchEnabled": true,
     "scheme": "deadpions",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -23,6 +24,8 @@
         "NSCameraUsageDescription": "DeadPions uses your camera to let you take a profile picture or video call with friends.",
         "NSMicrophoneUsageDescription": "DeadPions uses your microphone for voice messages and video calls.",
         "NSPhotoLibraryUsageDescription": "DeadPions accesses your photo library to let you select and upload a profile picture.",
+        "GADApplicationIdentifier": "ca-app-pub-3636440603787547~4892803097",
+        "NSUserTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "bitcode": false
@@ -69,6 +72,14 @@
           "enableGooglePay": true
         }
       ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3636440603787547~4892803097",
+          "iosAppId": "ca-app-pub-3636440603787547~4892803097",
+          "userTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you."
+        }
+      ],
       "expo-apple-authentication"
     ],
     "extra": {
@@ -76,5 +87,11 @@
         "projectId": "b596c8c4-ea61-4c09-9a1c-37faa9b5fc99"
       }
     }
+  }
+  ,
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-3636440603787547~4892803097",
+    "ios_app_id": "ca-app-pub-3636440603787547~4892803097",
+    "user_tracking_usage_description": "This identifier will be used to deliver personalized ads to you."
   }
 }

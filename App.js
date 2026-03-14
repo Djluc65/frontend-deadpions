@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import React from 'react';
 import * as Linking from 'expo-linking';
 import { NavigationContainer } from '@react-navigation/native';

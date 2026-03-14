@@ -14,6 +14,9 @@ class CoinsService {
      */
     static async obtenirSolde(token) {
         try {
+            const localCoins = await AsyncStorage.getItem(this.STORAGE_KEY_COINS);
+            const localBalance = localCoins ? parseInt(localCoins, 10) : null;
+
             // Priorité au serveur
             if (token) {
                 const response = await fetch(`${API_URL}/users/profile`, {
@@ -21,14 +24,23 @@ class CoinsService {
                 });
                 if (response.ok) {
                     const data = await response.json();
-                    await AsyncStorage.setItem(this.STORAGE_KEY_COINS, data.coins.toString());
-                    return data.coins;
+                    const serverBalance = typeof data?.coins === 'number' ? data.coins : parseInt(String(data?.coins ?? ''), 10);
+                    if (Number.isFinite(serverBalance)) {
+                        if (localBalance !== null && localBalance > serverBalance) {
+                            const pending = await TransactionService.getPendingTransactions();
+                            const hasPendingCredit = Array.isArray(pending) && pending.some(t => t?.type === 'CREDIT');
+                            if (hasPendingCredit) {
+                                return localBalance;
+                            }
+                        }
+                        await AsyncStorage.setItem(this.STORAGE_KEY_COINS, serverBalance.toString());
+                        return serverBalance;
+                    }
                 }
             }
             
             // Fallback local
-            const localCoins = await AsyncStorage.getItem(this.STORAGE_KEY_COINS);
-            return localCoins ? parseInt(localCoins, 10) : 0;
+            return localBalance ?? 0;
         } catch (error) {
             console.error('Erreur obtenirSolde:', error);
             const localCoins = await AsyncStorage.getItem(this.STORAGE_KEY_COINS);

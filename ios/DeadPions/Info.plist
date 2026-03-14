@@ -61,6 +61,10 @@
     <string>Allow $(PRODUCT_NAME) to access your camera</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your microphone</string>
+    <key>GADApplicationIdentifier</key>
+    <string>ca-app-pub-3636440603787547~4892803097</string>
+    <key>NSUserTrackingUsageDescription</key>
+    <string>This identifier will be used to deliver personalized ads to you.</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>This app needs access to your photo library to let you select a profile picture.</string>
     <key>RCTNewArchEnabled</key>
