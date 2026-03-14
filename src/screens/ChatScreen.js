@@ -7,6 +7,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
 import { Audio } from 'expo-av';
+import Constants from 'expo-constants';
 import { playButtonSound } from '../utils/soundManager';
 import { 
   RTCPeerConnection, 
@@ -699,10 +700,10 @@ const ChatScreen = ({ route, navigation }) => {
 
   const acceptCall = async () => {
     // Allow call acceptance in Expo Go (mock mode)
-    // if (!isWebRTCAvailable) {
-    //    Alert.alert("Erreur", "WebRTC non disponible sur cet appareil (Mode Expo Go).");
-    //    return;
-    // }
+    if (!isWebRTCAvailable && Constants.appOwnership === 'expo') {
+       Alert.alert("Mode Expo Go", "Les appels vidéo nécessitent un Development Build. Simulation uniquement.");
+       return;
+    }
 
     try {
       const stream = await getStream(callType);

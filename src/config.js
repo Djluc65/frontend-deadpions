@@ -27,3 +27,5 @@ export const API_URL =
 
 console.log('🔌 API URL:', API_URL);
 console.log('🌍 MODE:', API_URL.includes('railway') ? 'PRODUCTION (LIGNE)' : 'LOCAL');
+
+export const WEBSITE_URL = 'https://deadpions.eu';

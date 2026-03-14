@@ -20,6 +20,7 @@ import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import InfoScreen from '../screens/InfoScreen';
 import AssistantScreen from '../screens/AssistantScreen';
 import PremiumPionsScreen from '../screens/PremiumPionsScreen';
+import AdSystem from '../ads/AdSystem';
 
 const Stack = createStackNavigator();
 
@@ -50,6 +51,7 @@ function AppNavigator() {
         <Stack.Screen name="Assistant" component={AssistantScreen} />
         <Stack.Screen name="PremiumPions" component={PremiumPionsScreen} />
       </Stack.Navigator>
+      <AdSystem />
       <GlobalInviteListener />
     </>
   );

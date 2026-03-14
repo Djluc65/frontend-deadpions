@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ImageBackground, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState, View, Text, StyleSheet, ImageBackground, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useSelector, useDispatch } from 'react-redux';
 import { useStripe } from '@stripe/stripe-react-native';
 import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
-import { API_URL } from '../config';
+import { API_URL, WEBSITE_URL } from '../config';
 import CoinsService from '../services/CoinsService';
 import TransactionService from '../services/TransactionService';
 import { updateUser } from '../redux/slices/authSlice';
@@ -19,6 +19,96 @@ const ShopScreen = () => {
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const [loading, setLoading] = useState(false);
   const isIOS = Platform.OS === 'ios';
+  const iosCoinsUseWebShop = false;
+  const pendingProfileRefreshRef = useRef(false);
+
+  const refreshUserProfile = useCallback(async () => {
+    if (!token) return false;
+    try {
+      const response = await fetch(`${API_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) return false;
+
+      const data = await response.json();
+      if (!response.ok) return false;
+
+      const userData = (data && typeof data === 'object' && 'user' in data ? data.user : data) || null;
+      if (!userData || typeof userData !== 'object') return false;
+
+      const allowedKeys = [
+        '_id',
+        'email',
+        'pseudo',
+        'coins',
+        'avatar',
+        'country',
+        'stats',
+        'isPremium',
+        'isEarlyAccess',
+        'earlyAccessEndDate',
+        'subscriptionEndDate',
+        'dailyCreatedRooms',
+        'pawnSkin',
+        'pays'
+      ];
+
+      const patch = {};
+      for (const key of allowedKeys) {
+        if (key in userData) patch[key] = userData[key];
+      }
+
+      if (Object.keys(patch).length === 0) return false;
+      if (
+        typeof patch.coins === 'number' &&
+        typeof user?.coins === 'number' &&
+        patch.coins < user.coins
+      ) {
+        const pending = await TransactionService.getPendingTransactions();
+        const hasPendingCredit = Array.isArray(pending) && pending.some(t => t?.type === 'CREDIT');
+        if (hasPendingCredit) delete patch.coins;
+      }
+      dispatch(updateUser(patch));
+      return true;
+    } catch {
+      return false;
+    }
+  }, [dispatch, token, user?.coins]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState !== 'active') return;
+      if (!pendingProfileRefreshRef.current) return;
+      pendingProfileRefreshRef.current = false;
+      refreshUserProfile();
+    });
+
+    return () => subscription.remove();
+  }, [refreshUserProfile]);
+
+  const openWebShop = async (params = {}) => {
+    pendingProfileRefreshRef.current = true;
+    const mergedParams = { userId: user?._id, ...params };
+    const query = Object.entries(mergedParams)
+      .filter(([, value]) => value !== undefined && value !== null && value !== '')
+      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+      .join('&');
+
+    const shopUrl = `${WEBSITE_URL}/shop${query ? `?${query}` : ''}`;
+
+    try {
+      const supported = await Linking.canOpenURL(shopUrl);
+      if (supported) {
+        await Linking.openURL(shopUrl);
+      } else {
+        Alert.alert('Info', `Rendez-vous sur ${WEBSITE_URL} pour acheter des coins.`);
+      }
+    } catch {
+      Alert.alert('Info', `Rendez-vous sur ${WEBSITE_URL} pour acheter des coins.`);
+    }
+  };
 
   const COIN_PACKS = [
     { id: 'pack_beginner', coins: 50000, price: '1,99 €', label: 'Débutant' },
@@ -30,16 +120,12 @@ const ShopScreen = () => {
   ];
 
   const handleBuyPremium = async () => {
-      if (isIOS) {
-        Alert.alert("Info", "Les achats sont disponibles uniquement sur notre site web pour le moment.");
-        return;
-      }
       await handleBuyCoins('pack_premium_unlock', 0, '4,99 €', 'Pions Premium Unlock');
   };
 
   const handleSubscription = (plan) => {
     if (isIOS) {
-        Alert.alert("Info", "Les abonnements sont gérés via notre site web.");
+        openWebShop({ product: 'subscription', plan, source: 'ios_app' });
         return;
     }
     Alert.alert(
@@ -102,17 +188,19 @@ const ShopScreen = () => {
       if (response.ok && data.success) {
         // Enregistrer la transaction localement
         // On utilise paymentIntentId comme ID unique pour éviter les doublons lors de la synchro
-        await CoinsService.crediterCoins(
+        const creditedCoins = data.addedCoins || packDetails?.coins || 0;
+        const result = await CoinsService.crediterCoins(
             (user?.coins || 0), 
-            data.addedCoins || packDetails?.coins || 0,
+            creditedCoins,
             `Achat ${packDetails?.label || 'Boutique'}`,
             { uniqueId: paymentIntentId, packId: packDetails?.id }
         );
 
         Alert.alert('Succès', data.message);
-        // Refresh coins locally
+        dispatch(updateUser({ coins: result?.nouveauSolde ?? (user?.coins || 0) + creditedCoins }));
         const newBalance = await CoinsService.obtenirSolde(token);
         dispatch(updateUser({ coins: newBalance }));
+        await refreshUserProfile();
       } else {
          Alert.alert('Attention', data.message || 'Paiement non validé');
       }
@@ -124,6 +212,12 @@ const ShopScreen = () => {
 
   const handleBuyCoins = async (packId, coins, price, label) => {
     if (loading) return;
+
+    if (isIOS && iosCoinsUseWebShop) {
+      await openWebShop({ packId, source: 'ios_app' });
+      return;
+    }
+
     setLoading(true);
 
     // DÉTECTION MODE EXPO GO : Les paiements Stripe ne fonctionnent PAS dans Expo Go
@@ -253,27 +347,32 @@ const ShopScreen = () => {
               {/* Offre Mensuelle */}
               <TouchableOpacity 
                 style={styles.subCard} 
-                onPress={() => handleSubscription('Mensuel (2,99€)')}
-                disabled={isIOS}
+                onPress={() => handleSubscription('Mensuel')}
               >
-                <Text style={styles.subPrice}>{isIOS ? 'WEB' : '2,99 €'}</Text>
+                <Text style={styles.subName}>Mensuel</Text>
+                <Text style={styles.subPrice}>2,99 €</Text>
                 <Text style={styles.subPeriod}>/ mois</Text>
-                <Text style={styles.subDetail}>{isIOS ? 'Sur le site' : 'Flexible'}</Text>
+                <Text style={styles.subPerk}>+50 000 coins / mois</Text>
+                <Text style={styles.subPerk}>Salles illimitées • Coach IA • Stats avancées • Zéro pub</Text>
+                <Text style={styles.subDetail}>{isIOS ? 'Paiement sur le Web' : 'Bientôt disponible'}</Text>
               </TouchableOpacity>
 
               {/* Offre Annuelle */}
               <TouchableOpacity 
                 style={[styles.subCard, styles.bestValueCard]} 
-                onPress={() => handleSubscription('Annuel (19,99€)')}
-                disabled={isIOS}
+                onPress={() => handleSubscription('Annuel')}
               >
                 <View style={styles.bestValueBadge}>
                   <Text style={styles.bestValueText}>MEILLEURE OFFRE</Text>
                 </View>
-                <Text style={[styles.subPrice, styles.highlightText]}>{isIOS ? 'WEB' : '19,99 €'}</Text>
+                <Text style={[styles.subName, styles.highlightText]}>Annuel</Text>
+                <Text style={[styles.subPrice, styles.highlightText]}>19,99 €</Text>
                 <Text style={[styles.subPeriod, styles.highlightText]}>/ an</Text>
-                <Text style={[styles.subDetail, styles.highlightText]}>{isIOS ? 'Sur le site' : '~1,66 € / mois'}</Text>
-                {!isIOS && <Text style={[styles.saveText]}>-45%</Text>}
+                <Text style={[styles.subPerk, styles.highlightText]}>+60 000 coins / mois</Text>
+                <Text style={[styles.subPerk, styles.highlightText]}>Crédit mensuel pendant 1 an</Text>
+                <Text style={[styles.subDetail, styles.highlightText]}>{isIOS ? 'Paiement sur le Web' : 'Bientôt disponible'}</Text>
+                <Text style={[styles.subDetail, styles.highlightText]}>~1,66 € / mois</Text>
+                <Text style={[styles.saveText]}>-45%</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -344,11 +443,18 @@ const ShopScreen = () => {
                   )}
                   <Text style={styles.coinAmount}>{pack.coins.toLocaleString()}</Text>
                   <Text style={styles.coinLabel}>Coins</Text>
-                  <View style={[styles.priceButton, loading && { opacity: 0.7 }, isIOS && { backgroundColor: '#888' }]}>
+                  <View style={[styles.priceButton, loading && { opacity: 0.7 }, iosCoinsUseWebShop && { backgroundColor: '#888' }]}>
                     {loading ? (
                         <ActivityIndicator size="small" color="white" />
                     ) : (
-                        <Text style={styles.priceText}>{isIOS ? 'Sur le Web' : pack.price}</Text>
+                        <>
+                          <Text style={styles.priceText}>{pack.price}</Text>
+                          {isIOS && (
+                            <Text style={styles.priceSubText}>
+                              {iosCoinsUseWebShop ? 'Sur le Web' : 'Apple Pay'}
+                            </Text>
+                          )}
+                        </>
                     )}
                   </View>
                 </TouchableOpacity>
@@ -418,8 +524,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: getResponsiveSize(10),
     padding: getResponsiveSize(15),
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
     borderWidth: getResponsiveSize(1),
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
@@ -446,14 +552,26 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'white',
   },
+  subName: {
+    fontSize: getResponsiveSize(14),
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: getResponsiveSize(6),
+  },
   subPeriod: {
     fontSize: getResponsiveSize(14),
     color: '#ccc',
     marginBottom: getResponsiveSize(5),
   },
+  subPerk: {
+    fontSize: getResponsiveSize(12),
+    color: '#ddd',
+    marginTop: getResponsiveSize(6),
+  },
   subDetail: {
     fontSize: getResponsiveSize(12),
     color: '#aaa',
+    marginTop: getResponsiveSize(8),
   },
   highlightText: {
     color: '#FFD700',
@@ -520,6 +638,12 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     fontSize: getResponsiveSize(14),
+  },
+  priceSubText: {
+    color: 'white',
+    fontSize: getResponsiveSize(11),
+    opacity: 0.85,
+    marginTop: getResponsiveSize(2),
   },
   disclaimer: {
     color: '#888',

@@ -14,6 +14,18 @@ import { getResponsiveSize } from '../utils/responsive';
 
 WebBrowser.maybeCompleteAuthSession();
 
+const isUserCancelledAuth = (error) => {
+  const code = error?.code ?? error?.error ?? null;
+  const message = typeof error?.message === 'string' ? error.message : '';
+  if (code === 'ERR_CANCELED') return true;
+  if (code === 'ERR_REQUEST_CANCELED') return true;
+  if (code === 'ASAuthorizationErrorCanceled') return true;
+  if (code === 1001) return true;
+  if (message.toLowerCase().includes('canceled the authorization attempt')) return true;
+  if (message.toLowerCase().includes("canceled")) return true;
+  return false;
+};
+
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,21 +39,7 @@ const LoginScreen = ({ navigation }) => {
     androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
   });
 
-  const [isAppleAuthAvailable, setIsAppleAuthAvailable] = useState(false);
-
-  useEffect(() => {
-    const checkAppleAuthAvailability = async () => {
-      try {
-        const isAvailable = await AppleAuthentication.isAvailableAsync();
-        console.log('Apple Auth Available:', isAvailable);
-        setIsAppleAuthAvailable(isAvailable);
-      } catch (error) {
-        console.log('Error checking Apple Auth availability:', error);
-        setIsAppleAuthAvailable(false);
-      }
-    };
-    checkAppleAuthAvailability();
-  }, []);
+  const showAppleAuth = Platform.OS === 'ios';
 
   useEffect(() => {
     if (response?.type === 'success') {
@@ -162,10 +160,7 @@ const LoginScreen = ({ navigation }) => {
       }
 
     } catch (e) {
-      if (e.code === 'ERR_CANCELED') {
-        // L'utilisateur a annulé, on ne fait rien
-        return;
-      }
+      if (isUserCancelledAuth(e)) return;
       console.error(e);
       dispatch(loginFailure(e.message));
       Alert.alert('Erreur', e.message || "Impossible de se connecter avec Apple");
@@ -267,7 +262,7 @@ const LoginScreen = ({ navigation }) => {
 
           <Button title="Se connecter" onPress={handleLogin} />
           
-          {isAppleAuthAvailable && (
+          {showAppleAuth && (
             <AppleAuthentication.AppleAuthenticationButton
               buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
               buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
@@ -279,8 +274,14 @@ const LoginScreen = ({ navigation }) => {
 
           <TouchableOpacity 
             style={styles.googleButton} 
-            onPress={() => {
-              promptAsync();
+            onPress={async () => {
+              try {
+                await promptAsync();
+              } catch (e) {
+                if (isUserCancelledAuth(e)) return;
+                console.error(e);
+                Alert.alert('Erreur', e?.message || 'La connexion Google a échoué');
+              }
             }}
             disabled={!request}
           >
