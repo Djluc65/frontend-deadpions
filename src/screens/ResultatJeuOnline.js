@@ -3,10 +3,13 @@ import { View, Text, StyleSheet, TouchableOpacity, ImageBackground } from 'react
 import { CommonActions } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import { getResponsiveSize } from '../utils/responsive';
+import { useAdManager } from '../ads/AdSystem';
 
 const ResultatJeuOnline = ({ route, navigation }) => {
   const { victoire, gains, montantPari, adversaire, raisonDefaite, raisonVictoire, timeouts } = route.params;
   const user = useSelector(state => state.auth.user);
+  const { showAds, showRewarded } = useAdManager();
+  const canShowRewardedCta = !victoire && showAds;
 
   return (
     <ImageBackground 
@@ -51,6 +54,12 @@ const ResultatJeuOnline = ({ route, navigation }) => {
             <Text style={styles.soldeLabel}>Nouveau solde :</Text>
             <Text style={styles.soldeMontant}>🪙 {user?.coins?.toLocaleString()}</Text>
         </View>
+
+        {canShowRewardedCta && (
+          <TouchableOpacity style={styles.boutonRewarded} onPress={showRewarded}>
+            <Text style={styles.boutonRewardedTexte}>🎁 Regarder une pub — +10 coins</Text>
+          </TouchableOpacity>
+        )}
 
         <View style={styles.boutons}>
           <TouchableOpacity 
@@ -166,6 +175,28 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveSize(24),
     fontWeight: 'bold',
     color: '#111827',
+  },
+  boutonRewarded: {
+    width: '100%',
+    backgroundColor: '#f59e0b',
+    paddingVertical: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: getResponsiveSize(10),
+    borderWidth: 1,
+    borderColor: '#fbbf24',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  boutonRewardedTexte: {
+    color: '#111827',
+    fontSize: getResponsiveSize(14),
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   boutons: {
     flexDirection: 'row',

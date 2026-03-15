@@ -19,6 +19,7 @@ import { getAvatarSource } from '../../utils/avatarUtils';
 import { API_URL } from '../../config';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
+import { modalTheme } from '../../utils/modalTheme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -90,7 +91,7 @@ const UserSearchModal = ({ visible, onClose, navigation }) => {
           <Text style={styles.statsText}>☠️ {item.stats?.losses || 0}</Text>
         </View>
       </View>
-      <Ionicons name="chevron-forward" size={24} color="#666" />
+      <Ionicons name="chevron-forward" size={24} color="#f1c40f" />
     </TouchableOpacity>
   );
 
@@ -102,7 +103,7 @@ const UserSearchModal = ({ visible, onClose, navigation }) => {
       onRequestClose={onClose}
     >
       <View style={styles.container}>
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.8)' }]} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} />
         
         <KeyboardAvoidingView 
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -112,16 +113,16 @@ const UserSearchModal = ({ visible, onClose, navigation }) => {
             <View style={styles.header}>
               <Text style={styles.title}>Rechercher un joueur</Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Ionicons name="close" size={24} color="#FFF" />
+                <Ionicons name="close" size={24} color="#f1c40f" />
               </TouchableOpacity>
             </View>
 
             <View style={styles.searchContainer}>
-              <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+              <Ionicons name="search" size={20} color="#f1c40f" style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
                 placeholder="Pseudo du joueur..."
-                placeholderTextColor="#666"
+                placeholderTextColor="rgba(255,255,255,0.6)"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 autoFocus
@@ -130,7 +131,7 @@ const UserSearchModal = ({ visible, onClose, navigation }) => {
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <Ionicons name="close-circle" size={18} color="#666" />
+                  <Ionicons name="close-circle" size={18} color="#f1c40f" />
                 </TouchableOpacity>
               )}
             </View>
@@ -179,16 +180,16 @@ const styles = StyleSheet.create({
   content: {
     width: width * 0.9,
     height: height * 0.7,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#333',
+    backgroundColor: modalTheme.card.backgroundColor,
+    borderRadius: modalTheme.card.borderRadius,
+    borderWidth: modalTheme.card.borderWidth,
+    borderColor: modalTheme.card.borderColor,
     overflow: 'hidden',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowColor: modalTheme.card.shadowColor,
+    shadowOffset: modalTheme.card.shadowOffset,
+    shadowOpacity: modalTheme.card.shadowOpacity,
+    shadowRadius: modalTheme.card.shadowRadius,
+    elevation: modalTheme.card.elevation,
   },
   header: {
     flexDirection: 'row',
@@ -196,12 +197,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: '#f1c40f',
   },
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFF',
+    ...modalTheme.title,
+    fontSize: getResponsiveSize(22),
+    marginBottom: 0,
+    textAlign: 'left'
   },
   closeButton: {
     padding: 5,
@@ -209,13 +211,13 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2a2a2a',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     margin: 15,
     paddingHorizontal: 15,
-    borderRadius: 10,
+    borderRadius: getResponsiveSize(10),
     height: 50,
     borderWidth: 1,
-    borderColor: '#444',
+    borderColor: '#f1c40f',
   },
   searchIcon: {
     marginRight: 10,
@@ -232,12 +234,12 @@ const styles = StyleSheet.create({
   userCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#252525',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     padding: 12,
-    borderRadius: 12,
+    borderRadius: getResponsiveSize(12),
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: 'rgba(241, 196, 15, 0.5)',
   },
   avatar: {
     width: 50,
@@ -261,7 +263,7 @@ const styles = StyleSheet.create({
     gap: 15,
   },
   statsText: {
-    color: '#AAA',
+    color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 12,
   },
   centerContainer: {
@@ -271,7 +273,7 @@ const styles = StyleSheet.create({
     paddingTop: 50,
   },
   emptyText: {
-    color: '#666',
+    color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 16,
   },
 });

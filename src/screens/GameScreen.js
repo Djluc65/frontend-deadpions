@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, Dimensions, Alert, ScrollView, Animated, Image, Modal, Keyboard, Platform, Share, ActivityIndicator, FlatList, AppState } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, Dimensions, ScrollView, Animated, Image, Modal, Keyboard, Platform, Share, ActivityIndicator, FlatList, AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
@@ -29,6 +29,9 @@ import VersusAnimation from '../components/VersusAnimation';
 import NextMatchModal from '../components/NextMatchModal';
 import FlyingEmoji from '../components/FlyingEmoji';
 import PionSVG from '../components/PionSVG';
+import { useAdManager } from '../ads/AdSystem';
+import { appAlert } from '../services/appAlert';
+import { modalTheme } from '../utils/modalTheme';
 
 import { isTablet, getResponsiveSize, SCREEN_WIDTH, SCREEN_HEIGHT } from '../utils/responsive';
 
@@ -178,8 +181,13 @@ const GameScreen = ({ navigation, route }) => {
 
   const dispatch = useDispatch();
   const { setFeedback, debit, credit, refund } = useCoinsContext();
+  const { showAds, showRewarded } = useAdManager();
   const user = useSelector(state => state.auth.user);
   const { players: reduxPlayers, spectators: reduxSpectators } = useSelector(state => state.game);
+  const canBet = Boolean(user?.isPremium || user?.isEarlyAccess);
+  if ((mode === 'ai' || mode === 'ia') && !canBet && (params.betAmount || 0) > 0) {
+      params.betAmount = 0;
+  }
 
   const getPlayerId = (p) => p?._id || p?.id;
   const currentUserId = getPlayerId(user);
@@ -391,19 +399,45 @@ const GameScreen = ({ navigation, route }) => {
                 return;
             }
 
+            const currentCoins = user?.coins || 0;
+            if (params.betAmount > currentCoins) {
+                const manque = params.betAmount - currentCoins;
+                showAlert(
+                    'Solde insuffisant',
+                    `Il vous manque ${Number(manque).toLocaleString()} coins.`,
+                    [
+                        { text: 'Magasin', onPress: () => navigation.navigate('Home', { screen: 'Magasin' }) },
+                        { text: 'Retour', style: 'cancel', onPress: () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home')) }
+                    ]
+                );
+                return;
+            }
+
             // Déduire la mise au début de la partie (ou du tournoi)
             debit(params.betAmount, isTournament ? 'Inscription Tournoi IA' : 'Mise partie IA', { 
                 gameId: params.gameId || 'local_ia',
                 mode: 'ia',
                 isTournament
             }).catch(err => {
-                console.error('Erreur débit IA:', err);
-                Alert.alert('Erreur', 'Impossible de débiter la mise.');
-                if (navigation.canGoBack()) {
-                    navigation.goBack();
-                } else {
-                    navigation.navigate('Home');
+                const message = err?.message || '';
+                if (typeof message === 'string' && message.includes('Solde insuffisant')) {
+                    const missingMatch = message.match(/Manque\s+(\d+)\s+coins/i);
+                    const manque = missingMatch ? Number(missingMatch[1]) : null;
+                    showAlert(
+                        'Solde insuffisant',
+                        manque !== null ? `Il vous manque ${Number(manque).toLocaleString()} coins.` : 'Vous n\'avez pas assez de coins.',
+                        [
+                            { text: 'Magasin', onPress: () => navigation.navigate('Home', { screen: 'Magasin' }) },
+                            { text: 'Retour', style: 'cancel', onPress: () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home')) }
+                        ]
+                    );
+                    return;
                 }
+
+                console.log('Débit IA échoué:', err);
+                showAlert('Erreur', 'Impossible de débiter la mise.', [
+                    { text: 'Retour', style: 'cancel', onPress: () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home')) }
+                ]);
             });
         }
     }, []);
@@ -1476,7 +1510,7 @@ const GameScreen = ({ navigation, route }) => {
           timeControl: params.timeControl,
           gameId: params.gameId
       });
-      Alert.alert("Invitation envoyée", "En attente de la réponse...");
+      appAlert("Invitation envoyée", "En attente de la réponse...");
       setShowInviteModal(false);
   };
 
@@ -1499,7 +1533,7 @@ const GameScreen = ({ navigation, route }) => {
                   <Text style={styles.modalPseudo}>Inviter un joueur</Text>
                   
                   {/* Onglets */}
-                  <View style={{flexDirection: 'row', marginBottom: getResponsiveSize(15), borderBottomWidth: 1, borderBottomColor: '#333'}}>
+                  <View style={{flexDirection: 'row', marginBottom: getResponsiveSize(15), borderBottomWidth: getResponsiveSize(1), borderBottomColor: '#f1c40f'}}>
                       <TouchableOpacity 
                           style={{flex: 1, padding: getResponsiveSize(10), alignItems: 'center', borderBottomWidth: inviteMode === 'friends' ? 2 : 0, borderBottomColor: '#f1c40f'}}
                           onPress={() => {
@@ -1507,7 +1541,7 @@ const GameScreen = ({ navigation, route }) => {
                               setInviteMode('friends');
                           }}
                       >
-                          <Text style={{color: inviteMode === 'friends' ? '#f1c40f' : '#ccc', fontWeight: 'bold'}}>Amis</Text>
+                          <Text style={{color: inviteMode === 'friends' ? '#f1c40f' : '#fff', fontWeight: 'bold'}}>Amis</Text>
                       </TouchableOpacity>
                       <TouchableOpacity 
                           style={{flex: 1, padding: getResponsiveSize(10), alignItems: 'center', borderBottomWidth: inviteMode === 'online' ? 2 : 0, borderBottomColor: '#f1c40f'}}
@@ -1516,11 +1550,11 @@ const GameScreen = ({ navigation, route }) => {
                               setInviteMode('online');
                           }}
                       >
-                          <Text style={{color: inviteMode === 'online' ? '#f1c40f' : '#ccc', fontWeight: 'bold'}}>En ligne</Text>
+                          <Text style={{color: inviteMode === 'online' ? '#f1c40f' : '#fff', fontWeight: 'bold'}}>En ligne</Text>
                       </TouchableOpacity>
                   </View>
 
-                  <Text style={{color:'#ccc', marginBottom: getResponsiveSize(10)}}>
+                  <Text style={{color:'#fff', marginBottom: getResponsiveSize(10)}}>
                       {inviteMode === 'friends' ? 'Amis en ligne :' : 'Tous les joueurs en ligne :'}
                   </Text>
                   
@@ -1542,7 +1576,7 @@ const GameScreen = ({ navigation, route }) => {
                                       alignItems: 'center', 
                                       padding: getResponsiveSize(10), 
                                       borderBottomWidth: 1, 
-                                      borderBottomColor: '#333',
+                                      borderBottomColor: 'rgba(241, 196, 15, 0.3)',
                                       width: '100%'
                                   }}
                                   onPress={() => {
@@ -1593,7 +1627,7 @@ const GameScreen = ({ navigation, route }) => {
 
   const handleQuitGame = () => {
     if (isWaitingState && params.gameId) {
-        Alert.alert(
+        appAlert(
             "Annuler la partie ?",
             "Voulez-vous fermer la salle et récupérer votre mise ?",
             [
@@ -1613,7 +1647,7 @@ const GameScreen = ({ navigation, route }) => {
         return;
     }
 
-    Alert.alert(
+    appAlert(
         "Quitter la partie ?",
         "Vous perdrez automatiquement la partie.",
         [
@@ -1727,16 +1761,16 @@ const GameScreen = ({ navigation, route }) => {
       if (!isWaitingForOpponent) return null;
 
       return (
-          <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 999 }]}>
+          <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 999 }]}>
               <View style={{ alignItems: 'center', justifyContent: 'center' }}>
                   <ActivityIndicator size="large" color="#f1c40f" style={{ marginBottom: 20 }} />
                   <Text style={{ color: '#fff', fontSize: getResponsiveSize(20), fontWeight: 'bold', marginBottom: 10 }}>En attente d'un adversaire...</Text>
-                  <Text style={{ color: '#ccc', fontSize: getResponsiveSize(16), textAlign: 'center', maxWidth: '80%', marginBottom: 30 }}>
+                  <Text style={{ color: '#fff', fontSize: getResponsiveSize(16), textAlign: 'center', maxWidth: '80%', marginBottom: 30 }}>
                       Invitez un ami ou attendez qu'un joueur rejoigne la salle.
                   </Text>
                   
                   <TouchableOpacity 
-                      style={[styles.closeButton, { backgroundColor: '#e74c3c', width: getResponsiveSize(200) }]}
+                      style={[styles.closeButton, { width: getResponsiveSize(200) }]}
                       onPress={() => {
                            playButtonSound();
                            if (params.gameId) {
@@ -2746,7 +2780,7 @@ const GameScreen = ({ navigation, route }) => {
             console.log('[handlePress] Socket disconnected, attempting reconnect...');
             socket.connect();
             // Retry emit after short delay or alert user
-            Alert.alert('Erreur connexion', 'Connexion au serveur perdue. Tentative de reconnexion...');
+            appAlert('Erreur connexion', 'Connexion au serveur perdue. Tentative de reconnexion...');
             
             // Tentative de reconnexion immédiate et envoi
             setTimeout(() => {
@@ -3420,7 +3454,7 @@ const GameScreen = ({ navigation, route }) => {
       });
     } else {
       socket.connect();
-      Alert.alert('Erreur connexion', 'Connexion au serveur perdue. Tentative de reconnexion...');
+      appAlert('Erreur connexion', 'Connexion au serveur perdue. Tentative de reconnexion...');
       setTimeout(() => {
         if (socket.connected) {
           socket.emit('make_move', {
@@ -3655,6 +3689,18 @@ const GameScreen = ({ navigation, route }) => {
                       </>
                   )}
 
+                  {!victoire && !isDraw && !isTournamentDraw && showAds && mode !== 'spectator' && (
+                      <TouchableOpacity
+                          style={styles.boutonRewardedResult}
+                          onPress={() => {
+                              playButtonSound();
+                              showRewarded({ amount: 10, reason: 'Récompense défaite', metadata: { source: 'defeat_reward', context: type } });
+                          }}
+                      >
+                          <Text style={styles.boutonRewardedTexteResult}>🎁 Regarder une pub — +10 coins</Text>
+                      </TouchableOpacity>
+                  )}
+
                   {type === 'ia' && (
                       <>
                           {statsIA && (
@@ -3815,12 +3861,29 @@ const GameScreen = ({ navigation, route }) => {
                                   style={styles.boutonRejouer} 
                                   onPress={() => {
                                       playButtonSound();
-                                      setShowResultModal(false);
                                       if (type === 'online') {
+                                          setShowResultModal(false);
                                           navigation.navigate('Home');
                                       } else if (type === 'online_custom') {
+                                          setShowResultModal(false);
                                           navigation.navigate('Home');
                                       } else if (type === 'ia' || type === 'ai') {
+                                          const currentCoins = user?.coins || 0;
+                                          const needsDebit = (montantPari > 0) && (!isTournament || tournamentOver);
+                                          if (needsDebit && currentCoins < montantPari) {
+                                              const manque = montantPari - currentCoins;
+                                              showAlert(
+                                                  'Solde insuffisant',
+                                                  `Il vous manque ${Number(manque).toLocaleString()} coins.`,
+                                                  [
+                                                      { text: 'Magasin', onPress: () => navigation.navigate('Home', { screen: 'Magasin' }) },
+                                                      { text: 'OK', style: 'cancel' }
+                                                  ]
+                                              );
+                                              return;
+                                          }
+
+                                          setShowResultModal(false);
                                           isRematching.current = true;
                                           AudioController.setRematchMode(true);
                                           
@@ -3831,6 +3894,7 @@ const GameScreen = ({ navigation, route }) => {
                                           
                                           navigation.replace('Game', { modeJeu: 'ia', configIA: nextConfig, betAmount: montantPari });
                                       } else if (type === 'local') {
+                                          setShowResultModal(false);
                                           isRematching.current = true;
                                           AudioController.setRematchMode(true);
                                           if (resultData.localConfig) {
@@ -3839,6 +3903,7 @@ const GameScreen = ({ navigation, route }) => {
                                               navigation.replace('Game', { mode: 'local' });
                                           }
                                       } else {
+                                          setShowResultModal(false);
                                           isRematching.current = true;
                                           AudioController.setRematchMode(true);
                                           navigation.replace('Game', { modeJeu: 'local' });
@@ -3869,7 +3934,6 @@ const GameScreen = ({ navigation, route }) => {
                       )}
                   </View>
                   )}
-                  <View style={styles.innerShadow} pointerEvents="none" />
               </View>
           </View>
       );
@@ -3970,7 +4034,7 @@ const GameScreen = ({ navigation, route }) => {
             <TouchableOpacity 
                 style={[styles.menuFab, { backgroundColor: '#e74c3c' }]}
                 onPress={() => {
-                    Alert.alert(
+                    appAlert(
                         "Quitter",
                         "Voulez-vous quitter le mode spectateur ?",
                         [
@@ -4543,7 +4607,7 @@ const GameScreen = ({ navigation, route }) => {
                                 {activeModal === 'chat' ? 'Discussion' : 'Réactions'}
                             </Text>
                             <TouchableOpacity onPress={() => setActiveModal(null)}>
-                                <Ionicons name="close-circle" size={getResponsiveSize(30)} color="#ef4444" />
+                                <Ionicons name="close-circle" size={getResponsiveSize(30)} color="#f1c40f" />
                             </TouchableOpacity>
                         </View>
                         <ChatEnLigne
@@ -5008,23 +5072,13 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: modalTheme.overlay.backgroundColor,
+    justifyContent: modalTheme.overlay.justifyContent,
+    alignItems: modalTheme.overlay.alignItems
   },
   modalContent: {
-    backgroundColor: '#041c55',
-    padding: getResponsiveSize(20),
-    borderRadius: getResponsiveSize(20),
-    alignItems: 'center',
+    ...modalTheme.card,
     width: isTablet ? '50%' : '80%',
-    shadowColor: '#f1c40f',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: getResponsiveSize(3),
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: '#f1c40f',
   },
   modalAvatar: {
     width: getResponsiveSize(100),
@@ -5032,7 +5086,7 @@ const styles = StyleSheet.create({
     borderRadius: getResponsiveSize(50),
     marginBottom: getResponsiveSize(10),
     borderWidth: 2,
-    borderColor: '#eee',
+    borderColor: '#f1c40f',
   },
   modalPseudo: {
     fontSize: getResponsiveSize(24),
@@ -5046,7 +5100,8 @@ const styles = StyleSheet.create({
   },
   friendButton: {
     flexDirection: 'row',
-    backgroundColor: '#3b82f6',
+    ...modalTheme.button,
+    ...modalTheme.buttonActive,
     paddingHorizontal: getResponsiveSize(20),
     paddingVertical: getResponsiveSize(10),
     borderRadius: getResponsiveSize(25),
@@ -5054,17 +5109,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   friendButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
+    ...modalTheme.buttonText,
+    ...modalTheme.buttonTextActive,
     fontSize: getResponsiveSize(16),
   },
   closeButton: {
+    ...modalTheme.buttonBase,
+    ...modalTheme.buttonDestructive,
     marginTop: getResponsiveSize(20),
-    padding: getResponsiveSize(10),
   },
   closeButtonText: {
-    color: '#fff',
-    fontSize: getResponsiveSize(16),
+    ...modalTheme.buttonTextBase,
+    ...modalTheme.buttonTextOnDark,
   },
   flagOutsideRight: {
     fontSize: getResponsiveSize(30),
@@ -5082,23 +5138,17 @@ const styles = StyleSheet.create({
   },
   gameMenuOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: modalTheme.overlay.backgroundColor,
     justifyContent: 'flex-end',
     alignItems: 'flex-start',
   },
   menuContent: {
-    backgroundColor: '#041c55',
-    padding: getResponsiveSize(20),
-    borderRadius: getResponsiveSize(20),
+    ...modalTheme.card,
     width: '70%',
     maxWidth: getResponsiveSize(300),
     marginLeft: getResponsiveSize(20),
     marginBottom: getResponsiveSize(110),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: getResponsiveSize(4),
-    elevation: 5,
+    alignItems: 'stretch',
   },
   menuItem: {
     flexDirection: 'row',
@@ -5113,11 +5163,11 @@ const styles = StyleSheet.create({
   },
   menuDivider: {
     height: 1,
-    backgroundColor: '#eee',
+    backgroundColor: '#f1c40f',
     width: '100%',
   },
   closeMenuText: {
-    color: '#ff0000ff',
+    color: '#fff',
     
     fontSize: getResponsiveSize(16),
     textAlign: 'center',
@@ -5260,18 +5310,14 @@ const styles = StyleSheet.create({
     zIndex: 99,
   },
   chatModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    ...modalTheme.overlay,
     justifyContent: 'flex-end',
-    alignItems: 'center',
-    paddingBottom: getResponsiveSize(100),
+    paddingBottom: getResponsiveSize(100)
   },
   chatModalContent: {
-    backgroundColor: '#fff',
-    borderRadius: getResponsiveSize(20),
+    ...modalTheme.card,
     width: isTablet ? '50%' : '80%',
     height: getResponsiveSize(300),
-    elevation: 10,
     overflow: 'hidden'
   },
   chatModalHeader: {
@@ -5280,37 +5326,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingLeft: getResponsiveSize(15),
     paddingRight: getResponsiveSize(15),
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    backgroundColor: '#f3f4f6',
+    borderBottomWidth: getResponsiveSize(1),
+    borderBottomColor: '#f1c40f',
+    backgroundColor: '#041c55',
   },
   chatModalTitle: {
+    ...modalTheme.title,
     fontSize: getResponsiveSize(18),
-    fontWeight: 'bold',
-    color: '#1f2937'
+    marginBottom: 0,
+    textAlign: 'left'
   },
   bubbleContainer: {
     position: 'absolute',
     bottom: -getResponsiveSize(50),
-    backgroundColor: '#fff',
+    backgroundColor: '#041c55',
     borderRadius: getResponsiveSize(15),
     paddingHorizontal: getResponsiveSize(12),
     paddingVertical: getResponsiveSize(8),
     minWidth: getResponsiveSize(50),
     maxWidth: getResponsiveSize(200),
     elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.27,
-    shadowRadius: 4.65,
+    shadowColor: '#f1c40f',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: getResponsiveSize(3),
     zIndex: 200,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderWidth: getResponsiveSize(1),
+    borderColor: '#f1c40f',
   },
   bubbleText: {
-    color: '#1f2937',
+    color: '#fff',
     fontSize: getResponsiveSize(18),
     fontWeight: 'bold',
     textAlign: 'center',
@@ -5326,6 +5373,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     top: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
     alignItems: 'center',
     paddingBottom: getResponsiveSize(20),
@@ -5346,17 +5394,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#f1c40f',
     overflow: 'hidden',
-  },
-  innerShadow: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: getResponsiveSize(20),
-    borderWidth: getResponsiveSize(4),
-    borderColor: 'rgba(0, 0, 0, 0.3)',
-    zIndex: 10,
   },
   emojiResult: {
     fontSize: getResponsiveSize(60),
@@ -5481,9 +5518,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  boutonRewardedResult: {
+    width: '100%',
+    backgroundColor: '#f59e0b',
+    paddingVertical: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: getResponsiveSize(10),
+    borderWidth: 1,
+    borderColor: '#fbbf24',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 6,
+    elevation: 6,
+  },
   boutonTexteResult: {
     color: '#fff',
     fontSize: getResponsiveSize(16),
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  boutonRewardedTexteResult: {
+    color: '#111827',
+    fontSize: getResponsiveSize(14),
     fontWeight: 'bold',
     textAlign: 'center',
   },

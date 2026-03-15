@@ -9,7 +9,6 @@ import {
   Image, 
   TextInput, 
   Modal,
-  Alert,
   StatusBar,
   SafeAreaView,
   ActivityIndicator,
@@ -25,6 +24,7 @@ import socket from '../services/socket';
 import { setNotificationsCount } from '../redux/slices/socialSlice';
 import { getAvatarSource } from '../utils/avatarUtils';
 import { getResponsiveSize, isTablet } from '../utils/responsive';
+import { appAlert } from '../services/appAlert';
 
 const SocialScreen = ({ navigation }) => {
   // --- STATE ---
@@ -236,7 +236,7 @@ const SocialScreen = ({ navigation }) => {
 
     } catch (error) {
       console.error("Error fetching social data:", error);
-      Alert.alert("Erreur", "Impossible de charger les données sociales.");
+      appAlert("Erreur", "Impossible de charger les données sociales.");
     } finally {
       setLoading(false);
     }
@@ -263,7 +263,7 @@ const SocialScreen = ({ navigation }) => {
 
       const handleFriendRequest = () => {
         fetchData();
-        Alert.alert("Notification", "Nouvelle demande d'ami reçue !");
+        appAlert("Notification", "Nouvelle demande d'ami reçue !");
       };
 
       const handleReceiveMessage = (message) => {
@@ -337,12 +337,12 @@ const SocialScreen = ({ navigation }) => {
 
       const handleInvitationError = (msg) => {
           setIsWaitingForResponse(false);
-          Alert.alert("Erreur", msg);
+          appAlert("Erreur", msg);
       };
 
       const handleInvitationDeclined = (data) => {
           setIsWaitingForResponse(false);
-          Alert.alert("Refusé", `${data.recipientPseudo || 'L\'adversaire'} a refusé l'invitation.`);
+          appAlert("Refusé", `${data.recipientPseudo || 'L\'adversaire'} a refusé l'invitation.`);
       };
 
       const handleGameStart = (data) => {
@@ -398,11 +398,11 @@ const SocialScreen = ({ navigation }) => {
 
   const handleBlockFriend = (friend) => {
     // Implement block logic if API supports it
-    Alert.alert("Info", "Fonctionnalité de blocage à venir.");
+    appAlert("Info", "Fonctionnalité de blocage à venir.");
   };
 
   const handleRemoveFriend = (friend) => {
-    Alert.alert(
+    appAlert(
       "Supprimer l'ami",
       `Êtes-vous sûr de vouloir supprimer ${friend.name} de vos amis ?`,
       [
@@ -418,13 +418,13 @@ const SocialScreen = ({ navigation }) => {
               });
               if (res.ok) {
                 setFriends(prev => prev.filter(f => f.id !== friend.id));
-                Alert.alert("Succès", "Ami supprimé.");
+                appAlert("Succès", "Ami supprimé.");
               } else {
                 const data = await res.json();
-                Alert.alert("Erreur", data.message);
+                appAlert("Erreur", data.message);
               }
             } catch (error) {
-              Alert.alert("Erreur", "Erreur réseau.");
+              appAlert("Erreur", "Erreur réseau.");
             }
           }
         }
@@ -446,13 +446,13 @@ const SocialScreen = ({ navigation }) => {
       if (res.ok) {
         // Optimistic update or refetch
         fetchData();
-        Alert.alert("Succès", "Demande acceptée.");
+        appAlert("Succès", "Demande acceptée.");
       } else {
         const data = await res.json();
-        Alert.alert("Erreur", data.message);
+        appAlert("Erreur", data.message);
       }
     } catch (error) {
-      Alert.alert("Erreur", "Erreur réseau.");
+      appAlert("Erreur", "Erreur réseau.");
     }
   };
 
@@ -471,15 +471,15 @@ const SocialScreen = ({ navigation }) => {
         setRequestsReceived(prev => prev.filter(r => r.id !== id));
       } else {
         const data = await res.json();
-        Alert.alert("Erreur", data.message);
+        appAlert("Erreur", data.message);
       }
     } catch (error) {
-      Alert.alert("Erreur", "Erreur réseau.");
+      appAlert("Erreur", "Erreur réseau.");
     }
   };
 
   const handleCancelRequest = async (id) => {
-    Alert.alert("Info", "Annulation spécifique non implémentée.");
+    appAlert("Info", "Annulation spécifique non implémentée.");
   };
 
   const handleCancelLatestRequest = async () => {
@@ -493,12 +493,12 @@ const SocialScreen = ({ navigation }) => {
       const data = await res.json();
       if (res.ok) {
         fetchData();
-        Alert.alert("Succès", data.message || "Dernière demande annulée.");
+        appAlert("Succès", data.message || "Dernière demande annulée.");
       } else {
-        Alert.alert("Erreur", data.message || "Impossible d'annuler la demande.");
+        appAlert("Erreur", data.message || "Impossible d'annuler la demande.");
       }
     } catch (error) {
-      Alert.alert("Erreur", "Erreur réseau.");
+      appAlert("Erreur", "Erreur réseau.");
     }
   };
 
@@ -514,19 +514,19 @@ const SocialScreen = ({ navigation }) => {
       const responseData = await searchRes.json();
 
       if (!searchRes.ok) {
-        Alert.alert("Erreur", responseData.message || "Erreur lors de la recherche.");
+        appAlert("Erreur", responseData.message || "Erreur lors de la recherche.");
         return;
       }
 
       const users = responseData;
 
       if (!Array.isArray(users)) {
-        Alert.alert("Erreur", "Format de réponse invalide.");
+        appAlert("Erreur", "Format de réponse invalide.");
         return;
       }
 
       if (users.length === 0) {
-        Alert.alert("Erreur", "Utilisateur non trouvé.");
+        appAlert("Erreur", "Utilisateur non trouvé.");
         return;
       }
 
@@ -545,16 +545,16 @@ const SocialScreen = ({ navigation }) => {
 
       const data = await res.json();
       if (res.ok) {
-        Alert.alert("Succès", `Demande envoyée à ${targetUser.pseudo}`);
+        appAlert("Succès", `Demande envoyée à ${targetUser.pseudo}`);
         setNewFriendName('');
         setIsAddFriendVisible(false);
         fetchData();
       } else {
-        Alert.alert("Erreur", data.message);
+        appAlert("Erreur", data.message);
       }
     } catch (error) {
       console.error(error);
-      Alert.alert("Erreur", "Erreur réseau.");
+      appAlert("Erreur", "Erreur réseau.");
     }
   };
 

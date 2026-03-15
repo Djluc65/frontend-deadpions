@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Modal, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, Modal, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import socket from '../services/socket';
 import { getResponsiveSize } from '../utils/responsive';
+import { modalTheme } from '../utils/modalTheme';
+import { appAlert } from '../services/appAlert';
 
 // Composant global qui écoute les invitations de partie (socket) partout dans l'application
 const GlobalInviteListener = () => {
@@ -51,7 +53,7 @@ const GlobalInviteListener = () => {
 
         const handleInvitationDeclined = (data) => {
             // L'autre joueur a refusé l'invitation
-            Alert.alert("Refusé", `${data.recipientPseudo || "L'adversaire"} a refusé l'invitation.`);
+            appAlert("Refusé", `${data.recipientPseudo || "L'adversaire"} a refusé l'invitation.`);
         };
 
         socket.on('game_invitation', handleInvitation);
@@ -213,13 +215,13 @@ const GlobalInviteListener = () => {
                             style={[styles.button, styles.buttonDecline]}
                             onPress={handleDecline}
                         >
-                            <Text style={styles.textStyle}>Refuser</Text>
+                            <Text style={[styles.textStyle, styles.textOnDark]}>Refuser</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.button, styles.buttonAccept]}
                             onPress={handleAccept}
                         >
-                            <Text style={styles.textStyle}>Accepter</Text>
+                            <Text style={[styles.textStyle, styles.textPrimary]}>Accepter</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -229,38 +231,11 @@ const GlobalInviteListener = () => {
 };
 
 const styles = StyleSheet.create({
-    centeredView: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.5)',
-    },
-    modalView: {
-        margin: getResponsiveSize(20),
-        backgroundColor: 'white',
-        borderRadius: getResponsiveSize(20),
-        padding: getResponsiveSize(35),
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: getResponsiveSize(2),
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: getResponsiveSize(4),
-        elevation: 5,
-        width: '80%',
-    },
-    modalTitle: {
-        fontSize: getResponsiveSize(20),
-        fontWeight: 'bold',
-        marginBottom: getResponsiveSize(15),
-        textAlign: 'center',
-    },
+    centeredView: modalTheme.overlay,
+    modalView: modalTheme.card,
+    modalTitle: modalTheme.title,
     modalText: {
-        fontSize: getResponsiveSize(16),
-        marginBottom: getResponsiveSize(20),
-        textAlign: 'center',
+        ...modalTheme.message,
         lineHeight: getResponsiveSize(24),
     },
     buttonContainer: {
@@ -269,22 +244,22 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     button: {
-        borderRadius: getResponsiveSize(10),
-        padding: getResponsiveSize(10),
+        ...modalTheme.buttonBase,
         elevation: 2,
         minWidth: getResponsiveSize(100),
     },
     buttonAccept: {
-        backgroundColor: '#2196F3',
+        ...modalTheme.buttonPrimary,
     },
     buttonDecline: {
-        backgroundColor: '#ff4444',
+        ...modalTheme.buttonDestructive,
     },
     textStyle: {
-        color: 'white',
-        fontWeight: 'bold',
-        textAlign: 'center',
+        ...modalTheme.buttonTextBase,
+        fontSize: getResponsiveSize(16),
     },
+    textOnDark: modalTheme.buttonTextOnDark,
+    textPrimary: modalTheme.buttonTextPrimary,
 });
 
 export default GlobalInviteListener;

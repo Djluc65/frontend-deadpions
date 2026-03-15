@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Alert } from 'react-native';
 import { useSelector } from 'react-redux';
 import { translations } from '../../utils/translations';
 import { socket } from '../../utils/socket';
@@ -8,6 +7,7 @@ import CoinsService from '../../services/CoinsService';
 import TransactionService from '../../services/TransactionService';
 import FriendsMenuModal from './FriendsMenuModal';
 import CreateRoomModal from './CreateRoomModal';
+import { appAlert } from '../../services/appAlert';
 
 const FriendsGameSetup = ({ visible, onClose, navigation, user, onOpenLiveConfig }) => {
   const settings = useSelector(state => state.settings);
@@ -44,7 +44,7 @@ const FriendsGameSetup = ({ visible, onClose, navigation, user, onOpenLiveConfig
   const handleCreateRoom = useCallback(() => {
     // Check quota for free users
     if (!user?.isPremium && !user?.isEarlyAccess && user?.dailyCreatedRooms >= 5) {
-        Alert.alert(
+        appAlert(
             "Limite atteinte",
             "Vous avez atteint votre limite de 5 salles privées par jour. Passez Premium pour un accès illimité !",
             [

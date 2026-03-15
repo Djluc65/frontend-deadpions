@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, TouchableOpacity, StyleSheet, Alert, Text } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getResponsiveSize } from '../utils/responsive';
 import { 
@@ -9,6 +9,7 @@ import {
     mediaDevices,
     isAvailable as isWebRTCAvailable
 } from '../services/webrtc';
+import { appAlert } from '../services/appAlert';
 
 const VoiceChat = ({ gameId, userId, socket, isSpectator = false }) => {
     const [isMuted, setIsMuted] = useState(true);
@@ -34,7 +35,7 @@ const VoiceChat = ({ gameId, userId, socket, isSpectator = false }) => {
                 socket.emit('voice_join', { gameId, senderId: userId });
             } catch (err) {
                 console.error("Error initializing voice:", err);
-                Alert.alert("Erreur", "Impossible d'accéder au microphone.");
+                appAlert("Erreur", "Impossible d'accéder au microphone.");
             }
         };
 
@@ -191,7 +192,7 @@ const VoiceChat = ({ gameId, userId, socket, isSpectator = false }) => {
                 ]} 
                 onPress={() => {
                     if (!isWebRTCAvailable) {
-                        Alert.alert(
+                        appAlert(
                             "Audio non disponible", 
                             "La fonctionnalité audio nécessite un 'Development Build' ou un appareil compatible WebRTC."
                         );

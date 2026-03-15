@@ -2,6 +2,7 @@ import 'react-native-gesture-handler';
 import React from 'react';
 import * as Linking from 'expo-linking';
 import { NavigationContainer } from '@react-navigation/native';
+import { Alert } from 'react-native';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from './src/redux/store';
@@ -14,6 +15,8 @@ import { StripeProviderWrapper } from './src/components/StripeProviderWrapper';
 import LoadingSpinner from './src/components/common/LoadingSpinner';
 import { CoinsProvider } from './src/context/CoinsContext';
 import * as SplashScreen from 'expo-splash-screen';
+import AppAlertHost from './src/components/AppAlertHost';
+import { appAlert } from './src/services/appAlert';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync().catch(() => {
@@ -31,6 +34,10 @@ const linking = {
 };
 
 export default function App() {
+  React.useEffect(() => {
+    Alert.alert = appAlert;
+  }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StripeProviderWrapper
@@ -42,6 +49,7 @@ export default function App() {
             <QueryClientProvider client={queryClient}>
               <CoinsProvider>
                 <NavigationContainer linking={linking} fallback={<React.Fragment />}>
+                  <AppAlertHost />
                   <AppNavigator />
                   <StatusBar style="light" />
                 </NavigationContainer>

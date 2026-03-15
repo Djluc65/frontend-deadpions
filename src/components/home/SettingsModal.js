@@ -7,6 +7,7 @@ import { toggleMusic, toggleSound, setLanguage } from '../../redux/slices/settin
 import { translations } from '../../utils/translations';
 import { playButtonSound } from '../../utils/soundManager';
 import { getResponsiveSize } from '../../utils/responsive';
+import { modalTheme } from '../../utils/modalTheme';
 
 const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
   const dispatch = useDispatch();
@@ -109,32 +110,9 @@ const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
 });
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    width: '80%',
-    backgroundColor: '#041c55',
-    borderRadius: getResponsiveSize(20),
-    padding: getResponsiveSize(20),
-    alignItems: 'center',
-    shadowColor: '#f1c40f',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 3,
-    shadowRadius: getResponsiveSize(3),
-    elevation: 5,
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f',
-  },
-  modalTitle: {
-    fontSize: getResponsiveSize(24),
-    fontWeight: 'bold',
-    marginBottom: getResponsiveSize(20),
-    color: '#fff',
-  },
+  modalOverlay: modalTheme.overlay,
+  modalContent: modalTheme.card,
+  modalTitle: modalTheme.title,
   settingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

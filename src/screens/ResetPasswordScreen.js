@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ImageBackground, Alert, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import { API_URL } from '../config';
 import { validatePassword } from '../utils/validation';
 import { getResponsiveSize } from '../utils/responsive';
+import { appAlert } from '../services/appAlert';
 
 const ResetPasswordScreen = ({ route, navigation }) => {
   const { email, devToken } = route.params || {};
@@ -21,18 +22,18 @@ const ResetPasswordScreen = ({ route, navigation }) => {
 
   const handleResetPassword = async () => {
     if (!resetCode || !newPassword || !confirmPassword) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+      appAlert('Erreur', 'Veuillez remplir tous les champs');
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert('Erreur', 'Les mots de passe ne correspondent pas');
+      appAlert('Erreur', 'Les mots de passe ne correspondent pas');
       return;
     }
 
     const validation = validatePassword(newPassword);
     if (!validation.isValid) {
-      Alert.alert('Mot de passe trop faible', validation.message);
+      appAlert('Mot de passe trop faible', validation.message);
       return;
     }
 
@@ -49,7 +50,7 @@ const ResetPasswordScreen = ({ route, navigation }) => {
       const data = await response.json();
 
       if (response.ok) {
-        Alert.alert(
+        appAlert(
           'Succès',
           'Votre mot de passe a été réinitialisé avec succès.',
           [
@@ -60,11 +61,11 @@ const ResetPasswordScreen = ({ route, navigation }) => {
           ]
         );
       } else {
-        Alert.alert('Erreur', data.message || "Erreur lors de la réinitialisation");
+        appAlert('Erreur', data.message || "Erreur lors de la réinitialisation");
       }
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', 'Erreur serveur');
+      appAlert('Erreur', 'Erreur serveur');
     } finally {
       setLoading(false);
     }

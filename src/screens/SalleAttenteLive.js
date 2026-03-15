@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground, Image, Alert, Modal, FlatList, ActivityIndicator, Share } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground, Image, Modal, FlatList, ActivityIndicator, Share } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
 import { socket } from '../utils/socket';
@@ -7,6 +7,7 @@ import { API_URL } from '../config';
 import { playButtonSound } from '../utils/soundManager';
 import { getAvatarSource as getBaseAvatarSource } from '../utils/avatarUtils';
 import { getResponsiveSize, isTablet } from '../utils/responsive';
+import { appAlert } from '../services/appAlert';
 
 /**
  * Écran de la salle d'attente pour les jeux en direct.
@@ -136,7 +137,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
           };
 
           const handleLiveRoomClosed = () => {
-              Alert.alert('Live terminé', 'Le créateur a fermé la salle.', [
+              appAlert('Live terminé', 'Le créateur a fermé la salle.', [
                   { text: 'OK', onPress: () => navigation.navigate('Home') }
               ]);
           };
@@ -147,7 +148,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
           };
 
           const handleError = (message) => {
-              Alert.alert('Erreur', message, [
+              appAlert('Erreur', message, [
                   { text: 'OK', onPress: () => navigation.goBack() }
               ]);
           };
@@ -173,7 +174,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
   }, [roomId, navigation, configSalle]);
 
   const handleStopLive = () => {
-      Alert.alert(
+      appAlert(
           "Arrêter le Live ?",
           "Cela fermera la salle pour tous les participants.",
           [
@@ -191,7 +192,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
   };
 
   const handleLeaveLive = () => {
-      Alert.alert(
+      appAlert(
           "Quitter le Live ?",
           "Voulez-vous vraiment quitter la salle ?",
           [
@@ -223,7 +224,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
    */
   const handleStartGame = () => {
     if (!opponent) {
-        Alert.alert('Attente', 'Veuillez attendre qu\'un adversaire rejoigne la partie.');
+        appAlert('Attente', 'Veuillez attendre qu\'un adversaire rejoigne la partie.');
         return;
     }
     // Emit event to start the game on backend
@@ -253,7 +254,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
             // dismissed
         }
     } catch (error) {
-        Alert.alert(error.message);
+        appAlert('Erreur', error.message);
     }
   };
 
@@ -277,7 +278,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
         }
     } catch (err) {
         console.error('Error fetching friends:', err);
-        Alert.alert('Erreur', 'Impossible de charger la liste d\'amis');
+        appAlert('Erreur', 'Impossible de charger la liste d\'amis');
     } finally {
         setLoadingFriends(false);
     }
@@ -296,7 +297,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
           gameId: roomId,
           mode: 'live'
       });
-      Alert.alert('Succès', 'Invitation envoyée !');
+      appAlert('Succès', 'Invitation envoyée !');
       setInviteModalVisible(false);
   };
 

@@ -3,6 +3,7 @@ import { Modal, Pressable, ScrollView, View, Text, TouchableOpacity, StyleSheet 
 import { Ionicons } from '@expo/vector-icons';
 import { playButtonSound } from '../../utils/soundManager';
 import { getResponsiveSize } from '../../utils/responsive';
+import { modalTheme } from '../../utils/modalTheme';
 
 const CreateRoomModal = memo(({
   visible,
@@ -188,14 +189,13 @@ const CreateRoomModal = memo(({
 
             <View style={styles.modalButtons}>
             <TouchableOpacity style={styles.modalButtonCancel} onPress={() => { playButtonSound(); onClose(); }}>
-                <Text style={styles.modalButtonText}>Annuler</Text>
+                <Text style={[styles.modalButtonText, styles.modalButtonCancelText]}>Annuler</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.modalButtonConfirm} onPress={() => { playButtonSound(); handleCreateRoom(); }}>
                 <Text style={styles.modalButtonText}>Créer</Text>
             </TouchableOpacity>
             </View>
             </ScrollView>
-            <View style={styles.innerShadow} pointerEvents="none" />
         </Pressable>
         </Pressable>
     </Modal>
@@ -203,32 +203,9 @@ const CreateRoomModal = memo(({
 });
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  friendsModalContent: {
-    width: '80%',
-    backgroundColor: '#041c55',
-    borderRadius: getResponsiveSize(15),
-    padding: getResponsiveSize(15),
-    alignItems: 'center',
-    shadowColor: '#f1c40f',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 3,
-    shadowRadius: getResponsiveSize(3),
-    elevation: 5,
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f',
-  },
-  friendsModalTitle: {
-    fontSize: getResponsiveSize(20),
-    fontWeight: 'bold',
-    marginBottom: getResponsiveSize(15),
-    color: '#fff',
-  },
+  modalOverlay: modalTheme.overlay,
+  friendsModalContent: modalTheme.card,
+  friendsModalTitle: modalTheme.title,
   friendsLabel: {
     fontSize: getResponsiveSize(14),
     color: '#f1c40f',
@@ -281,33 +258,22 @@ const styles = StyleSheet.create({
   },
   modalButtonCancel: {
     flex: 1,
-    padding: getResponsiveSize(10),
-    borderRadius: getResponsiveSize(8),
-    backgroundColor: '#e74c3c',
+    ...modalTheme.buttonBase,
+    ...modalTheme.buttonCancel,
     alignItems: 'center',
   },
   modalButtonConfirm: {
     flex: 1,
-    padding: getResponsiveSize(10),
-    borderRadius: getResponsiveSize(8),
-    backgroundColor: '#2ecc71',
+    ...modalTheme.buttonBase,
+    ...modalTheme.buttonPrimary,
     alignItems: 'center',
   },
   modalButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: getResponsiveSize(14),
+    ...modalTheme.buttonTextBase,
+    ...modalTheme.buttonTextPrimary,
+    fontSize: getResponsiveSize(14)
   },
-  innerShadow: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: getResponsiveSize(15),
-    borderWidth: getResponsiveSize(4),
-    borderColor: 'rgba(0, 0, 0, 0.3)',
-  },
+  modalButtonCancelText: modalTheme.buttonTextOnDark,
   betDisplay: {
     flexDirection: 'row', 
     alignItems: 'center', 

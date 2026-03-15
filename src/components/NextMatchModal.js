@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Modal, View, Text, TouchableOpacity } from 'react-native';
 import { getResponsiveSize } from '../utils/responsive';
+import { modalTheme } from '../utils/modalTheme';
 
 const NextMatchModal = ({
   visible,
@@ -65,10 +66,7 @@ const NextMatchModal = ({
       <View
         style={[
           {
-            flex: 1,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            justifyContent: 'center',
-            alignItems: 'center',
+            ...modalTheme.overlay,
             paddingHorizontal: getResponsiveSize(20)
           },
           containerStyle
@@ -79,17 +77,17 @@ const NextMatchModal = ({
             {
               alignSelf: 'center',
               width: '90%',
-              backgroundColor: '#041c55',
-              borderColor: '#f1c40f',
-              borderWidth: getResponsiveSize(2),
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: getResponsiveSize(2) },
-              shadowOpacity: 0.25,
-              shadowRadius: getResponsiveSize(4),
-              elevation: 5,
-              padding: getResponsiveSize(20),
-              borderRadius: getResponsiveSize(10),
-              alignItems: 'center'
+              backgroundColor: modalTheme.card.backgroundColor,
+              borderColor: modalTheme.card.borderColor,
+              borderWidth: modalTheme.card.borderWidth,
+              shadowColor: modalTheme.card.shadowColor,
+              shadowOffset: modalTheme.card.shadowOffset,
+              shadowOpacity: modalTheme.card.shadowOpacity,
+              shadowRadius: modalTheme.card.shadowRadius,
+              elevation: modalTheme.card.elevation,
+              padding: modalTheme.card.padding,
+              borderRadius: modalTheme.card.borderRadius,
+              alignItems: modalTheme.card.alignItems
             },
             cardStyle
           ]}

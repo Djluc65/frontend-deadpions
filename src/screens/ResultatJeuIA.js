@@ -4,11 +4,13 @@ import { CommonActions } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { getResponsiveSize } from '../utils/responsive';
+import { useAdManager } from '../ads/AdSystem';
 
 const ResultatJeuIA = ({ route, navigation }) => {
   const { victoire, difficulte, configIA } = route.params;
   const [stats, setStats] = useState(null);
   const [scaleAnim] = useState(new Animated.Value(0));
+  const { showAds, showRewarded } = useAdManager();
 
   useEffect(() => {
     updateStats();
@@ -75,6 +77,12 @@ const ResultatJeuIA = ({ route, navigation }) => {
             <Text style={styles.statsTaux}>{tauxVictoire}% de victoires</Text>
             <Text style={styles.statsParties}>{stats.jouees} parties jouées</Text>
           </View>
+        )}
+
+        {!victoire && showAds && (
+          <TouchableOpacity style={styles.boutonRewarded} onPress={showRewarded}>
+            <Text style={styles.boutonRewardedTexte}>🎁 Regarder une pub — +10 coins</Text>
+          </TouchableOpacity>
         )}
         
         <View style={styles.boutons}>
@@ -163,6 +171,28 @@ const styles = StyleSheet.create({
   statsParties: {
     fontSize: getResponsiveSize(14),
     color: '#9ca3af'
+  },
+  boutonRewarded: {
+    width: '100%',
+    backgroundColor: '#f59e0b',
+    paddingVertical: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: getResponsiveSize(10),
+    borderWidth: 1,
+    borderColor: '#fbbf24',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 5
+  },
+  boutonRewardedTexte: {
+    fontSize: getResponsiveSize(14),
+    fontWeight: 'bold',
+    color: '#111827',
+    textAlign: 'center'
   },
   boutons: {
     width: '100%',

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ImageBackground, Alert, TouchableOpacity, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import { API_URL } from '../config';
 import { getResponsiveSize } from '../utils/responsive';
+import { appAlert } from '../services/appAlert';
 
 const ForgotPasswordScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
@@ -11,7 +12,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
   const handleSendResetLink = async () => {
     if (!email) {
-      Alert.alert('Erreur', 'Veuillez entrer votre email');
+      appAlert('Erreur', 'Veuillez entrer votre email');
       return;
     }
 
@@ -28,7 +29,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
       const data = await response.json();
 
       if (response.ok) {
-        Alert.alert(
+        appAlert(
           'Succès',
           'Un code de réinitialisation a été envoyé à votre adresse email.',
           [
@@ -43,11 +44,11 @@ const ForgotPasswordScreen = ({ navigation }) => {
           ]
         );
       } else {
-        Alert.alert('Erreur', data.message || "Impossible d'envoyer l'email");
+        appAlert('Erreur', data.message || "Impossible d'envoyer l'email");
       }
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', 'Erreur serveur');
+      appAlert('Erreur', 'Erreur serveur');
     } finally {
       setLoading(false);
     }

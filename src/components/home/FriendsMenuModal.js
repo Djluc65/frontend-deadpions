@@ -3,6 +3,7 @@ import { Modal, Pressable, View, Text, TouchableOpacity, StyleSheet } from 'reac
 import { Ionicons } from '@expo/vector-icons';
 import { playButtonSound } from '../../utils/soundManager';
 import { getResponsiveSize } from '../../utils/responsive';
+import { modalTheme } from '../../utils/modalTheme';
 
 const FriendsMenuModal = memo(({ 
   visible, 
@@ -24,22 +25,22 @@ const FriendsMenuModal = memo(({
           
           {/* Bouton pour créer une Salle Live (Publique) */}
           <TouchableOpacity 
-            style={[styles.menuButton, { backgroundColor: '#041c55'}]}
+            style={styles.menuButton}
             onPress={() => {
                 playButtonSound();
                 onNavigateToLiveConfig();
             }}
           >
-            <Ionicons name="radio-outline" size={getResponsiveSize(24)} color="#ef4444" style={{ marginRight: getResponsiveSize(10) }} />
+            <Ionicons name="radio-outline" size={getResponsiveSize(24)} color="#f1c40f" style={{ marginRight: getResponsiveSize(10) }} />
             <Text style={styles.menuButtonText}>Créer une Salle Live</Text>
-            <View style={{ backgroundColor: '#ef4444', paddingHorizontal: getResponsiveSize(6), paddingVertical: getResponsiveSize(2), borderRadius: getResponsiveSize(4), marginLeft: getResponsiveSize(10) }}>
-                <Text style={{ color: '#fff', fontSize: getResponsiveSize(10), fontWeight: 'bold' }}>LIVE</Text>
+            <View style={{ backgroundColor: '#f1c40f', paddingHorizontal: getResponsiveSize(6), paddingVertical: getResponsiveSize(2), borderRadius: getResponsiveSize(4), marginLeft: getResponsiveSize(10) }}>
+                <Text style={{ color: '#041c55', fontSize: getResponsiveSize(10), fontWeight: 'bold' }}>LIVE</Text>
             </View>
           </TouchableOpacity>
 
           {/* Bouton pour Jouer avec un ami (Privé) */}
           <TouchableOpacity 
-            style={[styles.menuButton, { backgroundColor:  '#041c55', marginTop: getResponsiveSize(15) }]}
+            style={[styles.menuButton, { marginTop: getResponsiveSize(15) }]}
             onPress={() => {
                 playButtonSound();
                 onOpenFriendConfig();
@@ -58,7 +59,6 @@ const FriendsMenuModal = memo(({
           >
             <Text style={styles.closeButtonText}>{t.close}</Text>
           </TouchableOpacity>
-          <View style={styles.innerShadow} pointerEvents="none" />
         </Pressable>
       </Pressable>
     </Modal>
@@ -66,77 +66,27 @@ const FriendsMenuModal = memo(({
 });
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  friendsModalContent: {
-    width: '80%',
-    backgroundColor: '#041c55',
-    borderRadius: getResponsiveSize(20),
-    padding: getResponsiveSize(20),
-    alignItems: 'center',
-    shadowColor: '#f1c40f',
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
-    shadowOpacity: 3,
-    shadowRadius: getResponsiveSize(3),
-    elevation: 5,
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f',
-  },
-  friendsModalTitle: {
-    fontSize: getResponsiveSize(24),
-    fontWeight: 'bold',
-    marginBottom: getResponsiveSize(20),
-    color: '#fff',
-  },
+  modalOverlay: modalTheme.overlay,
+  friendsModalContent: modalTheme.card,
+  friendsModalTitle: modalTheme.title,
   menuButton: {
+    ...modalTheme.button,
     flexDirection: 'row',
-    backgroundColor: '#041c55',
-    shadowOpacity: 0.8,
-    shadowRadius: getResponsiveSize(4),
-    elevation: 5,
-    borderWidth: getResponsiveSize(3),
-    borderColor: '#f1c40f',
-    shadowColor: '#f1c40f',
-    shadowOffset: {width: 0, height: 0},
-    padding: getResponsiveSize(15),
-    borderRadius: getResponsiveSize(12),
     alignItems: 'center',
     width: '100%',
     justifyContent: 'center',
   },
   menuButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: getResponsiveSize(16),
+    ...modalTheme.buttonText,
   },
   closeButton: {
-    backgroundColor: '#eb4141ff',
-    borderRadius: getResponsiveSize(20),
-    padding: getResponsiveSize(10),
-    paddingHorizontal: getResponsiveSize(30),
-    marginTop: getResponsiveSize(10),
+    ...modalTheme.buttonBase,
+    ...modalTheme.buttonDestructive,
+    marginTop: getResponsiveSize(10)
   },
   closeButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  innerShadow: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: getResponsiveSize(20),
-    borderWidth: getResponsiveSize(4),
-    borderColor: 'rgba(0, 0, 0, 0.3)',
+    ...modalTheme.buttonTextBase,
+    ...modalTheme.buttonTextOnDark,
   },
 });
 

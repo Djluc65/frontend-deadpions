@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Switch, Alert, ImageBackground } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Switch, ImageBackground } from 'react-native';
 import { useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { socket } from '../utils/socket';
 import { playButtonSound } from '../utils/soundManager';
 import { getResponsiveSize } from '../utils/responsive';
+import { appAlert } from '../services/appAlert';
 
 /**
  * Écran de configuration pour la création d'une salle live.
@@ -57,17 +58,17 @@ const ConfigurationSalleLive = ({ navigation }) => {
   const creerSalleLive = () => {
     // --- Validation des champs obligatoires ---
     if (!nomSalle.trim()) {
-      Alert.alert('❌ Erreur', 'Veuillez donner un nom à votre salle');
+      appAlert('❌ Erreur', 'Veuillez donner un nom à votre salle');
       return;
     }
     
     if (sallePrivee && !motDePasse.trim()) {
-      Alert.alert('❌ Erreur', 'Veuillez définir un mot de passe pour la salle privée');
+      appAlert('❌ Erreur', 'Veuillez définir un mot de passe pour la salle privée');
       return;
     }
     
     if (nomSalle.length < 3) {
-      Alert.alert('❌ Erreur', 'Le nom doit contenir au moins 3 caractères');
+      appAlert('❌ Erreur', 'Le nom doit contenir au moins 3 caractères');
       return;
     }
     
@@ -117,7 +118,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
 
     const handleError = (message) => {
         cleanup();
-        Alert.alert('Erreur', message);
+        appAlert('Erreur', message);
     };
 
     const cleanup = () => {
