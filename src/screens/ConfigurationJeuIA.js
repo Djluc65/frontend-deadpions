@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch, ImageBackground, Dimensions, SafeAreaView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch, ImageBackground, Dimensions, SafeAreaView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
 import { playButtonSound } from '../utils/soundManager';
 import { getResponsiveSize } from '../utils/responsive';
+import { appAlert } from '../services/appAlert';
 
 const { width } = Dimensions.get('window');
 
@@ -17,6 +18,7 @@ const BET_OPTIONS = [
 
 const ConfigurationJeuIA = ({ navigation }) => {
   const user = useSelector(state => state.auth.user);
+  const canBet = Boolean(user?.isPremium || user?.isEarlyAccess);
   const [activeTab, setActiveTab] = useState('difficulte'); // 'difficulte' | 'options'
   const [difficulte, setDifficulte] = useState('moyen');
   const [premierJoueur, setPremierJoueur] = useState('joueur');
@@ -25,7 +27,7 @@ const ConfigurationJeuIA = ({ navigation }) => {
   const [indicesActifs, setIndicesActifs] = useState(false);
   const [chronometreActif, setChronometreActif] = useState(true);
   const [animationsActives, setAnimationsActives] = useState(true);
-  const [betAmount, setBetAmount] = useState(100);
+  const [betAmount, setBetAmount] = useState(canBet ? 100 : 0);
   
   const [statistiques, setStatistiques] = useState({
     facile: { jouees: 0, gagnees: 0 },
@@ -37,6 +39,11 @@ const ConfigurationJeuIA = ({ navigation }) => {
   React.useEffect(() => {
     chargerStatistiques();
   }, []);
+
+  React.useEffect(() => {
+    if (!canBet && betAmount !== 0) setBetAmount(0);
+    if (canBet && betAmount === 0) setBetAmount(100);
+  }, [canBet]);
   
   const chargerStatistiques = async () => {
     try {
@@ -51,8 +58,9 @@ const ConfigurationJeuIA = ({ navigation }) => {
   
   const demarrerPartie = () => {
     // Vérification du solde
-    if (betAmount > user?.coins) {
-        Alert.alert('Solde insuffisant', `Vous n'avez pas assez de coins pour parier ${betAmount.toLocaleString()} coins.`);
+    const effectiveBet = canBet ? betAmount : 0;
+    if (effectiveBet > (user?.coins || 0)) {
+        appAlert('Solde insuffisant', `Vous n'avez pas assez de coins pour parier ${betAmount.toLocaleString()} coins.`);
         return;
     }
 
@@ -78,7 +86,7 @@ const ConfigurationJeuIA = ({ navigation }) => {
     // Naviguer vers GameScreen avec configuration IA
     navigation.navigate('Game', {
       modeJeu: 'ia',
-      betAmount: betAmount,
+      betAmount: effectiveBet,
       configIA: {
         difficulte,
         premierJoueur: joueurDebut,
@@ -131,7 +139,7 @@ const ConfigurationJeuIA = ({ navigation }) => {
 
   const handleDifficultySelect = (niveau) => {
     if (niveau.id === 'difficile' && !user?.isPremium && !user?.isEarlyAccess) {
-        Alert.alert(
+        appAlert(
             "Fonctionnalité Premium", 
             "L'IA Expert est réservée aux membres DeadPions+. Abonnez-vous pour débloquer le coach stratégique !",
             [
@@ -191,41 +199,42 @@ const ConfigurationJeuIA = ({ navigation }) => {
 
   const renderOptionsTab = () => (
     <View style={styles.tabContent}>
-      {/* Bet Amount - Styled like Online */}
-      <View style={styles.option}>
-        <Text style={styles.optionLabel}>Mise (coins)</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: getResponsiveSize(10) }}>
-            <TouchableOpacity 
-                onPress={() => {
-                    playButtonSound();
-                    const currentIndex = BET_OPTIONS.indexOf(betAmount);
-                    if (currentIndex > 0) setBetAmount(BET_OPTIONS[currentIndex - 1]);
-                }}
-                disabled={BET_OPTIONS.indexOf(betAmount) <= 0}
-                style={{ padding: getResponsiveSize(10), opacity: BET_OPTIONS.indexOf(betAmount) <= 0 ? 0.3 : 1 }}
-            >
-                <Ionicons name="remove-circle-outline" size={getResponsiveSize(40)} color="#fff" />
-            </TouchableOpacity>
-            
-            <View style={styles.betDisplay}>
-                <Text style={styles.betDisplayText}>
-                    {betAmount.toLocaleString()}
-                </Text>
-            </View>
+      {canBet && (
+          <View style={styles.option}>
+            <Text style={styles.optionLabel}>Mise (coins)</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: getResponsiveSize(10) }}>
+                <TouchableOpacity 
+                    onPress={() => {
+                        playButtonSound();
+                        const currentIndex = BET_OPTIONS.indexOf(betAmount);
+                        if (currentIndex > 0) setBetAmount(BET_OPTIONS[currentIndex - 1]);
+                    }}
+                    disabled={BET_OPTIONS.indexOf(betAmount) <= 0}
+                    style={{ padding: getResponsiveSize(10), opacity: BET_OPTIONS.indexOf(betAmount) <= 0 ? 0.3 : 1 }}
+                >
+                    <Ionicons name="remove-circle-outline" size={getResponsiveSize(40)} color="#fff" />
+                </TouchableOpacity>
+                
+                <View style={styles.betDisplay}>
+                    <Text style={styles.betDisplayText}>
+                        {betAmount.toLocaleString()}
+                    </Text>
+                </View>
 
-            <TouchableOpacity 
-                onPress={() => {
-                    playButtonSound();
-                    const currentIndex = BET_OPTIONS.indexOf(betAmount);
-                    if (currentIndex < BET_OPTIONS.length - 1) setBetAmount(BET_OPTIONS[currentIndex + 1]);
-                }}
-                disabled={BET_OPTIONS.indexOf(betAmount) >= BET_OPTIONS.length - 1}
-                style={{ padding: getResponsiveSize(10), opacity: BET_OPTIONS.indexOf(betAmount) >= BET_OPTIONS.length - 1 ? 0.3 : 1 }}
-            >
-                <Ionicons name="add-circle-outline" size={getResponsiveSize(40)} color="#fff" />
-            </TouchableOpacity>
-        </View>
-      </View>
+                <TouchableOpacity 
+                    onPress={() => {
+                        playButtonSound();
+                        const currentIndex = BET_OPTIONS.indexOf(betAmount);
+                        if (currentIndex < BET_OPTIONS.length - 1) setBetAmount(BET_OPTIONS[currentIndex + 1]);
+                    }}
+                    disabled={BET_OPTIONS.indexOf(betAmount) >= BET_OPTIONS.length - 1}
+                    style={{ padding: getResponsiveSize(10), opacity: BET_OPTIONS.indexOf(betAmount) >= BET_OPTIONS.length - 1 ? 0.3 : 1 }}
+                >
+                    <Ionicons name="add-circle-outline" size={getResponsiveSize(40)} color="#fff" />
+                </TouchableOpacity>
+            </View>
+          </View>
+      )}
 
       {/* Qui commence */}
       <View style={styles.option}>

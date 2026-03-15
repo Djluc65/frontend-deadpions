@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, View, Text, StyleSheet, ImageBackground, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
+import { AppState, View, Text, StyleSheet, ImageBackground, ScrollView, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useSelector, useDispatch } from 'react-redux';
@@ -11,12 +11,15 @@ import CoinsService from '../services/CoinsService';
 import TransactionService from '../services/TransactionService';
 import { updateUser } from '../redux/slices/authSlice';
 import { getResponsiveSize, isTablet } from '../utils/responsive';
+import { useAdManager } from '../ads/AdSystem';
+import { appAlert } from '../services/appAlert';
 
 const ShopScreen = () => {
   const navigation = useNavigation();
   const { user, token } = useSelector(state => state.auth);
   const dispatch = useDispatch();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  const { showAds, showRewarded } = useAdManager();
   const [loading, setLoading] = useState(false);
   const isIOS = Platform.OS === 'ios';
   const iosCoinsUseWebShop = false;
@@ -103,10 +106,10 @@ const ShopScreen = () => {
       if (supported) {
         await Linking.openURL(shopUrl);
       } else {
-        Alert.alert('Info', `Rendez-vous sur ${WEBSITE_URL} pour acheter des coins.`);
+        appAlert('Info', `Rendez-vous sur ${WEBSITE_URL} pour acheter des coins.`);
       }
     } catch {
-      Alert.alert('Info', `Rendez-vous sur ${WEBSITE_URL} pour acheter des coins.`);
+      appAlert('Info', `Rendez-vous sur ${WEBSITE_URL} pour acheter des coins.`);
     }
   };
 
@@ -128,7 +131,7 @@ const ShopScreen = () => {
         openWebShop({ product: 'subscription', plan, source: 'ios_app' });
         return;
     }
-    Alert.alert(
+    appAlert(
       "Abonnement DeadPions+",
       `Vous avez choisi l'offre ${plan}. Cette fonctionnalité sera bientôt disponible avec les paiements réels (Stripe/Apple/Google).`,
       [{ text: "OK" }]
@@ -162,7 +165,7 @@ const ShopScreen = () => {
       return { clientSecret, paymentIntentId, pack };
     } catch (error) {
       console.error("fetchPaymentSheetParams error:", error);
-      Alert.alert('Erreur', error.message || 'Impossible de contacter le serveur de paiement');
+      appAlert('Erreur', error.message || 'Impossible de contacter le serveur de paiement');
       return { clientSecret: null };
     }
   };
@@ -196,17 +199,17 @@ const ShopScreen = () => {
             { uniqueId: paymentIntentId, packId: packDetails?.id }
         );
 
-        Alert.alert('Succès', data.message);
+        appAlert('Succès', data.message);
         dispatch(updateUser({ coins: result?.nouveauSolde ?? (user?.coins || 0) + creditedCoins }));
         const newBalance = await CoinsService.obtenirSolde(token);
         dispatch(updateUser({ coins: newBalance }));
         await refreshUserProfile();
       } else {
-         Alert.alert('Attention', data.message || 'Paiement non validé');
+         appAlert('Attention', data.message || 'Paiement non validé');
       }
     } catch (error) {
       console.error('Erreur verification:', error);
-      Alert.alert('Erreur', 'Impossible de vérifier le paiement');
+      appAlert('Erreur', 'Impossible de vérifier le paiement');
     }
   };
 
@@ -223,7 +226,7 @@ const ShopScreen = () => {
     // DÉTECTION MODE EXPO GO : Les paiements Stripe ne fonctionnent PAS dans Expo Go
     // Il faut utiliser un Development Build ou tester sur simulateur
     if (Constants.appOwnership === 'expo') {
-      Alert.alert(
+      appAlert(
         "Mode Expo Go Détecté",
         "Les paiements Stripe natifs ne fonctionnent pas dans l'application Expo Go standard.\n\nVoulez-vous simuler un paiement réussi pour tester le flux ?",
         [
@@ -243,7 +246,7 @@ const ShopScreen = () => {
                 // On met à jour le state local juste pour l'affichage (ne persiste pas au backend)
                 dispatch(updateUser({ coins: (user?.coins || 0) + coins }));
 
-                Alert.alert("Simulation Réussie", `Paiement simulé pour ${label}.\n${coins.toLocaleString()} coins ajoutés (localement).\n\nVérifiez votre historique dans le profil !`);
+                appAlert("Simulation Réussie", `Paiement simulé pour ${label}.\n${coins.toLocaleString()} coins ajoutés (localement).\n\nVérifiez votre historique dans le profil !`);
               } catch (e) {
                 console.error(e);
               } finally {
@@ -261,7 +264,7 @@ const ShopScreen = () => {
       const { clientSecret, paymentIntentId, pack } = await fetchPaymentSheetParams(packId);
 
       if (!clientSecret) {
-        Alert.alert('Erreur', 'Impossible d\'initialiser le paiement');
+        appAlert('Erreur', 'Impossible d\'initialiser le paiement');
         setLoading(false);
         return;
       }
@@ -286,7 +289,7 @@ const ShopScreen = () => {
       });
 
       if (initError) {
-        Alert.alert('Erreur', initError.message);
+        appAlert('Erreur', initError.message);
         setLoading(false);
         return;
       }
@@ -295,7 +298,7 @@ const ShopScreen = () => {
       const { error: paymentError } = await presentPaymentSheet();
 
       if (paymentError) {
-        Alert.alert(`Erreur de paiement`, paymentError.message);
+        appAlert(`Erreur de paiement`, paymentError.message);
       } else {
         // 4. Verify Payment on Backend
         // On passe les détails du pack pour l'historique si le backend ne renvoie pas tout
@@ -303,7 +306,7 @@ const ShopScreen = () => {
       }
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', 'Une erreur est survenue lors du paiement.');
+      appAlert('Erreur', 'Une erreur est survenue lors du paiement.');
     } finally {
       setLoading(false);
     }
@@ -461,6 +464,21 @@ const ShopScreen = () => {
               ))}
             </View>
           </View>
+
+          {!user?.isPremium && !user?.isEarlyAccess && (
+            <View style={styles.sectionContainer}>
+              <Text style={styles.sectionTitle}>🎁 Coins gratuits</Text>
+              <Text style={styles.sectionSubtitle}>Regardez une publicité récompensée pour gagner 10 coins.</Text>
+
+              <TouchableOpacity
+                style={[styles.rewardedButton, !showAds && { opacity: 0.6 }]}
+                onPress={showRewarded}
+                disabled={loading || !showAds}
+              >
+                <Text style={styles.rewardedButtonText}>REGARDER LA PUB — +10 COINS</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           <Text style={styles.disclaimer}>
             DeadPions n'est pas un jeu d'argent. Les Coins ne sont pas convertibles en monnaie réelle.
@@ -644,6 +662,20 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveSize(11),
     opacity: 0.85,
     marginTop: getResponsiveSize(2),
+  },
+  rewardedButton: {
+    backgroundColor: '#f59e0b',
+    padding: getResponsiveSize(15),
+    borderRadius: getResponsiveSize(10),
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#fbbf24'
+  },
+  rewardedButtonText: {
+    color: '#111827',
+    fontWeight: 'bold',
+    fontSize: getResponsiveSize(15),
+    textTransform: 'uppercase'
   },
   disclaimer: {
     color: '#888',

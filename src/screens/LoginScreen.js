@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity, TouchableWithoutFeedback, Keyboard, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, Keyboard, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { useDispatch, useSelector } from 'react-redux';
 import { AntDesign } from '@expo/vector-icons';
@@ -11,6 +11,7 @@ import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import { API_URL } from '../config';
 import { getResponsiveSize } from '../utils/responsive';
+import { appAlert } from '../services/appAlert';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -46,7 +47,7 @@ const LoginScreen = ({ navigation }) => {
       const { id_token } = response.params;
       handleGoogleLogin(id_token);
     } else if (response?.type === 'error') {
-      Alert.alert('Erreur', 'La connexion Google a échoué');
+      appAlert('Erreur', 'La connexion Google a échoué');
     }
   }, [response]);
 
@@ -92,12 +93,12 @@ const LoginScreen = ({ navigation }) => {
         navigation.replace('Home');
       } else {
         dispatch(loginFailure(data.message));
-        Alert.alert('Erreur', data.message || "Erreur lors de la connexion Google");
+        appAlert('Erreur', data.message || "Erreur lors de la connexion Google");
       }
     } catch (error) {
       console.error(error);
       dispatch(loginFailure(error.message));
-      Alert.alert('Erreur', 'Impossible de se connecter au serveur');
+      appAlert('Erreur', 'Impossible de se connecter au serveur');
     }
   };
 
@@ -156,21 +157,21 @@ const LoginScreen = ({ navigation }) => {
         navigation.replace('Home');
       } else {
         dispatch(loginFailure(data.message));
-        Alert.alert('Erreur', data.message || "Erreur lors de la connexion Apple");
+        appAlert('Erreur', data.message || "Erreur lors de la connexion Apple");
       }
 
     } catch (e) {
       if (isUserCancelledAuth(e)) return;
       console.error(e);
       dispatch(loginFailure(e.message));
-      Alert.alert('Erreur', e.message || "Impossible de se connecter avec Apple");
+      appAlert('Erreur', e.message || "Impossible de se connecter avec Apple");
     }
   };
 
   const handleLogin = async () => {
     Keyboard.dismiss();
     if (!email || !password) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+      appAlert('Erreur', 'Veuillez remplir tous les champs');
       return;
     }
 
@@ -216,12 +217,12 @@ const LoginScreen = ({ navigation }) => {
         navigation.replace('Home');
       } else {
         dispatch(loginFailure(data.message));
-        Alert.alert('Erreur', data.message || "Erreur lors de la connexion");
+        appAlert('Erreur', data.message || "Erreur lors de la connexion");
       }
     } catch (error) {
       console.error(error);
       dispatch(loginFailure(error.message));
-      Alert.alert('Erreur', 'Impossible de se connecter au serveur');
+      appAlert('Erreur', 'Impossible de se connecter au serveur');
     }
   };
 
@@ -280,7 +281,7 @@ const LoginScreen = ({ navigation }) => {
               } catch (e) {
                 if (isUserCancelledAuth(e)) return;
                 console.error(e);
-                Alert.alert('Erreur', e?.message || 'La connexion Google a échoué');
+                appAlert('Erreur', e?.message || 'La connexion Google a échoué');
               }
             }}
             disabled={!request}

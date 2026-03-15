@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getResponsiveSize } from '../../utils/responsive';
 import { playButtonSound } from '../../utils/soundManager';
 import { ONLINE_TIME_OPTIONS } from '../../utils/constants';
+import { modalTheme } from '../../utils/modalTheme';
 
 const LocalGameSetup = memo(({ visible, onClose, navigation }) => {
   const [step, setStep] = useState(1);
@@ -128,7 +129,7 @@ const LocalGameSetup = memo(({ visible, onClose, navigation }) => {
                                     <Text style={styles.modalButtonText}>Annuler</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity style={styles.modalButtonConfirm} onPress={() => { playButtonSound(); setStep(2); }}>
-                                    <Text style={styles.modalButtonText}>Suivant</Text>
+                                    <Text style={[styles.modalButtonText, styles.modalButtonTextActive]}>Suivant</Text>
                                 </TouchableOpacity>
                             </View>
                         </>
@@ -215,13 +216,12 @@ const LocalGameSetup = memo(({ visible, onClose, navigation }) => {
                                     <Text style={styles.modalButtonText}>Retour</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity style={styles.modalButtonConfirm} onPress={() => { playButtonSound(); handleStartGame(); }}>
-                                    <Text style={styles.modalButtonText}>JOUER</Text>
+                                    <Text style={[styles.modalButtonText, styles.modalButtonTextActive]}>JOUER</Text>
                                 </TouchableOpacity>
                             </View>
                         </>
                     )}
                 </ScrollView>
-                <View style={styles.innerShadow} pointerEvents="none" />
             </Pressable>
         </Pressable>
     </Modal>
@@ -229,52 +229,18 @@ const LocalGameSetup = memo(({ visible, onClose, navigation }) => {
 });
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  modalOverlay: modalTheme.overlay,
   friendsModalContent: {
+    ...modalTheme.card,
     width: '90%',
-    backgroundColor: '#041c55',
-    borderRadius: getResponsiveSize(25),
-    padding: getResponsiveSize(25),
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#f1c40f',
-    shadowColor: "#000",
-    shadowOffset: {
-        width: 0,
-        height: getResponsiveSize(10),
-    },
-    shadowOpacity: 0.51,
-    shadowRadius: getResponsiveSize(13.16),
-    elevation: 20,
+    maxHeight: '90%',
     position: 'relative',
     overflow: 'hidden',
-    maxHeight: '90%',
-  },
-  innerShadow: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderWidth: getResponsiveSize(2),
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: getResponsiveSize(23),
   },
   friendsModalTitle: {
+    ...modalTheme.title,
     fontSize: getResponsiveSize(28),
-    fontWeight: 'bold',
-    color: '#f1c40f',
-    marginBottom: getResponsiveSize(25),
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: getResponsiveSize(-1), height: getResponsiveSize(1) },
-    textShadowRadius: getResponsiveSize(10)
+    textTransform: 'uppercase'
   },
   friendsLabel: {
     fontSize: getResponsiveSize(18),
@@ -317,33 +283,22 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
     marginTop: getResponsiveSize(20),
+    gap: getResponsiveSize(10),
   },
   modalButtonCancel: {
     flex: 1,
-    backgroundColor: '#e74c3c',
-    padding: getResponsiveSize(15),
-    borderRadius: getResponsiveSize(15),
-    marginRight: getResponsiveSize(10),
-    alignItems: 'center',
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#c0392b',
+    ...modalTheme.button,
   },
   modalButtonConfirm: {
     flex: 1,
-    backgroundColor: '#2ecc71',
-    padding: getResponsiveSize(15),
-    borderRadius: getResponsiveSize(15),
-    marginLeft: getResponsiveSize(10),
-    alignItems: 'center',
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#27ae60',
+    ...modalTheme.button,
+    ...modalTheme.buttonActive,
   },
   modalButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: getResponsiveSize(16),
-    textTransform: 'uppercase',
+    ...modalTheme.buttonText,
+    textTransform: 'uppercase'
   },
+  modalButtonTextActive: modalTheme.buttonTextActive,
   sectionContainer: {
     width: '100%',
     backgroundColor: '#041c55',

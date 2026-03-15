@@ -3,6 +3,7 @@ import { Modal, Pressable, View, Text, ActivityIndicator, TouchableOpacity, Scro
 import { Ionicons } from '@expo/vector-icons';
 import { getResponsiveSize } from '../../utils/responsive';
 import { playButtonSound } from '../../utils/soundManager';
+import { modalTheme } from '../../utils/modalTheme';
 
 const OnlineConfigModal = memo(({
   visible,
@@ -39,7 +40,7 @@ const OnlineConfigModal = memo(({
                 <Text style={styles.friendsModalTitle}>Recherche d'adversaire...</Text>
                 <ActivityIndicator size="large" color="#f1c40f" style={{ marginVertical: getResponsiveSize(20) }} />
                 <Text style={{ color: '#f1c40f', fontSize: getResponsiveSize(32), fontWeight: 'bold', marginBottom: getResponsiveSize(10) }}>{onlineSearchTimer}s</Text>
-                <Text style={{ color: '#ccc', fontSize: getResponsiveSize(14), marginBottom: getResponsiveSize(20) }}>Mise : {onlineBet.toLocaleString()} 💰</Text>
+                <Text style={{ color: '#fff', fontSize: getResponsiveSize(14), marginBottom: getResponsiveSize(20) }}>Mise : {onlineBet.toLocaleString()} 💰</Text>
                 
                 <TouchableOpacity 
                     style={styles.cancelSearchButton} 
@@ -175,7 +176,6 @@ const OnlineConfigModal = memo(({
                 </View>
             </ScrollView>
           )}
-          <View style={styles.innerShadow} pointerEvents="none" />
         </Pressable>
       </Pressable>
     </Modal>
@@ -183,35 +183,9 @@ const OnlineConfigModal = memo(({
 });
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  friendsModalContent: {
-    width: '80%',
-    backgroundColor: '#041c55',
-    borderRadius: getResponsiveSize(20),
-    padding: getResponsiveSize(20),
-    alignItems: 'center',
-    shadowColor: '#f1c40f',
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
-    shadowOpacity: 3,
-    shadowRadius: getResponsiveSize(3),
-    elevation: 5,
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f',
-  },
-  friendsModalTitle: {
-    fontSize: getResponsiveSize(24),
-    fontWeight: 'bold',
-    marginBottom: getResponsiveSize(20),
-    color: '#fff',
-  },
+  modalOverlay: modalTheme.overlay,
+  friendsModalContent: modalTheme.card,
+  friendsModalTitle: modalTheme.title,
   friendsLabel: {
     fontSize: getResponsiveSize(16),
     color: '#f1c40f',
@@ -262,56 +236,29 @@ const styles = StyleSheet.create({
   },
   modalButtonCancel: {
     flex: 1,
-    padding: getResponsiveSize(12),
-    borderRadius: getResponsiveSize(10),
-    backgroundColor: '#e74c3c',
+    ...modalTheme.buttonBase,
+    ...modalTheme.buttonCancel,
     alignItems: 'center',
   },
   modalButtonConfirm: {
     flex: 1,
-    padding: getResponsiveSize(12),
-    borderRadius: getResponsiveSize(10),
-    backgroundColor: '#2ecc71',
+    ...modalTheme.buttonBase,
+    ...modalTheme.buttonPrimary,
     alignItems: 'center',
   },
   modalButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: getResponsiveSize(16),
-  },
-  innerShadow: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: getResponsiveSize(20),
-    borderWidth: getResponsiveSize(4),
-    borderColor: 'rgba(0, 0, 0, 0.3)',
+    ...modalTheme.buttonTextBase,
+    ...modalTheme.buttonTextPrimary,
   },
   cancelSearchButton: {
-    backgroundColor: '#e74c3c',
+    ...modalTheme.buttonBase,
+    ...modalTheme.buttonDestructive,
     width: '100%',
-    paddingVertical: getResponsiveSize(15),
-    borderRadius: getResponsiveSize(20),
-    borderWidth: getResponsiveSize(2),
-    borderColor: '#c0392b',
-    shadowColor: "#000",
-    shadowOffset: {
-        width: 0,
-        height: getResponsiveSize(4),
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: getResponsiveSize(4.65),
-    elevation: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginTop: getResponsiveSize(10)
   },
   cancelSearchButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: getResponsiveSize(18),
+    ...modalTheme.buttonTextBase,
+    ...modalTheme.buttonTextOnDark,
     textTransform: 'uppercase'
   },
   betDisplay: {

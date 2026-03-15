@@ -159,7 +159,12 @@ export const CoinsProvider = ({ children }) => {
             
             return result;
         } catch (error) {
-            console.error('Erreur debit context:', error);
+            const message = error?.message || '';
+            if (typeof message === 'string' && message.includes('Solde insuffisant')) {
+                console.log('Débit refusé:', message);
+            } else {
+                console.error('Erreur debit context:', error);
+            }
             throw error;
         }
     };

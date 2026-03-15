@@ -3,6 +3,7 @@ import { View, ActivityIndicator, StyleSheet, Modal, Text } from 'react-native';
 import { useSelector } from 'react-redux';
 
 import { getResponsiveSize } from '../../utils/responsive';
+import { modalTheme } from '../../utils/modalTheme';
 
 /**
  * Composant de chargement global connecté au Redux Store.
@@ -34,17 +35,22 @@ const LoadingSpinner = () => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(4, 28, 85, 0.85)', // Bleu nuit DeadPions avec transparence
+    ...modalTheme.overlay,
     zIndex: 9999,
   },
   contentContainer: {
-    padding: getResponsiveSize(20),
-    borderRadius: getResponsiveSize(10),
-    alignItems: 'center',
+    backgroundColor: modalTheme.card.backgroundColor,
+    borderRadius: modalTheme.card.borderRadius,
+    padding: modalTheme.card.padding,
+    alignItems: modalTheme.card.alignItems,
     justifyContent: 'center',
+    shadowColor: modalTheme.card.shadowColor,
+    shadowOffset: modalTheme.card.shadowOffset,
+    shadowOpacity: modalTheme.card.shadowOpacity,
+    shadowRadius: modalTheme.card.shadowRadius,
+    elevation: modalTheme.card.elevation,
+    borderWidth: modalTheme.card.borderWidth,
+    borderColor: modalTheme.card.borderColor
   },
   text: {
     marginTop: getResponsiveSize(15),

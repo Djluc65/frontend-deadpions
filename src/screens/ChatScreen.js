@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, 
-  KeyboardAvoidingView, Platform, SafeAreaView, Alert, Modal, Image,
+  KeyboardAvoidingView, Platform, SafeAreaView, Modal, Image,
   Dimensions, Animated, Easing, Vibration, TouchableWithoutFeedback, Keyboard
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +22,7 @@ import { API_URL } from '../config';
 import socket from '../services/socket';
 import { AudioController } from '../utils/AudioController';
 import { getResponsiveSize, isTablet } from '../utils/responsive';
+import { appAlert } from '../services/appAlert';
 
 const { width, height } = Dimensions.get('window');
 
@@ -356,7 +357,7 @@ const ChatScreen = ({ route, navigation }) => {
             msg._id === tempMsg._id ? data : msg
         ));
       } else {
-        Alert.alert("Erreur", "Message non envoyé");
+        appAlert("Erreur", "Message non envoyé");
         // Remove temp message on failure
         setMessages(prev => prev.filter(msg => msg._id !== tempMsg._id));
       }
@@ -427,7 +428,7 @@ const ChatScreen = ({ route, navigation }) => {
       
     } catch (err) {
       console.error('Failed to start recording', err);
-      Alert.alert("Erreur", "Impossible de démarrer l'enregistrement");
+      appAlert("Erreur", "Impossible de démarrer l'enregistrement");
     }
   };
 
@@ -497,14 +498,14 @@ const ChatScreen = ({ route, navigation }) => {
         if (sendRes.ok) {
             setMessages(prev => [...prev, sentMessage]);
         } else {
-             Alert.alert("Erreur", "Impossible d'envoyer le message vocal");
+             appAlert("Erreur", "Impossible d'envoyer le message vocal");
         }
       } else {
-        Alert.alert("Erreur", "Échec de l'envoi du vocal.");
+        appAlert("Erreur", "Échec de l'envoi du vocal.");
       }
     } catch (error) {
       console.error("Error sending voice message:", error);
-      Alert.alert("Erreur", "Erreur réseau.");
+      appAlert("Erreur", "Erreur réseau.");
     }
   };
 
@@ -531,7 +532,7 @@ const ChatScreen = ({ route, navigation }) => {
   const playSound = async (uri, messageId) => { // ✅ CORRIGÉ
     if (!uri || uri === 'Message vocal' || !uri.startsWith('http')) { // ✅ CORRIGÉ
       console.error('❌ Invalid audio URI:', uri); // ✅ CORRIGÉ
-      Alert.alert('Erreur', 'Impossible de lire ce message vocal (URL invalide)'); // ✅ CORRIGÉ
+      appAlert('Erreur', 'Impossible de lire ce message vocal (URL invalide)'); // ✅ CORRIGÉ
       return; // ✅ CORRIGÉ
     } // ✅ CORRIGÉ
 
@@ -575,13 +576,13 @@ const ChatScreen = ({ route, navigation }) => {
         } // ✅ CORRIGÉ
         if (status.error) { // ✅ CORRIGÉ
           console.error('❌ Playback error:', status.error); // ✅ CORRIGÉ
-          Alert.alert('Erreur', 'Impossible de lire ce message vocal'); // ✅ CORRIGÉ
+          appAlert('Erreur', 'Impossible de lire ce message vocal'); // ✅ CORRIGÉ
           setIsPlaying(null); // ✅ CORRIGÉ
         } // ✅ CORRIGÉ
       }); // ✅ CORRIGÉ
     } catch (error) { // ✅ CORRIGÉ
       console.error('❌ playSound error:', error); // ✅ CORRIGÉ
-      Alert.alert('Erreur', 'Impossible de lire ce message vocal'); // ✅ CORRIGÉ
+      appAlert('Erreur', 'Impossible de lire ce message vocal'); // ✅ CORRIGÉ
       setIsPlaying(null); // ✅ CORRIGÉ
     } // ✅ CORRIGÉ
   }; // ✅ CORRIGÉ
@@ -693,7 +694,7 @@ const ChatScreen = ({ route, navigation }) => {
 
     } catch (err) {
       console.error("Error initiating call:", err);
-      Alert.alert("Erreur", "Impossible de démarrer l'appel");
+      appAlert("Erreur", "Impossible de démarrer l'appel");
       endCallCleanup();
     }
   };
@@ -701,7 +702,7 @@ const ChatScreen = ({ route, navigation }) => {
   const acceptCall = async () => {
     // Allow call acceptance in Expo Go (mock mode)
     if (!isWebRTCAvailable && Constants.appOwnership === 'expo') {
-       Alert.alert("Mode Expo Go", "Les appels vidéo nécessitent un Development Build. Simulation uniquement.");
+       appAlert("Mode Expo Go", "Les appels vidéo nécessitent un Development Build. Simulation uniquement.");
        return;
     }
 
@@ -833,7 +834,7 @@ const ChatScreen = ({ route, navigation }) => {
               onPress={() => {
                 const audioUrl = resolveAudioUrl(item);
                 if (!audioUrl) {
-                  Alert.alert('Erreur', 'Fichier audio introuvable');
+                  appAlert('Erreur', 'Fichier audio introuvable');
                   return;
                 }
                 playSound(audioUrl, item._id);

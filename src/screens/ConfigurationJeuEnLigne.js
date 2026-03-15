@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ImageBackground, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ImageBackground, ScrollView, ActivityIndicator } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { socket } from '../utils/socket';
 import { translations } from '../utils/translations';
 import { playButtonSound } from '../utils/soundManager';
 import { getResponsiveSize } from '../utils/responsive';
+import { appAlert } from '../services/appAlert';
 
 import { updateUser } from '../redux/slices/authSlice';
 
@@ -71,7 +72,7 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
   });
 
     socket.on('error', (msg) => {
-      Alert.alert('Erreur', msg);
+      appAlert('Erreur', msg);
       setEnAttenteMatch(false);
     });
 
@@ -96,14 +97,14 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
     } else if (tempsRestant === 0 && enAttenteMatch) {
       // Timeout
       annulerRecherche();
-      Alert.alert('Timeout', 'Aucun adversaire trouvé. Vos coins ont été remboursés.');
+      appAlert('Timeout', 'Aucun adversaire trouvé. Vos coins ont été remboursés.');
     }
     return () => clearInterval(interval);
   }, [enAttenteMatch, tempsRestant]);
 
   const demarrerRecherche = () => {
     if (soldeCoins < montantPari) {
-      Alert.alert('Solde insuffisant', `Il vous faut ${montantPari} coins.`);
+      appAlert('Solde insuffisant', `Il vous faut ${montantPari} coins.`);
       return;
     }
 

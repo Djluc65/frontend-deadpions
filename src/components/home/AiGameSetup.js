@@ -1,9 +1,10 @@
 import React, { useState, memo, useEffect } from 'react';
-import { View, Text, Modal, Pressable, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, Modal, Pressable, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { playButtonSound } from '../../utils/soundManager';
 import { BET_OPTIONS, ONLINE_TIME_OPTIONS } from '../../utils/constants';
 import { getResponsiveSize } from '../../utils/responsive';
+import { appAlert } from '../../services/appAlert';
 
 const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
   const [step, setStep] = useState(1); // 1: Config (Mode, Bet, Time), 2: Options (Diff, Start, Color)
@@ -20,6 +21,7 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
   const [aiVitesse, setAiVitesse] = useState('normal');
   const [aiIndices, setAiIndices] = useState(false);
   const [aiAnimations, setAiAnimations] = useState(true);
+  const canBet = Boolean(user?.isPremium || user?.isEarlyAccess);
 
   // Reset step when modal opens
   useEffect(() => {
@@ -30,7 +32,12 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
 
   // Ensure bet is valid
   useEffect(() => {
-    if (visible && user?.coins !== undefined) {
+    if (!visible) return;
+    if (!canBet) {
+        if (aiBet !== 0) setAiBet(0);
+        return;
+    }
+    if (user?.coins !== undefined) {
         const maxCoins = user.coins;
         if (aiBet > maxCoins) {
             const validBets = BET_OPTIONS.filter(b => b <= maxCoins);
@@ -41,11 +48,12 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
             }
         }
     }
-  }, [visible, user?.coins, aiBet]);
+  }, [visible, canBet, user?.coins, aiBet]);
 
   const handleStartGame = () => {
-    if (aiBet > (user?.coins || 0)) {
-        Alert.alert('Solde insuffisant', `Vous n'avez pas assez de coins pour parier ${aiBet.toLocaleString()} coins.`);
+    const effectiveBet = canBet ? aiBet : 0;
+    if (effectiveBet > (user?.coins || 0)) {
+        appAlert('Solde insuffisant', `Vous n'avez pas assez de coins pour parier ${aiBet.toLocaleString()} coins.`);
         return;
     }
 
@@ -72,7 +80,7 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
 
     navigation.navigate('Game', {
       modeJeu: 'ia',
-      betAmount: aiBet,
+      betAmount: effectiveBet,
       configIA: {
         difficulte: aiDifficulte,
         premierJoueur: joueurDebut,
@@ -100,7 +108,7 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
 
   const handleLevelSelect = (level) => {
     if (level.locked) {
-        Alert.alert(
+        appAlert(
             "Fonctionnalité Premium", 
             "L'IA Expert est réservée aux membres DeadPions+. Abonnez-vous pour débloquer le coach stratégique !",
             [
@@ -167,42 +175,43 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
                                 </>
                             )}
 
-                            {/* MISE */}
-                            <View style={{ width: '100%', backgroundColor: '#041c55', borderRadius: getResponsiveSize(20), padding: getResponsiveSize(4), marginBottom: getResponsiveSize(20), borderWidth: getResponsiveSize(1), borderColor: 'rgba(255,255,255,0.1)' }}>
-                                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: getResponsiveSize(16), textAlign: 'center' }}>Mise (coins)</Text>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                                    {(() => {
-                                        const availableBets = BET_OPTIONS.filter(b => b <= (user?.coins || 0));
-                                        const effectiveBets = availableBets.length > 0 ? availableBets : [100];
-                                        const currentIndex = effectiveBets.indexOf(aiBet);
-                                        const canGoPrev = currentIndex > 0;
-                                        const canGoNext = currentIndex < effectiveBets.length - 1;
+                            {canBet && (
+                                <View style={{ width: '100%', backgroundColor: '#041c55', borderRadius: getResponsiveSize(20), padding: getResponsiveSize(4), marginBottom: getResponsiveSize(20), borderWidth: getResponsiveSize(1), borderColor: 'rgba(255,255,255,0.1)' }}>
+                                    <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: getResponsiveSize(16), textAlign: 'center' }}>Mise (coins)</Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                                        {(() => {
+                                            const availableBets = BET_OPTIONS.filter(b => b <= (user?.coins || 0));
+                                            const effectiveBets = availableBets.length > 0 ? availableBets : [100];
+                                            const currentIndex = effectiveBets.indexOf(aiBet);
+                                            const canGoPrev = currentIndex > 0;
+                                            const canGoNext = currentIndex < effectiveBets.length - 1;
 
-                                        return (
-                                            <>
-                                                <TouchableOpacity onPress={() => { playButtonSound(); canGoPrev && setAiBet(effectiveBets[currentIndex - 1]); }} disabled={!canGoPrev} style={{ padding: getResponsiveSize(10), opacity: !canGoPrev ? 0.3 : 1 }}>
-                                                    <Ionicons name="remove-circle" size={getResponsiveSize(40)} color="#f1c40f" />
-                                                </TouchableOpacity>
-                                                <View style={{ 
-                                                    width: getResponsiveSize(140), height: getResponsiveSize(50), 
-                                                    backgroundColor: 'rgba(0,0,0,0.3)', 
-                                                    borderRadius: getResponsiveSize(25), 
-                                                    marginHorizontal: getResponsiveSize(10), 
-                                                    borderWidth: getResponsiveSize(1), 
-                                                    borderColor: '#f1c40f',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center'
-                                                }}>
-                                                    <Text style={{ color: '#f1c40f', fontSize: getResponsiveSize(22), fontWeight: 'bold' }}>{aiBet.toLocaleString()}</Text>
-                                                </View>
-                                                <TouchableOpacity onPress={() => { playButtonSound(); canGoNext && setAiBet(effectiveBets[currentIndex + 1]); }} disabled={!canGoNext} style={{ padding: getResponsiveSize(10), opacity: !canGoNext ? 0.3 : 1 }}>
-                                                    <Ionicons name="add-circle" size={getResponsiveSize(40)} color="#f1c40f" />
-                                                </TouchableOpacity>
-                                            </>
-                                        );
-                                    })()}
+                                            return (
+                                                <>
+                                                    <TouchableOpacity onPress={() => { playButtonSound(); canGoPrev && setAiBet(effectiveBets[currentIndex - 1]); }} disabled={!canGoPrev} style={{ padding: getResponsiveSize(10), opacity: !canGoPrev ? 0.3 : 1 }}>
+                                                        <Ionicons name="remove-circle" size={getResponsiveSize(40)} color="#f1c40f" />
+                                                    </TouchableOpacity>
+                                                    <View style={{ 
+                                                        width: getResponsiveSize(140), height: getResponsiveSize(50), 
+                                                        backgroundColor: 'rgba(0,0,0,0.3)', 
+                                                        borderRadius: getResponsiveSize(25), 
+                                                        marginHorizontal: getResponsiveSize(10), 
+                                                        borderWidth: getResponsiveSize(1), 
+                                                        borderColor: '#f1c40f',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center'
+                                                    }}>
+                                                        <Text style={{ color: '#f1c40f', fontSize: getResponsiveSize(22), fontWeight: 'bold' }}>{aiBet.toLocaleString()}</Text>
+                                                    </View>
+                                                    <TouchableOpacity onPress={() => { playButtonSound(); canGoNext && setAiBet(effectiveBets[currentIndex + 1]); }} disabled={!canGoNext} style={{ padding: getResponsiveSize(10), opacity: !canGoNext ? 0.3 : 1 }}>
+                                                        <Ionicons name="add-circle" size={getResponsiveSize(40)} color="#f1c40f" />
+                                                    </TouchableOpacity>
+                                                </>
+                                            );
+                                        })()}
+                                    </View>
                                 </View>
-                            </View>
+                            )}
 
                             {/* TEMPS PAR TOUR */}
                             <Text style={styles.friendsLabel}>Temps par tour:</Text>

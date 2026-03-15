@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Image, ActivityIndicator, ImageBackground, TouchableOpacity, useWindowDimensions, Animated, Easing, Modal, Switch, Pressable, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, ActivityIndicator, ImageBackground, TouchableOpacity, useWindowDimensions, Animated, Easing, Modal, Switch, Pressable, ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
@@ -13,6 +13,7 @@ import { socket } from '../utils/socket';
 import { BET_OPTIONS, ONLINE_TIME_OPTIONS } from '../utils/constants';
 import { useCoinsContext } from '../context/CoinsContext';
 import { getResponsiveSize, isTablet } from '../utils/responsive';
+import { appAlert } from '../services/appAlert';
 
 // Components
 import GameCard from '../components/common/GameCard';
@@ -166,7 +167,7 @@ const HomeScreen = ({ navigation }) => {
         socket.on('room_created', handleRoomCreated);
         
         const handleError = (message) => {
-            Alert.alert('Erreur', message);
+            appAlert('Erreur', message);
         };
         socket.on('error', handleError);
 

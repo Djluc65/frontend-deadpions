@@ -10,7 +10,6 @@ import {
   ScrollView,
   Modal,
   SafeAreaView,
-  Alert,
   ActivityIndicator
 } from 'react-native';
 import Svg, { Circle, Path, G, Defs, RadialGradient, Stop, LinearGradient, Ellipse } from 'react-native-svg';
@@ -20,6 +19,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { updateUser } from '../redux/slices/authSlice';
 import { API_URL } from '../config';
 import PionSVG, { PION_COLORS } from '../components/PionSVG';
+import { appAlert } from '../services/appAlert';
 
 const { width } = Dimensions.get('window');
 
@@ -135,12 +135,12 @@ export default function PremiumPionsScreen() {
 
   const handleEquip = async () => {
     if (!user) {
-      Alert.alert('Connexion requise', 'Veuillez vous connecter pour équiper un pion.');
+      appAlert('Connexion requise', 'Veuillez vous connecter pour équiper un pion.');
       return;
     }
     
     if (!isOwned) {
-      Alert.alert('Premium requis', 'Ce pion est réservé aux membres Premium.');
+      appAlert('Premium requis', 'Ce pion est réservé aux membres Premium.');
       return;
     }
 
@@ -159,14 +159,14 @@ export default function PremiumPionsScreen() {
       
       if (response.ok) {
         dispatch(updateUser({ pawnSkin: selectedType }));
-        Alert.alert('Succès', 'Pion équipé avec succès !');
+        appAlert('Succès', 'Pion équipé avec succès !');
         setDetailVisible(false);
       } else {
-        Alert.alert('Erreur', data.message || 'Impossible de mettre à jour le profil');
+        appAlert('Erreur', data.message || 'Impossible de mettre à jour le profil');
       }
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', 'Erreur de connexion au serveur');
+      appAlert('Erreur', 'Erreur de connexion au serveur');
     } finally {
       setLoading(false);
     }

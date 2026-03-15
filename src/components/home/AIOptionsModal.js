@@ -3,6 +3,7 @@ import { Modal, Pressable, ScrollView, View, Text, TouchableOpacity, StyleSheet 
 import { Ionicons } from '@expo/vector-icons';
 import { playButtonSound } from '../../utils/soundManager';
 import { getResponsiveSize } from '../../utils/responsive';
+import { modalTheme } from '../../utils/modalTheme';
 
 const AIOptionsModal = memo(({
   visible,
@@ -40,7 +41,7 @@ const AIOptionsModal = memo(({
                         >
                             <Ionicons name="arrow-back" size={getResponsiveSize(28)} color="#f1c40f" />
                         </TouchableOpacity>
-                        <Text style={[styles.friendsModalTitle, { color: '#f1c40f', textShadowColor: 'rgba(241, 196, 15, 0.5)', textShadowRadius: getResponsiveSize(10), marginBottom: 0 }]}>Configuration IA</Text>
+                        <Text style={[styles.friendsModalTitle, { marginBottom: 0 }]}>Configuration IA</Text>
                     </View>
                     
                     {/* DIFFICULTÉ */}
@@ -58,7 +59,7 @@ const AIOptionsModal = memo(({
                                         backgroundColor: '#041c55',
                                         borderRadius: getResponsiveSize(20),
                                         borderWidth: getResponsiveSize(2),
-                                        borderColor: aiDifficulte === niveau.id ? '#f1c40f' : 'rgba(255,255,255,0.1)',
+                                        borderColor: '#f1c40f',
                                     }
                                 ]}
                                 onPress={() => { playButtonSound(); setAiDifficulte(niveau.id); }}
@@ -146,10 +147,10 @@ const AIOptionsModal = memo(({
                     </View>
 
                     <TouchableOpacity 
-                        style={[styles.friendsCloseButton, { backgroundColor: '#f1c40f', width: '100%', borderRadius: getResponsiveSize(15), paddingVertical: getResponsiveSize(10) }]}
+                        style={[modalTheme.button, modalTheme.buttonActive, { width: '100%', borderRadius: getResponsiveSize(15), paddingVertical: getResponsiveSize(10) }]}
                         onPress={() => { playButtonSound(); onStart(); }}
                     >
-                        <Text style={[styles.friendsCloseButtonText, { color: '#000', fontWeight: 'bold', fontSize: getResponsiveSize(18) }]}>Jouer</Text>
+                        <Text style={[modalTheme.buttonText, modalTheme.buttonTextActive, { fontSize: getResponsiveSize(18) }]}>Jouer</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity 
@@ -159,7 +160,6 @@ const AIOptionsModal = memo(({
                         <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: getResponsiveSize(16) }}>Retour</Text>
                     </TouchableOpacity>
                 </ScrollView>
-                <View style={styles.innerShadow} pointerEvents="none" />
             </Pressable>
         </Pressable>
     </Modal>
@@ -167,35 +167,9 @@ const AIOptionsModal = memo(({
 });
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  friendsModalContent: {
-    width: '80%',
-    backgroundColor: '#041c55',
-    borderRadius: getResponsiveSize(20),
-    padding: getResponsiveSize(20),
-    alignItems: 'center',
-    shadowColor: '#f1c40f',
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
-    shadowOpacity: 3,
-    shadowRadius: getResponsiveSize(3),
-    elevation: 5,
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f',
-  },
-  friendsModalTitle: {
-    fontSize: getResponsiveSize(24),
-    fontWeight: 'bold',
-    marginBottom: getResponsiveSize(20),
-    color: '#fff',
-  },
+  modalOverlay: modalTheme.overlay,
+  friendsModalContent: modalTheme.card,
+  friendsModalTitle: modalTheme.title,
   friendsLabel: {
     fontSize: getResponsiveSize(16),
     color: '#f1c40f',
@@ -217,27 +191,6 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveSize(16),
     marginBottom: getResponsiveSize(15),
     textAlign: 'center'
-  },
-  friendsCloseButton: {
-    backgroundColor: '#f1c40f',
-    paddingVertical: getResponsiveSize(15),
-    paddingHorizontal: getResponsiveSize(30),
-    borderRadius: getResponsiveSize(30),
-    marginTop: getResponsiveSize(5),
-    width: '100%',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: getResponsiveSize(5),
-    elevation: 6,
-  },
-  friendsCloseButtonText: {
-    color: '#041c55',
-    fontWeight: 'bold',
-    fontSize: getResponsiveSize(18),
-    textTransform: 'uppercase',
-    letterSpacing: 1,
   },
 });
 

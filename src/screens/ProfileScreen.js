@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ImageBackground, Alert, TouchableOpacity, Image, ScrollView, Modal, FlatList, TouchableWithoutFeedback, Keyboard, SafeAreaView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, Image, ScrollView, Modal, FlatList, TouchableWithoutFeedback, Keyboard, SafeAreaView, Dimensions } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateUser, logout } from '../redux/slices/authSlice';
@@ -16,6 +16,7 @@ import { PREMIUM_AVATARS, getAvatarSource } from '../utils/avatarUtils';
 import TransactionService from '../services/TransactionService';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getResponsiveSize } from '../utils/responsive';
+import { appAlert } from '../services/appAlert';
 
 const { width } = Dimensions.get('window');
 
@@ -67,7 +68,7 @@ const ProfileScreen = ({ navigation }) => {
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission refusée', 'Désolé, nous avons besoin des permissions pour accéder à vos photos !');
+      appAlert('Permission refusée', 'Désolé, nous avons besoin des permissions pour accéder à vos photos !');
       return;
     }
 
@@ -98,7 +99,7 @@ const ProfileScreen = ({ navigation }) => {
 
   const handleSave = async () => {
     if (!pseudo.trim()) {
-      Alert.alert('Erreur', 'Le pseudo ne peut pas être vide');
+      appAlert('Erreur', 'Le pseudo ne peut pas être vide');
       return;
     }
 
@@ -136,19 +137,19 @@ const ProfileScreen = ({ navigation }) => {
 
       if (response.ok) {
         dispatch(updateUser(data));
-        Alert.alert('Succès', 'Profil mis à jour !');
+        appAlert('Succès', 'Profil mis à jour !');
         setIsEditing(false);
       } else {
-        Alert.alert('Erreur', data.message || 'Erreur lors de la mise à jour');
+        appAlert('Erreur', data.message || 'Erreur lors de la mise à jour');
       }
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', 'Impossible de se connecter au serveur');
+      appAlert('Erreur', 'Impossible de se connecter au serveur');
     }
   };
 
   const handleLogout = () => {
-    Alert.alert(
+    appAlert(
       "Déconnexion",
       "Voulez-vous vraiment vous déconnecter ?",
       [
@@ -169,7 +170,7 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const handleDeactivate = () => {
-    Alert.alert(
+    appAlert(
       "Désactiver le compte",
       "Êtes-vous sûr de vouloir désactiver votre compte ? Vous pourrez le réactiver en vous reconnectant.",
       [
@@ -188,15 +189,15 @@ const ProfileScreen = ({ navigation }) => {
               });
 
               if (response.ok) {
-                Alert.alert("Succès", "Votre compte a été désactivé.");
+                appAlert("Succès", "Votre compte a été désactivé.");
                 dispatch(logout());
                 navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
               } else {
-                Alert.alert("Erreur", "Impossible de désactiver le compte.");
+                appAlert("Erreur", "Impossible de désactiver le compte.");
               }
             } catch (error) {
               console.error(error);
-              Alert.alert("Erreur", "Erreur réseau.");
+              appAlert("Erreur", "Erreur réseau.");
             }
           }
         }
@@ -205,7 +206,7 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const handleDelete = () => {
-    Alert.alert(
+    appAlert(
       "Supprimer le compte",
       "ATTENTION : Cette action est irréversible. Toutes vos données seront perdues définitivement.",
       [
@@ -221,15 +222,15 @@ const ProfileScreen = ({ navigation }) => {
               });
 
               if (response.ok) {
-                Alert.alert("Compte supprimé", "Votre compte a été supprimé avec succès.");
+                appAlert("Compte supprimé", "Votre compte a été supprimé avec succès.");
                 dispatch(logout());
                 navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
               } else {
-                Alert.alert("Erreur", "Impossible de supprimer le compte.");
+                appAlert("Erreur", "Impossible de supprimer le compte.");
               }
             } catch (error) {
               console.error(error);
-              Alert.alert("Erreur", "Erreur réseau.");
+              appAlert("Erreur", "Erreur réseau.");
             }
           }
         }
@@ -239,7 +240,7 @@ const ProfileScreen = ({ navigation }) => {
 
   const handleSelectPremiumAvatar = (avatarId) => {
     if (!user?.isPremium && !user?.isEarlyAccess) {
-        Alert.alert('Premium requis', 'Ces avatars sont réservés aux membres Premium.');
+        appAlert('Premium requis', 'Ces avatars sont réservés aux membres Premium.');
         return;
     }
     setSelectedAvatar(avatarId);

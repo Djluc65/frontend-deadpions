@@ -29,7 +29,7 @@ import SessionController from '../components/SessionController';
 
 function AppNavigator() {
   return (
-    <>
+    <AdSystem>
       <SessionController />
       <Stack.Navigator initialRouteName="Waiting" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Waiting" component={WaitingScreen} />
@@ -51,9 +51,8 @@ function AppNavigator() {
         <Stack.Screen name="Assistant" component={AssistantScreen} />
         <Stack.Screen name="PremiumPions" component={PremiumPionsScreen} />
       </Stack.Navigator>
-      <AdSystem />
       <GlobalInviteListener />
-    </>
+    </AdSystem>
   );
 }
 

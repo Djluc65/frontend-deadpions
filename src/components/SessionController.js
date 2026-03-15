@@ -4,16 +4,69 @@ import { useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import { socket } from '../utils/socket';
 import { API_URL } from '../config';
+import { useAdManager } from '../ads/AdSystem';
+import { appAlert } from '../services/appAlert';
 
 const SessionController = () => {
     const navigation = useNavigation();
-    const { token } = useSelector(state => state.auth);
+    const { token, user } = useSelector(state => state.auth);
+    const { showAds, prepareRewarded, showRewarded } = useAdManager();
     const appState = useRef(AppState.currentState);
     // Track the active game ID for this session to prevent rejoining ghost games after restart
     const activeGameId = useRef(null);
+    const loginRewardPromptPendingRef = useRef(false);
+    const loginRewardPromptShownRef = useRef(false);
+    const lastUserIdRef = useRef(null);
+
+    useEffect(() => {
+        const userId = user?._id || user?.id || null;
+        if (!token || !userId) {
+            loginRewardPromptPendingRef.current = false;
+            loginRewardPromptShownRef.current = false;
+            lastUserIdRef.current = null;
+            return;
+        }
+        if (lastUserIdRef.current !== userId) {
+            loginRewardPromptPendingRef.current = true;
+            loginRewardPromptShownRef.current = false;
+            lastUserIdRef.current = userId;
+        }
+    }, [token, user?._id, user?.id]);
 
     useEffect(() => {
         if (!token) return;
+
+        const maybeShowLoginRewardPrompt = () => {
+            if (!showAds) return;
+            if (!loginRewardPromptPendingRef.current) return;
+            if (loginRewardPromptShownRef.current) return;
+            const navState = navigation.getState();
+            const currentRoute = navState?.routes?.[navState.index];
+            if (!currentRoute || currentRoute.name !== 'Home') return;
+
+            loginRewardPromptPendingRef.current = false;
+            loginRewardPromptShownRef.current = true;
+
+            setTimeout(() => {
+                prepareRewarded();
+                appAlert(
+                    'Bonus de connexion',
+                    'Regarder une pub maintenant pour gagner +20 coins ?',
+                    [
+                        { text: 'Non merci', style: 'cancel' },
+                        {
+                            text: 'Regarder',
+                            onPress: () => {
+                                prepareRewarded();
+                                setTimeout(() => {
+                                    showRewarded({ amount: 20, reason: 'Bonus connexion', metadata: { source: 'login_reward' } });
+                                }, 250);
+                            }
+                        }
+                    ]
+                );
+            }, 350);
+        };
 
         // 1. Listen for game start to track active session
         const handleGameStart = (data) => {
@@ -65,7 +118,11 @@ const SessionController = () => {
                     activeGameId.current = null;
                 }
             }
+
+            maybeShowLoginRewardPrompt();
         });
+
+        maybeShowLoginRewardPrompt();
 
         return () => {
             subscription.remove();
@@ -74,7 +131,7 @@ const SessionController = () => {
             socket.off('game_over', handleGameOver);
             socket.off('connect', handleReconnect);
         };
-    }, [token, navigation]);
+    }, [token, navigation, showAds, showRewarded]);
 
     const checkSessionStatus = async () => {
         // If we haven't started a game in this session, we don't want to auto-join

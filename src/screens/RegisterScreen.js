@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ImageBackground, Alert, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { loginSuccess } from '../redux/slices/authSlice';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import { API_URL } from '../config';
 import { getResponsiveSize } from '../utils/responsive';
+import { appAlert } from '../services/appAlert';
 
 const RegisterScreen = ({ navigation }) => {
   const [pseudo, setPseudo] = useState('');
@@ -17,11 +18,11 @@ const RegisterScreen = ({ navigation }) => {
   const handleRegister = async () => {
     Keyboard.dismiss();
     if (!pseudo || !email || !password || !confirmPassword) {
-        Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+        appAlert('Erreur', 'Veuillez remplir tous les champs');
         return;
     }
     if (password !== confirmPassword) {
-      Alert.alert('Erreur', 'Les mots de passe ne correspondent pas');
+      appAlert('Erreur', 'Les mots de passe ne correspondent pas');
       return;
     }
     
@@ -63,17 +64,17 @@ const RegisterScreen = ({ navigation }) => {
             refreshToken: data.refreshToken
         }));
         
-        Alert.alert('Succès', 'Compte créé ! Bienvenue ' + data.pseudo);
+        appAlert('Succès', 'Compte créé ! Bienvenue ' + data.pseudo);
         navigation.reset({
             index: 0,
             routes: [{ name: 'Home' }],
         });
       } else {
-        Alert.alert('Erreur', data.message || "Erreur lors de l'inscription");
+        appAlert('Erreur', data.message || "Erreur lors de l'inscription");
       }
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', 'Impossible de se connecter au serveur');
+      appAlert('Erreur', 'Impossible de se connecter au serveur');
     }
   };
 

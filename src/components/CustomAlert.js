@@ -2,6 +2,7 @@ import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
 import { playButtonSound } from '../utils/soundManager';
 import { getResponsiveSize } from '../utils/responsive';
+import { modalTheme } from '../utils/modalTheme';
 
 const CustomAlert = ({ visible, title, message, buttons = [], onClose }) => {
   return (
@@ -21,9 +22,9 @@ const CustomAlert = ({ visible, title, message, buttons = [], onClose }) => {
                     <TouchableOpacity 
                         key={index} 
                         style={[
-                            styles.button, 
-                            btn.style === 'cancel' ? styles.cancelButton : styles.confirmButton,
-                            btn.style === 'destructive' ? styles.destructiveButton : null
+                            styles.button,
+                            btn.style === 'cancel' ? styles.cancelButton : null,
+                            btn.style === 'destructive' ? styles.destructiveButton : styles.confirmButton
                         ]}
                         onPress={() => {
                             playButtonSound();
@@ -31,11 +32,17 @@ const CustomAlert = ({ visible, title, message, buttons = [], onClose }) => {
                             if (!btn.manualClose && onClose) onClose();
                         }}
                     >
-                        <Text style={styles.buttonText}>{btn.text}</Text>
+                        <Text
+                          style={[
+                            styles.buttonText,
+                            btn.style === 'cancel' || btn.style === 'destructive' ? styles.buttonTextOnDark : null
+                          ]}
+                        >
+                          {btn.text}
+                        </Text>
                     </TouchableOpacity>
                 ))}
             </View>
-            <View style={styles.innerShadow} pointerEvents="none" />
         </Pressable>
       </Pressable>
     </Modal>
@@ -43,39 +50,10 @@ const CustomAlert = ({ visible, title, message, buttons = [], onClose }) => {
 };
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  alertContent: {
-    width: '80%',
-    backgroundColor: '#041c55',
-    borderRadius: getResponsiveSize(20),
-    padding: getResponsiveSize(20),
-    alignItems: 'center',
-    shadowColor: '#f1c40f',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 3,
-    shadowRadius: getResponsiveSize(3),
-    elevation: 5,
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f',
-  },
-  alertTitle: {
-    fontSize: getResponsiveSize(22),
-    fontWeight: 'bold',
-    marginBottom: getResponsiveSize(10),
-    color: '#fff',
-    textAlign: 'center'
-  },
-  alertMessage: {
-    fontSize: getResponsiveSize(16),
-    color: '#ccc',
-    marginBottom: getResponsiveSize(20),
-    textAlign: 'center'
-  },
+  modalOverlay: modalTheme.overlay,
+  alertContent: modalTheme.card,
+  alertTitle: modalTheme.title,
+  alertMessage: modalTheme.message,
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -84,38 +62,23 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap'
   },
   button: {
-    paddingVertical: getResponsiveSize(12),
-    paddingHorizontal: getResponsiveSize(20),
-    borderRadius: getResponsiveSize(10),
-    minWidth: getResponsiveSize(100),
-    alignItems: 'center',
-    flex: 1,
+    ...modalTheme.buttonBase,
+    flex: 1
   },
   confirmButton: {
-    backgroundColor: '#2ecc71',
+    ...modalTheme.buttonPrimary
   },
   cancelButton: {
-    backgroundColor: '#95a5a6',
+    ...modalTheme.buttonCancel
   },
   destructiveButton: {
-    backgroundColor: '#e74c3c',
+    ...modalTheme.buttonDestructive
   },
   buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: getResponsiveSize(16),
-    textAlign: 'center',
+    ...modalTheme.buttonTextBase,
+    ...modalTheme.buttonTextPrimary
   },
-  innerShadow: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: getResponsiveSize(20),
-    borderWidth: getResponsiveSize(4),
-    borderColor: 'rgba(0, 0, 0, 0.3)',
-  },
+  buttonTextOnDark: modalTheme.buttonTextOnDark
 });
 
 export default CustomAlert;

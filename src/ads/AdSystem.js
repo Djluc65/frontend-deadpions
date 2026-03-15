@@ -44,10 +44,10 @@ const AdProvider = {
 const AD_RULES = {
   gracePeriodMs: 0,
   interstitialCooldownSec: 120,
-  actionsBeforeInterstitial: 5,
+  actionsBeforeInterstitial: 1,
   noAdScreens: ['Waiting', 'Login', 'Register', 'ForgotPassword', 'ResetPassword', 'Info', 'Assistant', 'PremiumPions', 'Magasin'],
   bannerOnlyScreens: ['MaisonTab', 'Social', 'Salle', 'Profile'],
-  fullAdScreens: ['Game', 'ResultatJeuOnline', 'ResultatJeuIA'],
+  fullAdScreens: ['ResultatJeuOnline', 'ResultatJeuIA'],
   shouldShowAds: (user) => {
     if (!user) return false;
     if (user.isPremium) return false;
@@ -96,7 +96,7 @@ export function useAdManager() {
   return ctx;
 }
 
-export default function AdSystem() {
+export default function AdSystem({ children }) {
   const { user } = useSelector((state) => state.auth);
   const { credit } = useCoinsContext();
 
@@ -119,6 +119,7 @@ export default function AdSystem() {
   const rewardedRef = useRef(null);
   const pendingShowInterstitialRef = useRef(false);
   const pendingShowRewardedRef = useRef(false);
+  const rewardedRewardRef = useRef({ amount: null, reason: null, metadata: null });
 
   const interstitialAdUnitId = useMemo(
     () => (__DEV__ && TestIds ? TestIds.INTERSTITIAL : AdProvider.units.interstitial.id),
@@ -196,22 +197,29 @@ export default function AdSystem() {
     });
 
     const unsubEarned = rewarded.addAdEventListener(RewardedAdEventType.EARNED_REWARD, async () => {
-      const reward = AdProvider.units.rewarded.reward;
-      if (reward.type !== 'coins') return;
-      if (typeof reward.amount !== 'number' || reward.amount <= 0) return;
+      const pending = rewardedRewardRef.current;
+      const defaultReward = AdProvider.units.rewarded.reward;
+      const amount = typeof pending?.amount === 'number' && pending.amount > 0 ? pending.amount : defaultReward.amount;
+      const reason = typeof pending?.reason === 'string' && pending.reason ? pending.reason : 'Récompense publicité';
+      const metadata = (pending?.metadata && typeof pending.metadata === 'object') ? pending.metadata : { source: 'rewarded_ad' };
+      rewardedRewardRef.current = { amount: null, reason: null, metadata: null };
+      if (defaultReward.type !== 'coins') return;
+      if (typeof amount !== 'number' || amount <= 0) return;
       try {
-        await credit(reward.amount, 'Récompense publicité', { source: 'rewarded_ad' });
+        await credit(amount, reason, metadata);
       } catch {}
     });
 
     const unsubClosed = rewarded.addAdEventListener(AdEventType.CLOSED, () => {
       setRewardedLoaded(false);
+      rewardedRewardRef.current = { amount: null, reason: null, metadata: null };
       rewarded.load();
     });
 
     const unsubError = rewarded.addAdEventListener(AdEventType.ERROR, () => {
       setRewardedLoaded(false);
       pendingShowRewardedRef.current = false;
+      rewardedRewardRef.current = { amount: null, reason: null, metadata: null };
     });
 
     rewarded.load();
@@ -284,34 +292,75 @@ export default function AdSystem() {
     }
   }, [user, screenKey, lastInterstitialAt, actionCount, interstitialLoaded]);
 
-  const showRewarded = useCallback(() => {
+  const prepareRewarded = useCallback(() => {
     if (!showAds) return;
+    if (!RewardedAd) return;
+    if (!rewardedRef.current) {
+      rewardedRef.current = RewardedAd.createForAdRequest(rewardedAdUnitId);
+    }
     const rewarded = rewardedRef.current;
     if (!rewarded) return;
+    if (rewardedLoaded) return;
+    try {
+      rewarded.load();
+    } catch {}
+  }, [showAds, rewardedAdUnitId, rewardedLoaded]);
+
+  const showRewarded = useCallback((options = {}) => {
+    if (!showAds) return;
+    if (!RewardedAd) return;
+    if (!rewardedRef.current) {
+      rewardedRef.current = RewardedAd.createForAdRequest(rewardedAdUnitId);
+    }
+    const rewarded = rewardedRef.current;
+    if (!rewarded) return;
+    if (options && typeof options === 'object') {
+      rewardedRewardRef.current = {
+        amount: typeof options.amount === 'number' ? options.amount : null,
+        reason: typeof options.reason === 'string' ? options.reason : null,
+        metadata: options.metadata && typeof options.metadata === 'object' ? options.metadata : null
+      };
+    } else {
+      rewardedRewardRef.current = { amount: null, reason: null, metadata: null };
+    }
     if (rewardedLoaded) {
+      let didShow = true;
       try {
         rewarded.show();
-      } catch {}
+      } catch {
+        didShow = false;
+      }
+      if (!didShow) {
+        pendingShowRewardedRef.current = true;
+        setTimeout(() => {
+          if (!pendingShowRewardedRef.current) return;
+          try {
+            rewarded.load();
+          } catch {}
+        }, 250);
+      }
     } else {
       pendingShowRewardedRef.current = true;
       try {
         rewarded.load();
       } catch {}
     }
-  }, [showAds, rewardedLoaded]);
+  }, [showAds, rewardedLoaded, rewardedAdUnitId]);
 
   const value = useMemo(
     () => ({
       showAds,
       trackAction,
       tryShowInterstitial,
+      prepareRewarded,
       showRewarded
     }),
-    [showAds, trackAction, tryShowInterstitial, showRewarded]
+    [showAds, trackAction, tryShowInterstitial, prepareRewarded, showRewarded]
   );
 
   return (
     <AdManagerContext.Provider value={value}>
+      {children}
       {showBanner && (
         <View style={[styles.bannerContainer, { bottom: bottomOffset }]}>
           <BannerAd unitId={bannerAdUnitId} size={BannerAdSize.BANNER} requestOptions={{ requestNonPersonalizedAdsOnly: false }} />
