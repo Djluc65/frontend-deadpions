@@ -125,6 +125,59 @@ export default function AdSystem({ children }) {
   const showBanner = nativeAdsAvailable && AD_RULES.canShowBanner(user, screenKey);
   const bottomOffset = useMemo(() => getBottomOffsetFromRoutePath(routePath), [routePath]);
 
+  useEffect(() => {
+    if (!adDebugEnabled) return;
+    const debugKey = JSON.stringify({
+      screenKey,
+      nativeAdsAvailable,
+      showAds,
+      showBanner,
+      useTestAdUnits,
+      requestNonPersonalizedAdsOnly,
+      isPremium: Boolean(user?.isPremium),
+      isEarlyAccess: Boolean(user?.isEarlyAccess)
+    });
+    const now = Date.now();
+    if (lastDebugSnapshotRef.current.key === debugKey && now - lastDebugSnapshotRef.current.at < 1500) return;
+    lastDebugSnapshotRef.current = { key: debugKey, at: now };
+
+    console.warn('[ADS] snapshot', {
+      screenKey,
+      nativeAdsAvailable,
+      showAds,
+      showBanner,
+      useTestAdUnits,
+      requestNonPersonalizedAdsOnly,
+      user: user ? { isPremium: Boolean(user?.isPremium), isEarlyAccess: Boolean(user?.isEarlyAccess) } : null
+    });
+  }, [
+    adDebugEnabled,
+    screenKey,
+    nativeAdsAvailable,
+    showAds,
+    showBanner,
+    useTestAdUnits,
+    requestNonPersonalizedAdsOnly,
+    user
+  ]);
+
+  useEffect(() => {
+    if (!adDebugEnabled) return;
+    if (nativeAdsAvailable) return;
+    console.warn('[ADS] native ads unavailable (google-mobile-ads not linked/loaded in this build)');
+  }, [adDebugEnabled, nativeAdsAvailable]);
+
+  useEffect(() => {
+    if (!adDebugEnabled) return;
+    if (!nativeAdsAvailable) return;
+    if (AD_RULES.shouldShowAds(user)) return;
+    console.warn('[ADS] ads disabled by rules (user not eligible)', {
+      hasUser: Boolean(user),
+      isPremium: Boolean(user?.isPremium),
+      isEarlyAccess: Boolean(user?.isEarlyAccess)
+    });
+  }, [adDebugEnabled, nativeAdsAvailable, user]);
+
   const [actionCount, setActionCount] = useState(0);
   const [lastInterstitialAt, setLastInterstitialAt] = useState(null);
   const [interstitialLoaded, setInterstitialLoaded] = useState(false);
@@ -138,6 +191,8 @@ export default function AdSystem({ children }) {
   const rewardedRewardRef = useRef({ amount: null, reason: null, metadata: null });
   const rewardedUnitIdRef = useRef(null);
   const rewardedUnsubsRef = useRef([]);
+  const rewardedPendingTimeoutRef = useRef(null);
+  const lastDebugSnapshotRef = useRef({ key: null, at: 0 });
 
   const interstitialAdUnitId = useMemo(
     () => (useTestAdUnits && TestIds ? TestIds.INTERSTITIAL : AdProvider.units.interstitial.id),
@@ -397,6 +452,17 @@ export default function AdSystem({ children }) {
         rewarded.load();
       } catch {}
     }
+
+    if (rewardedPendingTimeoutRef.current) {
+      clearTimeout(rewardedPendingTimeoutRef.current);
+      rewardedPendingTimeoutRef.current = null;
+    }
+    rewardedPendingTimeoutRef.current = setTimeout(() => {
+      if (!pendingShowRewardedRef.current) return;
+      pendingShowRewardedRef.current = false;
+      rewardedRewardRef.current = { amount: null, reason: null, metadata: null };
+      if (adDebugEnabled) console.warn('[ADS] rewarded timeout (no ad loaded to show)');
+    }, 8000);
   }, [showAds, rewardedLoaded, setupRewarded]);
 
   const value = useMemo(
@@ -419,6 +485,14 @@ export default function AdSystem({ children }) {
             unitId={bannerAdUnitId}
             size={BannerAdSize.BANNER}
             requestOptions={{ requestNonPersonalizedAdsOnly }}
+            onAdLoaded={() => {
+              if (!adDebugEnabled) return;
+              console.warn('[ADS] banner loaded', { screenKey, unitId: bannerAdUnitId });
+            }}
+            onAdFailedToLoad={(err) => {
+              if (!adDebugEnabled) return;
+              console.warn('[ADS] banner failed', { screenKey, unitId: bannerAdUnitId, err });
+            }}
           />
         </View>
       )}

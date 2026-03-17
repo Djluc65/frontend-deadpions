@@ -87,10 +87,4 @@
       }
     }
   }
-  ,
-  "react-native-google-mobile-ads": {
-    "android_app_id": "ca-app-pub-3636440603787547~4892803097",
-    "ios_app_id": "ca-app-pub-3636440603787547~4892803097",
-    "user_tracking_usage_description": "This identifier will be used to deliver personalized ads to you."
-  }
 }

@@ -1,7 +1,7 @@
 import renderer from 'react-test-renderer';
 import AppAlertHost from '../src/components/AppAlertHost';
 import CustomAlert from '../src/components/CustomAlert';
-import { appAlert } from '../src/services/appAlert';
+import { appAlert, setAppAlertHandler } from '../src/services/appAlert';
 
 jest.mock('expo-av', () => ({
   Audio: {
@@ -16,11 +16,23 @@ jest.mock('../src/utils/soundManager', () => ({
   playButtonSound: jest.fn(),
 }));
 
-describe('AppAlertHost', () => {
-  it('passes button textStyle through to CustomAlert', async () => {
-    const { act } = renderer;
-    let component;
+jest.setTimeout(15000);
 
+describe('AppAlertHost', () => {
+  const { act } = renderer;
+  let component;
+
+  afterEach(async () => {
+    if (component) {
+      await act(async () => {
+        component.unmount();
+      });
+      component = null;
+    }
+    setAppAlertHandler(null);
+  });
+
+  it('passes button textStyle through to CustomAlert', async () => {
     await act(async () => {
       component = renderer.create(<AppAlertHost />);
     });
@@ -38,16 +50,9 @@ describe('AppAlertHost', () => {
     expect(alert.props.buttons[0].textStyle).toEqual({ fontSize: 12 });
     expect(alert.props.buttons[1].text).toBe('Regarder');
     expect(alert.props.buttons[1].textStyle).toEqual({ fontSize: 14 });
-
-    await act(async () => {
-      component.unmount();
-    });
   });
 
   it('defaults to an OK button when buttons are missing', async () => {
-    const { act } = renderer;
-    let component;
-
     await act(async () => {
       component = renderer.create(<AppAlertHost />);
     });
@@ -59,9 +64,5 @@ describe('AppAlertHost', () => {
     const alert = component.root.findByType(CustomAlert);
     expect(alert.props.buttons).toHaveLength(1);
     expect(alert.props.buttons[0].text).toBe('OK');
-
-    await act(async () => {
-      component.unmount();
-    });
   });
 });

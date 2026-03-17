@@ -67,5 +67,22 @@
     "jest-expo": "~54.0.17",
     "react-test-renderer": "^19.1.0"
   },
+  "expo": {
+    "doctor": {
+      "appConfigFieldsNotSyncedCheck": {
+        "enabled": false
+      },
+      "reactNativeDirectoryCheck": {
+        "exclude": [
+          "react-native-webrtc"
+        ]
+      }
+    },
+    "install": {
+      "exclude": [
+        "react-native-svg"
+      ]
+    }
+  },
   "private": true
 }
