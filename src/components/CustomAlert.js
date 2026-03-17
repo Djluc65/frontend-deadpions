@@ -5,6 +5,8 @@ import { getResponsiveSize } from '../utils/responsive';
 import { modalTheme } from '../utils/modalTheme';
 
 const CustomAlert = ({ visible, title, message, buttons = [], onClose }) => {
+  const isSingleButton = !Array.isArray(buttons) || buttons.length <= 1;
+
   return (
     <Modal
       visible={visible}
@@ -14,8 +16,10 @@ const CustomAlert = ({ visible, title, message, buttons = [], onClose }) => {
     >
       <Pressable style={styles.modalOverlay} onPress={onClose}>
         <Pressable style={styles.alertContent} onPress={() => {}}>
-            <Text style={styles.alertTitle}>{title}</Text>
-            <Text style={styles.alertMessage}>{message}</Text>
+            <View style={styles.body}>
+              <Text style={styles.alertTitle}>{title}</Text>
+              <Text style={styles.alertMessage}>{message}</Text>
+            </View>
             
             <View style={styles.buttonContainer}>
                 {buttons.map((btn, index) => (
@@ -23,6 +27,7 @@ const CustomAlert = ({ visible, title, message, buttons = [], onClose }) => {
                         key={index} 
                         style={[
                             styles.button,
+                            isSingleButton ? styles.buttonSingle : styles.buttonMulti,
                             btn.style === 'cancel' ? styles.cancelButton : null,
                             btn.style === 'destructive' ? styles.destructiveButton : styles.confirmButton
                         ]}
@@ -35,7 +40,8 @@ const CustomAlert = ({ visible, title, message, buttons = [], onClose }) => {
                         <Text
                           style={[
                             styles.buttonText,
-                            btn.style === 'cancel' || btn.style === 'destructive' ? styles.buttonTextOnDark : null
+                            btn.style === 'cancel' || btn.style === 'destructive' ? styles.buttonTextOnDark : null,
+                            btn?.textStyle
                           ]}
                         >
                           {btn.text}
@@ -51,19 +57,43 @@ const CustomAlert = ({ visible, title, message, buttons = [], onClose }) => {
 
 const styles = StyleSheet.create({
   modalOverlay: modalTheme.overlay,
-  alertContent: modalTheme.card,
-  alertTitle: modalTheme.title,
-  alertMessage: modalTheme.message,
+  alertContent: {
+    ...modalTheme.card,
+    maxWidth: getResponsiveSize(460),
+    minWidth: getResponsiveSize(280)
+  },
+  body: {
+    width: '100%',
+    alignItems: 'center'
+  },
+  alertTitle: {
+    ...modalTheme.title,
+    marginBottom: getResponsiveSize(10)
+  },
+  alertMessage: {
+    ...modalTheme.message,
+    marginBottom: getResponsiveSize(18)
+  },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     width: '100%',
-    gap: getResponsiveSize(15),
+    gap: getResponsiveSize(12),
     flexWrap: 'wrap'
   },
   button: {
     ...modalTheme.buttonBase,
-    flex: 1
+    minHeight: getResponsiveSize(44),
+    paddingVertical: getResponsiveSize(12)
+  },
+  buttonSingle: {
+    width: '100%',
+    maxWidth: '100%'
+  },
+  buttonMulti: {
+    flexGrow: 1,
+    flexBasis: '45%',
+    maxWidth: '48%'
   },
   confirmButton: {
     ...modalTheme.buttonPrimary
@@ -76,7 +106,8 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     ...modalTheme.buttonTextBase,
-    ...modalTheme.buttonTextPrimary
+    ...modalTheme.buttonTextPrimary,
+    flexShrink: 1
   },
   buttonTextOnDark: modalTheme.buttonTextOnDark
 });

@@ -10,7 +10,8 @@ const normalizeButtons = (buttons) => {
     text: b?.text == null ? 'OK' : String(b.text),
     style: b?.style,
     onPress: typeof b?.onPress === 'function' ? b.onPress : undefined,
-    manualClose: Boolean(b?.manualClose)
+    manualClose: Boolean(b?.manualClose),
+    textStyle: (b?.textStyle && typeof b.textStyle === 'object') ? b.textStyle : undefined
   }));
 };
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
@@ -6,6 +6,7 @@ import { socket } from '../utils/socket';
 import { API_URL } from '../config';
 import { useAdManager } from '../ads/AdSystem';
 import { appAlert } from '../services/appAlert';
+import { getResponsiveSize } from '../utils/responsive';
 
 const SessionController = () => {
     const navigation = useNavigation();
@@ -53,7 +54,7 @@ const SessionController = () => {
                     'Bonus de connexion',
                     'Regarder une pub maintenant pour gagner +20 coins ?',
                     [
-                        { text: 'Non merci', style: 'cancel' },
+                        { text: 'Non merci', style: 'cancel', textStyle: { fontSize: getResponsiveSize(14) } },
                         {
                             text: 'Regarder',
                             onPress: () => {
@@ -61,12 +62,14 @@ const SessionController = () => {
                                 setTimeout(() => {
                                     showRewarded({ amount: 20, reason: 'Bonus connexion', metadata: { source: 'login_reward' } });
                                 }, 250);
-                            }
+                            },
+                            textStyle: { fontSize: getResponsiveSize(14) }
                         }
                     ]
                 );
             }, 350);
         };
+
 
         // 1. Listen for game start to track active session
         const handleGameStart = (data) => {

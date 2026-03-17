@@ -100,6 +100,22 @@ export default function AdSystem({ children }) {
   const { user } = useSelector((state) => state.auth);
   const { credit } = useCoinsContext();
 
+  const adDebugEnabled = useMemo(() => {
+    const raw = process.env.EXPO_PUBLIC_AD_DEBUG;
+    return raw === '1' || raw === 'true';
+  }, []);
+
+  const useTestAdUnits = useMemo(() => {
+    const raw = process.env.EXPO_PUBLIC_AD_USE_TEST_IDS;
+    const enabled = raw === '1' || raw === 'true';
+    return __DEV__ || enabled;
+  }, []);
+
+  const requestNonPersonalizedAdsOnly = useMemo(() => {
+    const raw = process.env.EXPO_PUBLIC_AD_NPA_ONLY;
+    return raw === '1' || raw === 'true';
+  }, []);
+
   const navState = useNavigationState((state) => state);
   const routePath = useMemo(() => getActiveRoutePath(navState), [navState]);
   const screenKey = routePath[routePath.length - 1] || null;
@@ -120,22 +136,30 @@ export default function AdSystem({ children }) {
   const pendingShowInterstitialRef = useRef(false);
   const pendingShowRewardedRef = useRef(false);
   const rewardedRewardRef = useRef({ amount: null, reason: null, metadata: null });
+  const rewardedUnitIdRef = useRef(null);
+  const rewardedUnsubsRef = useRef([]);
 
   const interstitialAdUnitId = useMemo(
-    () => (__DEV__ && TestIds ? TestIds.INTERSTITIAL : AdProvider.units.interstitial.id),
-    []
+    () => (useTestAdUnits && TestIds ? TestIds.INTERSTITIAL : AdProvider.units.interstitial.id),
+    [useTestAdUnits]
   );
   const rewardedAdUnitId = useMemo(
-    () => (__DEV__ && TestIds ? TestIds.REWARDED : AdProvider.units.rewarded.id),
-    []
+    () => (useTestAdUnits && TestIds ? TestIds.REWARDED : AdProvider.units.rewarded.id),
+    [useTestAdUnits]
   );
-  const bannerAdUnitId = useMemo(() => (__DEV__ && TestIds ? TestIds.BANNER : AdProvider.units.banner.id), []);
+  const bannerAdUnitId = useMemo(
+    () => (useTestAdUnits && TestIds ? TestIds.BANNER : AdProvider.units.banner.id),
+    [useTestAdUnits]
+  );
 
   useEffect(() => {
     if (!showAds) return;
     if (!mobileAds) return;
-    mobileAds().initialize().catch(() => {});
-  }, [showAds]);
+    mobileAds().initialize().catch((err) => {
+      if (!adDebugEnabled) return;
+      console.warn('[ADS] initialize failed', err);
+    });
+  }, [showAds, adDebugEnabled]);
 
   useEffect(() => {
     if (!showAds) return;
@@ -162,9 +186,10 @@ export default function AdSystem({ children }) {
       interstitial.load();
     });
 
-    const unsubError = interstitial.addAdEventListener(AdEventType.ERROR, () => {
+    const unsubError = interstitial.addAdEventListener(AdEventType.ERROR, (err) => {
       setInterstitialLoaded(false);
       pendingShowInterstitialRef.current = false;
+      if (adDebugEnabled) console.warn('[ADS] interstitial error', err);
     });
 
     interstitial.load();
@@ -176,14 +201,28 @@ export default function AdSystem({ children }) {
     };
   }, [showAds, interstitialAdUnitId]);
 
-  useEffect(() => {
-    if (!showAds) return;
-    if (!RewardedAd) return;
+  const setupRewarded = useCallback(() => {
+    if (!showAds) return null;
+    if (!RewardedAd) return null;
 
-    if (!rewardedRef.current) {
-      rewardedRef.current = RewardedAd.createForAdRequest(rewardedAdUnitId);
+    const hasSameUnit = rewardedRef.current && rewardedUnitIdRef.current === rewardedAdUnitId;
+    if (hasSameUnit && rewardedUnsubsRef.current.length) {
+      return rewardedRef.current;
     }
 
+    rewardedUnsubsRef.current.forEach((unsub) => {
+      try {
+        unsub();
+      } catch {}
+    });
+    rewardedUnsubsRef.current = [];
+
+    setRewardedLoaded(false);
+    pendingShowRewardedRef.current = false;
+    rewardedRewardRef.current = { amount: null, reason: null, metadata: null };
+
+    rewardedUnitIdRef.current = rewardedAdUnitId;
+    rewardedRef.current = RewardedAd.createForAdRequest(rewardedAdUnitId, { requestNonPersonalizedAdsOnly });
     const rewarded = rewardedRef.current;
 
     const unsubLoaded = rewarded.addAdEventListener(RewardedAdEventType.LOADED, () => {
@@ -213,24 +252,43 @@ export default function AdSystem({ children }) {
     const unsubClosed = rewarded.addAdEventListener(AdEventType.CLOSED, () => {
       setRewardedLoaded(false);
       rewardedRewardRef.current = { amount: null, reason: null, metadata: null };
-      rewarded.load();
+      try {
+        rewarded.load();
+      } catch {}
     });
 
-    const unsubError = rewarded.addAdEventListener(AdEventType.ERROR, () => {
+    const unsubError = rewarded.addAdEventListener(AdEventType.ERROR, (err) => {
       setRewardedLoaded(false);
       pendingShowRewardedRef.current = false;
       rewardedRewardRef.current = { amount: null, reason: null, metadata: null };
+      if (adDebugEnabled) console.warn('[ADS] rewarded error', err);
     });
 
-    rewarded.load();
+    rewardedUnsubsRef.current = [unsubLoaded, unsubEarned, unsubClosed, unsubError];
+    try {
+      rewarded.load();
+    } catch {}
+    return rewarded;
+  }, [showAds, rewardedAdUnitId, credit, adDebugEnabled, requestNonPersonalizedAdsOnly]);
 
-    return () => {
-      unsubLoaded();
-      unsubEarned();
-      unsubClosed();
-      unsubError();
-    };
-  }, [showAds, rewardedAdUnitId, credit]);
+  useEffect(() => {
+    if (!showAds) {
+      rewardedUnsubsRef.current.forEach((unsub) => {
+        try {
+          unsub();
+        } catch {}
+      });
+      rewardedUnsubsRef.current = [];
+      rewardedUnitIdRef.current = null;
+      rewardedRef.current = null;
+      setRewardedLoaded(false);
+      pendingShowRewardedRef.current = false;
+      rewardedRewardRef.current = { amount: null, reason: null, metadata: null };
+      return;
+    }
+    setupRewarded();
+    return () => {};
+  }, [showAds, setupRewarded]);
 
   useEffect(() => {
     if (!showAds) {
@@ -295,24 +353,18 @@ export default function AdSystem({ children }) {
   const prepareRewarded = useCallback(() => {
     if (!showAds) return;
     if (!RewardedAd) return;
-    if (!rewardedRef.current) {
-      rewardedRef.current = RewardedAd.createForAdRequest(rewardedAdUnitId);
-    }
-    const rewarded = rewardedRef.current;
+    const rewarded = setupRewarded();
     if (!rewarded) return;
     if (rewardedLoaded) return;
     try {
       rewarded.load();
     } catch {}
-  }, [showAds, rewardedAdUnitId, rewardedLoaded]);
+  }, [showAds, rewardedLoaded, setupRewarded]);
 
   const showRewarded = useCallback((options = {}) => {
     if (!showAds) return;
     if (!RewardedAd) return;
-    if (!rewardedRef.current) {
-      rewardedRef.current = RewardedAd.createForAdRequest(rewardedAdUnitId);
-    }
-    const rewarded = rewardedRef.current;
+    const rewarded = setupRewarded();
     if (!rewarded) return;
     if (options && typeof options === 'object') {
       rewardedRewardRef.current = {
@@ -345,7 +397,7 @@ export default function AdSystem({ children }) {
         rewarded.load();
       } catch {}
     }
-  }, [showAds, rewardedLoaded, rewardedAdUnitId]);
+  }, [showAds, rewardedLoaded, setupRewarded]);
 
   const value = useMemo(
     () => ({
@@ -363,7 +415,11 @@ export default function AdSystem({ children }) {
       {children}
       {showBanner && (
         <View style={[styles.bannerContainer, { bottom: bottomOffset }]}>
-          <BannerAd unitId={bannerAdUnitId} size={BannerAdSize.BANNER} requestOptions={{ requestNonPersonalizedAdsOnly: false }} />
+          <BannerAd
+            unitId={bannerAdUnitId}
+            size={BannerAdSize.BANNER}
+            requestOptions={{ requestNonPersonalizedAdsOnly }}
+          />
         </View>
       )}
     </AdManagerContext.Provider>
