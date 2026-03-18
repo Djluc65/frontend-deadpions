@@ -25,6 +25,7 @@ const WaitingScreen = ({ navigation }) => {
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
     const initializeApp = async () => {
       const startTime = Date.now();
 
@@ -42,12 +43,16 @@ const WaitingScreen = ({ navigation }) => {
 
       // 2. Vérification Auth
       const authPromise = (async () => {
-        if (!token || !refreshToken) {
+        // Capture token and refreshToken values at start
+        const currentToken = token;
+        const currentRefreshToken = refreshToken;
+
+        if (!currentToken || !currentRefreshToken) {
             return { valid: false };
         }
         try {
             const response = await fetch(`${API_URL}/auth/me`, {
-                headers: { Authorization: `Bearer ${token}` }
+                headers: { Authorization: `Bearer ${currentToken}` }
             });
             if (response.ok) return { valid: true };
 
@@ -55,7 +60,7 @@ const WaitingScreen = ({ navigation }) => {
             const refreshResponse = await fetch(`${API_URL}/auth/refresh-token`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ refreshToken })
+                body: JSON.stringify({ refreshToken: currentRefreshToken })
             });
 
             if (refreshResponse.ok) {
@@ -75,6 +80,8 @@ const WaitingScreen = ({ navigation }) => {
           authPromise
       ]);
       
+      if (!isMounted) return;
+
       // Petit délai minimal si tout est allé trop vite pour éviter le flash
       const elapsed = Date.now() - startTime;
       if (elapsed < 500) await new Promise(r => setTimeout(r, 500 - elapsed));
@@ -88,7 +95,8 @@ const WaitingScreen = ({ navigation }) => {
     };
 
     initializeApp();
-  }, [token, refreshToken, dispatch, navigation]);
+    return () => { isMounted = false; };
+  }, [dispatch, navigation]); // Removed token and refreshToken from dependencies to prevent double run on token refresh
 
   return (
     <View style={styles.background}>
