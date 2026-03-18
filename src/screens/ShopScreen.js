@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, View, Text, StyleSheet, ImageBackground, ScrollView, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
+import { AppState, View, Text, StyleSheet, ImageBackground, ScrollView, ActivityIndicator, Platform } from 'react-native';
+import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useSelector, useDispatch } from 'react-redux';

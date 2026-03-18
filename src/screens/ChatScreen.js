@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, 
+  View, Text, StyleSheet, TextInput, FlatList, 
   KeyboardAvoidingView, Platform, SafeAreaView, Modal, Image,
   Dimensions, Animated, Easing, Vibration, TouchableWithoutFeedback, Keyboard
 } from 'react-native';
+import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
 import { Audio } from 'expo-av';
@@ -1073,7 +1074,7 @@ const ChatScreen = ({ route, navigation }) => {
       <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => { playButtonSound(); navigation.goBack(); }}>
+        <TouchableOpacity onPress={() => { navigation.goBack(); }}>
           <Ionicons name="arrow-back" size={getResponsiveSize(24)} color="#fff" />
         </TouchableOpacity>
         <View style={styles.headerInfo}>

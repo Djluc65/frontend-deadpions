@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, Keyboard, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableWithoutFeedback, Keyboard, Platform } from 'react-native';
+import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import { Image } from 'expo-image';
 import { useDispatch, useSelector } from 'react-redux';
 import { AntDesign } from '@expo/vector-icons';

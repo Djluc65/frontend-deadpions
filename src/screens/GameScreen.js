@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, Dimensions, ScrollView, Animated, Image, Modal, Keyboard, Platform, Share, ActivityIndicator, FlatList, AppState } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, Dimensions, ScrollView, Animated, Image, Modal, Keyboard, Platform, Share, ActivityIndicator, FlatList, AppState } from 'react-native';
+import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';

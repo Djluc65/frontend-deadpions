@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { TextInput, View, StyleSheet, TouchableOpacity } from 'react-native';
+import { TextInput, View, StyleSheet } from 'react-native';
+import { AppTouchableOpacity as TouchableOpacity } from './AppTouchable';
 import { Ionicons } from '@expo/vector-icons';
 import { getResponsiveSize } from '../../utils/responsive';
 

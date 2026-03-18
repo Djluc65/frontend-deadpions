@@ -4,7 +4,6 @@ import {
   Text, 
   StyleSheet, 
   ImageBackground, 
-  TouchableOpacity, 
   FlatList, 
   Image, 
   TextInput, 
@@ -16,6 +15,7 @@ import {
   Keyboard,
   ScrollView
 } from 'react-native';
+import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector, useDispatch } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';

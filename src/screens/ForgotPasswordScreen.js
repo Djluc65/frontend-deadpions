@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import { API_URL } from '../config';

@@ -6,6 +6,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { API_URL } from '../config';
 import socket from '../services/socket';
 import { setNotificationsCount, incrementNotificationsCount } from '../redux/slices/socialSlice';
+import { playButtonSound } from '../utils/soundManager';
 
 import HomeScreen from '../screens/HomeScreen';
 import SocialScreen from '../screens/SocialScreen';
@@ -115,6 +116,9 @@ const HomeTabNavigator = () => {
             <CustomTabIcon focused={focused} iconName="home" label={t.home_tab} />
           ),
         }}
+        listeners={{
+          tabPress: () => playButtonSound(),
+        }}
       />
       <Tab.Screen 
         name="Social" 
@@ -126,6 +130,9 @@ const HomeTabNavigator = () => {
             <CustomTabIcon focused={focused} iconName="people" label={t.social_tab} />
           ),
         }}
+        listeners={{
+          tabPress: () => playButtonSound(),
+        }}
       />
       <Tab.Screen 
         name="Salle" 
@@ -135,6 +142,9 @@ const HomeTabNavigator = () => {
             <CustomTabIcon focused={focused} iconName="easel" label={t.room_tab} />
           ),
         }}
+        listeners={{
+          tabPress: () => playButtonSound(),
+        }}
       />
       <Tab.Screen 
         name="Magasin" 
@@ -143,6 +153,9 @@ const HomeTabNavigator = () => {
           tabBarIcon: ({ focused }) => (
             <CustomTabIcon focused={focused} iconName="cart" label={t.shop_tab} />
           ),
+        }}
+        listeners={{
+          tabPress: () => playButtonSound(),
         }}
       />
     </Tab.Navigator>

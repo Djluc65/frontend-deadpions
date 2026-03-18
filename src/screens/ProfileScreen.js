@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, Image, ScrollView, Modal, FlatList, TouchableWithoutFeedback, Keyboard, SafeAreaView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, Image, ScrollView, Modal, FlatList, TouchableWithoutFeedback, Keyboard, SafeAreaView, Dimensions } from 'react-native';
+import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import { useFocusEffect } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateUser, logout } from '../redux/slices/authSlice';
@@ -267,7 +268,7 @@ const ProfileScreen = ({ navigation }) => {
     >
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-            <TouchableOpacity onPress={() => { playButtonSound(); navigation.goBack(); }} style={styles.backButton}>
+            <TouchableOpacity onPress={() => { navigation.goBack(); }} style={styles.backButton}>
                 <Ionicons name="arrow-back" size={getResponsiveSize(24)} color="#fff" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Mon Profil</Text>
@@ -330,7 +331,7 @@ const ProfileScreen = ({ navigation }) => {
 
             {/* Actions Menu */}
             <View style={styles.menuContainer}>
-                <TouchableOpacity style={styles.menuItem} onPress={() => { playButtonSound(); navigation.navigate('PremiumPions'); }}>
+                <TouchableOpacity style={styles.menuItem} onPress={() => { navigation.navigate('PremiumPions'); }}>
                     <View style={[styles.iconBox, { backgroundColor: 'rgba(155, 89, 182, 0.2)' }]}>
                         <MaterialCommunityIcons name="chess-pawn" size={getResponsiveSize(24)} color="#9b59b6" />
                     </View>
@@ -343,7 +344,7 @@ const ProfileScreen = ({ navigation }) => {
                     <Ionicons name="chevron-forward" size={getResponsiveSize(20)} color="#ccc" />
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.menuItem} onPress={() => { playButtonSound(); setShowHistoryModal(true); }}>
+                <TouchableOpacity style={styles.menuItem} onPress={() => { setShowHistoryModal(true); }}>
                     <View style={[styles.iconBox, { backgroundColor: 'rgba(52, 152, 219, 0.2)' }]}>
                         <MaterialCommunityIcons name="history" size={getResponsiveSize(24)} color="#3498db" />
                     </View>
@@ -352,7 +353,6 @@ const ProfileScreen = ({ navigation }) => {
                 </TouchableOpacity>
 
                 <TouchableOpacity style={styles.menuItem} onPress={() => {
-                    playButtonSound();
                     setIsEditing(!isEditing);
                     if (isEditing) handleSave(); // Save on toggle off if needed, but better to use specific button
                 }}>
@@ -546,7 +546,7 @@ const ProfileScreen = ({ navigation }) => {
               numColumns={3}
               showsVerticalScrollIndicator={false}
               renderItem={({ item }) => (
-                <TouchableOpacity style={styles.countryItem} onPress={() => { playButtonSound(); handleSelectCountry(item); }}>
+                <TouchableOpacity style={styles.countryItem} onPress={() => { handleSelectCountry(item); }}>
                   <Text style={styles.countryFlag}>{item.flag}</Text>
                   <Text style={styles.countryName} numberOfLines={1}>{item.name}</Text>
                 </TouchableOpacity>

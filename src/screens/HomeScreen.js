@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Image, ActivityIndicator, ImageBackground, TouchableOpacity, useWindowDimensions, Animated, Easing, Modal, Switch, Pressable, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Image, ActivityIndicator, ImageBackground, useWindowDimensions, Animated, Easing, Modal, Switch, Pressable, ScrollView } from 'react-native';
+import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
