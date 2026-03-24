@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useSelector, useDispatch } from 'react-redux';
 import { useStripe } from '@stripe/stripe-react-native';
+import * as IAP from 'react-native-iap';
 import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
 import { API_URL, WEBSITE_URL } from '../config';
@@ -19,12 +20,98 @@ const ShopScreen = () => {
   const navigation = useNavigation();
   const { user, token } = useSelector(state => state.auth);
   const dispatch = useDispatch();
-  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  
+  // Stripe (Désactivé sur iOS pour conformité Apple)
+  const stripe = !isIOS ? useStripe() : { initPaymentSheet: () => {}, presentPaymentSheet: () => {} };
+  const { initPaymentSheet, presentPaymentSheet } = stripe;
+
   const { showAds, showRewarded } = useAdManager();
   const [loading, setLoading] = useState(false);
   const isIOS = Platform.OS === 'ios';
+  
+  // Apple SKUs (Mis à jour avec les identifiants réels fournis par Apple)
+  const IAP_SKUS = {
+    'pack_beginner': '6760978721',
+    'pack_popular': '6760979134',
+    'pack_bestseller': '6760979454',
+    'pack_pro': '6760980786',
+    'pack_expert': '6760980947',
+    'pack_whale': '6760981051',
+    'pack_premium_unlock': 'com.deadpions.app.premium_unlock', // À vérifier si ID numérique existe
+    'subscription_monthly': '6760981674',
+    'subscription_yearly': '6760981553'
+  };
+
   const iosCoinsUseWebShop = false;
   const pendingProfileRefreshRef = useRef(false);
+
+  // Initialisation IAP
+  useEffect(() => {
+    if (isIOS) {
+      const initIAP = async () => {
+        try {
+          await IAP.initConnection();
+          // Pré-charger les produits si nécessaire
+          await IAP.getProducts({ skus: Object.values(IAP_SKUS) });
+        } catch (err) {
+          console.warn('IAP Init Error:', err);
+        }
+      };
+      initIAP();
+
+      // Listener pour les achats terminés
+      const purchaseUpdateSubscription = IAP.purchaseUpdatedListener(async (purchase) => {
+        const receipt = purchase.transactionReceipt;
+        if (receipt) {
+          try {
+            await verifyApplePurchase(receipt, purchase.productId);
+            await IAP.finishTransaction({ purchase, isConsumable: true });
+          } catch (ackErr) {
+            console.warn('IAP Ack Error:', ackErr);
+          }
+        }
+      });
+
+      const purchaseErrorSubscription = IAP.purchaseErrorListener((error) => {
+        if (error.code !== 'E_USER_CANCELLED') {
+           appAlert('Erreur', `L'achat a échoué: ${error.message}`);
+        }
+        setLoading(false);
+      });
+
+      return () => {
+        purchaseUpdateSubscription.remove();
+        purchaseErrorSubscription.remove();
+        IAP.endConnection();
+      };
+    }
+  }, []);
+
+  const verifyApplePurchase = async (receipt, productId) => {
+    try {
+      const response = await fetch(`${API_URL}/payment/verify-apple`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ receipt, productId }),
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        appAlert('Succès', 'Achat validé ! Vos coins ont été ajoutés.');
+        await refreshUserProfile();
+      } else {
+        throw new Error(data.message || 'Validation Apple échouée');
+      }
+    } catch (err) {
+      console.error('Verify Apple Purchase Error:', err);
+      appAlert('Erreur', 'Impossible de valider votre achat auprès du serveur.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const refreshUserProfile = useCallback(async () => {
     if (!token) return false;
@@ -127,9 +214,16 @@ const ShopScreen = () => {
       await handleBuyCoins('pack_premium_unlock', 0, '4,99 €', 'Pions Premium Unlock');
   };
 
-  const handleSubscription = (plan) => {
+  const handleSubscription = async (plan) => {
     if (isIOS) {
-        openWebShop({ product: 'subscription', plan, source: 'ios_app' });
+        setLoading(true);
+        try {
+            const sku = plan === 'Mensuel' ? IAP_SKUS.subscription_monthly : IAP_SKUS.subscription_yearly;
+            await IAP.requestSubscription({ sku });
+        } catch (err) {
+            console.error('IAP Subscription Error:', err);
+            setLoading(false);
+        }
         return;
     }
     appAlert(
@@ -217,8 +311,16 @@ const ShopScreen = () => {
   const handleBuyCoins = async (packId, coins, price, label) => {
     if (loading) return;
 
-    if (isIOS && iosCoinsUseWebShop) {
-      await openWebShop({ packId, source: 'ios_app' });
+    if (isIOS) {
+      setLoading(true);
+      try {
+        const sku = IAP_SKUS[packId];
+        if (!sku) throw new Error('Produit non configuré pour Apple');
+        await IAP.requestPurchase({ sku, andFinishTransactionIOS: false });
+      } catch (err) {
+        console.error('IAP Purchase Error:', err);
+        setLoading(false);
+      }
       return;
     }
 
@@ -358,7 +460,7 @@ const ShopScreen = () => {
                 <Text style={styles.subPeriod}>/ mois</Text>
                 <Text style={styles.subPerk}>+50 000 coins / mois</Text>
                 <Text style={styles.subPerk}>Salles illimitées • Coach IA • Stats avancées • Zéro pub</Text>
-                <Text style={styles.subDetail}>{isIOS ? 'Paiement sur le Web' : 'Bientôt disponible'}</Text>
+                <Text style={styles.subDetail}>{isIOS ? 'S\'abonner avec Apple' : 'Bientôt disponible'}</Text>
               </TouchableOpacity>
 
               {/* Offre Annuelle */}
@@ -374,7 +476,7 @@ const ShopScreen = () => {
                 <Text style={[styles.subPeriod, styles.highlightText]}>/ an</Text>
                 <Text style={[styles.subPerk, styles.highlightText]}>+60 000 coins / mois</Text>
                 <Text style={[styles.subPerk, styles.highlightText]}>Crédit mensuel pendant 1 an</Text>
-                <Text style={[styles.subDetail, styles.highlightText]}>{isIOS ? 'Paiement sur le Web' : 'Bientôt disponible'}</Text>
+                <Text style={[styles.subDetail, styles.highlightText]}>{isIOS ? 'S\'abonner avec Apple' : 'Bientôt disponible'}</Text>
                 <Text style={[styles.subDetail, styles.highlightText]}>~1,66 € / mois</Text>
                 <Text style={[styles.saveText]}>-45%</Text>
               </TouchableOpacity>
@@ -454,9 +556,7 @@ const ShopScreen = () => {
                         <>
                           <Text style={styles.priceText}>{pack.price}</Text>
                           {isIOS && (
-                            <Text style={styles.priceSubText}>
-                              {iosCoinsUseWebShop ? 'Sur le Web' : 'Apple Pay'}
-                            </Text>
+                            <Text style={styles.priceSubText}>Apple Pay</Text>
                           )}
                         </>
                     )}

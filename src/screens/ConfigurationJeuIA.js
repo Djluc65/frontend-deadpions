@@ -34,10 +34,11 @@ const ConfigurationJeuIA = ({ navigation }) => {
     moyen: { jouees: 0, gagnees: 0 },
     difficile: { jouees: 0, gagnees: 0 }
   });
+  const [tournamentStarter, setTournamentStarter] = useState('joueur'); // Persiste le starter du prochain tournoi
   
-  // Charger les statistiques au montage
+  // Charger les statistiques et le starter au montage
   React.useEffect(() => {
-    chargerStatistiques();
+    chargerDonneesInitiales();
   }, []);
 
   React.useEffect(() => {
@@ -45,18 +46,22 @@ const ConfigurationJeuIA = ({ navigation }) => {
     if (canBet && betAmount === 0) setBetAmount(100);
   }, [canBet]);
   
-  const chargerStatistiques = async () => {
+  const chargerDonneesInitiales = async () => {
     try {
       const stats = await AsyncStorage.getItem('statsIA');
       if (stats) {
         setStatistiques(JSON.parse(stats));
       }
+      const savedStarter = await AsyncStorage.getItem('tournamentIAStarter');
+      if (savedStarter) {
+        setTournamentStarter(savedStarter);
+      }
     } catch (error) {
-      console.error('Erreur chargement stats:', error);
+      console.error('Erreur chargement données initiales:', error);
     }
   };
   
-  const demarrerPartie = () => {
+  const demarrerPartie = async () => {
     // Vérification du solde
     const effectiveBet = canBet ? betAmount : 0;
     if (effectiveBet > (user?.coins || 0)) {
@@ -66,8 +71,18 @@ const ConfigurationJeuIA = ({ navigation }) => {
 
     // Déterminer qui commence réellement
     let joueurDebut = premierJoueur;
+    const isTournament = activeTab === 'options' && indicesActifs === false; // On détecte si c'est le mode tournoi selon tes réglages UI (à affiner si besoin)
+    
     if (premierJoueur === 'aleatoire') {
       joueurDebut = Math.random() < 0.5 ? 'joueur' : 'ia';
+    } else if (isTournament) {
+      // En mode tournoi, on utilise le starter persistant pour la PARTIE 1
+      joueurDebut = tournamentStarter;
+      
+      // On prépare déjà l'inversion pour le PROCHAIN tournoi (ou le bouton Rejouer du tournoi complet)
+      const nextTournamentStarter = tournamentStarter === 'joueur' ? 'ia' : 'joueur';
+      await AsyncStorage.setItem('tournamentIAStarter', nextTournamentStarter);
+      setTournamentStarter(nextTournamentStarter);
     }
     
     // Déterminer les couleurs (traduction en anglais pour le moteur de jeu)
@@ -94,7 +109,13 @@ const ConfigurationJeuIA = ({ navigation }) => {
         vitesseIA,
         indicesActifs,
         chronometreActif,
-        animationsActives
+        animationsActives,
+        mode: isTournament ? 'tournament' : 'single',
+        tournamentSettings: isTournament ? {
+            gameNumber: 1,
+            totalGames: 3, // ou la valeur choisie dans ton UI
+            starterPartie1: joueurDebut 
+        } : null
       }
     });
   };

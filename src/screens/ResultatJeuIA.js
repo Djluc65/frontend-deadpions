@@ -49,6 +49,10 @@ const ResultatJeuIA = ({ route, navigation }) => {
       setStats(statsObj[difficulte]);
     } catch (error) {
       console.error('Error updating stats:', error);
+      // Fallback: set stats in memory even if saving failed
+      if (!stats) {
+        setStats({ jouees: 1, gagnees: victoire ? 1 : 0 });
+      }
     }
   };
 
@@ -88,7 +92,15 @@ const ResultatJeuIA = ({ route, navigation }) => {
         <View style={styles.boutons}>
           <TouchableOpacity
             style={styles.boutonRejouer}
-            onPress={() => navigation.replace('Game', { modeJeu: 'ia', configIA })}
+            onPress={async () => {
+              // Si c'était un tournoi, on s'assure que le prochain tournoi commence par l'autre joueur
+              if (configIA?.mode === 'tournament' && configIA?.tournamentSettings?.starterPartie1) {
+                const lastStarter = configIA.tournamentSettings.starterPartie1;
+                const nextStarter = lastStarter === 'joueur' ? 'ia' : 'joueur';
+                await AsyncStorage.setItem('tournamentIAStarter', nextStarter);
+              }
+              navigation.replace('Game', { modeJeu: 'ia', configIA });
+            }}
           >
             <Text style={styles.boutonTexte}>🔄 Rejouer</Text>
           </TouchableOpacity>

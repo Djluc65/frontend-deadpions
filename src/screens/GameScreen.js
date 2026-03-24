@@ -33,6 +33,7 @@ import PionSVG from '../components/PionSVG';
 import { useAdManager } from '../ads/AdSystem';
 import { appAlert } from '../services/appAlert';
 import { modalTheme } from '../utils/modalTheme';
+import { getTournamentProgress } from '../utils/constants';
 
 import { isTablet, getResponsiveSize, SCREEN_WIDTH, SCREEN_HEIGHT } from '../utils/responsive';
 
@@ -536,99 +537,6 @@ const GameScreen = ({ navigation, route }) => {
     }
   }, [user, mode]);
 
-  // Handle game start/reload logic
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleGameStart = (data) => {
-        if (data.gameId && data.gameId !== params.gameId) {
-             console.log('New Game ID detected, reloading screen...');
-             isRematching.current = true;
-             AudioController.setRematchMode(true);
-            setRematchRequested(false);
-
-             // Reset local state aggressively before navigation to avoid UI artifacts
-             setBoard([]);
-             setWinningLine(null);
-             setGameOver(false);
-             setShowResultModal(false);
-             setNextMatchVisible(false);
-             setWaitingForNextRound(false);
-             setWaitingMessage(null);
-             setCurrentPlayer(null);
-             setTimeLeft(undefined);
-             setTimeouts({ black: 0, white: 0 });
-             setTournamentScore({ black: 0, white: 0 });
-             setTournamentGameNumber(1);
-             // total games will be reset by incoming tournamentSettings
-
-             // Calculer le nouvel adversaire pour mettre à jour les coins dans les params
-             const pBlack = data.players.black;
-             const pWhite = data.players.white;
-             // Utiliser currentUserId pour identifier l'adversaire
-             const isBlackMe = (pBlack.id || pBlack._id)?.toString() === currentUserId?.toString();
-             const newOpponent = isBlackMe ? pWhite : pBlack;
-
-             navigation.replace('Game', {
-                 ...params, 
-                 gameId: data.gameId,
-                 players: data.players,
-                 opponent: newOpponent,
-                 betAmount: data.betAmount,
-                 timeControl: data.timeControl,
-                 tournamentSettings: data.tournamentSettings,
-                 currentTurn: data.currentTurn
-             });
-             return;
-        }
-
-        console.log('Game started with same ID, updating local state...');
-        syncReadyRef.current = true;
-        setIsWaitingState(false);
-        setRematchRequested(false);
-        setBoard(Array.isArray(data.board) ? data.board : []);
-        setWinningLine(null);
-        setGameOver(false);
-        setShowResultModal(false);
-        setNextMatchVisible(false);
-        setWaitingForNextRound(false);
-        setWaitingMessage(null);
-        setCurrentPlayer(data.currentTurn ?? null);
-        setTimeouts({ black: 0, white: 0 });
-        if (data.timeControl) {
-            setTimeControlSetting(data.timeControl);
-            setTimeLeft(data.timeControl);
-        }
-        if (data.tournamentSettings) {
-            setTournamentScore(data.tournamentSettings.score);
-            setTournamentGameNumber(data.tournamentSettings.gameNumber);
-            setTournamentTotalGames(data.tournamentSettings.totalGames);
-        } else {
-            setTournamentScore({ black: 0, white: 0 });
-            setTournamentGameNumber(1);
-        }
-        if (data.players) {
-            setPlayersData(data.players);
-            
-            const pBlack = data.players.black;
-            const pWhite = data.players.white;
-            const isBlackMe = (pBlack.id || pBlack._id)?.toString() === currentUserId?.toString();
-            const newOpponent = isBlackMe ? pWhite : pBlack;
-            if (newOpponent) {
-                setOpponent(newOpponent);
-                if (newOpponent.coins != null) setOpponentCoins(newOpponent.coins);
-            }
-            
-            dispatch(setPlayers(data.players));
-        }
-    };
-
-    socket.on('game_start', handleGameStart);
-    return () => {
-        socket.off('game_start', handleGameStart);
-    };
-  }, [params.gameId, navigation]);
-
   useEffect(() => {
       if (bubbles.player2) {
           const timer = setTimeout(() => {
@@ -709,10 +617,12 @@ const GameScreen = ({ navigation, route }) => {
   useEffect(() => {
     if (mode !== 'online' && mode !== 'spectator' && mode !== 'online_custom' && mode !== 'live') return;
 
-    if (mode === 'spectator' && params.gameId) {
-        socket.emit('join_spectator', { gameId: params.gameId });
-    } else if (mode === 'live' && params.gameId) {
-        socket.emit('join_live_room', { gameId: params.gameId });
+    const initialParams = paramsRef.current;
+
+    if (mode === 'spectator' && initialParams.gameId) {
+        socket.emit('join_spectator', { gameId: initialParams.gameId });
+    } else if (mode === 'live' && initialParams.gameId) {
+        socket.emit('join_live_room', { gameId: initialParams.gameId });
     }
 
     const handleSpectatorJoined = (data) => {
@@ -738,9 +648,10 @@ const GameScreen = ({ navigation, route }) => {
     };
 
     const handleGameStart = (data) => {
+        const currentParams = paramsRef.current;
         // console.log('Game start received in GameScreen:', data);
 
-        if (data.gameId && data.gameId !== params.gameId) {
+        if (data.gameId && data.gameId !== currentParams.gameId) {
              console.log('New Game ID detected, reloading screen...');
              isRematching.current = true;
              AudioController.setRematchMode(true);
@@ -767,7 +678,7 @@ const GameScreen = ({ navigation, route }) => {
              const newOpponent = isBlackMe ? pWhite : pBlack;
 
              navigation.replace('Game', {
-                 ...params, 
+                 ...currentParams, 
                  gameId: data.gameId,
                  players: data.players,
                  opponent: newOpponent,
@@ -841,6 +752,7 @@ const GameScreen = ({ navigation, route }) => {
     };
 
     const handleGameOver = (data) => {
+      const currentParams = paramsRef.current;
       setGameOver(true);
       setWaitingForNextRound(false);
       if (data.winner) setWinner(data.winner);
@@ -848,20 +760,29 @@ const GameScreen = ({ navigation, route }) => {
       // Fallback tournoi en ligne: si le serveur renvoie 'game_over' (ex: timeout 5 fois)
       // et que la manche n'est PAS décisive, afficher la fenêtre "Match suivant".
       // On calcule alors le score/nextGameNumber si le serveur ne les fournit pas.
-    if ((mode === 'online' || mode === 'online_custom' || mode === 'live') && params?.tournamentSettings && !data?.tournamentOver) {
-        // Uniquement pour les fins de manche (pas fin de tournoi)
+    const tournamentProgress = getTournamentProgress({
+      mode,
+      tournamentSettings: currentParams?.tournamentSettings,
+      tournamentTotalGames,
+      tournamentGameNumber,
+      tournamentOver: data?.tournamentOver,
+    });
+
+    if (tournamentProgress) {
         const winnerColor = data?.winner;
         const isRoundEnd = data?.reason === 'round_over' || data?.reason === 'victory';
-        if (winnerColor && isRoundEnd) {
-          // Score fourni par le serveur OU calcul local (ajout d'1 point au vainqueur)
+        if (isRoundEnd && !tournamentProgress.isLastGame) {
           const currentScore = data?.score || tournamentScore || { black: 0, white: 0 };
-          const newScore = data?.score ? data.score : {
-            ...currentScore,
-            [winnerColor]: (currentScore[winnerColor] || 0) + 1
-          };
-          const totalGames = tournamentTotalGames || params.tournamentSettings?.totalGames || 1;
-          const currentGameNumber = tournamentGameNumber || params.tournamentSettings?.gameNumber || 1;
-          const nextGameNumber = (typeof data?.nextGameNumber === 'number') ? data.nextGameNumber : (currentGameNumber + 1);
+          const newScore = data?.score ? data.score : (
+            winnerColor ? {
+              ...currentScore,
+              [winnerColor]: (currentScore[winnerColor] || 0) + 1
+            } : currentScore
+          );
+
+          const totalGames = tournamentProgress.totalGames;
+          const currentGameNumber = tournamentProgress.currentGameNumber;
+          const nextGameNumber = (typeof data?.nextGameNumber === 'number') ? data.nextGameNumber : tournamentProgress.nextGameNumber;
           const remainingGames = totalGames - currentGameNumber;
           const blackScore = newScore.black || 0;
           const whiteScore = newScore.white || 0;
@@ -869,11 +790,11 @@ const GameScreen = ({ navigation, route }) => {
 
           if (!wouldBeTournamentOver) {
             // Calculer la ligne gagnante pour l'effet visuel
-            if (data.winner) {
+            if (winnerColor) {
               const currentBoard = boardRef.current;
-              const playerStones = currentBoard.filter(s => s.player === data.winner);
+              const playerStones = currentBoard.filter(s => s.player === winnerColor);
               for (let s of playerStones) {
-                const line = checkWinner(s.row, s.col, data.winner, currentBoard);
+                const line = checkWinner(s.row, s.col, winnerColor, currentBoard);
                 if (line) {
                   setWinningLine(line);
                   break;
@@ -883,10 +804,11 @@ const GameScreen = ({ navigation, route }) => {
             setTimeout(() => {
               setAlertData({
                 title: `Match ${nextGameNumber - 1} terminé`,
-                message: `${winnerColor === 'black'
-                    ? (params.players?.black?.pseudo || 'Joueur 1')
-                    : (params.players?.white?.pseudo || 'Joueur 2')
-                  } gagne ! \nScore: ${blackScore} - ${whiteScore}`
+                message: winnerColor === 'black'
+                  ? `${currentParams.players?.black?.pseudo || 'Joueur 1'} gagne ! \nScore: ${blackScore} - ${whiteScore}`
+                  : winnerColor === 'white'
+                    ? `${currentParams.players?.white?.pseudo || 'Joueur 2'} gagne ! \nScore: ${blackScore} - ${whiteScore}`
+                    : `Match nul\nScore: ${blackScore} - ${whiteScore}`
               });
               setNextMatchVisible(true);
               // Démarrer un timer de 30s comme NextMatchModal par défaut
@@ -947,33 +869,34 @@ const GameScreen = ({ navigation, route }) => {
       
       if (isWinner && data.gains > 0) {
           setFeedback({ visible: true, amount: data.gains, type: 'CREDIT' });
-      } else if (data.reason === 'draw' && (params.betAmount || 0) > 0) {
-          setFeedback({ visible: true, amount: params.betAmount || 0, type: 'REMBOURSEMENT' });
+      } else if (data.reason === 'draw' && (currentParams.betAmount || 0) > 0) {
+          setFeedback({ visible: true, amount: currentParams.betAmount || 0, type: 'REMBOURSEMENT' });
       }
 
       setTimeout(() => {
             setResultData({
                 victoire: isWinner,
                 gains: data.gains || 0,
-                montantPari: params.betAmount || 0,
+                montantPari: currentParams.betAmount || 0,
                 adversaire: opponent,
                 raisonVictoire: isWinner && data.reason === 'timeout' ? 'timeout_adverse' : null,
                 raisonDefaite: !isWinner && data.reason === 'timeout' ? 'timeout' : null,
                 timeouts: data.timeouts,
                 type: mode,
-                isTournament: !!params.tournamentSettings
+                isTournament: !!currentParams.tournamentSettings
             });
         setShowResultModal(true);
       }, 1500);
     };
 
     const handleOpponentDisconnected = () => {
+       const currentParams = paramsRef.current;
        setGameOver(true);
        setWaitingForNextRound(false);
        setResultData({
          victoire: true,
-         gains: (params.betAmount || 0) * 0.9,
-         montantPari: params.betAmount || 0,
+         gains: (currentParams.betAmount || 0) * 0.9,
+         montantPari: currentParams.betAmount || 0,
          adversaire: opponent,
          raisonVictoire: 'disconnect',
          type: mode
@@ -2540,10 +2463,12 @@ const GameScreen = ({ navigation, route }) => {
                    // Prepare next ConfigIA
                    const nextConfigIA = {
                        ...configIA,
+                       premierJoueur: isTournament && !tournamentOver ? (configIA.premierJoueur === 'ia' ? 'joueur' : 'ia') : configIA.premierJoueur,
                        tournamentSettings: isTournament ? {
                            totalGames: tournamentTotalGames,
                            gameNumber: tournamentOver ? 1 : nextGameNumber,
-                           score: tournamentOver ? { black: 0, white: 0 } : newScore
+                           score: tournamentOver ? { black: 0, white: 0 } : newScore,
+                           starterPartie1: configIA.tournamentSettings?.starterPartie1
                        } : null
                    };
 
@@ -2641,7 +2566,7 @@ const GameScreen = ({ navigation, route }) => {
                  // Alternate starting player for tournament
                  let nextPremierJoueur = configIA.premierJoueur;
                  if (isTournament && !tournamentOver) {
-                      nextPremierJoueur = configIA.premierJoueur === 'ia' ? 'me' : 'ia';
+                      nextPremierJoueur = configIA.premierJoueur === 'ia' ? 'joueur' : 'ia';
                  }
 
                  const nextConfigIA = {
@@ -2650,7 +2575,8 @@ const GameScreen = ({ navigation, route }) => {
                      tournamentSettings: isTournament ? {
                          totalGames: tournamentTotalGames,
                          gameNumber: tournamentOver ? 1 : nextGameNumber,
-                         score: tournamentOver ? { black: 0, white: 0 } : newScore
+                         score: tournamentOver ? { black: 0, white: 0 } : newScore,
+                         starterPartie1: configIA.tournamentSettings?.starterPartie1
                      } : null
                  };
 

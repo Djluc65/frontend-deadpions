@@ -12,3 +12,31 @@ export const ONLINE_TIME_OPTIONS = [
   { label: '1 min 30s', value: 90 },
   { label: '2 min', value: 120 }
 ];
+
+export const ONLINE_TOURNAMENT_MODES = ['online', 'online_custom', 'live'];
+
+export function getTournamentProgress({
+  mode,
+  tournamentSettings,
+  tournamentTotalGames,
+  tournamentGameNumber,
+  tournamentOver,
+}) {
+  if (!ONLINE_TOURNAMENT_MODES.includes(mode)) return null;
+  if (tournamentOver) return null;
+
+  const isTournament = !!tournamentSettings || (typeof tournamentTotalGames === 'number' && tournamentTotalGames > 1);
+  if (!isTournament) return null;
+
+  const totalGames = tournamentTotalGames || tournamentSettings?.totalGames || 1;
+  const currentGameNumber = tournamentGameNumber || tournamentSettings?.gameNumber || 1;
+  const nextGameNumber = currentGameNumber + 1;
+  const isLastGame = currentGameNumber >= totalGames;
+
+  return {
+    totalGames,
+    currentGameNumber,
+    nextGameNumber,
+    isLastGame,
+  };
+}
