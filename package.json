@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
-    "start": "EXPO_HOME=.expo-home expo start --offline",
+    "start": "EXPO_HOME=.expo-home expo start",
+    "start:offline": "EXPO_HOME=.expo-home expo start --offline",
     "start:local": "EXPO_HOME=.expo-home EXPO_PUBLIC_API_URL=http://localhost:5001/api expo start",
     "android": "EXPO_HOME=.expo-home expo run:android",
     "ios": "EXPO_HOME=.expo-home CP_HOME_DIR=ios/.cocoapods-home expo run:ios",

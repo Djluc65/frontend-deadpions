@@ -4,14 +4,32 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
 import { translations } from '../utils/translations';
 import { getResponsiveSize } from '../utils/responsive';
+import { appAlert } from '../services/appAlert';
 
 const InfoScreen = ({ navigation }) => {
   const settings = useSelector(state => state.settings || { language: 'fr' });
   const t = translations[settings.language] || translations.fr;
   const version = "1.0.0 (Early Access)";
 
-  const openLink = (url) => {
-    Linking.openURL(url).catch(err => console.error("Couldn't load page", err));
+  const openLink = async (url) => {
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (!supported) {
+        if (url.startsWith('mailto:')) {
+          appAlert('Impossible d’ouvrir', 'Aucune app e-mail n’est disponible sur cet appareil.\n\nContact : deadpions@gmail.com');
+          return;
+        }
+        appAlert('Impossible d’ouvrir', `Lien non supporté : ${url}`);
+        return;
+      }
+      await Linking.openURL(url);
+    } catch (e) {
+      if (url.startsWith('mailto:')) {
+        appAlert('Impossible d’ouvrir', 'Impossible d’ouvrir votre app e-mail.\n\nContact : deadpions@gmail.com');
+        return;
+      }
+      appAlert('Erreur', 'Impossible d’ouvrir ce lien pour le moment.');
+    }
   };
 
   const sections = [
