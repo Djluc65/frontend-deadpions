@@ -159,6 +159,7 @@ const HomeScreen = ({ navigation }) => {
         timeControl: data.timeControl,
         gameType: data.mode,
         tournamentSettings: data.tournamentSettings,
+        inviteCode: data.inviteCode || null,
         isWaiting: true
     });
   };

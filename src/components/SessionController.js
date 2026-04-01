@@ -7,6 +7,7 @@ import { API_URL } from '../config';
 import { useAdManager } from '../ads/AdSystem';
 import { appAlert } from '../services/appAlert';
 import { getResponsiveSize } from '../utils/responsive';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SessionController = () => {
     const navigation = useNavigation();
@@ -31,6 +32,37 @@ const SessionController = () => {
             loginRewardPromptPendingRef.current = true;
             loginRewardPromptShownRef.current = false;
             lastUserIdRef.current = userId;
+            // After login, process any pending deep link invite code
+            (async () => {
+                try {
+                    const code = await AsyncStorage.getItem('pendingInviteCode');
+                    if (code && code.length === 6) {
+                        await AsyncStorage.removeItem('pendingInviteCode');
+                        if (!socket.connected) socket.connect();
+                        const onSuccess = (data) => {
+                            socket.off('join_code_success', onSuccess);
+                            socket.off('join_code_error', onError);
+                            if (data?.type === 'custom') {
+                                navigation.navigate('Game', { mode: 'online_custom', gameId: data.gameId });
+                            } else if (data?.gameId) {
+                                navigation.navigate('SalleAttenteLive', { roomId: data.gameId, configSalle: data.config });
+                            } else {
+                                navigation.navigate('Home');
+                            }
+                        };
+                        const onError = () => {
+                            socket.off('join_code_success', onSuccess);
+                            socket.off('join_code_error', onError);
+                            appAlert('Invitation', 'Code invalide ou expiré.');
+                        };
+                        socket.on('join_code_success', onSuccess);
+                        socket.on('join_code_error', onError);
+                        socket.emit('join_by_code', { code: code.trim().toUpperCase(), userId });
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            })();
         }
     }, [token, user?._id, user?.id]);
 

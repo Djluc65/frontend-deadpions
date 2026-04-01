@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ImageBackground, Dimensions, ScrollView, Animated, Image, Modal, Keyboard, Platform, Share, ActivityIndicator, FlatList, AppState } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
 import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -2208,6 +2209,7 @@ const GameScreen = ({ navigation, route }) => {
       let r = row + dx;
       let c = col + dy;
       while (
+        r >= 0 && r < ROWS && c >= 0 && c < COLS &&
         boardToCheck.some(s => s.row === r && s.col === c && s.player === player)
       ) {
         line.push({row: r, col: c});
@@ -2220,6 +2222,7 @@ const GameScreen = ({ navigation, route }) => {
       r = row - dx;
       c = col - dy;
       while (
+        r >= 0 && r < ROWS && c >= 0 && c < COLS &&
         boardToCheck.some(s => s.row === r && s.col === c && s.player === player)
       ) {
         line.push({row: r, col: c});
@@ -2394,7 +2397,10 @@ const GameScreen = ({ navigation, route }) => {
 
     // Calculer le coup de l'IA
     const coup = calculerCoupIA(board, configIA.difficulte, currentPlayer);
-
+    if (!coup || coup.row < 0 || coup.row >= ROWS || coup.col < 0 || coup.col >= COLS) {
+        setIaEnReflexion(false);
+        return;
+    }
     if (coup) {
         setDernierCoupIA(coup);
 
@@ -2636,6 +2642,7 @@ const GameScreen = ({ navigation, route }) => {
   };
 
   const handlePress = (row, col) => {
+    if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return;
     if (gameOver) return;
     if (waitingForNextRound) return; // Prevent moves while waiting for next round/game over
     if (mode === 'spectator') return;
@@ -3101,6 +3108,7 @@ const GameScreen = ({ navigation, route }) => {
   const timeoutHandledRef = useRef(false);
 
   const jouerCoupLocalOuIAParTimer = useCallback((row, col, player) => {
+    if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return;
     playSound(player);
     const newStone = { row, col, player };
     const newBoard = [...board, newStone];
@@ -3368,7 +3376,7 @@ const GameScreen = ({ navigation, route }) => {
       move = calculerCoupIA(board, 'moyen', myColor);
     }
 
-    if (!move) return;
+    if (!move || move.row < 0 || move.row >= ROWS || move.col < 0 || move.col >= COLS) return;
 
     if (socket.connected) {
       socket.emit('make_move', {
@@ -4414,6 +4422,34 @@ const GameScreen = ({ navigation, route }) => {
                         <Text style={{ color: '#ccc', fontSize: getResponsiveSize(14), textAlign: 'center' }}>
                             {mode === 'live' ? "La partie commencera dès qu'un joueur rejoindra la salle." : "Invitez un ami pour commencer la partie"}
                         </Text>
+                        
+                        {(mode === 'online_custom' && params?.inviteCode) && (
+                          <View style={{ marginTop: getResponsiveSize(16), alignItems: 'center' }}>
+                            <Text style={{ color: '#f1c40f', fontWeight: 'bold', letterSpacing: 2, fontSize: getResponsiveSize(18) }}>{params.inviteCode}</Text>
+                            <View style={{ backgroundColor: '#fff', padding: getResponsiveSize(8), borderRadius: getResponsiveSize(8), marginTop: getResponsiveSize(10) }}>
+                              <QRCode
+                                value={`deadpions://invite/${params.inviteCode}`}
+                                size={getResponsiveSize(140)}
+                                backgroundColor="#ffffff"
+                                color="#041c55"
+                              />
+                            </View>
+                            <TouchableOpacity 
+                              style={{ marginTop: getResponsiveSize(12), paddingHorizontal: getResponsiveSize(12), paddingVertical: getResponsiveSize(8), borderRadius: getResponsiveSize(8), borderWidth: 1, borderColor: '#f1c40f' }}
+                              onPress={async () => {
+                                try {
+                                  await Share.share({
+                                    message: `Rejoins ma partie privée sur DeadPions ! 🎲\ndeadpions://invite/${params.inviteCode}`,
+                                    url: `deadpions://invite/${params.inviteCode}`,
+                                    title: 'Invitation DeadPions'
+                                  });
+                                } catch (_) {}
+                              }}
+                            >
+                              <Text style={{ color: '#f1c40f', fontWeight: '600' }}>Partager le lien</Text>
+                            </TouchableOpacity>
+                          </View>
+                        )}
                         
                         {mode === 'live' && (
                             <View style={{ width: '100%', alignItems: 'center', marginTop: getResponsiveSize(20) }}>

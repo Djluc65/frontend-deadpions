@@ -8,6 +8,7 @@ import { playButtonSound } from '../utils/soundManager';
 import { getAvatarSource as getBaseAvatarSource } from '../utils/avatarUtils';
 import { getResponsiveSize, isTablet } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
+import QRCode from 'react-native-qrcode-svg';
 
 /**
  * Écran de la salle d'attente pour les jeux en direct.
@@ -238,9 +239,10 @@ const SalleAttenteLive = ({ route, navigation }) => {
    */
   const handleShare = async () => {
     try {
+        const inviteUrl = configSalle?.roomCode ? `deadpions://invite/${configSalle.roomCode}` : `deadpions://live/${roomId}`;
         const result = await Share.share({
-            message: `Rejoins ma partie sur DeadPions ! 🎲\nClique ici : deadpions://live/${roomId}`,
-            url: `deadpions://live/${roomId}`, // iOS support
+            message: `Rejoins ma partie sur DeadPions ! 🎲\nClique ici : ${inviteUrl}`,
+            url: inviteUrl, // iOS support
             title: 'Invitation DeadPions'
         });
         
@@ -406,7 +408,25 @@ const SalleAttenteLive = ({ route, navigation }) => {
             </View>
             
             <View style={styles.divider} />
-            
+
+            {isCreator && configSalle?.roomCode && (
+              <View style={styles.inviteSection}>
+                <Text style={styles.inviteSectionTitle}>Inviter via code ou QR</Text>
+                <View style={styles.qrContainer}>
+                  <QRCode
+                    value={`deadpions://invite/${configSalle.roomCode}`}
+                    size={getResponsiveSize(160)}
+                    backgroundColor="white"
+                    color="#041c55"
+                  />
+                </View>
+                <View style={styles.codeRow}>
+                  <Text style={styles.codeText}>{configSalle.roomCode}</Text>
+                </View>
+                <Text style={styles.inviteHint}>Partage ce code à ton adversaire</Text>
+              </View>
+            )}
+
             <View style={styles.paramsGrid}>
                 <View style={styles.paramItem}>
                     <Ionicons name="cash-outline" size={getResponsiveSize(20)} color="#f1c40f" />
@@ -916,6 +936,45 @@ const styles = StyleSheet.create({
     color: '#ef4444',
     marginLeft: getResponsiveSize(8),
     fontWeight: 'bold',
+  },
+  inviteSection: {
+    alignItems: 'center',
+    marginVertical: getResponsiveSize(16),
+    padding: getResponsiveSize(16),
+    backgroundColor: 'rgba(4, 28, 85, 0.9)',
+    borderRadius: getResponsiveSize(16),
+    borderWidth: getResponsiveSize(1),
+    borderColor: '#f1c40f',
+    width: '100%',
+  },
+  inviteSectionTitle: {
+    color: '#f1c40f',
+    fontWeight: 'bold',
+    fontSize: getResponsiveSize(16),
+    marginBottom: getResponsiveSize(12),
+  },
+  qrContainer: {
+    padding: getResponsiveSize(12),
+    backgroundColor: 'white',
+    borderRadius: getResponsiveSize(12),
+    marginBottom: getResponsiveSize(12),
+  },
+  codeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: getResponsiveSize(8),
+    marginBottom: getResponsiveSize(4),
+  },
+  codeText: {
+    color: '#fff',
+    fontSize: getResponsiveSize(28),
+    fontWeight: 'bold',
+    letterSpacing: getResponsiveSize(6),
+  },
+  inviteHint: {
+    color: '#9ca3af',
+    fontSize: getResponsiveSize(12),
+    marginTop: getResponsiveSize(4),
   }
 });
 

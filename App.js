@@ -29,6 +29,7 @@ const linking = {
     screens: {
       ResetPassword: 'reset-password/:devToken',
       SalleAttenteLive: 'live/:roomId',
+      InviteJoin: 'invite/:code',
     },
   },
 };

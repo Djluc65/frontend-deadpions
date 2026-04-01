@@ -20,6 +20,7 @@ const ShopScreen = () => {
   const navigation = useNavigation();
   const { user, token } = useSelector(state => state.auth);
   const dispatch = useDispatch();
+  const isIOS = Platform.OS === 'ios';
   
   // Stripe (Désactivé sur iOS pour conformité Apple)
   const stripe = !isIOS ? useStripe() : { initPaymentSheet: () => {}, presentPaymentSheet: () => {} };
@@ -27,19 +28,18 @@ const ShopScreen = () => {
 
   const { showAds, showRewarded } = useAdManager();
   const [loading, setLoading] = useState(false);
-  const isIOS = Platform.OS === 'ios';
   
   // Apple SKUs (Mis à jour avec les identifiants réels fournis par Apple)
   const IAP_SKUS = {
-    'pack_beginner': '6760978721',
-    'pack_popular': '6760979134',
-    'pack_bestseller': '6760979454',
-    'pack_pro': '6760980786',
-    'pack_expert': '6760980947',
-    'pack_whale': '6760981051',
+    'pack_beginner': 'com.deadpions.app.pack_beginner',
+    'pack_popular': 'com.deadpions.app.pack_popular',
+    'pack_bestseller': 'com.deadpions.app.pack_bestseller',
+    'pack_pro': 'com.deadpions.app.pack_pro',
+    'pack_expert': 'com.deadpions.app.pack_expert',
+    'pack_whale': 'com.deadpions.app.pack_whale',
     'pack_premium_unlock': 'com.deadpions.app.premium_unlock', // À vérifier si ID numérique existe
-    'subscription_monthly': '6760981674',
-    'subscription_yearly': '6760981553'
+    'subscription_monthly': 'com.deadpions.app.premium_monthly_nonrenewing',
+    'subscription_yearly': 'com.deadpions.app.premium_yearly_nonrenewing'
   };
 
   const iosCoinsUseWebShop = false;
@@ -52,7 +52,7 @@ const ShopScreen = () => {
         try {
           await IAP.initConnection();
           // Pré-charger les produits si nécessaire
-          await IAP.getProducts({ skus: Object.values(IAP_SKUS) });
+          await IAP.fetchProducts({ skus: Object.values(IAP_SKUS), type: 'all' });
         } catch (err) {
           console.warn('IAP Init Error:', err);
         }
@@ -65,7 +65,13 @@ const ShopScreen = () => {
         if (receipt) {
           try {
             await verifyApplePurchase(receipt, purchase.productId);
-            await IAP.finishTransaction({ purchase, isConsumable: true });
+            const nonConsumables = new Set([
+              IAP_SKUS.pack_premium_unlock,
+              IAP_SKUS.subscription_monthly,
+              IAP_SKUS.subscription_yearly
+            ]);
+            const isConsumable = !nonConsumables.has(purchase.productId);
+            await IAP.finishTransaction({ purchase, isConsumable });
           } catch (ackErr) {
             console.warn('IAP Ack Error:', ackErr);
           }
@@ -219,7 +225,10 @@ const ShopScreen = () => {
         setLoading(true);
         try {
             const sku = plan === 'Mensuel' ? IAP_SKUS.subscription_monthly : IAP_SKUS.subscription_yearly;
-            await IAP.requestSubscription({ sku });
+            await IAP.requestPurchase({
+              type: 'subs',
+              request: { apple: { sku, andDangerouslyFinishTransactionAutomatically: false } }
+            });
         } catch (err) {
             console.error('IAP Subscription Error:', err);
             setLoading(false);
@@ -316,7 +325,10 @@ const ShopScreen = () => {
       try {
         const sku = IAP_SKUS[packId];
         if (!sku) throw new Error('Produit non configuré pour Apple');
-        await IAP.requestPurchase({ sku, andFinishTransactionIOS: false });
+        await IAP.requestPurchase({
+          type: 'in-app',
+          request: { apple: { sku, andDangerouslyFinishTransactionAutomatically: false } }
+        });
       } catch (err) {
         console.error('IAP Purchase Error:', err);
         setLoading(false);
