@@ -6,3 +6,5 @@ web-build/
 .env*.local
 *.log
 .local_cocoapods/
+ios/.cocoapods-home/
+ios/ios/.cocoapods-home/
