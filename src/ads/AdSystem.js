@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Platform } from 'react-native';
 import { useNavigationState } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import { useCoinsContext } from '../context/CoinsContext';
@@ -100,6 +100,9 @@ export default function AdSystem({ children }) {
   const { user } = useSelector((state) => state.auth);
   const { credit } = useCoinsContext();
 
+  const [attReady, setAttReady] = useState(false);
+  const [attAuthorized, setAttAuthorized] = useState(false);
+
   const adDebugEnabled = useMemo(() => {
     const raw = process.env.EXPO_PUBLIC_AD_DEBUG;
     return raw === '1' || raw === 'true';
@@ -111,10 +114,7 @@ export default function AdSystem({ children }) {
     return __DEV__ || enabled;
   }, []);
 
-  const requestNonPersonalizedAdsOnly = useMemo(() => {
-    const raw = process.env.EXPO_PUBLIC_AD_NPA_ONLY;
-    return raw === '1' || raw === 'true';
-  }, []);
+  
 
   const navState = useNavigationState((state) => state);
   const routePath = useMemo(() => getActiveRoutePath(navState), [navState]);
@@ -124,6 +124,44 @@ export default function AdSystem({ children }) {
   const showAds = nativeAdsAvailable && AD_RULES.shouldShowAds(user);
   const showBanner = nativeAdsAvailable && AD_RULES.canShowBanner(user, screenKey);
   const bottomOffset = useMemo(() => getBottomOffsetFromRoutePath(routePath), [routePath]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function run() {
+      if (Platform.OS !== 'ios') {
+        setAttReady(true);
+        setAttAuthorized(false);
+        return;
+      }
+      try {
+        const mod = await import('expo-tracking-transparency');
+        const { getTrackingPermissionsAsync, requestTrackingPermissionsAsync, TrackingStatus } = mod;
+        const res = await getTrackingPermissionsAsync();
+        let status = res?.status || res;
+        if (status === 'not-determined') {
+          const req = await requestTrackingPermissionsAsync();
+          status = req?.status || req;
+        }
+        if (cancelled) return;
+        setAttAuthorized(status === 'authorized' || status === 'granted' || status === TrackingStatus?.Authorized);
+      } catch (e) {
+        if (adDebugEnabled) console.warn('[ADS] ATT module unavailable or failed', e);
+        setAttAuthorized(false);
+      } finally {
+        if (!cancelled) setAttReady(true);
+      }
+    }
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [adDebugEnabled]);
+
+  const requestNonPersonalizedAdsOnly = useMemo(() => {
+    const raw = process.env.EXPO_PUBLIC_AD_NPA_ONLY;
+    const envPrefersNpa = raw === '1' || raw === 'true';
+    return envPrefersNpa || (Platform.OS === 'ios' && attReady && !attAuthorized);
+  }, [attReady, attAuthorized]);
 
   useEffect(() => {
     if (!adDebugEnabled) return;
@@ -210,18 +248,20 @@ export default function AdSystem({ children }) {
   useEffect(() => {
     if (!showAds) return;
     if (!mobileAds) return;
+    if (Platform.OS === 'ios' && !attReady) return;
     mobileAds().initialize().catch((err) => {
       if (!adDebugEnabled) return;
       console.warn('[ADS] initialize failed', err);
     });
-  }, [showAds, adDebugEnabled]);
+  }, [showAds, adDebugEnabled, attReady]);
 
   useEffect(() => {
     if (!showAds) return;
     if (!InterstitialAd) return;
+    if (Platform.OS === 'ios' && !attReady) return;
 
     if (!interstitialRef.current) {
-      interstitialRef.current = InterstitialAd.createForAdRequest(interstitialAdUnitId);
+      interstitialRef.current = InterstitialAd.createForAdRequest(interstitialAdUnitId, { requestNonPersonalizedAdsOnly });
     }
 
     const interstitial = interstitialRef.current;
@@ -254,11 +294,12 @@ export default function AdSystem({ children }) {
       unsubClosed();
       unsubError();
     };
-  }, [showAds, interstitialAdUnitId]);
+  }, [showAds, interstitialAdUnitId, requestNonPersonalizedAdsOnly, attReady]);
 
   const setupRewarded = useCallback(() => {
     if (!showAds) return null;
     if (!RewardedAd) return null;
+    if (Platform.OS === 'ios' && !attReady) return null;
 
     const hasSameUnit = rewardedRef.current && rewardedUnitIdRef.current === rewardedAdUnitId;
     if (hasSameUnit && rewardedUnsubsRef.current.length) {

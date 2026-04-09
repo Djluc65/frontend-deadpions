@@ -51,16 +51,18 @@ const FriendsMenuModal = memo(({
             <Text style={styles.menuButtonText}>Jouer avec un ami</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.menuButton, { marginTop: getResponsiveSize(15) }]}
-            onPress={() => {
-                playButtonSound();
-                if (onOpenJoinByCode) onOpenJoinByCode();
-            }}
-          >
-            <Ionicons name="key-outline" size={getResponsiveSize(24)} color="#fff" style={{ marginRight: getResponsiveSize(10) }} />
-            <Text style={styles.menuButtonText}>Rejoindre avec un code</Text>
-          </TouchableOpacity>
+          {false && (
+            <TouchableOpacity 
+              style={[styles.menuButton, { marginTop: getResponsiveSize(15) }]}
+              onPress={() => {
+                  playButtonSound();
+                  if (onOpenJoinByCode) onOpenJoinByCode();
+              }}
+            >
+              <Ionicons name="key-outline" size={getResponsiveSize(24)} color="#fff" style={{ marginRight: getResponsiveSize(10) }} />
+              <Text style={styles.menuButtonText}>Rejoindre avec un code</Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={styles.closeButton}

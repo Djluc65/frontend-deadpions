@@ -57,8 +57,9 @@ export const CoinsProvider = ({ children }) => {
 
     const handleBalanceUpdate = (data) => {
         console.log('Balance updated via socket:', data);
-        if (data && typeof data.coins === 'number') {
-            dispatch(updateUser({ coins: data.coins }));
+        const newBalance = typeof data === 'number' ? data : data?.coins;
+        if (typeof newBalance === 'number') {
+            dispatch(updateUser({ coins: newBalance }));
         }
     };
 

@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSelector } from 'react-redux';
 import { playButtonSound } from '../../utils/soundManager';
 import { getResponsiveSize } from '../../utils/responsive';
 import { modalTheme } from '../../utils/modalTheme';
@@ -19,6 +20,7 @@ import { modalTheme } from '../../utils/modalTheme';
 const CODE_LENGTH = 6;
 
 const JoinByCodeModal = memo(({ visible, onClose, socket, navigation, appAlert, t }) => {
+  const user = useSelector(state => state.auth.user);
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -43,18 +45,36 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, navigation, appAlert, 
       cleanupRef.current?.();
       setLoading(false);
       onClose();
-      navigation.navigate('Game', {
-        mode: 'online_custom',
-        gameId: data.gameId,
-        players: data.players,
-        currentTurn: data.currentTurn ?? 'black',
-        betAmount: data.betAmount,
-        timeControl: data.timeControl,
-        gameType: data.mode,
-        tournamentSettings: data.tournamentSettings ?? null,
-        inviteCode: data.inviteCode ?? null,
-        isWaiting: false,
-      });
+      if (data?.type === 'live') {
+        navigation.navigate('SalleAttenteLive', {
+          configSalle: data.config,
+          roomId: data.gameId,
+          roomCode: data.roomCode,
+          role: data.role,
+          players: data.players,
+          betAmount: data.betAmount,
+          timeControl: data.timeControl,
+        });
+        return;
+      }
+
+      if (data?.type === 'custom') {
+        navigation.navigate('Game', {
+          mode: 'online_custom',
+          gameId: data.gameId,
+          players: data.players,
+          currentTurn: data.currentTurn ?? 'black',
+          betAmount: data.betAmount,
+          timeControl: data.timeControl,
+          gameType: data.mode,
+          tournamentSettings: data.tournamentSettings ?? null,
+          inviteCode: data.inviteCode ?? null,
+          isWaiting: false,
+        });
+        return;
+      }
+
+      navigation.navigate('Home');
     };
 
     const handleError = (message) => {
@@ -63,8 +83,8 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, navigation, appAlert, 
       setError(typeof message === 'string' ? message : 'Code invalide ou partie introuvable.');
     };
 
-    socket.on('join_success', handleSuccess);
-    socket.on('join_error', handleError);
+    socket.on('join_code_success', handleSuccess);
+    socket.on('join_code_error', handleError);
 
     const handleGenericError = (msg) => {
       setLoading(false);
@@ -73,8 +93,8 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, navigation, appAlert, 
     socket.on('error', handleGenericError);
 
     return () => {
-      socket.off('join_success', handleSuccess);
-      socket.off('join_error', handleError);
+      socket.off('join_code_success', handleSuccess);
+      socket.off('join_code_error', handleError);
       socket.off('error', handleGenericError);
     };
   }, [socket, navigation, onClose]);
@@ -95,11 +115,16 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, navigation, appAlert, 
       setError('Connexion au serveur indisponible. Réessayez.');
       return;
     }
+    const userId = user?._id || user?.id;
+    if (!userId) {
+      setError('Vous devez être connecté.');
+      return;
+    }
     playButtonSound();
     setLoading(true);
     setError('');
     cleanupRef.current = registerListeners();
-    socket.emit('join_by_code', { code: code.trim() });
+    socket.emit('join_by_code', { code: code.trim().toUpperCase(), userId });
     const timeout = setTimeout(() => {
       cleanupRef.current?.();
       setLoading(false);
@@ -110,7 +135,7 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, navigation, appAlert, 
       clearTimeout(timeout);
       originalCleanup?.();
     };
-  }, [code, socket, registerListeners]);
+  }, [code, socket, registerListeners, user?._id, user?.id]);
 
   const handleClose = useCallback(() => {
     if (loading) return;

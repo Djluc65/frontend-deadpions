@@ -1,9 +1,8 @@
 import React from 'react';
 import renderer from 'react-test-renderer';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import { AppState } from 'react-native';
-import SessionController from '../src/components/SessionController';
 import { useAdManager } from '../src/ads/AdSystem';
 import { appAlert } from '../src/services/appAlert';
 import { socket } from '../src/utils/socket';
@@ -16,9 +15,22 @@ jest.mock('expo-constants', () => ({
   },
 }));
 
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  setItem: jest.fn(() => Promise.resolve()),
+  getItem: jest.fn(() => Promise.resolve(null)),
+  removeItem: jest.fn(() => Promise.resolve()),
+  mergeItem: jest.fn(() => Promise.resolve()),
+  clear: jest.fn(() => Promise.resolve()),
+  getAllKeys: jest.fn(() => Promise.resolve([])),
+  multiGet: jest.fn(() => Promise.resolve([])),
+  multiSet: jest.fn(() => Promise.resolve()),
+  multiRemove: jest.fn(() => Promise.resolve()),
+}));
+
 // Mocks
 jest.mock('react-redux', () => ({
   useSelector: jest.fn(),
+  useDispatch: jest.fn(),
 }));
 
 jest.mock('@react-navigation/native', () => ({
@@ -47,10 +59,13 @@ jest.mock('../src/utils/responsive', () => ({
   getResponsiveSize: jest.fn((val) => val),
 }));
 
+const SessionController = require('../src/components/SessionController').default;
+
 describe('SessionController', () => {
   const { act } = renderer;
   let mockNavigation;
   let mockAdManager;
+  let mockDispatch;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -64,6 +79,9 @@ describe('SessionController', () => {
       navigate: jest.fn(),
     };
     useNavigation.mockReturnValue(mockNavigation);
+
+    mockDispatch = jest.fn();
+    useDispatch.mockReturnValue(mockDispatch);
 
     mockAdManager = {
       showAds: true,

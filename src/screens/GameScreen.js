@@ -252,6 +252,7 @@ const GameScreen = ({ navigation, route }) => {
       AudioController.setRematchMode(true);
       setWaitingForNextRound(true);
       setCurrentPlayer(null);
+      setSelectedCell(null);
       socket.emit('player_ready_next_round', {
         gameId: params.gameId,
         userId: user._id
@@ -629,6 +630,7 @@ const GameScreen = ({ navigation, route }) => {
     const handleSpectatorJoined = (data) => {
         setBoard(data.board || []);
         setCurrentPlayer(data.currentTurn);
+        setSelectedCell(null);
         if (data.moves && data.moves.length > 0) {
             setDernierCoupIA(data.moves[data.moves.length - 1]);
         }
@@ -666,6 +668,7 @@ const GameScreen = ({ navigation, route }) => {
              setWaitingForNextRound(false);
              setWaitingMessage(null);
              setCurrentPlayer(null);
+             setSelectedCell(null);
              setTimeLeft(undefined);
              setTimeouts({ black: 0, white: 0 });
              setTournamentScore({ black: 0, white: 0 });
@@ -697,6 +700,7 @@ const GameScreen = ({ navigation, route }) => {
         setBoard(Array.isArray(data.board) ? data.board : []);
         setWinningLine(null);
         setGameOver(false);
+        setSelectedCell(null);
         setShowResultModal(false);
         setNextMatchVisible(false);
         setWaitingForNextRound(false);
@@ -971,6 +975,7 @@ const GameScreen = ({ navigation, route }) => {
     const handleRoundOver = (data) => {
         setRoundOverData(data);
         setWaitingForNextRound(false);
+        setSelectedCell(null);
 
         // Calculate winning line for visual effect
         if (data.winner) {
@@ -1016,11 +1021,12 @@ const GameScreen = ({ navigation, route }) => {
 
     const handleStartNextRound = (data) => {
         setWaitingForNextRound(false);
-        setBoard([]);
+        setBoard(Array.isArray(data?.board) ? data.board : []);
         setTimeouts({ black: 0, white: 0 });
         setTournamentScore(data.score);
         setTournamentGameNumber(data.nextGameNumber);
         setCurrentPlayer(data.nextTurn);
+        setSelectedCell(null);
         if (data.timeControl) setTimeLeft(data.timeControl);
 
         // Reset game state for next round
@@ -1110,6 +1116,9 @@ const GameScreen = ({ navigation, route }) => {
     };
 
     const handleSocketError = (msg) => {
+        if (msg === 'Not your turn' || msg === 'Not your turn.') {
+            return;
+        }
         console.log('Socket error:', msg);
         if (msg === 'Cell occupied') {
             if ((mode === 'online' || mode === 'online_custom') && params.gameId) {
@@ -3692,7 +3701,7 @@ const GameScreen = ({ navigation, route }) => {
                                   styles.boutonRejouer, 
                                   { 
                                       backgroundColor: '#f1c40f', 
-                                      width: type === 'online' ? '20%' : '100%', 
+                                      width: (type === 'online' || type === 'online_custom') ? '20%' : '100%', 
                                       marginBottom: 0, 
                                       flex: 0 
                                   }
@@ -4122,7 +4131,7 @@ const GameScreen = ({ navigation, route }) => {
       )}
 
       <View 
-        style={[styles.boardContainer, (mode === 'online' || mode === 'live') && !isTablet && { marginTop: gameOver ? -50 : (nextMatchVisible ? 0 : 70) }]} 
+        style={[styles.boardContainer, (mode === 'online' || mode === 'live') && !isTablet && { marginTop: gameOver ? -50 : 0 }]} 
         onLayout={(e) => containerDimensions.current = e.nativeEvent.layout}
         pointerEvents={mode === 'spectator' ? 'none' : 'auto'}
       >
@@ -4423,7 +4432,7 @@ const GameScreen = ({ navigation, route }) => {
                             {mode === 'live' ? "La partie commencera dès qu'un joueur rejoindra la salle." : "Invitez un ami pour commencer la partie"}
                         </Text>
                         
-                        {(mode === 'online_custom' && params?.inviteCode) && (
+                        {false && (mode === 'online_custom' && params?.inviteCode) && (
                           <View style={{ marginTop: getResponsiveSize(16), alignItems: 'center' }}>
                             <Text style={{ color: '#f1c40f', fontWeight: 'bold', letterSpacing: 2, fontSize: getResponsiveSize(18) }}>{params.inviteCode}</Text>
                             <View style={{ backgroundColor: '#fff', padding: getResponsiveSize(8), borderRadius: getResponsiveSize(8), marginTop: getResponsiveSize(10) }}>

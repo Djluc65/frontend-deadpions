@@ -62,6 +62,10 @@ const SalleAttenteLive = ({ route, navigation }) => {
   // Connexion au salon socket et écoute du démarrage
   useEffect(() => {
       if (roomId) {
+          const userId = user?._id || user?.id;
+          if (!socket.connected) socket.connect();
+          if (userId) socket.emit('join_user_room', userId);
+
           // Rejoindre la salle socket pour recevoir les événements (game_start, etc.)
           socket.emit('join_live_room', { gameId: roomId });
 
@@ -409,7 +413,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
             
             <View style={styles.divider} />
 
-            {isCreator && configSalle?.roomCode && (
+            {false && isCreator && configSalle?.roomCode && (
               <View style={styles.inviteSection}>
                 <Text style={styles.inviteSectionTitle}>Inviter via code ou QR</Text>
                 <View style={styles.qrContainer}>

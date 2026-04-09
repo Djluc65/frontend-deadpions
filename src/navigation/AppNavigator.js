@@ -1,9 +1,11 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { View, ActivityIndicator } from 'react-native';
 import { socket } from '../utils/socket';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { appAlert } from '../services/appAlert';
+import { updateUser } from '../redux/slices/authSlice';
 
 // Écrans
 import WaitingScreen from '../screens/WaitingScreen';
@@ -33,6 +35,7 @@ import SessionController from '../components/SessionController';
 
 function InviteJoinScreen({ route, navigation }) {
   const user = useSelector(state => state.auth.user);
+  const dispatch = useDispatch();
   const code = route?.params?.code;
 
   React.useEffect(() => {
@@ -50,34 +53,63 @@ function InviteJoinScreen({ route, navigation }) {
 
     const handleSuccess = (data) => {
       cleanup();
-      if (data?.type === 'custom') {
-        navigation.replace('Game', { mode: 'online_custom', gameId: data.gameId });
-      } else if (data?.config) {
-        navigation.replace('SalleAttenteLive', { configSalle: data.config, roomId: data.gameId });
-      } else if (data?.gameId) {
-        navigation.replace('SalleAttenteLive', { roomId: data.gameId });
-      } else {
-        navigation.replace('Home');
+      if (data?.type === 'live') {
+        navigation.replace('SalleAttenteLive', {
+          configSalle: data.config,
+          roomId: data.gameId,
+          roomCode: data.roomCode,
+          role: data.role,
+          players: data.players,
+          betAmount: data.betAmount,
+          timeControl: data.timeControl,
+        });
+        return;
       }
+
+      if (data?.type === 'custom') {
+        navigation.replace('Game', {
+          mode: 'online_custom',
+          gameId: data.gameId,
+          players: data.players,
+          currentTurn: data.currentTurn ?? 'black',
+          betAmount: data.betAmount,
+          timeControl: data.timeControl,
+          gameType: data.mode,
+          tournamentSettings: data.tournamentSettings ?? null,
+          inviteCode: data.inviteCode ?? null,
+          isWaiting: false,
+        });
+        return;
+      }
+
+      navigation.replace('Home');
     };
 
-    const handleError = () => {
+    const handleError = (msg) => {
       cleanup();
+      appAlert('Invitation', typeof msg === 'string' ? msg : 'Code invalide ou expiré.');
       navigation.replace('Home');
+    };
+
+    const handleBalanceUpdated = (payload) => {
+      const newBalance = typeof payload === 'number' ? payload : payload?.coins;
+      if (typeof newBalance === 'number') dispatch(updateUser({ coins: newBalance }));
     };
 
     const cleanup = () => {
       socket.off('join_code_success', handleSuccess);
       socket.off('join_code_error', handleError);
+      socket.off('balance_updated', handleBalanceUpdated);
     };
 
     socket.on('join_code_success', handleSuccess);
     socket.on('join_code_error', handleError);
+    socket.on('balance_updated', handleBalanceUpdated);
 
     socket.emit('join_by_code', { code: code.trim().toUpperCase(), userId: user._id || user.id });
 
     return cleanup;
-  }, [user, code, navigation]);
+  }, [user, code, navigation, dispatch]);
 
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#041c55' }}>

@@ -61,7 +61,11 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
 
     // Setup socket listeners
     useEffect(() => {
-        if (!user || !user._id) return;
+        if (!visible) return;
+        const userId = user?._id || user?.id;
+        if (!userId) return;
+        if (!socket.connected) socket.connect();
+        socket.emit('join_user_room', userId);
 
         const handleRoomCreated = (createdConfig) => {
             setIsCreating(false);
@@ -97,7 +101,7 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
             socket.off('live_room_created', handleRoomCreated);
             socket.off('error', handleError);
         };
-    }, [user, navigation, onClose]);
+    }, [visible, user?._id, user?.id, navigation, onClose]);
 
     const validateStep1 = () => {
         if (!nomSalle.trim()) {
@@ -132,6 +136,14 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
         // Final validation check (though steps should have caught it)
         if (!validateStep1()) return;
 
+        const userId = user?._id || user?.id;
+        if (!userId) {
+            appAlert('Erreur', 'Vous devez être connecté.');
+            return;
+        }
+        if (!socket.connected) socket.connect();
+        socket.emit('join_user_room', userId);
+
         setIsCreating(true);
 
         const configSalle = {
@@ -140,7 +152,7 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
             description: description || 'Partie en direct',
             type: 'live',
             createur: {
-                id: user._id || user.id,
+                id: userId,
                 pseudo: user.pseudo,
                 avatar: user.avatar,
                 niveau: user.level || 1,
@@ -409,32 +421,37 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                             <Text style={styles.betInfo}>Veuillez patienter</Text>
                         </View>
                     ) : (
-                        <ScrollView contentContainerStyle={{ alignItems: 'center', width: '100%' }} style={{ width: '100%' }}>
-                            <Text style={styles.friendsModalTitle}>Créer une Salle Live</Text>
-                            <Text style={styles.stepIndicator}>Étape {step}/{TOTAL_STEPS}</Text>
+                        <>
+                          <ScrollView 
+                            contentContainerStyle={{ alignItems: 'center', width: '100%', paddingBottom: getResponsiveSize(120) }} 
+                            style={{ width: '100%' }}
+                          >
+                              <Text style={styles.friendsModalTitle}>Créer une Salle Live</Text>
+                              <Text style={styles.stepIndicator}>Étape {step}/{TOTAL_STEPS}</Text>
 
-                            {renderStepContent()}
+                              {renderStepContent()}
+                          </ScrollView>
 
-                            <View style={styles.modalButtons}>
-                                <TouchableOpacity 
-                                    style={styles.modalButtonCancel} 
-                                    onPress={step === 1 ? onClose : handleBack}
-                                >
-                                    <Text style={styles.modalButtonText}>
-                                        {step === 1 ? 'Annuler' : 'Retour'}
-                                    </Text>
-                                </TouchableOpacity>
-                                
-                                <TouchableOpacity 
-                                    style={styles.modalButtonConfirm} 
-                                    onPress={step === TOTAL_STEPS ? handleCreateRoom : handleNext}
-                                >
-                                    <Text style={[styles.modalButtonText, styles.modalButtonTextActive]}>
-                                        {step === TOTAL_STEPS ? 'CRÉER' : 'SUIVANT'}
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
-                        </ScrollView>
+                          <View style={styles.modalButtonsFixed}>
+                              <TouchableOpacity 
+                                  style={styles.modalButtonCancel} 
+                                  onPress={step === 1 ? onClose : handleBack}
+                              >
+                                  <Text style={styles.modalButtonText}>
+                                      {step === 1 ? 'Annuler' : 'Retour'}
+                                  </Text>
+                              </TouchableOpacity>
+                              
+                              <TouchableOpacity 
+                                  style={styles.modalButtonConfirm} 
+                                  onPress={step === TOTAL_STEPS ? handleCreateRoom : handleNext}
+                              >
+                                  <Text style={[styles.modalButtonText, styles.modalButtonTextActive]}>
+                                      {step === TOTAL_STEPS ? 'CRÉER' : 'SUIVANT'}
+                                  </Text>
+                              </TouchableOpacity>
+                          </View>
+                        </>
                     )}
                 </Pressable>
             </Pressable>
@@ -507,6 +524,15 @@ const styles = StyleSheet.create({
         width: '100%',
         marginTop: getResponsiveSize(20),
         marginBottom: getResponsiveSize(20)
+    },
+    modalButtonsFixed: {
+        position: 'absolute',
+        left: getResponsiveSize(16),
+        right: getResponsiveSize(16),
+        bottom: getResponsiveSize(16),
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
     modalButtonCancel: {
         flex: 1,

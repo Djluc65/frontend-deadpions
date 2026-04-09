@@ -6,7 +6,7 @@
     "newArchEnabled": true,
     "scheme": "deadpions",
     "orientation": "portrait",
-    "icon": "./assets/adaptive-icon.png",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash.png",
@@ -33,7 +33,7 @@
     "android": {
       "package": "com.deadpions.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [
@@ -67,7 +67,6 @@
       [
         "@stripe/stripe-react-native",
         {
-          "merchantIdentifier": "merchant.com.deadpions",
           "enableGooglePay": true
         }
       ],
@@ -80,7 +79,8 @@
         }
       ],
       "expo-apple-authentication",
-      "react-native-iap"
+      "react-native-iap",
+      "expo-tracking-transparency"
     ],
     "extra": {
       "eas": {

@@ -1,16 +1,18 @@
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { socket } from '../utils/socket';
 import { API_URL } from '../config';
 import { useAdManager } from '../ads/AdSystem';
 import { appAlert } from '../services/appAlert';
 import { getResponsiveSize } from '../utils/responsive';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { updateUser } from '../redux/slices/authSlice';
 
 const SessionController = () => {
     const navigation = useNavigation();
+    const dispatch = useDispatch();
     const { token, user } = useSelector(state => state.auth);
     const { showAds, prepareRewarded, showRewarded } = useAdManager();
     const appState = useRef(AppState.currentState);
@@ -39,24 +41,50 @@ const SessionController = () => {
                     if (code && code.length === 6) {
                         await AsyncStorage.removeItem('pendingInviteCode');
                         if (!socket.connected) socket.connect();
+                        const onBalanceUpdated = (payload) => {
+                            const newBalance = typeof payload === 'number' ? payload : payload?.coins;
+                            if (typeof newBalance === 'number') dispatch(updateUser({ coins: newBalance }));
+                        };
                         const onSuccess = (data) => {
                             socket.off('join_code_success', onSuccess);
                             socket.off('join_code_error', onError);
+                            socket.off('balance_updated', onBalanceUpdated);
                             if (data?.type === 'custom') {
-                                navigation.navigate('Game', { mode: 'online_custom', gameId: data.gameId });
+                                navigation.navigate('Game', {
+                                    mode: 'online_custom',
+                                    gameId: data.gameId,
+                                    players: data.players,
+                                    currentTurn: data.currentTurn ?? 'black',
+                                    betAmount: data.betAmount,
+                                    timeControl: data.timeControl,
+                                    gameType: data.mode,
+                                    tournamentSettings: data.tournamentSettings ?? null,
+                                    inviteCode: data.inviteCode ?? null,
+                                    isWaiting: false,
+                                });
                             } else if (data?.gameId) {
-                                navigation.navigate('SalleAttenteLive', { roomId: data.gameId, configSalle: data.config });
+                                navigation.navigate('SalleAttenteLive', {
+                                    configSalle: data.config,
+                                    roomId: data.gameId,
+                                    roomCode: data.roomCode,
+                                    role: data.role,
+                                    players: data.players,
+                                    betAmount: data.betAmount,
+                                    timeControl: data.timeControl,
+                                });
                             } else {
                                 navigation.navigate('Home');
                             }
                         };
-                        const onError = () => {
+                        const onError = (msg) => {
                             socket.off('join_code_success', onSuccess);
                             socket.off('join_code_error', onError);
-                            appAlert('Invitation', 'Code invalide ou expiré.');
+                            socket.off('balance_updated', onBalanceUpdated);
+                            appAlert('Invitation', typeof msg === 'string' ? msg : 'Code invalide ou expiré.');
                         };
                         socket.on('join_code_success', onSuccess);
                         socket.on('join_code_error', onError);
+                        socket.on('balance_updated', onBalanceUpdated);
                         socket.emit('join_by_code', { code: code.trim().toUpperCase(), userId });
                     }
                 } catch (e) {
@@ -64,7 +92,7 @@ const SessionController = () => {
                 }
             })();
         }
-    }, [token, user?._id, user?.id]);
+    }, [token, user?._id, user?.id, dispatch]);
 
     useEffect(() => {
         if (!token) return;

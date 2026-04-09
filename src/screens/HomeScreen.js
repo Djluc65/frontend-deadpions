@@ -154,7 +154,7 @@ const HomeScreen = ({ navigation }) => {
         mode: 'online_custom',
         gameId: data.gameId,
         players: data.players,
-        currentTurn: 'black',
+        currentTurn: data.currentTurn || 'black',
         betAmount: data.betAmount,
         timeControl: data.timeControl,
         gameType: data.mode,
