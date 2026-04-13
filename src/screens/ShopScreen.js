@@ -28,6 +28,9 @@ const ShopScreen = () => {
 
   const { showAds, showRewarded } = useAdManager();
   const [loading, setLoading] = useState(false);
+  const [availableIapSkus, setAvailableIapSkus] = useState([]);
+  const iapReadyRef = useRef(false);
+  const purchaseTimeoutRef = useRef(null);
   
   // Apple SKUs (Mis à jour avec les identifiants réels fournis par Apple)
   const IAP_SKUS = {
@@ -45,14 +48,71 @@ const ShopScreen = () => {
   const iosCoinsUseWebShop = false;
   const pendingProfileRefreshRef = useRef(false);
 
+  const clearPurchaseTimeout = useCallback(() => {
+    if (!purchaseTimeoutRef.current) return;
+    clearTimeout(purchaseTimeoutRef.current);
+    purchaseTimeoutRef.current = null;
+  }, []);
+
+  const startPurchaseTimeout = useCallback(() => {
+    clearPurchaseTimeout();
+    purchaseTimeoutRef.current = setTimeout(() => {
+      setLoading(false);
+      appAlert(
+        'Info',
+        "Aucune fenêtre d'achat Apple n'est apparue.\n\nCauses fréquentes:\n- Produit In-App Purchase non disponible sur TestFlight (pas associé à la build ou mauvais identifiant)\n- Achats In-App désactivés sur l'iPhone (Temps d'écran)\n- Problème de connexion à l'App Store\n\nRéessaie après avoir vérifié App Store Connect > TestFlight > In-App Purchases."
+      );
+    }, 20000);
+  }, [clearPurchaseTimeout]);
+
+  const ensureIapReady = useCallback(async () => {
+    if (!isIOS) return true;
+    if (iapReadyRef.current) return true;
+    try {
+      await IAP.initConnection();
+      iapReadyRef.current = true;
+      return true;
+    } catch (err) {
+      console.warn('IAP Init Error:', err);
+      appAlert('Erreur', "Impossible d'initialiser les achats Apple.");
+      return false;
+    }
+  }, [isIOS]);
+
   // Initialisation IAP
   useEffect(() => {
     if (isIOS) {
       const initIAP = async () => {
         try {
           await IAP.initConnection();
-          // Pré-charger les produits si nécessaire
-          await IAP.fetchProducts({ skus: Object.values(IAP_SKUS), type: 'all' });
+          iapReadyRef.current = true;
+
+          const productSkus = [
+            IAP_SKUS.pack_beginner,
+            IAP_SKUS.pack_popular,
+            IAP_SKUS.pack_bestseller,
+            IAP_SKUS.pack_pro,
+            IAP_SKUS.pack_expert,
+            IAP_SKUS.pack_whale,
+            IAP_SKUS.pack_premium_unlock,
+          ].filter(Boolean);
+
+          const subscriptionSkus = [
+            IAP_SKUS.subscription_monthly,
+            IAP_SKUS.subscription_yearly,
+          ].filter(Boolean);
+
+          const products = await IAP.fetchProducts({ skus: productSkus, type: 'in-app' });
+          const subscriptions = await IAP.fetchProducts({ skus: subscriptionSkus, type: 'subs' });
+
+          const ids = [
+            ...(Array.isArray(products) ? products : []),
+            ...(Array.isArray(subscriptions) ? subscriptions : []),
+          ]
+            .map((p) => p?.productId || p?.id || p?.sku)
+            .filter(Boolean);
+
+          setAvailableIapSkus(Array.from(new Set(ids)));
         } catch (err) {
           console.warn('IAP Init Error:', err);
         }
@@ -61,6 +121,7 @@ const ShopScreen = () => {
 
       // Listener pour les achats terminés
       const purchaseUpdateSubscription = IAP.purchaseUpdatedListener(async (purchase) => {
+        clearPurchaseTimeout();
         const receipt = purchase.transactionReceipt;
         if (receipt) {
           try {
@@ -74,11 +135,15 @@ const ShopScreen = () => {
             await IAP.finishTransaction({ purchase, isConsumable });
           } catch (ackErr) {
             console.warn('IAP Ack Error:', ackErr);
+            setLoading(false);
           }
+        } else {
+          setLoading(false);
         }
       });
 
       const purchaseErrorSubscription = IAP.purchaseErrorListener((error) => {
+        clearPurchaseTimeout();
         if (error.code !== 'E_USER_CANCELLED') {
            appAlert('Erreur', `L'achat a échoué: ${error.message}`);
         }
@@ -86,6 +151,7 @@ const ShopScreen = () => {
       });
 
       return () => {
+        clearPurchaseTimeout();
         purchaseUpdateSubscription.remove();
         purchaseErrorSubscription.remove();
         IAP.endConnection();
@@ -225,12 +291,27 @@ const ShopScreen = () => {
         setLoading(true);
         try {
             const sku = plan === 'Mensuel' ? IAP_SKUS.subscription_monthly : IAP_SKUS.subscription_yearly;
+            const ready = await ensureIapReady();
+            if (!ready) {
+              setLoading(false);
+              return;
+            }
+            if (availableIapSkus.length > 0 && !availableIapSkus.includes(sku)) {
+              setLoading(false);
+              appAlert(
+                'Info',
+                "Cet abonnement n'est pas disponible sur TestFlight.\n\nVérifie que le produit existe dans App Store Connect et qu'il est associé à cette build TestFlight."
+              );
+              return;
+            }
+            startPurchaseTimeout();
             await IAP.requestPurchase({
               type: 'subs',
               request: { apple: { sku, andDangerouslyFinishTransactionAutomatically: false } }
             });
         } catch (err) {
             console.error('IAP Subscription Error:', err);
+            clearPurchaseTimeout();
             setLoading(false);
         }
         return;
@@ -325,12 +406,27 @@ const ShopScreen = () => {
       try {
         const sku = IAP_SKUS[packId];
         if (!sku) throw new Error('Produit non configuré pour Apple');
+        const ready = await ensureIapReady();
+        if (!ready) {
+          setLoading(false);
+          return;
+        }
+        if (availableIapSkus.length > 0 && !availableIapSkus.includes(sku)) {
+          setLoading(false);
+          appAlert(
+            'Info',
+            "Ce produit n'est pas disponible sur TestFlight.\n\nVérifie l'identifiant du produit (SKU) dans le code et dans App Store Connect, puis associe l'In-App Purchase à la build TestFlight."
+          );
+          return;
+        }
+        startPurchaseTimeout();
         await IAP.requestPurchase({
           type: 'in-app',
           request: { apple: { sku, andDangerouslyFinishTransactionAutomatically: false } }
         });
       } catch (err) {
         console.error('IAP Purchase Error:', err);
+        clearPurchaseTimeout();
         setLoading(false);
       }
       return;
@@ -567,9 +663,6 @@ const ShopScreen = () => {
                     ) : (
                         <>
                           <Text style={styles.priceText}>{pack.price}</Text>
-                          {isIOS && (
-                            <Text style={styles.priceSubText}>Apple Pay</Text>
-                          )}
                         </>
                     )}
                   </View>

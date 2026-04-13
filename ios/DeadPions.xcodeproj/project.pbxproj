@@ -7,31 +7,31 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0C15A6DEF37B3960B8D21D1C /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = BE001AC028DC66184399346E /* PrivacyInfo.xcprivacy */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		206D169F9E46FF81168AC636 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F09C7317C8021CE5FEE5395 /* ExpoModulesProvider.swift */; };
+		2B43F1D5D682A11011DCC536 /* libPods-DeadPions.a in Frameworks */ = {isa = PBXBuildFile; fileRef = FD67636DFA25A4C9500D7742 /* libPods-DeadPions.a */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		47197937133747F989938895 /* noop-file.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30C30FCF4B7140589331A2A3 /* noop-file.swift */; };
-		4827643A6426A42F2F1DA849 /* libPods-DeadPions.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 6609893F4D31C65ECAF4D1F3 /* libPods-DeadPions.a */; };
-		A031B4FD42B60A1414E5AB1D /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBF3C1D1A606F5041911363E /* ExpoModulesProvider.swift */; };
+		6E105B4BB34C1CFBE8F55173 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F901EB177115E523A4DFDE5F /* PrivacyInfo.xcprivacy */; };
+		8B3FA36320754AE085AA09F0 /* noop-file.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF89D33D3FF5436A84082795 /* noop-file.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0F09C7317C8021CE5FEE5395 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-DeadPions/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* DeadPions.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeadPions.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = DeadPions/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = DeadPions/Info.plist; sourceTree = "<group>"; };
-		30C30FCF4B7140589331A2A3 /* noop-file.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = "noop-file.swift"; path = "DeadPions/noop-file.swift"; sourceTree = "<group>"; };
-		392FC734B12FE7E8957C11EF /* Pods-DeadPions.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DeadPions.release.xcconfig"; path = "Target Support Files/Pods-DeadPions/Pods-DeadPions.release.xcconfig"; sourceTree = "<group>"; };
-		6609893F4D31C65ECAF4D1F3 /* libPods-DeadPions.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-DeadPions.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		4FA1EDD13234D1CD743A8FCB /* Pods-DeadPions.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DeadPions.release.xcconfig"; path = "Target Support Files/Pods-DeadPions/Pods-DeadPions.release.xcconfig"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = DeadPions/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		BE001AC028DC66184399346E /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = DeadPions/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		C92FC026BD98D6CE351DE702 /* Pods-DeadPions.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DeadPions.debug.xcconfig"; path = "Target Support Files/Pods-DeadPions/Pods-DeadPions.debug.xcconfig"; sourceTree = "<group>"; };
-		EBF3C1D1A606F5041911363E /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-DeadPions/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		CF89D33D3FF5436A84082795 /* noop-file.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = "noop-file.swift"; path = "DeadPions/noop-file.swift"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = DeadPions/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* DeadPions-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "DeadPions-Bridging-Header.h"; path = "DeadPions/DeadPions-Bridging-Header.h"; sourceTree = "<group>"; };
+		F901EB177115E523A4DFDE5F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = DeadPions/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		FD67636DFA25A4C9500D7742 /* libPods-DeadPions.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-DeadPions.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		FEB44DB0E34DA8A394FF275D /* Pods-DeadPions.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-DeadPions.debug.xcconfig"; path = "Target Support Files/Pods-DeadPions/Pods-DeadPions.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -39,23 +39,13 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4827643A6426A42F2F1DA849 /* libPods-DeadPions.a in Frameworks */,
+				2B43F1D5D682A11011DCC536 /* libPods-DeadPions.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		138EDFB877195712ADE0394D /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				C92FC026BD98D6CE351DE702 /* Pods-DeadPions.debug.xcconfig */,
-				392FC734B12FE7E8957C11EF /* Pods-DeadPions.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
-			sourceTree = "<group>";
-		};
 		13B07FAE1A68108700A75B9A /* DeadPions */ = {
 			isa = PBXGroup;
 			children = (
@@ -65,8 +55,8 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				30C30FCF4B7140589331A2A3 /* noop-file.swift */,
-				BE001AC028DC66184399346E /* PrivacyInfo.xcprivacy */,
+				CF89D33D3FF5436A84082795 /* noop-file.swift */,
+				F901EB177115E523A4DFDE5F /* PrivacyInfo.xcprivacy */,
 			);
 			name = DeadPions;
 			sourceTree = "<group>";
@@ -75,9 +65,27 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				6609893F4D31C65ECAF4D1F3 /* libPods-DeadPions.a */,
+				FD67636DFA25A4C9500D7742 /* libPods-DeadPions.a */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		41E1B68DE5B9FB87876D3F76 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				FEB44DB0E34DA8A394FF275D /* Pods-DeadPions.debug.xcconfig */,
+				4FA1EDD13234D1CD743A8FCB /* Pods-DeadPions.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		4E46343360DF62239E9D7B42 /* DeadPions */ = {
+			isa = PBXGroup;
+			children = (
+				0F09C7317C8021CE5FEE5395 /* ExpoModulesProvider.swift */,
+			);
+			name = DeadPions;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -94,8 +102,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				138EDFB877195712ADE0394D /* Pods */,
-				A1C23E678019805CCEDA2FE1 /* ExpoModulesProviders */,
+				41E1B68DE5B9FB87876D3F76 /* Pods */,
+				A511CD21588107271780627E /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -110,18 +118,10 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		8E7E71DF28BEAADE72CD06C3 /* DeadPions */ = {
+		A511CD21588107271780627E /* ExpoModulesProviders */ = {
 			isa = PBXGroup;
 			children = (
-				EBF3C1D1A606F5041911363E /* ExpoModulesProvider.swift */,
-			);
-			name = DeadPions;
-			sourceTree = "<group>";
-		};
-		A1C23E678019805CCEDA2FE1 /* ExpoModulesProviders */ = {
-			isa = PBXGroup;
-			children = (
-				8E7E71DF28BEAADE72CD06C3 /* DeadPions */,
+				4E46343360DF62239E9D7B42 /* DeadPions */,
 			);
 			name = ExpoModulesProviders;
 			sourceTree = "<group>";
@@ -143,14 +143,14 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "DeadPions" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				1AA7C901A224CC910620A2AF /* [Expo] Configure project */,
+				3BB19AD8FACA79F7759BBCC2 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				536F9C6AE65BA0FD1AA5EFE4 /* [CP] Embed Pods Frameworks */,
-				9010C4A540A2B7568480B623 /* [CP-User] [RNGoogleMobileAds] Configuration */,
+				8F82340B58553AD3D4A1AC17 /* [CP] Embed Pods Frameworks */,
+				F2983B530C2E57E15A58C21F /* [CP-User] [RNGoogleMobileAds] Configuration */,
 			);
 			buildRules = (
 			);
@@ -170,8 +170,8 @@
 				LastUpgradeCheck = 1130;
 				TargetAttributes = {
 					13B07F861A680F5B00A75B9A = {
-						DevelopmentTeam = GA3R4ZC74G;
 						LastSwiftMigration = 1250;
+						DevelopmentTeam = "GA3R4ZC74G";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -202,7 +202,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				0C15A6DEF37B3960B8D21D1C /* PrivacyInfo.xcprivacy in Resources */,
+				6E105B4BB34C1CFBE8F55173 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -224,7 +224,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [[ -f \"$PODS_ROOT/../.xcode.env\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env\"\nfi\nif [[ -f \"$PODS_ROOT/../.xcode.env.local\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env.local\"\nfi\n\n# The project root by default is one level up from the ios directory\nexport PROJECT_ROOT=\"$PROJECT_DIR\"/..\n\nif [[ \"$CONFIGURATION\" = *Debug* ]]; then\n  export SKIP_BUNDLING=1\nfi\nif [[ -z \"$ENTRY_FILE\" ]]; then\n  # Set the entry JS file using the bundler's entry resolution.\n  export ENTRY_FILE=\"$(\"$NODE_BINARY\" -e \"require('expo/scripts/resolveAppEntry')\" \"$PROJECT_ROOT\" ios absolute | tail -n 1)\"\nfi\n\nif [[ -z \"$CLI_PATH\" ]]; then\n  # Use Expo CLI\n  export CLI_PATH=\"$(\"$NODE_BINARY\" --print \"require.resolve('@expo/cli', { paths: [require.resolve('expo/package.json')] })\")\"\nfi\nif [[ -z \"$BUNDLE_COMMAND\" ]]; then\n  # Default Expo CLI command for bundling\n  export BUNDLE_COMMAND=\"export:embed\"\nfi\n\n# Source .xcode.env.updates if it exists to allow\n# SKIP_BUNDLING to be unset if needed\nif [[ -f \"$PODS_ROOT/../.xcode.env.updates\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env.updates\"\nfi\n# Source local changes to allow overrides\n# if needed\nif [[ -f \"$PODS_ROOT/../.xcode.env.local\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env.local\"\nfi\n\nRN_XCODE_SCRIPT_PATH=\"$(\"$NODE_BINARY\" --print \"require('path').dirname(require.resolve('react-native/package.json')) + '/scripts/react-native-xcode.sh'\")\"\n\"$RN_XCODE_SCRIPT_PATH\"\n\n";
+			shellScript = "if [[ -f \"$PODS_ROOT/../.xcode.env\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env\"\nfi\nif [[ -f \"$PODS_ROOT/../.xcode.env.local\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env.local\"\nfi\n\n# The project root by default is one level up from the ios directory\nexport PROJECT_ROOT=\"$PROJECT_DIR\"/..\n\nif [[ \"$CONFIGURATION\" = *Debug* ]]; then\n  export SKIP_BUNDLING=1\nfi\nif [[ -z \"$ENTRY_FILE\" ]]; then\n  # Set the entry JS file using the bundler's entry resolution.\n  export ENTRY_FILE=\"$(\"$NODE_BINARY\" -e \"require('expo/scripts/resolveAppEntry')\" \"$PROJECT_ROOT\" ios absolute | tail -n 1)\"\nfi\n\nif [[ -z \"$CLI_PATH\" ]]; then\n  # Use Expo CLI\n  export CLI_PATH=\"$(\"$NODE_BINARY\" --print \"require.resolve('@expo/cli', { paths: [require.resolve('expo/package.json')] })\")\"\nfi\nif [[ -z \"$BUNDLE_COMMAND\" ]]; then\n  # Default Expo CLI command for bundling\n  export BUNDLE_COMMAND=\"export:embed\"\nfi\n\n# Source .xcode.env.updates if it exists to allow\n# SKIP_BUNDLING to be unset if needed\nif [[ -f \"$PODS_ROOT/../.xcode.env.updates\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env.updates\"\nfi\n# Source local changes to allow overrides\n# if needed\nif [[ -f \"$PODS_ROOT/../.xcode.env.local\" ]]; then\n  source \"$PODS_ROOT/../.xcode.env.local\"\nfi\n\n`\"$NODE_BINARY\" --print \"require('path').dirname(require.resolve('react-native/package.json')) + '/scripts/react-native-xcode.sh'\"`\n\n";
 		};
 		08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -248,7 +248,7 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		1AA7C901A224CC910620A2AF /* [Expo] Configure project */ = {
+		3BB19AD8FACA79F7759BBCC2 /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -271,30 +271,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-DeadPions/expo-configure-project.sh\"\n";
-		};
-		536F9C6AE65BA0FD1AA5EFE4 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-DeadPions/Pods-DeadPions-frameworks.sh",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/JitsiWebRTC/WebRTC.framework/WebRTC",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/WebRTC.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/React.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactNativeDependencies.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-DeadPions/Pods-DeadPions-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
 		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -358,7 +334,31 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-DeadPions/Pods-DeadPions-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		9010C4A540A2B7568480B623 /* [CP-User] [RNGoogleMobileAds] Configuration */ = {
+		8F82340B58553AD3D4A1AC17 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-DeadPions/Pods-DeadPions-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/JitsiWebRTC/WebRTC.framework/WebRTC",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/WebRTC.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/React.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactNativeDependencies.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-DeadPions/Pods-DeadPions-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		F2983B530C2E57E15A58C21F /* [CP-User] [RNGoogleMobileAds] Configuration */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -379,8 +379,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				47197937133747F989938895 /* noop-file.swift in Sources */,
-				A031B4FD42B60A1414E5AB1D /* ExpoModulesProvider.swift in Sources */,
+				8B3FA36320754AE085AA09F0 /* noop-file.swift in Sources */,
+				206D169F9E46FF81168AC636 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -389,15 +389,12 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = C92FC026BD98D6CE351DE702 /* Pods-DeadPions.debug.xcconfig */;
+			baseConfigurationReference = FEB44DB0E34DA8A394FF275D /* Pods-DeadPions.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = DeadPions/DeadPions.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = GA3R4ZC74G;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -423,20 +420,20 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
+				DEVELOPMENT_TEAM = "GA3R4ZC74G";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 			};
 			name = Debug;
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 392FC734B12FE7E8957C11EF /* Pods-DeadPions.release.xcconfig */;
+			baseConfigurationReference = 4FA1EDD13234D1CD743A8FCB /* Pods-DeadPions.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = DeadPions/DeadPions.entitlements;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = GA3R4ZC74G;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = DeadPions/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -457,6 +454,9 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
+				DEVELOPMENT_TEAM = "GA3R4ZC74G";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 			};
 			name = Release;
 		};

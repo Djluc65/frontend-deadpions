@@ -134,16 +134,21 @@ export default function AdSystem({ children }) {
         return;
       }
       try {
+        // Un petit délai pour s'assurer que l'app est bien au premier plan
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
         const mod = await import('expo-tracking-transparency');
         const { getTrackingPermissionsAsync, requestTrackingPermissionsAsync, TrackingStatus } = mod;
         const res = await getTrackingPermissionsAsync();
         let status = res?.status || res;
-        if (status === 'not-determined') {
+        
+        if (status === 'not-determined' || status === 0) {
           const req = await requestTrackingPermissionsAsync();
           status = req?.status || req;
         }
+        
         if (cancelled) return;
-        setAttAuthorized(status === 'authorized' || status === 'granted' || status === TrackingStatus?.Authorized);
+        setAttAuthorized(status === 'authorized' || status === 'granted' || status === TrackingStatus?.Authorized || status === 3);
       } catch (e) {
         if (adDebugEnabled) console.warn('[ADS] ATT module unavailable or failed', e);
         setAttAuthorized(false);
