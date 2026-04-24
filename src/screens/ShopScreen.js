@@ -5,8 +5,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useSelector, useDispatch } from 'react-redux';
 import { useStripe } from '@stripe/stripe-react-native';
-import * as IAP from 'react-native-iap';
-import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
 import { API_URL, WEBSITE_URL } from '../config';
 import CoinsService from '../services/CoinsService';
@@ -15,6 +13,8 @@ import { updateUser } from '../redux/slices/authSlice';
 import { getResponsiveSize, isTablet } from '../utils/responsive';
 import { useAdManager } from '../ads/AdSystem';
 import { appAlert } from '../services/appAlert';
+
+import * as IAP from 'react-native-iap';
 
 const ShopScreen = () => {
   const navigation = useNavigation();
@@ -28,22 +28,34 @@ const ShopScreen = () => {
 
   const { showAds, showRewarded } = useAdManager();
   const [loading, setLoading] = useState(false);
-  const [availableIapSkus, setAvailableIapSkus] = useState([]);
   const iapReadyRef = useRef(false);
   const purchaseTimeoutRef = useRef(null);
   
-  // Apple SKUs (Mis à jour avec les identifiants réels fournis par Apple)
-  const IAP_SKUS = {
-    'pack_beginner': 'com.deadpions.app.pack_beginner',
-    'pack_popular': 'com.deadpions.app.pack_popular',
-    'pack_bestseller': 'com.deadpions.app.pack_bestseller',
-    'pack_pro': 'com.deadpions.app.pack_pro',
-    'pack_expert': 'com.deadpions.app.pack_expert',
-    'pack_whale': 'com.deadpions.app.pack_whale',
-    'pack_premium_unlock': 'com.deadpions.app.premium_unlock', // À vérifier si ID numérique existe
-    'subscription_monthly': 'com.deadpions.app.premium_monthly_nonrenewing',
-    'subscription_yearly': 'com.deadpions.app.premium_yearly_nonrenewing'
-  };
+  // SKUs (Mis à jour avec les identifiants réels fournis par Apple et Google Play)
+  const IAP_SKUS = Platform.select({
+    ios: {
+      pack_beginner:        'com.deadpions.app.pack_beginner',
+      pack_popular:         'com.deadpions.app.pack_popular',
+      pack_bestseller:      'com.deadpions.app.pack_bestseller',
+      pack_pro:             'com.deadpions.app.pack_pro',
+      pack_expert:          'com.deadpions.app.pack_expert',
+      pack_whale:           'com.deadpions.app.pack_whale',
+      pack_premium_unlock:  'com.deadpions.app.premium_unlock',
+      subscription_monthly: 'com.deadpions.app.premium_monthly_nonrenewing',
+      subscription_yearly:  'com.deadpions.app.premium_yearly_nonrenewing',
+    },
+    android: {
+      pack_beginner:        'deadpions_pack_beginner',
+      pack_popular:         'deadpions_pack_popular',
+      pack_bestseller:      'deadpions_pack_bestseller',
+      pack_pro:             'deadpions_pack_pro',
+      pack_expert:          'deadpions_pack_expert',
+      pack_whale:           'deadpions_pack_whale',
+      pack_premium_unlock:  'deadpions_premium_unlock',
+      subscription_monthly: 'deadpions_premium_monthly',
+      subscription_yearly:  'deadpions_premium_yearly',
+    },
+  });
 
   const iosCoinsUseWebShop = false;
   const pendingProfileRefreshRef = useRef(false);
@@ -60,13 +72,12 @@ const ShopScreen = () => {
       setLoading(false);
       appAlert(
         'Info',
-        "Aucune fenêtre d'achat Apple n'est apparue.\n\nCauses fréquentes:\n- Produit In-App Purchase non disponible sur TestFlight (pas associé à la build ou mauvais identifiant)\n- Achats In-App désactivés sur l'iPhone (Temps d'écran)\n- Problème de connexion à l'App Store\n\nRéessaie après avoir vérifié App Store Connect > TestFlight > In-App Purchases."
+        "Aucune fenêtre d'achat n'est apparue.\n\nCauses fréquentes:\n- Produit In-App Purchase indisponible (sandbox / pays / appareil)\n- Achats In-App désactivés (Temps d'écran)\n- Problème de connexion à l'App Store\n\nRéessaie dans quelques instants."
       );
     }, 20000);
   }, [clearPurchaseTimeout]);
 
   const ensureIapReady = useCallback(async () => {
-    if (!isIOS) return true;
     if (iapReadyRef.current) return true;
     try {
       await IAP.initConnection();
@@ -74,63 +85,55 @@ const ShopScreen = () => {
       return true;
     } catch (err) {
       console.warn('IAP Init Error:', err);
-      appAlert('Erreur', "Impossible d'initialiser les achats Apple.");
+      appAlert('Erreur', "Impossible d'initialiser les achats in-app.");
       return false;
     }
-  }, [isIOS]);
+  }, []);
 
   // Initialisation IAP
   useEffect(() => {
-    if (isIOS) {
-      const initIAP = async () => {
-        try {
-          await IAP.initConnection();
-          iapReadyRef.current = true;
+    const initIAP = async () => {
+      try {
+        await IAP.initConnection();
+        iapReadyRef.current = true;
 
-          const productSkus = [
-            IAP_SKUS.pack_beginner,
-            IAP_SKUS.pack_popular,
-            IAP_SKUS.pack_bestseller,
-            IAP_SKUS.pack_pro,
-            IAP_SKUS.pack_expert,
-            IAP_SKUS.pack_whale,
-            IAP_SKUS.pack_premium_unlock,
-          ].filter(Boolean);
+        const isAndroid = Platform.OS === 'android';
+        const productSkus = [
+          IAP_SKUS.pack_beginner,
+          IAP_SKUS.pack_popular,
+          IAP_SKUS.pack_bestseller,
+          IAP_SKUS.pack_pro,
+          IAP_SKUS.pack_expert,
+          IAP_SKUS.pack_whale,
+          IAP_SKUS.pack_premium_unlock,
+        ].filter(Boolean);
 
-          const subscriptionSkus = [
-            IAP_SKUS.subscription_monthly,
-            IAP_SKUS.subscription_yearly,
-          ].filter(Boolean);
+        const subscriptionSkus = [
+          IAP_SKUS.subscription_monthly,
+          IAP_SKUS.subscription_yearly,
+        ].filter(Boolean);
 
-          const products = await IAP.fetchProducts({ skus: productSkus, type: 'in-app' });
-          const subscriptions = await IAP.fetchProducts({ skus: subscriptionSkus, type: 'subs' });
-
-          const ids = [
-            ...(Array.isArray(products) ? products : []),
-            ...(Array.isArray(subscriptions) ? subscriptions : []),
-          ]
-            .map((p) => p?.productId || p?.id || p?.sku)
-            .filter(Boolean);
-
-          setAvailableIapSkus(Array.from(new Set(ids)));
-        } catch (err) {
-          console.warn('IAP Init Error:', err);
+        const inAppSkus = isIOS ? [...productSkus, ...subscriptionSkus] : productSkus;
+        await IAP.fetchProducts({ skus: inAppSkus, type: 'in-app' });
+        if (isAndroid) {
+          await IAP.fetchProducts({ skus: subscriptionSkus, type: 'subs' });
         }
-      };
-      initIAP();
+      } catch (err) {
+        console.warn('IAP Init Error:', err);
+      }
+    };
+    initIAP();
 
-      // Listener pour les achats terminés
-      const purchaseUpdateSubscription = IAP.purchaseUpdatedListener(async (purchase) => {
-        clearPurchaseTimeout();
+    // Listener pour les achats terminés
+    const purchaseUpdateSubscription = IAP.purchaseUpdatedListener(async (purchase) => {
+      clearPurchaseTimeout();
+      
+      if (Platform.OS === 'ios') {
         const receipt = purchase.transactionReceipt;
         if (receipt) {
           try {
             await verifyApplePurchase(receipt, purchase.productId);
-            const nonConsumables = new Set([
-              IAP_SKUS.pack_premium_unlock,
-              IAP_SKUS.subscription_monthly,
-              IAP_SKUS.subscription_yearly
-            ]);
+            const nonConsumables = new Set([IAP_SKUS.pack_premium_unlock, IAP_SKUS.subscription_monthly, IAP_SKUS.subscription_yearly].filter(Boolean));
             const isConsumable = !nonConsumables.has(purchase.productId);
             await IAP.finishTransaction({ purchase, isConsumable });
           } catch (ackErr) {
@@ -140,23 +143,39 @@ const ShopScreen = () => {
         } else {
           setLoading(false);
         }
-      });
+      }
 
-      const purchaseErrorSubscription = IAP.purchaseErrorListener((error) => {
-        clearPurchaseTimeout();
-        if (error.code !== 'E_USER_CANCELLED') {
-           appAlert('Erreur', `L'achat a échoué: ${error.message}`);
+      if (Platform.OS === 'android') {
+        if (purchase.purchaseToken) {
+          try {
+            await verifyAndroidPurchase(purchase);
+            const nonConsumables = new Set([IAP_SKUS.pack_premium_unlock, IAP_SKUS.subscription_monthly, IAP_SKUS.subscription_yearly].filter(Boolean));
+            const isConsumable = !nonConsumables.has(purchase.productId);
+            await IAP.finishTransaction({ purchase, isConsumable });
+          } catch (ackErr) {
+            console.warn('IAP Ack Error:', ackErr);
+            setLoading(false);
+          }
+        } else {
+          setLoading(false);
         }
-        setLoading(false);
-      });
+      }
+    });
 
-      return () => {
-        clearPurchaseTimeout();
-        purchaseUpdateSubscription.remove();
-        purchaseErrorSubscription.remove();
-        IAP.endConnection();
-      };
-    }
+    const purchaseErrorSubscription = IAP.purchaseErrorListener((error) => {
+      clearPurchaseTimeout();
+      if (error.code !== 'E_USER_CANCELLED') {
+         appAlert('Erreur', `L'achat a échoué: ${error.message}`);
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      clearPurchaseTimeout();
+      purchaseUpdateSubscription.remove();
+      purchaseErrorSubscription.remove();
+      IAP.endConnection();
+    };
   }, []);
 
   const verifyApplePurchase = async (receipt, productId) => {
@@ -172,13 +191,43 @@ const ShopScreen = () => {
 
       const data = await response.json();
       if (response.ok && data.success) {
-        appAlert('Succès', 'Achat validé ! Vos coins ont été ajoutés.');
+        appAlert('Succès', data?.message || 'Achat validé !');
         await refreshUserProfile();
       } else {
         throw new Error(data.message || 'Validation Apple échouée');
       }
     } catch (err) {
       console.error('Verify Apple Purchase Error:', err);
+      appAlert('Erreur', 'Impossible de valider votre achat auprès du serveur.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyAndroidPurchase = async (purchase) => {
+    try {
+      const response = await fetch(`${API_URL}/payment/verify-android`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          productId: purchase.productId,
+          purchaseToken: purchase.purchaseToken,
+          packageName: 'com.deadpions.app', // ton bundle ID Android
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        appAlert('Succès', data?.message || 'Achat validé !');
+        await refreshUserProfile();
+      } else {
+        throw new Error(data.message || 'Validation Google Play échouée');
+      }
+    } catch (err) {
+      console.error('Verify Android Purchase Error:', err);
       appAlert('Erreur', 'Impossible de valider votre achat auprès du serveur.');
     } finally {
       setLoading(false);
@@ -287,7 +336,9 @@ const ShopScreen = () => {
   };
 
   const handleSubscription = async (plan) => {
-    if (isIOS) {
+    const isAndroid = Platform.OS === 'android';
+    
+    if (isIOS || isAndroid) {
         setLoading(true);
         try {
             const sku = plan === 'Mensuel' ? IAP_SKUS.subscription_monthly : IAP_SKUS.subscription_yearly;
@@ -296,19 +347,19 @@ const ShopScreen = () => {
               setLoading(false);
               return;
             }
-            if (availableIapSkus.length > 0 && !availableIapSkus.includes(sku)) {
-              setLoading(false);
-              appAlert(
-                'Info',
-                "Cet abonnement n'est pas disponible sur TestFlight.\n\nVérifie que le produit existe dans App Store Connect et qu'il est associé à cette build TestFlight."
-              );
-              return;
-            }
             startPurchaseTimeout();
-            await IAP.requestPurchase({
-              type: 'subs',
-              request: { apple: { sku, andDangerouslyFinishTransactionAutomatically: false } }
-            });
+
+            if (isIOS) {
+              await IAP.requestPurchase({
+                type: 'in-app',
+                request: { apple: { sku, andDangerouslyFinishTransactionAutomatically: false } }
+              });
+            } else {
+              await IAP.requestPurchase({
+                type: 'subs',
+                request: { google: { skus: [sku] } }
+              });
+            }
         } catch (err) {
             console.error('IAP Subscription Error:', err);
             clearPurchaseTimeout();
@@ -401,6 +452,9 @@ const ShopScreen = () => {
   const handleBuyCoins = async (packId, coins, price, label) => {
     if (loading) return;
 
+    const isIOS = Platform.OS === 'ios';
+    const isAndroid = Platform.OS === 'android';
+
     if (isIOS) {
       setLoading(true);
       try {
@@ -409,14 +463,6 @@ const ShopScreen = () => {
         const ready = await ensureIapReady();
         if (!ready) {
           setLoading(false);
-          return;
-        }
-        if (availableIapSkus.length > 0 && !availableIapSkus.includes(sku)) {
-          setLoading(false);
-          appAlert(
-            'Info',
-            "Ce produit n'est pas disponible sur TestFlight.\n\nVérifie l'identifiant du produit (SKU) dans le code et dans App Store Connect, puis associe l'In-App Purchase à la build TestFlight."
-          );
           return;
         }
         startPurchaseTimeout();
@@ -432,43 +478,40 @@ const ShopScreen = () => {
       return;
     }
 
-    setLoading(true);
+    if (isAndroid) {
+      setLoading(true);
+      try {
+        const sku = IAP_SKUS[packId];
+        if (!sku) throw new Error('Produit non configuré pour Android');
+        
+        const ready = await ensureIapReady();
+        if (!ready) {
+          setLoading(false);
+          return;
+        }
 
-    // DÉTECTION MODE EXPO GO : Les paiements Stripe ne fonctionnent PAS dans Expo Go
-    // Il faut utiliser un Development Build ou tester sur simulateur
-    if (Constants.appOwnership === 'expo') {
-      appAlert(
-        "Mode Expo Go Détecté",
-        "Les paiements Stripe natifs ne fonctionnent pas dans l'application Expo Go standard.\n\nVoulez-vous simuler un paiement réussi pour tester le flux ?",
-        [
-          { text: "Annuler", style: "cancel", onPress: () => setLoading(false) },
-          { 
-            text: "Simuler Succès", 
-            onPress: async () => {
-              // Simulation pour tester l'interface
-              try {
-                await CoinsService.crediterCoins(
-                    (user?.coins || 0), 
-                    coins,
-                    `Simulation ${label}`,
-                    { uniqueId: 'sim_' + Date.now() }
-                );
-                
-                // On met à jour le state local juste pour l'affichage (ne persiste pas au backend)
-                dispatch(updateUser({ coins: (user?.coins || 0) + coins }));
+        startPurchaseTimeout();
 
-                appAlert("Simulation Réussie", `Paiement simulé pour ${label}.\n${coins.toLocaleString()} coins ajoutés (localement).\n\nVérifiez votre historique dans le profil !`);
-              } catch (e) {
-                console.error(e);
-              } finally {
-                setLoading(false);
-              }
-            }
+        await IAP.requestPurchase({
+          type: 'in-app',
+          request: {
+            google: { skus: [sku] }
           }
-        ]
-      );
+        });
+        // Le listener purchaseUpdatedListener prend le relais
+      } catch (err) {
+        console.error('IAP Purchase Error:', err);
+        clearPurchaseTimeout();
+        if (err.code !== 'E_USER_CANCELLED') {
+          appAlert('Erreur', err.message || "L'achat a échoué");
+        }
+        setLoading(false);
+      }
       return;
     }
+
+    appAlert('Info', 'Les achats sont disponibles sur iOS et Android uniquement.');
+    return;
 
     try {
       // 1. Fetch Payment Intent from Backend
@@ -663,6 +706,9 @@ const ShopScreen = () => {
                     ) : (
                         <>
                           <Text style={styles.priceText}>{pack.price}</Text>
+                          {isIOS && (
+                            <Text style={styles.priceSubText}>Apple Pay</Text>
+                          )}
                         </>
                     )}
                   </View>

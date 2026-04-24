@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableWithoutFeedback, Keyboard, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableWithoutFeedback, Keyboard, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import { Image } from 'expo-image';
 import { useDispatch, useSelector } from 'react-redux';
@@ -7,6 +7,7 @@ import { AntDesign } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import Constants from 'expo-constants';
 import { loginStart, loginSuccess, loginFailure } from '../redux/slices/authSlice';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
@@ -33,15 +34,24 @@ const LoginScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const dispatch = useDispatch();
 
+  const cleanEnv = (value) => (typeof value === 'string' ? value.trim() : undefined);
+  const googleWebClientId = cleanEnv(process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
+  const googleIosClientId = cleanEnv(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID);
+  const googleAndroidClientId = cleanEnv(process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID);
+
   // Configuration Google Auth
   // IMPORTANT: Remplacez ces IDs par vos propres Client IDs depuis Google Cloud Console
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    clientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+    clientId: googleWebClientId,
+    iosClientId: googleIosClientId,
+    androidClientId: googleAndroidClientId,
   });
 
   const showAppleAuth = Platform.OS === 'ios';
+  const showGoogleAuth = Platform.OS === 'android' || Platform.OS === 'ios';
+  const googleConfigured = Platform.OS === 'android'
+    ? Boolean(googleAndroidClientId)
+    : Boolean(googleIosClientId);
 
   useEffect(() => {
     if (response?.type === 'success') {
@@ -235,73 +245,96 @@ const LoginScreen = ({ navigation }) => {
         contentFit="cover"
       />
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.container}>
-          <Text style={styles.title}>Connexion</Text>
-          <Input 
-            placeholder="Email"
-            value={email} 
-            onChangeText={setEmail} 
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-            textContentType="emailAddress"
-          />
-          <Input 
-            placeholder="Mot de passe" 
-            value={password} 
-            onChangeText={setPassword} 
-            secureTextEntry 
-            autoComplete="password"
-            textContentType="password"
-          />
-          
-          <TouchableOpacity 
-            onPress={() => navigation.navigate('ForgotPassword')}
-            style={styles.forgotPasswordContainer}
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? getResponsiveSize(64) : 0}
+        >
+          <ScrollView
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
-          </TouchableOpacity>
+            <Text style={styles.title}>Connexion</Text>
 
-          <Button title="Se connecter" onPress={handleLogin} />
-          
-          {showAppleAuth && (
-            <AppleAuthentication.AppleAuthenticationButton
-              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
-              cornerRadius={getResponsiveSize(8)}
-              style={styles.appleButton}
-              onPress={handleAppleLogin}
+            {showGoogleAuth && (
+              <View style={{ width: '100%', marginBottom: getResponsiveSize(10) }}>
+                <Button
+                  title="Continuer avec Google"
+                  onPress={async () => {
+                    if (!googleConfigured) {
+                      appAlert('Configuration', 'Google Sign-In n’est pas configuré pour Android.');
+                      return;
+                    }
+                    try {
+                      const useProxy = Constants.appOwnership === 'expo';
+                      await promptAsync({ useProxy });
+                    } catch (e) {
+                      if (isUserCancelledAuth(e)) return;
+                      console.error(e);
+                      const message = typeof e?.message === 'string' ? e.message : '';
+                      if (message.toLowerCase().includes('redirect') || message.toLowerCase().includes('mismatch')) {
+                        appAlert('Erreur', 'Google OAuth est mal configuré (package/SHA-1/redirect).');
+                        return;
+                      }
+                      appAlert('Erreur', e?.message || 'La connexion Google a échoué');
+                    }
+                  }}
+                  style={!googleConfigured ? styles.googleButtonDisabled : undefined}
+                  textStyle={{ color: '#fff' }}
+                />
+              </View>
+            )}
+
+            <Input 
+              placeholder="Email"
+              value={email} 
+              onChangeText={setEmail} 
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              textContentType="emailAddress"
             />
-          )}
+            <Input 
+              placeholder="Mot de passe" 
+              value={password} 
+              onChangeText={setPassword} 
+              secureTextEntry 
+              autoComplete="password"
+              textContentType="password"
+            />
+            
+            <TouchableOpacity 
+              onPress={() => navigation.navigate('ForgotPassword')}
+              style={styles.forgotPasswordContainer}
+            >
+              <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.googleButton} 
-            onPress={async () => {
-              try {
-                await promptAsync();
-              } catch (e) {
-                if (isUserCancelledAuth(e)) return;
-                console.error(e);
-                appAlert('Erreur', e?.message || 'La connexion Google a échoué');
-              }
-            }}
-            disabled={!request}
-          >
-            <AntDesign name="google" size={getResponsiveSize(24)} color="black" />
-            <Text style={styles.googleButtonText}>Se connecter avec Google</Text>
-          </TouchableOpacity>
+            <Button title="Se connecter" onPress={handleLogin} />
+            
+            {showAppleAuth && (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+                cornerRadius={getResponsiveSize(8)}
+                style={styles.appleButton}
+                onPress={handleAppleLogin}
+              />
+            )}
 
-          <Button 
-            title="S'inscrire" 
-            onPress={() => navigation.navigate('Register')} 
-            style={{ backgroundColor: 'transparent', borderWidth: getResponsiveSize(1), borderColor: '#fff' }}
-          />
-          {!API_URL.includes('railway') && (
-            <Text style={{ color: '#00ff00', textAlign: 'center', marginTop: getResponsiveSize(20), fontWeight: 'bold' }}>
-              🔌 MODE LOCAL ({API_URL})
-            </Text>
-          )}
-        </View>
+            <Button 
+              title="S'inscrire" 
+              onPress={() => navigation.navigate('Register')} 
+              style={{ backgroundColor: 'transparent', borderWidth: getResponsiveSize(1), borderColor: '#fff' }}
+            />
+            {!API_URL.includes('railway') && (
+              <Text style={{ color: '#00ff00', textAlign: 'center', marginTop: getResponsiveSize(20), fontWeight: 'bold' }}>
+                🔌 MODE LOCAL ({API_URL})
+              </Text>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
       </TouchableWithoutFeedback>
     </View>
   );
@@ -315,9 +348,12 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    justifyContent: 'center',
     padding: getResponsiveSize(20),
     backgroundColor: 'rgba(0,0,0,0.5)', // Overlay for better readability
+  },
+  content: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   title: {
     fontSize: getResponsiveSize(32),
@@ -351,6 +387,9 @@ const styles = StyleSheet.create({
     borderRadius: getResponsiveSize(8),
     marginTop: getResponsiveSize(15),
     marginBottom: getResponsiveSize(15),
+  },
+  googleButtonDisabled: {
+    opacity: 0.6,
   },
   googleButtonText: {
     color: '#000',

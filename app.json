@@ -3,8 +3,8 @@
     "name": "DeadPions",
     "slug": "deadpions",
     "version": "1.0.0",
-    "newArchEnabled": true,
-    "scheme": "deadpions",
+    "newArchEnabled": false,
+    "scheme": ["deadpions", "exp+deadpions"],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -79,8 +79,9 @@
         }
       ],
       "expo-apple-authentication",
-      "react-native-iap",
-      "expo-tracking-transparency"
+      "expo-tracking-transparency",
+      "expo-font",
+      "react-native-iap"
     ],
     "extra": {
       "eas": {

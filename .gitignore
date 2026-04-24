@@ -2,9 +2,13 @@ node_modules/
 .expo/
 dist/
 web-build/
+.DS_Store
 .env
 .env*.local
 *.log
+.npm/
+.tmp/
 .local_cocoapods/
 ios/.cocoapods-home/
 ios/ios/.cocoapods-home/
+ios/.derivedData/

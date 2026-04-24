@@ -194,7 +194,7 @@ const VoiceChat = ({ gameId, userId, socket, isSpectator = false }) => {
                     if (!isWebRTCAvailable) {
                         appAlert(
                             "Audio non disponible", 
-                            "La fonctionnalité audio nécessite un 'Development Build' ou un appareil compatible WebRTC."
+                            "La fonctionnalité audio n'est pas disponible sur cet appareil."
                         );
                         return;
                     }

@@ -2,7 +2,7 @@ import 'react-native-gesture-handler';
 import React from 'react';
 import * as Linking from 'expo-linking';
 import { NavigationContainer } from '@react-navigation/native';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from './src/redux/store';
@@ -35,8 +35,39 @@ const linking = {
 };
 
 export default function App() {
+  const [attChecked, setAttChecked] = React.useState(Platform.OS !== 'ios');
+
   React.useEffect(() => {
     Alert.alert = appAlert;
+    
+    // Request App Tracking Transparency permission on app launch (iOS only)
+    const requestTrackingPermission = async () => {
+      if (Platform.OS !== 'ios') {
+        setAttChecked(true);
+        return;
+      }
+      try {
+        const mod = await import('expo-tracking-transparency');
+        const { getTrackingPermissionsAsync, requestTrackingPermissionsAsync, TrackingStatus } = mod;
+        const res = await getTrackingPermissionsAsync();
+        let status = res?.status ?? res;
+        const isNotDetermined =
+          status === 'not-determined' ||
+          status === TrackingStatus?.NotDetermined ||
+          status === 0;
+        if (isNotDetermined) {
+          const req = await requestTrackingPermissionsAsync();
+          status = req?.status ?? req;
+        }
+      } catch (e) {
+        console.warn('ATT request failed:', e);
+      } finally {
+        setAttChecked(true);
+      }
+    };
+    
+    // Request ATT permission immediately on app launch
+    requestTrackingPermission();
   }, []);
 
   return (
@@ -49,11 +80,15 @@ export default function App() {
           <PersistGate loading={null} persistor={persistor}>
             <QueryClientProvider client={queryClient}>
               <CoinsProvider>
-                <NavigationContainer linking={linking} fallback={<React.Fragment />}>
-                  <AppAlertHost />
-                  <AppNavigator />
-                  <StatusBar style="light" />
-                </NavigationContainer>
+                {attChecked ? (
+                  <NavigationContainer linking={linking} fallback={<React.Fragment />}>
+                    <AppAlertHost />
+                    <AppNavigator />
+                    <StatusBar style="light" />
+                  </NavigationContainer>
+                ) : (
+                  <LoadingSpinner />
+                )}
               </CoinsProvider>
             </QueryClientProvider>
           </PersistGate>

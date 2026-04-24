@@ -69,14 +69,13 @@ if (Platform.OS === 'ios') {
     console.warn("Failed to require react-native-webrtc:", error);
   }
 } else {
-  console.log("WebRTC Native Module not found. Running in fallback mode (likely Expo Go).");
+  console.log("WebRTC Native Module not found. Running in fallback mode.");
   
   // Mock RTCView to prevent crashes if rendered
   WebRTC.RTCView = ({ style }) => (
     <View style={[style, styles.fallbackContainer]}>
       <Text style={styles.fallbackText}>
-        Vidéo non disponible dans Expo Go.{"\n"}
-        Veuillez créer un "Development Build".
+        Vidéo non disponible sur cet appareil.
       </Text>
     </View>
   );

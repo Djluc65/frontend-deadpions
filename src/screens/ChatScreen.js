@@ -8,7 +8,6 @@ import { AppTouchableOpacity as TouchableOpacity } from '../components/common/Ap
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
 import { Audio } from 'expo-av';
-import Constants from 'expo-constants';
 import { playButtonSound } from '../utils/soundManager';
 import { 
   RTCPeerConnection, 
@@ -701,10 +700,9 @@ const ChatScreen = ({ route, navigation }) => {
   };
 
   const acceptCall = async () => {
-    // Allow call acceptance in Expo Go (mock mode)
-    if (!isWebRTCAvailable && Constants.appOwnership === 'expo') {
-       appAlert("Mode Expo Go", "Les appels vidéo nécessitent un Development Build. Simulation uniquement.");
-       return;
+    if (!isWebRTCAvailable) {
+      appAlert('Info', `Les appels ${callType === 'video' ? 'vidéo' : 'audio'} ne sont pas disponibles sur cet appareil.`);
+      return;
     }
 
     try {
@@ -996,7 +994,7 @@ const ChatScreen = ({ route, navigation }) => {
                  ) : (
                    <View style={styles.waitingRemote}>
                      <Text style={{color: 'white', textAlign: 'center'}}>
-                        {isWebRTCAvailable ? "En attente de la vidéo..." : "Vidéo non disponible dans Expo Go\n(Mode Simulation)"}
+                        {isWebRTCAvailable ? "En attente de la vidéo..." : "Vidéo non disponible sur cet appareil."}
                      </Text>
                    </View>
                  )}

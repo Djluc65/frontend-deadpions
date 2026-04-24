@@ -11,7 +11,9 @@ import { modalTheme } from '../../utils/modalTheme';
  * Style cohérent avec l'univers DeadPions (Fond sombre bleuté, Spinner Or).
  */
 const LoadingSpinner = () => {
-  const { isLoading, loadingMessage } = useSelector(state => state.ui);
+  const ui = useSelector((state) => state?.ui) || {};
+  const isLoading = Boolean(ui.isLoading);
+  const loadingMessage = ui.loadingMessage;
 
   return (
     <Modal
