@@ -59,5 +59,53 @@ target 'DeadPions' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
+
+    hermes_script_path = File.expand_path("../node_modules/react-native/sdks/hermes-engine/utils/replace_hermes_version.js", __dir__)
+    if File.exist?(hermes_script_path)
+      contents = File.read(hermes_script_path)
+      patched = contents.gsub(
+        /execSync\(`tar -xf \$\{tarballURLPath\} -C \$\{finalLocation\}`\);/,
+        'execSync(`tar -xf "${tarballURLPath}" -C "${finalLocation}"`);'
+      )
+      File.write(hermes_script_path, patched) if patched != contents
+    end
+
+    installer.pods_project.targets.each do |target|
+      next unless target.name == 'NitroIap'
+
+      target.build_configurations.each do |build_configuration|
+        next unless build_configuration.name == 'Release'
+
+        build_configuration.build_settings['SWIFT_OPTIMIZATION_LEVEL'] = '-Onone'
+      end
+    end
+
+    installer.pods_project.targets.each do |target|
+      target.build_phases.each do |phase|
+        next unless phase.respond_to?(:shell_script)
+
+        shell_script = phase.shell_script
+        next if shell_script.nil?
+
+        patched = shell_script
+
+        if shell_script.include?('RCT_SCRIPT_POD_INSTALLATION_ROOT') && shell_script.include?('WITH_ENVIRONMENT') && shell_script.include?('SCRIPT_PHASES_SCRIPT')
+          patched = patched
+            .gsub('export RCT_SCRIPT_RN_DIR=$RCT_SCRIPT_POD_INSTALLATION_ROOT/../node_modules/react-native', 'export RCT_SCRIPT_RN_DIR="$RCT_SCRIPT_POD_INSTALLATION_ROOT/../node_modules/react-native"')
+            .gsub('export RCT_SCRIPT_APP_PATH=$RCT_SCRIPT_POD_INSTALLATION_ROOT/..', 'export RCT_SCRIPT_APP_PATH="$RCT_SCRIPT_POD_INSTALLATION_ROOT/.."')
+            .gsub('export RCT_SCRIPT_OUTPUT_DIR=$RCT_SCRIPT_POD_INSTALLATION_ROOT', 'export RCT_SCRIPT_OUTPUT_DIR="$RCT_SCRIPT_POD_INSTALLATION_ROOT"')
+            .gsub('/bin/sh -c "$WITH_ENVIRONMENT $SCRIPT_PHASES_SCRIPT"', '/bin/sh "$WITH_ENVIRONMENT" "$SCRIPT_PHASES_SCRIPT"')
+        end
+
+        if shell_script.include?('get-app-config-ios.sh') && shell_script.include?('bash -l -c')
+          patched = patched.gsub(
+            'bash -l -c "$PODS_TARGET_SRCROOT/../scripts/get-app-config-ios.sh"',
+            'bash -l -c "exec \\"$PODS_TARGET_SRCROOT/../scripts/get-app-config-ios.sh\\""'
+          )
+        end
+
+        phase.shell_script = patched if patched != shell_script
+      end
+    end
   end
 end

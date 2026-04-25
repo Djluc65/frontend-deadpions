@@ -8,6 +8,7 @@ import Constants from 'expo-constants';
 // Fallback IP (used only if not in dev client and no env provided)
 const LOCAL_IP = '172.20.10.2';
 const PORT = '5001';
+const PROD_API_URL = 'https://backend-deadpions-production.up.railway.app/api';
 
 // Try to infer host from Expo dev environment (Dev Client / metro)
 const hostFromExpo = (() => {
@@ -23,9 +24,13 @@ const hostFromExpo = (() => {
 
 export const API_URL =
   process.env.EXPO_PUBLIC_API_URL ||
-  (hostFromExpo ? `http://${hostFromExpo}:${PORT}/api` : `http://${LOCAL_IP}:${PORT}/api`);
+  (__DEV__
+    ? (hostFromExpo ? `http://${hostFromExpo}:${PORT}/api` : `http://${LOCAL_IP}:${PORT}/api`)
+    : PROD_API_URL);
 
-console.log('🔌 API URL:', API_URL);
-console.log('🌍 MODE:', API_URL.includes('railway') ? 'PRODUCTION (LIGNE)' : 'LOCAL');
+if (__DEV__) {
+  console.log('🔌 API URL:', API_URL);
+  console.log('🌍 MODE:', API_URL.includes('railway') ? 'PRODUCTION (LIGNE)' : 'LOCAL');
+}
 
 export const WEBSITE_URL = 'https://deadpions.eu';

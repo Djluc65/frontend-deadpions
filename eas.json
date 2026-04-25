@@ -31,12 +31,16 @@
     "production-simulator": {
       "extends": "production",
       "ios": {
-        "simulator": true
+        "simulator": true,
+        "image": "macos-sequoia-15.6-xcode-16.4"
       }
     },
     "production": {
       "distribution": "store",
       "autoIncrement": true,
+      "ios": {
+        "image": "macos-sequoia-15.6-xcode-16.4"
+      },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://backend-deadpions-production.up.railway.app/api",
         "EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY": "pk_live_51SyDTfE3G9WWgZTjwzwLkV7CQTUAAeeiUULV0MF7Sq1rwWti5unkpRirRXvrWhbZx1UkFiZpsyDKWXuauFlAh0Ug00Oq69qYjb",

@@ -16,6 +16,31 @@ import { appAlert } from '../services/appAlert';
 
 import * as IAP from 'react-native-iap';
 
+const IAP_SKUS = Platform.select({
+  ios: {
+    pack_beginner:        'com.deadpions.app.pack_beginner',
+    pack_popular:         'com.deadpions.app.pack_popular',
+    pack_bestseller:      'com.deadpions.app.pack_bestseller',
+    pack_pro:             'com.deadpions.app.pack_pro',
+    pack_expert:          'com.deadpions.app.pack_expert',
+    pack_whale:           'com.deadpions.app.pack_whale',
+    pack_premium_unlock:  'com.deadpions.app.premium_unlock',
+    subscription_monthly: 'com.deadpions.app.premium_monthly_nonrenewing',
+    subscription_yearly:  'com.deadpions.app.premium_yearly_nonrenewing',
+  },
+  android: {
+    pack_beginner:        'deadpions_pack_beginner',
+    pack_popular:         'deadpions_pack_popular',
+    pack_bestseller:      'deadpions_pack_bestseller',
+    pack_pro:             'deadpions_pack_pro',
+    pack_expert:          'deadpions_pack_expert',
+    pack_whale:           'deadpions_pack_whale',
+    pack_premium_unlock:  'deadpions_premium_unlock',
+    subscription_monthly: 'deadpions_premium_monthly',
+    subscription_yearly:  'deadpions_premium_yearly',
+  },
+});
+
 const ShopScreen = () => {
   const navigation = useNavigation();
   const { user, token } = useSelector(state => state.auth);
@@ -29,34 +54,13 @@ const ShopScreen = () => {
   const { showAds, showRewarded } = useAdManager();
   const [loading, setLoading] = useState(false);
   const iapReadyRef = useRef(false);
+  const iapInitPromiseRef = useRef(null);
+  const iapCatalogReadyRef = useRef(false);
+  const iapCatalogPromiseRef = useRef(null);
   const purchaseTimeoutRef = useRef(null);
+  const purchaseInFlightRef = useRef(false);
+  const purchaseSkuRef = useRef(null);
   
-  // SKUs (Mis à jour avec les identifiants réels fournis par Apple et Google Play)
-  const IAP_SKUS = Platform.select({
-    ios: {
-      pack_beginner:        'com.deadpions.app.pack_beginner',
-      pack_popular:         'com.deadpions.app.pack_popular',
-      pack_bestseller:      'com.deadpions.app.pack_bestseller',
-      pack_pro:             'com.deadpions.app.pack_pro',
-      pack_expert:          'com.deadpions.app.pack_expert',
-      pack_whale:           'com.deadpions.app.pack_whale',
-      pack_premium_unlock:  'com.deadpions.app.premium_unlock',
-      subscription_monthly: 'com.deadpions.app.premium_monthly_nonrenewing',
-      subscription_yearly:  'com.deadpions.app.premium_yearly_nonrenewing',
-    },
-    android: {
-      pack_beginner:        'deadpions_pack_beginner',
-      pack_popular:         'deadpions_pack_popular',
-      pack_bestseller:      'deadpions_pack_bestseller',
-      pack_pro:             'deadpions_pack_pro',
-      pack_expert:          'deadpions_pack_expert',
-      pack_whale:           'deadpions_pack_whale',
-      pack_premium_unlock:  'deadpions_premium_unlock',
-      subscription_monthly: 'deadpions_premium_monthly',
-      subscription_yearly:  'deadpions_premium_yearly',
-    },
-  });
-
   const iosCoinsUseWebShop = false;
   const pendingProfileRefreshRef = useRef(false);
 
@@ -66,58 +70,88 @@ const ShopScreen = () => {
     purchaseTimeoutRef.current = null;
   }, []);
 
-  const startPurchaseTimeout = useCallback(() => {
+  const startPurchaseTimeout = useCallback((sku) => {
     clearPurchaseTimeout();
+    purchaseSkuRef.current = sku || null;
     purchaseTimeoutRef.current = setTimeout(() => {
       setLoading(false);
+      purchaseInFlightRef.current = false;
       appAlert(
         'Info',
-        "Aucune fenêtre d'achat n'est apparue.\n\nCauses fréquentes:\n- Produit In-App Purchase indisponible (sandbox / pays / appareil)\n- Achats In-App désactivés (Temps d'écran)\n- Problème de connexion à l'App Store\n\nRéessaie dans quelques instants."
+        `Si aucune fenêtre d'achat n'apparaît:\n\nCauses fréquentes:\n- Produit In-App Purchase indisponible (sandbox / pays / appareil)\n- Achats In-App désactivés (Temps d'écran)\n- Problème de connexion à l'App Store\n\nRéessaie dans quelques instants.${sku ? `\n\nProduit: ${sku}` : ''}`
       );
-    }, 20000);
+    }, 60000);
   }, [clearPurchaseTimeout]);
 
   const ensureIapReady = useCallback(async () => {
     if (iapReadyRef.current) return true;
+    if (iapInitPromiseRef.current) return await iapInitPromiseRef.current;
     try {
-      await IAP.initConnection();
-      iapReadyRef.current = true;
-      return true;
+      iapInitPromiseRef.current = (async () => {
+        await IAP.initConnection();
+        iapReadyRef.current = true;
+        return true;
+      })();
+      return await iapInitPromiseRef.current;
     } catch (err) {
       console.warn('IAP Init Error:', err);
       appAlert('Erreur', "Impossible d'initialiser les achats in-app.");
       return false;
+    } finally {
+      iapInitPromiseRef.current = null;
     }
   }, []);
+
+  const ensureIapCatalog = useCallback(async () => {
+    if (iapCatalogReadyRef.current) return true;
+    if (iapCatalogPromiseRef.current) return await iapCatalogPromiseRef.current;
+
+    const ready = await ensureIapReady();
+    if (!ready) return false;
+
+    const isAndroid = Platform.OS === 'android';
+    const productSkus = [
+      IAP_SKUS.pack_beginner,
+      IAP_SKUS.pack_popular,
+      IAP_SKUS.pack_bestseller,
+      IAP_SKUS.pack_pro,
+      IAP_SKUS.pack_expert,
+      IAP_SKUS.pack_whale,
+      IAP_SKUS.pack_premium_unlock,
+    ].filter(Boolean);
+
+    const subscriptionSkus = [
+      IAP_SKUS.subscription_monthly,
+      IAP_SKUS.subscription_yearly,
+    ].filter(Boolean);
+
+    const inAppSkus = isIOS ? [...productSkus, ...subscriptionSkus] : productSkus;
+
+    try {
+      iapCatalogPromiseRef.current = (async () => {
+        await IAP.fetchProducts({ skus: inAppSkus, type: 'in-app' });
+        if (isAndroid) {
+          await IAP.fetchProducts({ skus: subscriptionSkus, type: 'subs' });
+        }
+        iapCatalogReadyRef.current = true;
+        return true;
+      })();
+      return await iapCatalogPromiseRef.current;
+    } catch (err) {
+      console.warn('IAP Catalog Error:', err);
+      return false;
+    } finally {
+      iapCatalogPromiseRef.current = null;
+    }
+  }, [ensureIapReady, isIOS]);
 
   // Initialisation IAP
   useEffect(() => {
     const initIAP = async () => {
       try {
-        await IAP.initConnection();
-        iapReadyRef.current = true;
-
-        const isAndroid = Platform.OS === 'android';
-        const productSkus = [
-          IAP_SKUS.pack_beginner,
-          IAP_SKUS.pack_popular,
-          IAP_SKUS.pack_bestseller,
-          IAP_SKUS.pack_pro,
-          IAP_SKUS.pack_expert,
-          IAP_SKUS.pack_whale,
-          IAP_SKUS.pack_premium_unlock,
-        ].filter(Boolean);
-
-        const subscriptionSkus = [
-          IAP_SKUS.subscription_monthly,
-          IAP_SKUS.subscription_yearly,
-        ].filter(Boolean);
-
-        const inAppSkus = isIOS ? [...productSkus, ...subscriptionSkus] : productSkus;
-        await IAP.fetchProducts({ skus: inAppSkus, type: 'in-app' });
-        if (isAndroid) {
-          await IAP.fetchProducts({ skus: subscriptionSkus, type: 'subs' });
-        }
+        const ready = await ensureIapReady();
+        if (!ready) return;
+        await ensureIapCatalog();
       } catch (err) {
         console.warn('IAP Init Error:', err);
       }
@@ -127,6 +161,7 @@ const ShopScreen = () => {
     // Listener pour les achats terminés
     const purchaseUpdateSubscription = IAP.purchaseUpdatedListener(async (purchase) => {
       clearPurchaseTimeout();
+      purchaseInFlightRef.current = false;
       
       if (Platform.OS === 'ios') {
         const receipt = purchase.transactionReceipt;
@@ -164,6 +199,7 @@ const ShopScreen = () => {
 
     const purchaseErrorSubscription = IAP.purchaseErrorListener((error) => {
       clearPurchaseTimeout();
+      purchaseInFlightRef.current = false;
       if (error.code !== 'E_USER_CANCELLED') {
          appAlert('Erreur', `L'achat a échoué: ${error.message}`);
       }
@@ -172,6 +208,9 @@ const ShopScreen = () => {
 
     return () => {
       clearPurchaseTimeout();
+      purchaseInFlightRef.current = false;
+      iapReadyRef.current = false;
+      iapCatalogReadyRef.current = false;
       purchaseUpdateSubscription.remove();
       purchaseErrorSubscription.remove();
       IAP.endConnection();
@@ -339,15 +378,21 @@ const ShopScreen = () => {
     const isAndroid = Platform.OS === 'android';
     
     if (isIOS || isAndroid) {
+        if (purchaseInFlightRef.current) {
+          appAlert('Info', "Un achat est déjà en cours. Si aucune fenêtre ne s'affiche, quitte et relance l'app, puis réessaie.");
+          return;
+        }
         setLoading(true);
+        purchaseInFlightRef.current = true;
         try {
             const sku = plan === 'Mensuel' ? IAP_SKUS.subscription_monthly : IAP_SKUS.subscription_yearly;
             const ready = await ensureIapReady();
             if (!ready) {
               setLoading(false);
+              purchaseInFlightRef.current = false;
               return;
             }
-            startPurchaseTimeout();
+            startPurchaseTimeout(sku);
 
             if (isIOS) {
               await IAP.requestPurchase({
@@ -364,6 +409,10 @@ const ShopScreen = () => {
             console.error('IAP Subscription Error:', err);
             clearPurchaseTimeout();
             setLoading(false);
+            purchaseInFlightRef.current = false;
+            if (err?.code !== 'E_USER_CANCELLED') {
+              appAlert('Erreur', err?.message ? `L'achat a échoué: ${err.message}` : "L'achat a échoué.");
+            }
         }
         return;
     }
@@ -456,16 +505,23 @@ const ShopScreen = () => {
     const isAndroid = Platform.OS === 'android';
 
     if (isIOS) {
+      if (purchaseInFlightRef.current) {
+        appAlert('Info', "Un achat est déjà en cours. Si aucune fenêtre ne s'affiche, quitte et relance l'app, puis réessaie.");
+        return;
+      }
       setLoading(true);
+      purchaseInFlightRef.current = true;
       try {
         const sku = IAP_SKUS[packId];
         if (!sku) throw new Error('Produit non configuré pour Apple');
         const ready = await ensureIapReady();
         if (!ready) {
           setLoading(false);
+          purchaseInFlightRef.current = false;
           return;
         }
-        startPurchaseTimeout();
+        await ensureIapCatalog();
+        startPurchaseTimeout(sku);
         await IAP.requestPurchase({
           type: 'in-app',
           request: { apple: { sku, andDangerouslyFinishTransactionAutomatically: false } }
@@ -474,12 +530,18 @@ const ShopScreen = () => {
         console.error('IAP Purchase Error:', err);
         clearPurchaseTimeout();
         setLoading(false);
+        purchaseInFlightRef.current = false;
+        if (err?.code !== 'E_USER_CANCELLED') {
+          appAlert('Erreur', err?.message ? `L'achat a échoué: ${err.message}` : "L'achat a échoué.");
+        }
       }
       return;
     }
 
     if (isAndroid) {
+      if (purchaseInFlightRef.current) return;
       setLoading(true);
+      purchaseInFlightRef.current = true;
       try {
         const sku = IAP_SKUS[packId];
         if (!sku) throw new Error('Produit non configuré pour Android');
@@ -487,10 +549,12 @@ const ShopScreen = () => {
         const ready = await ensureIapReady();
         if (!ready) {
           setLoading(false);
+          purchaseInFlightRef.current = false;
           return;
         }
 
-        startPurchaseTimeout();
+        await ensureIapCatalog();
+        startPurchaseTimeout(sku);
 
         await IAP.requestPurchase({
           type: 'in-app',
@@ -506,6 +570,7 @@ const ShopScreen = () => {
           appAlert('Erreur', err.message || "L'achat a échoué");
         }
         setLoading(false);
+        purchaseInFlightRef.current = false;
       }
       return;
     }
@@ -573,7 +638,7 @@ const ShopScreen = () => {
       resizeMode="cover"
     >
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
           
           <Text style={styles.headerTitle}>Boutique</Text>
           
