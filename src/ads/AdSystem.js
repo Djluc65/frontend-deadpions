@@ -138,11 +138,7 @@ export default function AdSystem({ children }) {
         const { getTrackingPermissionsAsync, requestTrackingPermissionsAsync, TrackingStatus } = mod;
         const res = await getTrackingPermissionsAsync();
         let status = res?.status || res;
-        const isNotDetermined =
-          status === 'not-determined' ||
-          status === TrackingStatus?.NotDetermined ||
-          status === 0;
-        if (isNotDetermined) {
+        if (status === 'not-determined') {
           const req = await requestTrackingPermissionsAsync();
           status = req?.status || req;
         }
