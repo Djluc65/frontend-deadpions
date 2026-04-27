@@ -5,8 +5,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useSelector, useDispatch } from 'react-redux';
 import { useStripe } from '@stripe/stripe-react-native';
-import * as IAP from 'react-native-iap';
-import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
 import { API_URL, WEBSITE_URL } from '../config';
 import CoinsService from '../services/CoinsService';
@@ -15,6 +13,33 @@ import { updateUser } from '../redux/slices/authSlice';
 import { getResponsiveSize, isTablet } from '../utils/responsive';
 import { useAdManager } from '../ads/AdSystem';
 import { appAlert } from '../services/appAlert';
+
+import * as IAP from 'react-native-iap';
+
+const IAP_SKUS = Platform.select({
+  ios: {
+    pack_beginner:        'com.deadpions.app.pack_beginner',
+    pack_popular:         'com.deadpions.app.pack_popular',
+    pack_bestseller:      'com.deadpions.app.pack_bestseller',
+    pack_pro:             'com.deadpions.app.pack_pro',
+    pack_expert:          'com.deadpions.app.pack_expert',
+    pack_whale:           'com.deadpions.app.pack_whale',
+    pack_premium_unlock:  'com.deadpions.app.premium_unlock',
+    subscription_monthly: 'com.deadpions.app.premium_monthly_nonrenewing',
+    subscription_yearly:  'com.deadpions.app.premium_yearly_nonrenewing',
+  },
+  android: {
+    pack_beginner:        'deadpions_pack_beginner',
+    pack_popular:         'deadpions_pack_popular',
+    pack_bestseller:      'deadpions_pack_bestseller',
+    pack_pro:             'deadpions_pack_pro',
+    pack_expert:          'deadpions_pack_expert',
+    pack_whale:           'deadpions_pack_whale',
+    pack_premium_unlock:  'deadpions_premium_unlock',
+    subscription_monthly: 'deadpions_premium_monthly',
+    subscription_yearly:  'deadpions_premium_yearly',
+  },
+});
 
 const ShopScreen = () => {
   const navigation = useNavigation();
@@ -28,69 +53,168 @@ const ShopScreen = () => {
 
   const { showAds, showRewarded } = useAdManager();
   const [loading, setLoading] = useState(false);
+  const iapReadyRef = useRef(false);
+  const iapInitPromiseRef = useRef(null);
+  const iapCatalogReadyRef = useRef(false);
+  const iapCatalogPromiseRef = useRef(null);
+  const purchaseTimeoutRef = useRef(null);
+  const purchaseInFlightRef = useRef(false);
+  const purchaseSkuRef = useRef(null);
   
-  // Apple SKUs (Mis à jour avec les identifiants réels fournis par Apple)
-  const IAP_SKUS = {
-    'pack_beginner': 'com.deadpions.app.pack_beginner',
-    'pack_popular': 'com.deadpions.app.pack_popular',
-    'pack_bestseller': 'com.deadpions.app.pack_bestseller',
-    'pack_pro': 'com.deadpions.app.pack_pro',
-    'pack_expert': 'com.deadpions.app.pack_expert',
-    'pack_whale': 'com.deadpions.app.pack_whale',
-    'pack_premium_unlock': 'com.deadpions.app.premium_unlock', // À vérifier si ID numérique existe
-    'subscription_monthly': 'com.deadpions.app.premium_monthly_nonrenewing',
-    'subscription_yearly': 'com.deadpions.app.premium_yearly_nonrenewing'
-  };
-
   const iosCoinsUseWebShop = false;
   const pendingProfileRefreshRef = useRef(false);
 
+  const clearPurchaseTimeout = useCallback(() => {
+    if (!purchaseTimeoutRef.current) return;
+    clearTimeout(purchaseTimeoutRef.current);
+    purchaseTimeoutRef.current = null;
+  }, []);
+
+  const startPurchaseTimeout = useCallback((sku) => {
+    clearPurchaseTimeout();
+    purchaseSkuRef.current = sku || null;
+    purchaseTimeoutRef.current = setTimeout(() => {
+      setLoading(false);
+      purchaseInFlightRef.current = false;
+      appAlert(
+        'Info',
+        `Si aucune fenêtre d'achat n'apparaît:\n\nCauses fréquentes:\n- Produit In-App Purchase indisponible (sandbox / pays / appareil)\n- Achats In-App désactivés (Temps d'écran)\n- Problème de connexion à l'App Store\n\nRéessaie dans quelques instants.${sku ? `\n\nProduit: ${sku}` : ''}`
+      );
+    }, 60000);
+  }, [clearPurchaseTimeout]);
+
+  const ensureIapReady = useCallback(async () => {
+    if (iapReadyRef.current) return true;
+    if (iapInitPromiseRef.current) return await iapInitPromiseRef.current;
+    try {
+      iapInitPromiseRef.current = (async () => {
+        await IAP.initConnection();
+        iapReadyRef.current = true;
+        return true;
+      })();
+      return await iapInitPromiseRef.current;
+    } catch (err) {
+      console.warn('IAP Init Error:', err);
+      appAlert('Erreur', "Impossible d'initialiser les achats in-app.");
+      return false;
+    } finally {
+      iapInitPromiseRef.current = null;
+    }
+  }, []);
+
+  const ensureIapCatalog = useCallback(async () => {
+    if (iapCatalogReadyRef.current) return true;
+    if (iapCatalogPromiseRef.current) return await iapCatalogPromiseRef.current;
+
+    const ready = await ensureIapReady();
+    if (!ready) return false;
+
+    const isAndroid = Platform.OS === 'android';
+    const productSkus = [
+      IAP_SKUS.pack_beginner,
+      IAP_SKUS.pack_popular,
+      IAP_SKUS.pack_bestseller,
+      IAP_SKUS.pack_pro,
+      IAP_SKUS.pack_expert,
+      IAP_SKUS.pack_whale,
+      IAP_SKUS.pack_premium_unlock,
+    ].filter(Boolean);
+
+    const subscriptionSkus = [
+      IAP_SKUS.subscription_monthly,
+      IAP_SKUS.subscription_yearly,
+    ].filter(Boolean);
+
+    const inAppSkus = isIOS ? [...productSkus, ...subscriptionSkus] : productSkus;
+
+    try {
+      iapCatalogPromiseRef.current = (async () => {
+        await IAP.fetchProducts({ skus: inAppSkus, type: 'in-app' });
+        if (isAndroid) {
+          await IAP.fetchProducts({ skus: subscriptionSkus, type: 'subs' });
+        }
+        iapCatalogReadyRef.current = true;
+        return true;
+      })();
+      return await iapCatalogPromiseRef.current;
+    } catch (err) {
+      console.warn('IAP Catalog Error:', err);
+      return false;
+    } finally {
+      iapCatalogPromiseRef.current = null;
+    }
+  }, [ensureIapReady, isIOS]);
+
   // Initialisation IAP
   useEffect(() => {
-    if (isIOS) {
-      const initIAP = async () => {
-        try {
-          await IAP.initConnection();
-          // Pré-charger les produits si nécessaire
-          await IAP.fetchProducts({ skus: Object.values(IAP_SKUS), type: 'all' });
-        } catch (err) {
-          console.warn('IAP Init Error:', err);
-        }
-      };
-      initIAP();
+    const initIAP = async () => {
+      try {
+        const ready = await ensureIapReady();
+        if (!ready) return;
+        await ensureIapCatalog();
+      } catch (err) {
+        console.warn('IAP Init Error:', err);
+      }
+    };
+    initIAP();
 
-      // Listener pour les achats terminés
-      const purchaseUpdateSubscription = IAP.purchaseUpdatedListener(async (purchase) => {
+    // Listener pour les achats terminés
+    const purchaseUpdateSubscription = IAP.purchaseUpdatedListener(async (purchase) => {
+      clearPurchaseTimeout();
+      purchaseInFlightRef.current = false;
+      
+      if (Platform.OS === 'ios') {
         const receipt = purchase.transactionReceipt;
         if (receipt) {
           try {
             await verifyApplePurchase(receipt, purchase.productId);
-            const nonConsumables = new Set([
-              IAP_SKUS.pack_premium_unlock,
-              IAP_SKUS.subscription_monthly,
-              IAP_SKUS.subscription_yearly
-            ]);
+            const nonConsumables = new Set([IAP_SKUS.pack_premium_unlock, IAP_SKUS.subscription_monthly, IAP_SKUS.subscription_yearly].filter(Boolean));
             const isConsumable = !nonConsumables.has(purchase.productId);
             await IAP.finishTransaction({ purchase, isConsumable });
           } catch (ackErr) {
             console.warn('IAP Ack Error:', ackErr);
+            setLoading(false);
           }
+        } else {
+          setLoading(false);
         }
-      });
+      }
 
-      const purchaseErrorSubscription = IAP.purchaseErrorListener((error) => {
-        if (error.code !== 'E_USER_CANCELLED') {
-           appAlert('Erreur', `L'achat a échoué: ${error.message}`);
+      if (Platform.OS === 'android') {
+        if (purchase.purchaseToken) {
+          try {
+            await verifyAndroidPurchase(purchase);
+            const nonConsumables = new Set([IAP_SKUS.pack_premium_unlock, IAP_SKUS.subscription_monthly, IAP_SKUS.subscription_yearly].filter(Boolean));
+            const isConsumable = !nonConsumables.has(purchase.productId);
+            await IAP.finishTransaction({ purchase, isConsumable });
+          } catch (ackErr) {
+            console.warn('IAP Ack Error:', ackErr);
+            setLoading(false);
+          }
+        } else {
+          setLoading(false);
         }
-        setLoading(false);
-      });
+      }
+    });
 
-      return () => {
-        purchaseUpdateSubscription.remove();
-        purchaseErrorSubscription.remove();
-        IAP.endConnection();
-      };
-    }
+    const purchaseErrorSubscription = IAP.purchaseErrorListener((error) => {
+      clearPurchaseTimeout();
+      purchaseInFlightRef.current = false;
+      if (error.code !== 'E_USER_CANCELLED') {
+         appAlert('Erreur', `L'achat a échoué: ${error.message}`);
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      clearPurchaseTimeout();
+      purchaseInFlightRef.current = false;
+      iapReadyRef.current = false;
+      iapCatalogReadyRef.current = false;
+      purchaseUpdateSubscription.remove();
+      purchaseErrorSubscription.remove();
+      IAP.endConnection();
+    };
   }, []);
 
   const verifyApplePurchase = async (receipt, productId) => {
@@ -106,13 +230,43 @@ const ShopScreen = () => {
 
       const data = await response.json();
       if (response.ok && data.success) {
-        appAlert('Succès', 'Achat validé ! Vos coins ont été ajoutés.');
+        appAlert('Succès', data?.message || 'Achat validé !');
         await refreshUserProfile();
       } else {
         throw new Error(data.message || 'Validation Apple échouée');
       }
     } catch (err) {
       console.error('Verify Apple Purchase Error:', err);
+      appAlert('Erreur', 'Impossible de valider votre achat auprès du serveur.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyAndroidPurchase = async (purchase) => {
+    try {
+      const response = await fetch(`${API_URL}/payment/verify-android`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          productId: purchase.productId,
+          purchaseToken: purchase.purchaseToken,
+          packageName: 'com.deadpions.app', // ton bundle ID Android
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        appAlert('Succès', data?.message || 'Achat validé !');
+        await refreshUserProfile();
+      } else {
+        throw new Error(data.message || 'Validation Google Play échouée');
+      }
+    } catch (err) {
+      console.error('Verify Android Purchase Error:', err);
       appAlert('Erreur', 'Impossible de valider votre achat auprès du serveur.');
     } finally {
       setLoading(false);
@@ -221,17 +375,44 @@ const ShopScreen = () => {
   };
 
   const handleSubscription = async (plan) => {
-    if (isIOS) {
+    const isAndroid = Platform.OS === 'android';
+    
+    if (isIOS || isAndroid) {
+        if (purchaseInFlightRef.current) {
+          appAlert('Info', "Un achat est déjà en cours. Si aucune fenêtre ne s'affiche, quitte et relance l'app, puis réessaie.");
+          return;
+        }
         setLoading(true);
+        purchaseInFlightRef.current = true;
         try {
             const sku = plan === 'Mensuel' ? IAP_SKUS.subscription_monthly : IAP_SKUS.subscription_yearly;
-            await IAP.requestPurchase({
-              type: 'subs',
-              request: { apple: { sku, andDangerouslyFinishTransactionAutomatically: false } }
-            });
+            const ready = await ensureIapReady();
+            if (!ready) {
+              setLoading(false);
+              purchaseInFlightRef.current = false;
+              return;
+            }
+            startPurchaseTimeout(sku);
+
+            if (isIOS) {
+              await IAP.requestPurchase({
+                type: 'in-app',
+                request: { apple: { sku, andDangerouslyFinishTransactionAutomatically: false } }
+              });
+            } else {
+              await IAP.requestPurchase({
+                type: 'subs',
+                request: { google: { skus: [sku] } }
+              });
+            }
         } catch (err) {
             console.error('IAP Subscription Error:', err);
+            clearPurchaseTimeout();
             setLoading(false);
+            purchaseInFlightRef.current = false;
+            if (err?.code !== 'E_USER_CANCELLED') {
+              appAlert('Erreur', err?.message ? `L'achat a échoué: ${err.message}` : "L'achat a échoué.");
+            }
         }
         return;
     }
@@ -320,59 +501,82 @@ const ShopScreen = () => {
   const handleBuyCoins = async (packId, coins, price, label) => {
     if (loading) return;
 
+    const isIOS = Platform.OS === 'ios';
+    const isAndroid = Platform.OS === 'android';
+
     if (isIOS) {
+      if (purchaseInFlightRef.current) {
+        appAlert('Info', "Un achat est déjà en cours. Si aucune fenêtre ne s'affiche, quitte et relance l'app, puis réessaie.");
+        return;
+      }
       setLoading(true);
+      purchaseInFlightRef.current = true;
       try {
         const sku = IAP_SKUS[packId];
         if (!sku) throw new Error('Produit non configuré pour Apple');
+        const ready = await ensureIapReady();
+        if (!ready) {
+          setLoading(false);
+          purchaseInFlightRef.current = false;
+          return;
+        }
+        await ensureIapCatalog();
+        startPurchaseTimeout(sku);
         await IAP.requestPurchase({
           type: 'in-app',
           request: { apple: { sku, andDangerouslyFinishTransactionAutomatically: false } }
         });
       } catch (err) {
         console.error('IAP Purchase Error:', err);
+        clearPurchaseTimeout();
         setLoading(false);
+        purchaseInFlightRef.current = false;
+        if (err?.code !== 'E_USER_CANCELLED') {
+          appAlert('Erreur', err?.message ? `L'achat a échoué: ${err.message}` : "L'achat a échoué.");
+        }
       }
       return;
     }
 
-    setLoading(true);
+    if (isAndroid) {
+      if (purchaseInFlightRef.current) return;
+      setLoading(true);
+      purchaseInFlightRef.current = true;
+      try {
+        const sku = IAP_SKUS[packId];
+        if (!sku) throw new Error('Produit non configuré pour Android');
+        
+        const ready = await ensureIapReady();
+        if (!ready) {
+          setLoading(false);
+          purchaseInFlightRef.current = false;
+          return;
+        }
 
-    // DÉTECTION MODE EXPO GO : Les paiements Stripe ne fonctionnent PAS dans Expo Go
-    // Il faut utiliser un Development Build ou tester sur simulateur
-    if (Constants.appOwnership === 'expo') {
-      appAlert(
-        "Mode Expo Go Détecté",
-        "Les paiements Stripe natifs ne fonctionnent pas dans l'application Expo Go standard.\n\nVoulez-vous simuler un paiement réussi pour tester le flux ?",
-        [
-          { text: "Annuler", style: "cancel", onPress: () => setLoading(false) },
-          { 
-            text: "Simuler Succès", 
-            onPress: async () => {
-              // Simulation pour tester l'interface
-              try {
-                await CoinsService.crediterCoins(
-                    (user?.coins || 0), 
-                    coins,
-                    `Simulation ${label}`,
-                    { uniqueId: 'sim_' + Date.now() }
-                );
-                
-                // On met à jour le state local juste pour l'affichage (ne persiste pas au backend)
-                dispatch(updateUser({ coins: (user?.coins || 0) + coins }));
+        await ensureIapCatalog();
+        startPurchaseTimeout(sku);
 
-                appAlert("Simulation Réussie", `Paiement simulé pour ${label}.\n${coins.toLocaleString()} coins ajoutés (localement).\n\nVérifiez votre historique dans le profil !`);
-              } catch (e) {
-                console.error(e);
-              } finally {
-                setLoading(false);
-              }
-            }
+        await IAP.requestPurchase({
+          type: 'in-app',
+          request: {
+            google: { skus: [sku] }
           }
-        ]
-      );
+        });
+        // Le listener purchaseUpdatedListener prend le relais
+      } catch (err) {
+        console.error('IAP Purchase Error:', err);
+        clearPurchaseTimeout();
+        if (err.code !== 'E_USER_CANCELLED') {
+          appAlert('Erreur', err.message || "L'achat a échoué");
+        }
+        setLoading(false);
+        purchaseInFlightRef.current = false;
+      }
       return;
     }
+
+    appAlert('Info', 'Les achats sont disponibles sur iOS et Android uniquement.');
+    return;
 
     try {
       // 1. Fetch Payment Intent from Backend
@@ -434,7 +638,7 @@ const ShopScreen = () => {
       resizeMode="cover"
     >
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
           
           <Text style={styles.headerTitle}>Boutique</Text>
           

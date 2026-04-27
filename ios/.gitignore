@@ -29,5 +29,3 @@ project.xcworkspace
 
 # CocoaPods
 /Pods/
-.cocoapods-home/
-/ios/.cocoapods-home/

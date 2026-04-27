@@ -70,7 +70,7 @@ const InfoScreen = ({ navigation }) => {
     {
       title: "Mentions Légales",
       icon: "document-text-outline",
-      action: () => openLink('https://deadpions.com/terms'), // Placeholder
+      action: () => openLink('https://deadpions.eu'), // Placeholder
       actionLabel: "Conditions d'utilisation"
     }
   ];
