@@ -15,13 +15,14 @@ const FriendsMenuModal = memo(({
 }) => {
   return (
     <Modal
-      animationType="fade"
+      animationType="none"
       transparent={true}
       visible={visible}
       onRequestClose={onClose}
     >
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable style={styles.friendsModalContent} onPress={() => {}}>
+      <View style={styles.modalOverlay}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <View style={styles.friendsModalContent} onStartShouldSetResponder={() => true}>
           <Text style={styles.friendsModalTitle}>{t.friends}</Text>
           
           {/* Bouton pour créer une Salle Live (Publique) */}
@@ -73,8 +74,8 @@ const FriendsMenuModal = memo(({
           >
             <Text style={styles.closeButtonText}>{t.close}</Text>
           </TouchableOpacity>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 });

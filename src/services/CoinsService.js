@@ -226,10 +226,10 @@ class CoinsService {
     /**
      * Calcule les gains nets après commission
      * @param {number} montantPari 
-     * @param {number} pourcentageGains (ex: 0.9 pour 90%)
+     * @param {number} pourcentageGains (ex: 0.95 pour 95%)
      * @returns {object} { gainsNet, commission, total }
      */
-    static calculerGains(montantPari, pourcentageGains = 0.9) {
+    static calculerGains(montantPari, pourcentageGains = 0.95) {
         const potTotal = montantPari * 2;
         const gainsNet = Math.floor(potTotal * pourcentageGains);
         const commission = potTotal - gainsNet;

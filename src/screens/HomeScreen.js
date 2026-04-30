@@ -79,6 +79,18 @@ const HomeScreen = ({ navigation }) => {
   // Local Game Config State
   const [localConfigVisible, setLocalConfigVisible] = useState(false);
 
+  const openOnlineConfig = useCallback(() => {
+    requestAnimationFrame(() => setOnlineConfigVisible(true));
+  }, []);
+
+  const openAiConfig = useCallback(() => {
+    requestAnimationFrame(() => setAiConfigVisible(true));
+  }, []);
+
+  const openFriendsConfig = useCallback(() => {
+    requestAnimationFrame(() => setFriendsMenuVisible(true));
+  }, []);
+
   const startPulse = (anim) => {
     Animated.loop(
       Animated.sequence([
@@ -260,7 +272,7 @@ const HomeScreen = ({ navigation }) => {
         onPlaySound={handlePlaySound} 
       />
 
-      <View style={styles.logoContainer}>
+      <View pointerEvents="none" style={styles.logoContainer}>
         <Animated.Image 
           source={require('../../assets/images/LogoDeadPions2.png')} 
           style={[
@@ -303,10 +315,11 @@ const HomeScreen = ({ navigation }) => {
         {/* )} */}
       </View>
 
-      <View style={[styles.container, { paddingBottom: getResponsiveSize(100) }]}>
+      <View style={[styles.container, { paddingBottom: getResponsiveSize(140) }]}>
+        <View style={styles.buttonsContainer}>
         <View style={styles.row}>
           <GameCard
-            onPress={() => setOnlineConfigVisible(true)}
+            onPress={openOnlineConfig}
             onPlaySound={handlePlaySound}
             style={[styles.liveCard, styles.halfCard]}
           >
@@ -322,7 +335,7 @@ const HomeScreen = ({ navigation }) => {
             </View>
           </GameCard>
           <GameCard 
-            onPress={() => setAiConfigVisible(true)} 
+            onPress={openAiConfig} 
             onPlaySound={handlePlaySound}
             style={[styles.liveCard, styles.halfCard]}
           >
@@ -338,9 +351,9 @@ const HomeScreen = ({ navigation }) => {
             </View>
           </GameCard>
         </View>
-        <View style={styles.row}>
+        <View style={[styles.row, styles.rowSpacing]}>
           <GameCard 
-            onPress={() => setFriendsMenuVisible(true)} 
+            onPress={openFriendsConfig} 
             onPlaySound={handlePlaySound}
             style={[styles.liveCard, styles.halfCard]}
           >
@@ -373,6 +386,7 @@ const HomeScreen = ({ navigation }) => {
             </View>
           </GameCard>
         </View>
+        </View>
 
         {/* Animation Duel de Pions */}
         <BattleAnimation />
@@ -388,34 +402,41 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   logoContainer: {
-    flex: 1,
-    justifyContent: 'center',
+    flex: 0,
+    justifyContent: 'flex-start',
     alignItems: 'center',
-    bottom: getResponsiveSize(70),
+    marginTop: getResponsiveSize(10),
+    marginBottom: getResponsiveSize(10),
+    transform: [{ translateY: -getResponsiveSize(25) }],
   },
   logo: {
     // Taille dynamique dans le composant
   },
   container: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     padding: getResponsiveSize(20),
     gap: getResponsiveSize(20),
     width: '100%',
-    bottom: '18%',
-    paddingBottom: getResponsiveSize(100),
+    paddingBottom: getResponsiveSize(40),
+    paddingTop: 0,
+  },
+  buttonsContainer: {
+    marginTop: -getResponsiveSize(70),
   },
   row: {
     flexDirection: 'row',
     gap: getResponsiveSize(20),
     justifyContent: 'space-between',
   },
+  rowSpacing: {
+    marginTop: getResponsiveSize(20),
+  },
   halfCard: {
     flex: 1,
   },
   liveCard: {
   borderWidth: getResponsiveSize(3),
-  top: getResponsiveSize(130),
   borderColor: 'rgba(4, 28, 85, 0.95)',
 
   // shadow bottom

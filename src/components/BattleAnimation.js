@@ -242,7 +242,7 @@ const BattleAnimation = () => {
   });
 
   return (
-    <View style={styles.container}>
+    <View pointerEvents="none" style={styles.container}>
       {/* --- LION (Gauche / Rouge) --- */}
       <Animated.View style={[
         styles.fighterContainer,
@@ -306,9 +306,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: getResponsiveSize(120),
     width: '100%',
-    marginTop: getResponsiveSize(20),
     marginBottom: getResponsiveSize(10),
-    top: getResponsiveSize(120),
+    marginTop: getResponsiveSize(10),
     overflow: 'visible', // Permettre aux effets de dépasser
   },
   fighterContainer: {

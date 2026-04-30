@@ -4,6 +4,7 @@ import { useNavigationState } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import { useCoinsContext } from '../context/CoinsContext';
 import { getResponsiveSize } from '../utils/responsive';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 let mobileAds;
 let AdEventType;
@@ -100,7 +101,7 @@ export default function AdSystem({ children }) {
   const { user } = useSelector((state) => state.auth);
   const { credit } = useCoinsContext();
 
-  const [attReady, setAttReady] = useState(false);
+  const [attReady, setAttReady] = useState(Platform.OS !== 'ios');
   const [attAuthorized, setAttAuthorized] = useState(false);
 
   const adDebugEnabled = useMemo(() => {
@@ -126,40 +127,50 @@ export default function AdSystem({ children }) {
   const bottomOffset = useMemo(() => getBottomOffsetFromRoutePath(routePath), [routePath]);
 
   useEffect(() => {
-    let cancelled = false;
-    async function run() {
-      if (Platform.OS !== 'ios') {
-        setAttReady(true);
-        setAttAuthorized(false);
-        return;
-      }
-      try {
-        const mod = await import('expo-tracking-transparency');
-        const { getTrackingPermissionsAsync, requestTrackingPermissionsAsync, TrackingStatus } = mod;
-        const res = await getTrackingPermissionsAsync();
-        let status = res?.status || res;
-        const isNotDetermined =
-          status === 'not-determined' ||
-          status === TrackingStatus?.NotDetermined ||
-          status === 0;
-        if (isNotDetermined) {
-          const req = await requestTrackingPermissionsAsync();
-          status = req?.status || req;
-        }
-        if (cancelled) return;
-        setAttAuthorized(status === 'authorized' || status === 'granted' || status === TrackingStatus?.Authorized);
-      } catch (e) {
-        if (adDebugEnabled) console.warn('[ADS] ATT module unavailable or failed', e);
-        setAttAuthorized(false);
-      } finally {
-        if (!cancelled) setAttReady(true);
-      }
+    if (Platform.OS !== 'ios') {
+      setAttReady(true);
+      setAttAuthorized(false);
+      return;
     }
-    run();
+
+    const applyPayload = (payload) => {
+      const authorized = Boolean(payload?.authorized);
+      setAttAuthorized(authorized);
+      setAttReady(Boolean(payload?.checked));
+    };
+
+    const current = globalThis.__ATT_STATUS__;
+    if (current?.checked) {
+      applyPayload(current);
+    }
+
+    let cancelled = false;
+    AsyncStorage.getItem('att_status_payload')
+      .then((raw) => {
+        if (cancelled) return;
+        if (!raw) return;
+        try {
+          applyPayload(JSON.parse(raw));
+        } catch (_) {}
+      })
+      .catch(() => {});
+
+    if (!(globalThis.__ATT_LISTENERS__ instanceof Set)) {
+      globalThis.__ATT_LISTENERS__ = new Set();
+    }
+    const listener = (payload) => {
+      if (cancelled) return;
+      applyPayload(payload);
+    };
+    globalThis.__ATT_LISTENERS__.add(listener);
+
     return () => {
       cancelled = true;
+      try {
+        globalThis.__ATT_LISTENERS__?.delete(listener);
+      } catch (_) {}
     };
-  }, [adDebugEnabled]);
+  }, []);
 
   const requestNonPersonalizedAdsOnly = useMemo(() => {
     const raw = process.env.EXPO_PUBLIC_AD_NPA_ONLY;

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { Image } from 'expo-image';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSelector, useDispatch } from 'react-redux';
 import { updateAccessToken, logout } from '../redux/slices/authSlice';
 import { API_URL } from '../config';
@@ -19,6 +20,57 @@ const WaitingScreen = ({ navigation }) => {
         await SplashScreen.hideAsync();
       } catch (e) {
         // ignore error
+      }
+
+      try {
+        if (Platform.OS !== 'ios') {
+          const payload = { checked: true, status: 'not_applicable', authorized: false, at: Date.now() };
+          globalThis.__ATT_STATUS__ = payload;
+          if (globalThis.__ATT_LISTENERS__ instanceof Set) {
+            for (const fn of globalThis.__ATT_LISTENERS__) {
+              try { fn(payload); } catch (_) {}
+            }
+          }
+          try { await AsyncStorage.setItem('att_status_payload', JSON.stringify(payload)); } catch (_) {}
+          return;
+        }
+
+        await new Promise((r) => setTimeout(r, 350));
+        const mod = await import('expo-tracking-transparency');
+        const { getTrackingPermissionsAsync, requestTrackingPermissionsAsync, TrackingStatus } = mod;
+        const res = await getTrackingPermissionsAsync();
+        let status = res?.status ?? res;
+        const isNotDetermined =
+          status === 'not-determined' ||
+          status === TrackingStatus?.NotDetermined ||
+          status === 0;
+        if (isNotDetermined) {
+          const req = await requestTrackingPermissionsAsync();
+          status = req?.status ?? req;
+        }
+
+        const authorized =
+          status === 'authorized' ||
+          status === 'granted' ||
+          status === TrackingStatus?.Authorized;
+
+        const payload = { checked: true, status, authorized, at: Date.now() };
+        globalThis.__ATT_STATUS__ = payload;
+        if (globalThis.__ATT_LISTENERS__ instanceof Set) {
+          for (const fn of globalThis.__ATT_LISTENERS__) {
+            try { fn(payload); } catch (_) {}
+          }
+        }
+        try { await AsyncStorage.setItem('att_status_payload', JSON.stringify(payload)); } catch (_) {}
+      } catch (_) {
+        const payload = { checked: true, status: 'error', authorized: false, at: Date.now() };
+        globalThis.__ATT_STATUS__ = payload;
+        if (globalThis.__ATT_LISTENERS__ instanceof Set) {
+          for (const fn of globalThis.__ATT_LISTENERS__) {
+            try { fn(payload); } catch (_) {}
+          }
+        }
+        try { await AsyncStorage.setItem('att_status_payload', JSON.stringify(payload)); } catch (_) {}
       }
     };
     hideSplash();

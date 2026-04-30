@@ -41,7 +41,7 @@ const ResultatJeuOnline = ({ route, navigation }) => {
           <View style={styles.gainsContainer}>
             <Text style={styles.gainsLabel}>Vous avez gagné :</Text>
             <Text style={styles.gainsMontant}>+🪙 {gains.toLocaleString()}</Text>
-            <Text style={styles.gainsInfo}>(90% de {(montantPari * 2).toLocaleString()} coins)</Text>
+            <Text style={styles.gainsInfo}>(95% de {(montantPari * 2).toLocaleString()} coins)</Text>
           </View>
         ) : (
           <View style={styles.perteContainer}>

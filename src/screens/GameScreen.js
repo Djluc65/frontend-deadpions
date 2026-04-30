@@ -358,7 +358,10 @@ const GameScreen = ({ navigation, route }) => {
     }
   }, [mode, player2?.pseudo]);
 
+  const isExitingRef = useRef(false);
+
   const showAlert = (title, message, buttons = []) => {
+      if (isExitingRef.current) return;
       setCustomAlert({ visible: true, title, message, buttons });
   };
 
@@ -601,6 +604,7 @@ const GameScreen = ({ navigation, route }) => {
   const [messageIA, setMessageIA] = useState('');
   const [dernierCoupIA, setDernierCoupIA] = useState(null);
   const [gameOver, setGameOver] = useState(false);
+  const [isSpectatorMode, setIsSpectatorMode] = useState(false);
 
   // Tournament State
   const initialTournamentSettings = params.tournamentSettings || configIA.tournamentSettings || localConfig.tournamentSettings || {};
@@ -900,7 +904,7 @@ const GameScreen = ({ navigation, route }) => {
        setWaitingForNextRound(false);
        setResultData({
          victoire: true,
-         gains: (currentParams.betAmount || 0) * 0.9,
+         gains: Math.floor((currentParams.betAmount || 0) * 2 * 0.95),
          montantPari: currentParams.betAmount || 0,
          adversaire: opponent,
          raisonVictoire: 'disconnect',
@@ -1156,12 +1160,88 @@ const GameScreen = ({ navigation, route }) => {
     };
 
     const handleLiveRoomClosed = () => {
+        if (isExitingRef.current) return;
         showAlert("Live terminé", "Le créateur a fermé le live.", [
             { text: "OK", onPress: () => navigation.navigate('Home'), style: 'cancel' }
         ]);
     };
 
+    const handleLiveGameEnded = (data) => {
+        setGameOver(true);
+        setWaitingForNextRound(false);
+        setSelectedCell(null);
+        setShowGameMenu(false);
+
+        const myId = (userRef.current?._id || userRef.current?.id || '').toString();
+        const winnerId = (data?.winner?.id || data?.winner?._id || '').toString();
+        const loserId = (data?.loser?.id || data?.loser?._id || '').toString();
+        const isWinner = Boolean(myId && winnerId && myId === winnerId);
+        const isLoser = Boolean(myId && loserId && myId === loserId);
+
+        if (isExitingRef.current && !isWinner) return;
+
+        const winnerPseudo = data?.winner?.pseudo;
+        const loserPseudo = data?.loser?.pseudo;
+        const rawCoinsAwarded = data?.coinsAwarded;
+        const coinsAwarded = typeof rawCoinsAwarded === 'number' ? rawCoinsAwarded : Number(rawCoinsAwarded) || 0;
+        const isCreatorLeaving = Boolean(data?.isCreatorLeaving);
+        const winnerBalance = typeof data?.winnerBalance === 'number' ? data.winnerBalance : null;
+        const loserBalance = typeof data?.loserBalance === 'number' ? data.loserBalance : null;
+
+        if (isWinner && coinsAwarded > 0) {
+            setFeedback({ visible: true, amount: coinsAwarded, type: 'CREDIT' });
+        }
+
+        if (isWinner && typeof winnerBalance === 'number') {
+            dispatch(updateUser({ coins: winnerBalance }));
+        } else if (isLoser && typeof loserBalance === 'number') {
+            dispatch(updateUser({ coins: loserBalance }));
+        }
+
+        try {
+            syncBalance();
+        } catch (_) {}
+
+        if (isWinner) {
+            const coinsMsg = coinsAwarded > 0 ? `\n🏆 +${coinsAwarded} coins crédités !` : '';
+            showAlert(
+                "🎉 Victoire par forfait !",
+                `${loserPseudo || "Votre adversaire"} a quitté la partie. Vous remportez la victoire !${coinsMsg}`,
+                [
+                    {
+                        text: "Super !",
+                        onPress: () => {
+                            try {
+                                syncBalance();
+                            } catch (_) {}
+
+                            if (isCreatorLeaving) {
+                                navigation.navigate('Home');
+                            }
+                        }
+                    }
+                ],
+                { cancelable: false }
+            );
+            return;
+        }
+
+        if (isLoser) {
+            try {
+                syncBalance();
+            } catch (_) {}
+            return;
+        }
+
+        const msg = winnerPseudo
+            ? `${winnerPseudo} gagne par forfait.${coinsAwarded > 0 ? `\nGain: +${coinsAwarded} coins` : ''}`
+            : `Partie terminée.${coinsAwarded > 0 ? `\nGain: +${coinsAwarded} coins` : ''}`;
+
+        showAlert("Partie terminée", msg, [{ text: "OK", onPress: () => {} }]);
+    };
+
     const handleOpponentLeftLive = () => {
+        if (isExitingRef.current) return;
         if (mode === 'spectator') {
             setShowResultModal(false);
             setNextMatchVisible(false);
@@ -1215,7 +1295,8 @@ const GameScreen = ({ navigation, route }) => {
                     text: "Arrêter le live",
                     style: 'destructive',
                     onPress: () => {
-                        socket.emit('stop_live_room', { gameId: params.gameId });
+                        isExitingRef.current = true;
+                        socket.emit('stop_live_room', { gameId: params.gameId, userId: user?._id || user?.id });
                         navigation.navigate('Home');
                     }
                 }
@@ -1225,6 +1306,7 @@ const GameScreen = ({ navigation, route }) => {
     };
 
     const handleDowngradedToSpectator = () => {
+        if (isExitingRef.current) return;
         setShowResultModal(false);
         if (params.roomConfig) {
             navigation.replace('SalleAttenteLive', { configSalle: params.roomConfig });
@@ -1248,6 +1330,7 @@ const GameScreen = ({ navigation, route }) => {
     socket.on('opponent_disconnected', handleOpponentDisconnected);
     socket.on('opponent_left_live', handleOpponentLeftLive);
     socket.on('live_room_closed', handleLiveRoomClosed);
+    socket.on('live_game_ended', handleLiveGameEnded);
     socket.on('downgraded_to_spectator', handleDowngradedToSpectator);
     socket.on('balance_updated', handleBalanceUpdated);
     socket.on('MESSAGE_TEXTE', handleMessageTexte);
@@ -1269,6 +1352,7 @@ const GameScreen = ({ navigation, route }) => {
       socket.off('opponent_disconnected', handleOpponentDisconnected);
       socket.off('opponent_left_live', handleOpponentLeftLive);
       socket.off('live_room_closed', handleLiveRoomClosed);
+      socket.off('live_game_ended', handleLiveGameEnded);
       socket.off('downgraded_to_spectator', handleDowngradedToSpectator);
       socket.off('balance_updated', handleBalanceUpdated);
       socket.off('MESSAGE_TEXTE', handleMessageTexte);
@@ -1280,7 +1364,7 @@ const GameScreen = ({ navigation, route }) => {
       socket.off('tournament_draw', handleTournamentDraw);
       socket.off('error', handleSocketError);
     };
-  }, [mode, navigation, user, isSoundEnabled, player1.id, player2.id, params.gameId]);
+  }, [mode, navigation, user, isSoundEnabled, player1.id, player2.id, params.gameId, isSpectatorMode]);
 
   useEffect(() => {
     if (isWaitingState && user && (mode === 'online' || mode === 'online_custom') && params.gameId && listenersReadyRef.current && !hasJoinedRoomRef.current) {
@@ -1578,6 +1662,76 @@ const GameScreen = ({ navigation, route }) => {
                 }
             ]
         );
+        return;
+    }
+
+    if (mode === 'live' && params.gameId) {
+        const myId = user?._id || user?.id;
+        const creatorId = params.roomConfig?.createur?._id || params.roomConfig?.createur?.id || params.roomConfig?.createurId;
+        const isCreator = Boolean(myId && creatorId && myId.toString() === creatorId.toString());
+
+        if (isSpectatorMode) {
+            appAlert("Quitter ?", "Retourner à l'accueil ?", [
+                { text: "Annuler", style: "cancel" },
+                {
+                    text: "Accueil",
+                    onPress: () => {
+                        isExitingRef.current = true;
+                        setShowGameMenu(false);
+                        navigation.navigate('Home');
+                    }
+                }
+            ]);
+            return;
+        }
+
+        if (!isCreator) {
+            appAlert("Quitter la partie live ?", "Choisissez une option :", [
+                { text: "Annuler", style: "cancel" },
+                {
+                    text: "Continuer à suivre",
+                    onPress: () => {
+                        playButtonSound();
+                        setIsSpectatorMode(true);
+                        setShowGameMenu(false);
+                        if (myId) {
+                            socket.emit('switch_to_spectator', { gameId: params.gameId, userId: myId });
+                        }
+                    }
+                },
+                {
+                    text: "Retourner à l'accueil",
+                    style: "destructive",
+                    onPress: () => {
+                        playButtonSound();
+                        isExitingRef.current = true;
+                        setShowGameMenu(false);
+                        if (myId) {
+                            socket.emit('player_forfeit_live', { gameId: params.gameId, userId: myId });
+                        }
+                        navigation.navigate('Home');
+                    }
+                }
+            ]);
+            return;
+        }
+
+        appAlert("Quitter la partie live ?", "Vous perdrez automatiquement la partie.", [
+            { text: "Annuler", style: "cancel" },
+            {
+                text: "Quitter",
+                style: "destructive",
+                onPress: () => {
+                    playButtonSound();
+                    isExitingRef.current = true;
+                    setShowGameMenu(false);
+                    if (myId) {
+                        socket.emit('player_forfeit_live', { gameId: params.gameId, userId: myId });
+                    }
+                    navigation.navigate('Home');
+                }
+            }
+        ]);
         return;
     }
 
@@ -2654,7 +2808,7 @@ const GameScreen = ({ navigation, route }) => {
     if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return;
     if (gameOver) return;
     if (waitingForNextRound) return; // Prevent moves while waiting for next round/game over
-    if (mode === 'spectator') return;
+    if (mode === 'spectator' || isSpectatorMode) return;
     if (!syncReadyRef.current && (mode === 'online' || mode === 'online_custom' || mode === 'live')) return;
     
     // En mode IA, bloquer les clics pendant le tour de l'IA
@@ -2820,7 +2974,7 @@ const GameScreen = ({ navigation, route }) => {
                 } : null
             };
 
-            // Calcul des gains (Mise * 1.9 pour 90% de profit)
+            // Calcul des gains (Pot total * 0.95)
             // Modification pour synchronisation globale et tournoi
             let profit = 0;
             let totalReturn = 0;
@@ -2834,8 +2988,9 @@ const GameScreen = ({ navigation, route }) => {
             const shouldAwardGains = (!isTournament && didUserWinGame) || (isTournament && tournamentOver && isUserWinnerOfTournament);
 
             if (shouldAwardGains) {
-                profit = Math.floor((params.betAmount || 0) * 0.9);
-                totalReturn = (params.betAmount || 0) + profit;
+                const betAmount = params.betAmount || 0;
+                totalReturn = Math.floor(betAmount * 2 * 0.95);
+                profit = totalReturn - betAmount;
             }
             
             if (params.betAmount > 0 && totalReturn > 0) {
@@ -3791,7 +3946,8 @@ const GameScreen = ({ navigation, route }) => {
                                       const userId = user?._id || user?.id;
                                       const isCreator = creatorId && userId && creatorId.toString() === userId.toString();
                                       if (isCreator) {
-                                          socket.emit('stop_live_room', { gameId: params.gameId });
+                                          isExitingRef.current = true;
+                                          socket.emit('stop_live_room', { gameId: params.gameId, userId: user?._id || user?.id });
                                       }
                                       navigation.navigate('Home');
                                   }}
@@ -3911,7 +4067,9 @@ const GameScreen = ({ navigation, route }) => {
                                             { 
                                                 text: "Arrêter le Live", 
                                                 onPress: () => {
-                                                    socket.emit('stop_live_room', { gameId: params.gameId });
+                                                    isExitingRef.current = true;
+                                                    try { socket.emit('stop_live_room', { gameId: params.gameId, userId: user?._id || user?.id }); } catch (_) {}
+                                                    try { socket.emit('leave_live_room', { gameId: params.gameId }); } catch (_) {}
                                                     navigation.navigate('Home');
                                                 }, 
                                                 style: 'destructive' 
@@ -3919,24 +4077,28 @@ const GameScreen = ({ navigation, route }) => {
                                         ]
                                     );
                                 } else {
+                                    if (mode === 'live') {
+                                        handleQuitGame();
+                                        return;
+                                    }
+
                                     showAlert(
-                                        mode === 'live' ? "Quitter le live" : "Quitter la partie",
-                                        mode === 'live' ? "Voulez-vous vraiment quitter cette partie ?" : "Voulez-vous vraiment quitter la partie ?",
+                                        "Quitter la partie",
+                                        "Voulez-vous vraiment quitter la partie ?",
                                         [
                                             { text: "Annuler", style: "cancel" },
-                                            { 
-                                                text: "Quitter", 
+                                            {
+                                                text: "Quitter",
                                                 onPress: () => {
-                                                    if (mode === 'live' || mode === 'online_custom' || mode === 'online') {
-                                                        socket.emit('resign');
-                                                    }
-                                                    if (navigation.canGoBack()) {
-                                                        navigation.goBack();
-                                                    } else {
-                                                        navigation.navigate('Home');
-                                                    }
-                                                }, 
-                                                style: 'destructive' 
+                                                    isExitingRef.current = true;
+                                                    try {
+                                                        if (mode === 'online_custom' || mode === 'online') {
+                                                            socket.emit('resign');
+                                                        }
+                                                    } catch (_) {}
+                                                    navigation.navigate('Home');
+                                                },
+                                                style: 'destructive'
                                             }
                                         ]
                                     );
@@ -4025,7 +4187,7 @@ const GameScreen = ({ navigation, route }) => {
       <View style={styles.header}>
         {renderProfileModal()}
         {mode !== 'live' && mode !== 'online_custom' && mode !== 'online' && mode !== 'ai' && mode !== 'ia' && mode !== 'local' && mode !== 'spectator' && renderGameMenu()}
-        {mode === 'spectator' && (
+        {(mode === 'spectator' || isSpectatorMode) && (
             <View style={{ position: 'absolute', top: 10, alignSelf: 'center', backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 15, paddingVertical: 5, borderRadius: 20, zIndex: 10 }}>
                 <Text style={{ color: '#fff', fontWeight: 'bold' }}>👁️ Mode Spectateur</Text>
             </View>

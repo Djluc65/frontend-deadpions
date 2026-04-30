@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground, Image, Modal, FlatList, ActivityIndicator, Share } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground, Image, Modal, FlatList, ActivityIndicator, Share, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
 import { socket } from '../utils/socket';
@@ -19,9 +19,12 @@ const SalleAttenteLive = ({ route, navigation }) => {
   const params = route.params || {};
   const [configSalle, setConfigSalle] = useState(params.configSalle || null);
   const roomId = params.roomId || (configSalle ? configSalle.id : null);
+  const isLeavingRef = useRef(false);
+  const detachRef = useRef(null);
 
   const user = useSelector(state => state.auth.user);
   const token = useSelector(state => state.auth.token);
+  const [isStartingGame, setIsStartingGame] = useState(false);
   
   // --- États locaux ---
   const [spectateurs, setSpectateurs] = useState(configSalle && Array.isArray(configSalle.spectateurs) ? configSalle.spectateurs : []); // Liste des spectateurs présents
@@ -70,6 +73,8 @@ const SalleAttenteLive = ({ route, navigation }) => {
           socket.emit('join_live_room', { gameId: roomId });
 
           const handleGameStart = (data) => {
+              if (isLeavingRef.current) return;
+              setIsStartingGame(false);
               console.log('Game start received in waiting room:', data);
               if (!configSalle && !data.roomConfig) return; 
 
@@ -85,11 +90,13 @@ const SalleAttenteLive = ({ route, navigation }) => {
           };
 
           const handleSpectatorUpdate = (list) => {
+              if (isLeavingRef.current) return;
               console.log('Spectators updated:', list);
               setSpectateurs(list);
           };
 
           const handlePlayerJoined = (data) => {
+              if (isLeavingRef.current) return;
               console.log('Player joined:', data);
               // Si le joueur qui rejoint n'est pas le créateur, c'est l'adversaire
               const creatorId = (configSalle?.createur?._id || configSalle?.createur?.id) || (user?._id || user?.id);
@@ -101,6 +108,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
           };
 
           const handleLiveRoomJoined = (data) => {
+              if (isLeavingRef.current) return;
               console.log('Live room joined data:', data);
               
               let currentConfig = configSalle;
@@ -142,17 +150,21 @@ const SalleAttenteLive = ({ route, navigation }) => {
           };
 
           const handleLiveRoomClosed = () => {
+              if (isLeavingRef.current) return;
               appAlert('Live terminé', 'Le créateur a fermé la salle.', [
                   { text: 'OK', onPress: () => navigation.navigate('Home') }
               ]);
           };
 
           const handleOpponentLeftLive = () => {
+              if (isLeavingRef.current) return;
               setOpponent(null);
               // Optionnel : Toast ou petit message
           };
 
           const handleError = (message) => {
+              if (isLeavingRef.current) return;
+              setIsStartingGame(false);
               appAlert('Erreur', message, [
                   { text: 'OK', onPress: () => navigation.goBack() }
               ]);
@@ -166,7 +178,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
           socket.on('opponent_left_live', handleOpponentLeftLive);
           socket.on('error', handleError);
 
-          return () => {
+          const detach = () => {
               socket.off('game_start', handleGameStart);
               socket.off('spectator_list_updated', handleSpectatorUpdate);
               socket.off('player_joined', handlePlayerJoined);
@@ -175,20 +187,28 @@ const SalleAttenteLive = ({ route, navigation }) => {
               socket.off('opponent_left_live', handleOpponentLeftLive);
               socket.off('error', handleError);
           };
+          detachRef.current = detach;
+
+          return () => {
+              detach();
+          };
       }
   }, [roomId, navigation, configSalle]);
 
   const handleStopLive = () => {
-      appAlert(
+      Alert.alert(
           "Arrêter le Live ?",
           "Cela fermera la salle pour tous les participants.",
           [
               { text: "Annuler", style: "cancel" },
-              { 
-                  text: "Arrêter", 
-                  style: "destructive", 
+              {
+                  text: "Arrêter",
+                  style: "destructive",
                   onPress: () => {
-                      socket.emit('stop_live_room', { gameId: roomId });
+                      isLeavingRef.current = true;
+                      try { detachRef.current?.(); } catch (_) {}
+                      try { socket.emit('stop_live_room', { gameId: roomId, userId: user?._id || user?.id }); } catch (_) {}
+                      try { socket.emit('leave_live_room', { gameId: roomId }); } catch (_) {}
                       navigation.navigate('Home');
                   }
               }
@@ -197,16 +217,18 @@ const SalleAttenteLive = ({ route, navigation }) => {
   };
 
   const handleLeaveLive = () => {
-      appAlert(
+      Alert.alert(
           "Quitter le Live ?",
           "Voulez-vous vraiment quitter la salle ?",
           [
               { text: "Annuler", style: "cancel" },
-              { 
-                  text: "Quitter", 
-                  style: "destructive", 
+              {
+                  text: "Quitter",
+                  style: "destructive",
                   onPress: () => {
-                      // socket.emit('quit_waiting_room', { gameId: roomId }); // Assuming this exists or just disconnect handling
+                      isLeavingRef.current = true;
+                      try { detachRef.current?.(); } catch (_) {}
+                      try { socket.emit('leave_live_room', { gameId: roomId }); } catch (_) {}
                       navigation.navigate('Home');
                   }
               }
@@ -232,6 +254,8 @@ const SalleAttenteLive = ({ route, navigation }) => {
         appAlert('Attente', 'Veuillez attendre qu\'un adversaire rejoigne la partie.');
         return;
     }
+    if (isStartingGame) return;
+    setIsStartingGame(true);
     // Emit event to start the game on backend
     socket.emit('start_live_game', {
         gameId: roomId

@@ -5,10 +5,19 @@ import { getResponsiveSize } from '../../utils/responsive';
 const GameCard = memo(({ title, onPress, color, children, style, onPlaySound }) => (
   <TouchableOpacity
     style={[styles.card, { borderColor: color }, style]}
+    activeOpacity={0.7}
     hitSlop={{ top: getResponsiveSize(10), bottom: getResponsiveSize(10), left: getResponsiveSize(10), right: getResponsiveSize(10) }}
+    pressRetentionOffset={{ top: getResponsiveSize(30), bottom: getResponsiveSize(30), left: getResponsiveSize(30), right: getResponsiveSize(30) }}
+    delayPressIn={0}
     onPress={async () => {
-      if (onPlaySound) await onPlaySound();
-      if (onPress) onPress();
+      try {
+        if (onPlaySound) {
+          Promise.resolve(onPlaySound()).catch(() => {});
+        }
+      } catch (_) {}
+      try {
+        if (onPress) onPress();
+      } catch (_) {}
     }}
   >
     {children ? (

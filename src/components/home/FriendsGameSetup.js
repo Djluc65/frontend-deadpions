@@ -12,6 +12,7 @@ const FriendsGameSetup = ({ visible, onClose, navigation, user, onOpenLiveConfig
   const settings = useSelector(state => state.settings);
   const t = translations[settings.language] || translations.fr;
 
+  const [showMenu, setShowMenu] = useState(true);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
   const [inviteMode, setInviteMode] = useState('simple');
   const [inviteSeriesLength, setInviteSeriesLength] = useState(2);
@@ -24,29 +25,37 @@ const FriendsGameSetup = ({ visible, onClose, navigation, user, onOpenLiveConfig
   // Reset state when modal is closed
   useEffect(() => {
     if (!visible) {
+      setShowMenu(true);
       setShowCreateRoom(false);
+      setShowJoinByCode(false);
       setStartingSide('random');
       setHostColor('random');
+    }
+    if (visible) {
+      setShowMenu(true);
     }
   }, [visible]);
 
   const handleNavigateToLiveConfig = useCallback(() => {
     onClose();
     if (onOpenLiveConfig) {
-      onOpenLiveConfig();
+      setTimeout(() => onOpenLiveConfig(), 250);
     }
   }, [onClose, onOpenLiveConfig]);
 
   const handleOpenFriendConfig = useCallback(() => {
-    setShowCreateRoom(true);
+    setShowMenu(false);
+    setTimeout(() => setShowCreateRoom(true), 0);
   }, []);
 
   const handleOpenJoinByCode = useCallback(() => {
-    setShowJoinByCode(true);
+    setShowMenu(false);
+    setTimeout(() => setShowJoinByCode(true), 0);
   }, []);
 
   const closeJoinByCode = useCallback(() => {
     setShowJoinByCode(false);
+    setShowMenu(true);
   }, []);
 
   const handleCreateRoom = useCallback(() => {
@@ -84,12 +93,13 @@ const FriendsGameSetup = ({ visible, onClose, navigation, user, onOpenLiveConfig
 
   const handleCloseCreateRoom = useCallback(() => {
     setShowCreateRoom(false);
+    setShowMenu(true);
   }, []);
 
   return (
     <>
       <FriendsMenuModal
-        visible={visible && !showCreateRoom && !showJoinByCode}
+        visible={visible && showMenu}
         onClose={onClose}
         onNavigateToLiveConfig={handleNavigateToLiveConfig}
         onOpenFriendConfig={handleOpenFriendConfig}

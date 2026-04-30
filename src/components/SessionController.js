@@ -254,7 +254,7 @@ const SessionController = () => {
             } else if (status.matchStatus === 'completed') {
                 // Navigate to Result
                 const isVictory = status.result === 'win';
-                const gains = isVictory ? Math.floor(status.gameData.betAmount * 2 * 0.9) : 0;
+                const gains = isVictory ? Math.floor(status.gameData.betAmount * 2 * 0.95) : 0;
                 
                 navigation.navigate('ResultatJeuOnline', {
                     victoire: isVictory,

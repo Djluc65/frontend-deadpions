@@ -7,6 +7,10 @@ let shouldStopHome = false;
 let activeGameScreens = 0;
 let isRematchMode = false;
 
+const HOME_MUSIC_SOURCE = require('../../assets/song/AmbianceSonoreBackgroundHome2.mp3');
+const GAME_MUSIC_SOURCE = require('../../assets/song/SonsDeGameplay.mp3');
+const VICTORY_SOUND_SOURCE = require('../../assets/song/game-over-deep-male-voice-clip-352695.mp3');
+
 export const AudioController = {
   get isRematchMode() {
     return isRematchMode;
@@ -66,7 +70,7 @@ export const AudioController = {
       shouldStopHome = false;
       
       const { sound } = await Audio.Sound.createAsync(
-        require('../../assets/song/AmbianceSonoreBackgroundHome2.mp3'),
+        HOME_MUSIC_SOURCE,
         { isLooping: true, volume: 0.4 }
       );
 
@@ -91,10 +95,19 @@ export const AudioController = {
     if (homeSound) {
       try {
         await homeSound.stopAsync();
-        await homeSound.unloadAsync();
-        homeSound = null;
       } catch (e) {
-        console.log('Error stopping home music', e);
+        const msg = String(e?.message || e || '');
+        // Benign race on iOS when stop is requested during an internal seek/load.
+        if (!msg.toLowerCase().includes('seeking interrupted')) {
+          console.log('Error stopping home music', e);
+        }
+      } finally {
+        try {
+          await homeSound.unloadAsync();
+        } catch (_) {
+          // no-op: sound can already be unloaded/interrupted
+        }
+        homeSound = null;
       }
     }
   },
@@ -114,7 +127,7 @@ export const AudioController = {
       }
 
       const { sound } = await Audio.Sound.createAsync(
-        require('../../assets/song/Sons de gameplay.mp3'),
+        GAME_MUSIC_SOURCE,
         { isLooping: false, volume: 0.5 }
       );
       gameSound = sound;
@@ -128,10 +141,18 @@ export const AudioController = {
     if (gameSound) {
       try {
         await gameSound.stopAsync();
-        await gameSound.unloadAsync();
-        gameSound = null;
       } catch (e) {
-        console.log('Error stopping game music', e);
+        const msg = String(e?.message || e || '');
+        if (!msg.toLowerCase().includes('seeking interrupted')) {
+          console.log('Error stopping game music', e);
+        }
+      } finally {
+        try {
+          await gameSound.unloadAsync();
+        } catch (_) {
+          // no-op
+        }
+        gameSound = null;
       }
     }
   },
@@ -140,7 +161,7 @@ export const AudioController = {
     if (!isSoundEnabled) return;
     try {
       const { sound } = await Audio.Sound.createAsync(
-        require('../../assets/song/game-over-deep-male-voice-clip-352695.mp3')
+        VICTORY_SOUND_SOURCE
       );
       await sound.playAsync();
       
