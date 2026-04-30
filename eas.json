@@ -32,14 +32,14 @@
       "extends": "production",
       "ios": {
         "simulator": true,
-        "image": "macos-sequoia-15.6-xcode-16.4"
+        "image": "macos-sequoia-15.5-xcode-26.0"
       }
     },
     "production": {
       "distribution": "store",
       "autoIncrement": true,
       "ios": {
-        "image": "macos-sequoia-15.6-xcode-16.4"
+        "image": "macos-sequoia-15.5-xcode-26.0"
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://backend-deadpions-production.up.railway.app/api",
@@ -54,6 +54,10 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascAppId": "6759306765"
+      }
+    }
   }
 }
