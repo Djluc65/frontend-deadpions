@@ -6,11 +6,11 @@ import {
   TouchableOpacity,
   FlatList,
   Animated,
-  Dimensions,
   ScrollView,
   Modal,
   SafeAreaView,
-  ActivityIndicator
+  ActivityIndicator,
+  useWindowDimensions
 } from 'react-native';
 import Svg, { Circle, Path, G, Defs, RadialGradient, Stop, LinearGradient, Ellipse } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,8 +20,6 @@ import { updateUser } from '../redux/slices/authSlice';
 import { API_URL } from '../config';
 import PionSVG, { PION_COLORS } from '../components/PionSVG';
 import { appAlert } from '../services/appAlert';
-
-const { width } = Dimensions.get('window');
 
 // ─── Types & Configuration ────────────────────────────────────────────────────────────
 
@@ -47,6 +45,7 @@ function PionCard({
   onPress,
   selected,
   equipped,
+  cardWidth,
 }) {
   const scale = useRef(new Animated.Value(1)).current;
   const glow = useRef(new Animated.Value(0)).current;
@@ -81,6 +80,7 @@ function PionCard({
       <Animated.View
         style={[
           styles.pionCard,
+          typeof cardWidth === 'number' ? { width: cardWidth } : null,
           selected && { borderColor: c.light, borderWidth: 2 },
           { transform: [{ scale }] },
         ]}
@@ -123,6 +123,7 @@ export default function PremiumPionsScreen() {
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const { user, token } = useSelector(state => state.auth);
+  const { width } = useWindowDimensions();
   
   const [selectedType, setSelectedType] = useState(user?.pawnSkin || 'skull');
   const [selectedColor, setSelectedColor] = useState('red');
@@ -130,17 +131,16 @@ export default function PremiumPionsScreen() {
   const [loading, setLoading] = useState(false);
 
   const selectedConfig = PION_TYPES.find(p => p.id === selectedType) || PION_TYPES[0];
-  const isOwned = !selectedConfig.isPremium || user?.isPremium || user?.isEarlyAccess;
   const isEquipped = user?.pawnSkin === selectedType;
+
+  const gridGap = 12;
+  const scrollPaddingHorizontal = 20;
+  const availableGridWidth = Math.max(0, width - scrollPaddingHorizontal * 2);
+  const pionCardWidth = Math.floor((availableGridWidth - gridGap * 2) / 3);
 
   const handleEquip = async () => {
     if (!user) {
       appAlert('Connexion requise', 'Veuillez vous connecter pour équiper un pion.');
-      return;
-    }
-    
-    if (!isOwned) {
-      appAlert('Premium requis', 'Ce pion est réservé aux membres Premium.');
       return;
     }
 
@@ -227,23 +227,10 @@ export default function PremiumPionsScreen() {
               onPress={() => setSelectedType(config.id)}
               selected={selectedType === config.id}
               equipped={user?.pawnSkin === config.id}
+              cardWidth={pionCardWidth}
             />
           ))}
         </View>
-
-        {/* Unlock Banner */}
-        {!user?.isPremium && !user?.isEarlyAccess && (
-          <View style={styles.unlockBanner}>
-            <Text style={styles.unlockTitle}>🔓 Débloque tous les Pions</Text>
-            <Text style={styles.unlockSub}>12 pions exclusifs — Rouge & Bleu</Text>
-            <TouchableOpacity 
-              style={styles.unlockBtn}
-              onPress={() => navigation.navigate('Shop', { purchaseTarget: 'premium_unlock' })}
-            >
-              <Text style={styles.unlockBtnText}>PASSER EN PRO — 4,99€</Text>
-            </TouchableOpacity>
-          </View>
-        )}
 
       </ScrollView>
 
@@ -271,7 +258,7 @@ export default function PremiumPionsScreen() {
               <View style={[styles.equipButton, { backgroundColor: '#444' }]}>
                  <Text style={styles.equipButtonText}>ACTUELLEMENT ÉQUIPÉ</Text>
               </View>
-            ) : isOwned ? (
+            ) : (
               <TouchableOpacity 
                 style={[styles.equipButton, { backgroundColor: COLORS[selectedColor].primary }]}
                 onPress={handleEquip}
@@ -282,16 +269,6 @@ export default function PremiumPionsScreen() {
                 ) : (
                    <Text style={styles.equipButtonText}>ÉQUIPER CE PION</Text>
                 )}
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity 
-                style={[styles.equipButton, { backgroundColor: '#CC0000' }]}
-                onPress={() => {
-                   setDetailVisible(false);
-                   navigation.navigate('Shop', { purchaseTarget: 'premium_unlock' });
-                }}
-              >
-                <Text style={styles.equipButtonText}>DÉBLOQUER (PRO)</Text>
               </TouchableOpacity>
             )}
 
@@ -419,7 +396,6 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   pionCard: {
-    width: (width - 64) / 3,
     aspectRatio: 0.9,
     backgroundColor: COLORS.card,
     borderRadius: 16,

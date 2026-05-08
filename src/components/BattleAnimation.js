@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Animated, StyleSheet, Dimensions, Easing } from 'react-native';
+import { View, Animated, StyleSheet, Easing, useWindowDimensions } from 'react-native';
 import { Svg, Defs, LinearGradient, Stop, Path, Polygon, Circle } from 'react-native-svg';
-import { getResponsiveSize } from '../utils/responsive';
+import { getResponsiveSize, SCREEN_WIDTH } from '../utils/responsive';
 
-const { width } = Dimensions.get('window');
+const width = SCREEN_WIDTH;
 
 // Images assets (Utilisation des assets existants du projet)
 const LION_IMG = require('../../assets/avatars2/lion2.png');
@@ -121,6 +121,9 @@ const CollisionEffect = ({ anim }) => (
 );
 
 const BattleAnimation = () => {
+  const { width: windowWidth } = useWindowDimensions();
+  const isTablet = windowWidth >= 768;
+  
   // --- Valeurs d'animation ---
   const moveAnim = useRef(new Animated.Value(0)).current;   // 0: Début, 1: Affrontement central
   const popAnim = useRef(new Animated.Value(0)).current;    // 0: Normal, 1: Têtes en avant
@@ -242,7 +245,7 @@ const BattleAnimation = () => {
   });
 
   return (
-    <View pointerEvents="none" style={styles.container}>
+    <View pointerEvents="none" style={[styles.container, { marginTop: getResponsiveSize(10) + (isTablet ? 50 : 0) }]}>
       {/* --- LION (Gauche / Rouge) --- */}
       <Animated.View style={[
         styles.fighterContainer,
@@ -307,7 +310,6 @@ const styles = StyleSheet.create({
     height: getResponsiveSize(120),
     width: '100%',
     marginBottom: getResponsiveSize(10),
-    marginTop: getResponsiveSize(10),
     overflow: 'visible', // Permettre aux effets de dépasser
   },
   fighterContainer: {

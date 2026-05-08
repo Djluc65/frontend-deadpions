@@ -1,11 +1,13 @@
 import React from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, Pressable, useWindowDimensions } from 'react-native';
 import { playButtonSound } from '../utils/soundManager';
 import { getResponsiveSize } from '../utils/responsive';
 import { modalTheme } from '../utils/modalTheme';
 
 const CustomAlert = ({ visible, title, message, buttons = [], onClose }) => {
   const isSingleButton = !Array.isArray(buttons) || buttons.length <= 1;
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
 
   return (
     <Modal
@@ -15,7 +17,14 @@ const CustomAlert = ({ visible, title, message, buttons = [], onClose }) => {
       onRequestClose={onClose}
     >
       <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable style={styles.alertContent} onPress={() => {}}>
+        <Pressable
+          style={[
+            styles.alertContent,
+            isTablet && { width: '50%', maxWidth: 500, alignSelf: 'center' },
+            !isTablet && { width: '85%' },
+          ]}
+          onPress={() => {}}
+        >
             <View style={styles.body}>
               <Text style={styles.alertTitle}>{title}</Text>
               <Text style={styles.alertMessage}>{message}</Text>
@@ -60,7 +69,7 @@ const styles = StyleSheet.create({
   alertContent: {
     ...modalTheme.card,
     maxWidth: getResponsiveSize(460),
-    minWidth: getResponsiveSize(280)
+    minWidth: getResponsiveSize(280),
   },
   body: {
     width: '100%',

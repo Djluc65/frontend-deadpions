@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Animated, Dimensions, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Animated, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import EmojiAnimation from './EmojiAnimation';
 import { getEmojiSource } from '../utils/emojis';
-import { getResponsiveSize } from '../utils/responsive';
+import { getResponsiveSize, SCREEN_WIDTH } from '../utils/responsive';
 
-const { width, height } = Dimensions.get('window');
+const width = SCREEN_WIDTH;
 
 const LiveChatOverlay = ({ 
     messages, 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ImageBackground, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, TouchableWithoutFeedback, Keyboard, useWindowDimensions } from 'react-native';
 import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
@@ -8,6 +8,8 @@ import { getResponsiveSize } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
 
 const ForgotPasswordScreen = ({ navigation }) => {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -63,26 +65,30 @@ const ForgotPasswordScreen = ({ navigation }) => {
     >
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.container}>
-          <Text style={styles.title}>Mot de passe oublié</Text>
-          <Text style={styles.subtitle}>Entrez votre email pour recevoir un lien de réinitialisation.</Text>
+          <View style={[styles.formContainer, isTablet && styles.formContainerTablet]}>
+            <Text style={[styles.title, isTablet && styles.titleTablet]}>Mot de passe oublié</Text>
+            <Text style={[styles.subtitle, isTablet && styles.subtitleTablet]}>
+              Entrez votre email pour recevoir un lien de réinitialisation.
+            </Text>
           
-          <Input 
-            placeholder="Email"
-            value={email} 
-            onChangeText={setEmail} 
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
+            <Input 
+              placeholder="Email"
+              value={email} 
+              onChangeText={setEmail} 
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
           
-          <Button 
-            title={loading ? "Envoi..." : "Envoyer"} 
-            onPress={handleSendResetLink} 
-            disabled={loading}
-          />
+            <Button 
+              title={loading ? "Envoi..." : "Envoyer"} 
+              onPress={handleSendResetLink} 
+              disabled={loading}
+            />
           
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backButtonText}>Retour à la connexion</Text>
-          </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <Text style={styles.backButtonText}>Retour à la connexion</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </TouchableWithoutFeedback>
     </ImageBackground>
@@ -100,6 +106,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: getResponsiveSize(20),
     backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+  },
+  formContainer: {
+    width: '100%',
+  },
+  formContainerTablet: {
+    maxWidth: 480,
+    alignSelf: 'center',
   },
   title: {
     fontSize: getResponsiveSize(28),
@@ -108,11 +122,17 @@ const styles = StyleSheet.create({
     marginBottom: getResponsiveSize(10),
     textAlign: 'center',
   },
+  titleTablet: {
+    fontSize: getResponsiveSize(28),
+  },
   subtitle: {
     fontSize: getResponsiveSize(16),
     color: '#ccc',
     marginBottom: getResponsiveSize(30),
     textAlign: 'center',
+  },
+  subtitleTablet: {
+    fontSize: getResponsiveSize(16),
   },
   backButton: {
     marginTop: getResponsiveSize(20),

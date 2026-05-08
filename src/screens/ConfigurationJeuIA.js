@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch, ImageBackground, Dimensions, SafeAreaView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch, ImageBackground, SafeAreaView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
 import { playButtonSound } from '../utils/soundManager';
-import { getResponsiveSize } from '../utils/responsive';
+import { getResponsiveSize, SCREEN_WIDTH } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
 
-const { width } = Dimensions.get('window');
+const width = SCREEN_WIDTH;
 
 const BET_OPTIONS = [
   100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 

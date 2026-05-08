@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, Text, StyleSheet, TextInput, FlatList, 
   KeyboardAvoidingView, Platform, SafeAreaView, Modal, Image,
-  Dimensions, Animated, Easing, Vibration, TouchableWithoutFeedback, Keyboard
+  Animated, Easing, Vibration, TouchableWithoutFeedback, Keyboard
 } from 'react-native';
 import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,10 +21,11 @@ import {
 import { API_URL } from '../config';
 import socket from '../services/socket';
 import { AudioController } from '../utils/AudioController';
-import { getResponsiveSize, isTablet } from '../utils/responsive';
+import { getResponsiveSize, isTablet, SCREEN_WIDTH, SCREEN_HEIGHT } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
 
-const { width, height } = Dimensions.get('window');
+const width = SCREEN_WIDTH;
+const height = SCREEN_HEIGHT;
 
 const ChatScreen = ({ route, navigation }) => {
   const { friendId, friendName, friendAvatar } = route.params;

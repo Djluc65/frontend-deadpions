@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ImageBackground, TouchableWithoutFeedback, Keyboard, Platform } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, TouchableWithoutFeedback, Keyboard, Platform, useWindowDimensions } from 'react-native';
 import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import { useDispatch } from 'react-redux';
 import { AntDesign } from '@expo/vector-icons';
@@ -26,6 +26,8 @@ const isUserCancelledAuth = (error) => {
 };
 
 const RegisterScreen = ({ navigation }) => {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
   const [pseudo, setPseudo] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -180,7 +182,8 @@ const RegisterScreen = ({ navigation }) => {
         resizeMode="cover"
       >
         <View style={styles.container}>
-          <Text style={styles.title}>Inscription</Text>
+          <View style={[styles.formContainer, isTablet && styles.formContainerTablet]}>
+          <Text style={[styles.title, isTablet && styles.titleTablet]}>Inscription</Text>
           {showGoogleAuth && (
             <View style={{ width: '100%', marginBottom: getResponsiveSize(10) }}>
               <Button
@@ -226,6 +229,7 @@ const RegisterScreen = ({ navigation }) => {
             onPress={() => navigation.goBack()} 
             style={{ backgroundColor: 'transparent' }}
           />
+          </View>
         </View>
       </ImageBackground>
     </TouchableWithoutFeedback>
@@ -244,12 +248,22 @@ const styles = StyleSheet.create({
     padding: getResponsiveSize(20),
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
+  formContainer: {
+    width: '100%',
+  },
+  formContainerTablet: {
+    maxWidth: 480,
+    alignSelf: 'center',
+  },
   title: {
     fontSize: getResponsiveSize(32),
     color: '#fff',
     fontWeight: 'bold',
     marginBottom: getResponsiveSize(30),
     textAlign: 'center',
+  },
+  titleTablet: {
+    fontSize: getResponsiveSize(28),
   },
   googleButton: {
     flexDirection: 'row',

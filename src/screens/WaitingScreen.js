@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, StyleSheet, ActivityIndicator, Platform } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { View, StyleSheet, ActivityIndicator, Platform, Text, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSelector, useDispatch } from 'react-redux';
@@ -12,6 +12,47 @@ import * as SplashScreen from 'expo-splash-screen';
 const WaitingScreen = ({ navigation }) => {
   const { token, refreshToken } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
+  const [attGateVisible, setAttGateVisible] = useState(false);
+  const attResolveRef = useRef(null);
+  const attGatePromiseRef = useRef(null);
+  const attApiRef = useRef(null);
+  const attInitResolveRef = useRef(null);
+  const attInitPromiseRef = useRef(null);
+
+  if (!attInitPromiseRef.current) {
+    attInitPromiseRef.current = new Promise((resolve) => { attInitResolveRef.current = resolve; });
+  }
+
+  const normalizeAttStatus = useCallback((rawStatus) => {
+    const status = typeof rawStatus === 'string' ? rawStatus : (rawStatus?.status ?? rawStatus);
+    const s = (typeof status === 'string' ? status : '')
+      .toLowerCase()
+      .trim()
+      .replace(/[\s_]+/g, '-');
+
+    if (s === 'undetermined' || s === 'not-determined' || s === 'notdetermined') return 'undetermined';
+    if (s === 'authorized' || s === 'granted' || s === 'allowed') return 'authorized';
+    if (s === 'denied' || s === 'restricted') return 'denied';
+    return s || 'unknown';
+  }, []);
+
+  const pushAttPayload = useCallback(async (payload) => {
+    globalThis.__ATT_STATUS__ = payload;
+    if (globalThis.__ATT_LISTENERS__ instanceof Set) {
+      for (const fn of globalThis.__ATT_LISTENERS__) {
+        try { fn(payload); } catch (_) {}
+      }
+    }
+    try { await AsyncStorage.setItem('att_status_payload', JSON.stringify(payload)); } catch (_) {}
+  }, []);
+
+  const resolveAttGate = useCallback(() => {
+    if (typeof attResolveRef.current === 'function') {
+      try { attResolveRef.current(true); } catch (_) {}
+    }
+    attResolveRef.current = null;
+    attGatePromiseRef.current = null;
+  }, []);
 
   useEffect(() => {
     // Hide splash screen once WaitingScreen is mounted
@@ -24,57 +65,71 @@ const WaitingScreen = ({ navigation }) => {
 
       try {
         if (Platform.OS !== 'ios') {
-          const payload = { checked: true, status: 'not_applicable', authorized: false, at: Date.now() };
-          globalThis.__ATT_STATUS__ = payload;
-          if (globalThis.__ATT_LISTENERS__ instanceof Set) {
-            for (const fn of globalThis.__ATT_LISTENERS__) {
-              try { fn(payload); } catch (_) {}
-            }
-          }
-          try { await AsyncStorage.setItem('att_status_payload', JSON.stringify(payload)); } catch (_) {}
+          await pushAttPayload({ checked: true, status: 'not_applicable', authorized: false, at: Date.now() });
           return;
         }
 
-        await new Promise((r) => setTimeout(r, 350));
         const mod = await import('expo-tracking-transparency');
         const { getTrackingPermissionsAsync, requestTrackingPermissionsAsync, TrackingStatus } = mod;
+        attApiRef.current = { getTrackingPermissionsAsync, requestTrackingPermissionsAsync, TrackingStatus };
+
         const res = await getTrackingPermissionsAsync();
-        let status = res?.status ?? res;
-        const isNotDetermined =
-          status === 'not-determined' ||
-          status === TrackingStatus?.NotDetermined ||
-          status === 0;
-        if (isNotDetermined) {
-          const req = await requestTrackingPermissionsAsync();
-          status = req?.status ?? req;
-        }
+        const status = res?.status ?? res;
+        const normalized = normalizeAttStatus(status);
+        console.log('[ATT] initial status =', status);
 
-        const authorized =
-          status === 'authorized' ||
-          status === 'granted' ||
-          status === TrackingStatus?.Authorized;
-
-        const payload = { checked: true, status, authorized, at: Date.now() };
-        globalThis.__ATT_STATUS__ = payload;
-        if (globalThis.__ATT_LISTENERS__ instanceof Set) {
-          for (const fn of globalThis.__ATT_LISTENERS__) {
-            try { fn(payload); } catch (_) {}
+        if (normalized === 'undetermined') {
+          if (!attGatePromiseRef.current) {
+            attGatePromiseRef.current = new Promise((resolve) => { attResolveRef.current = resolve; });
           }
+          setAttGateVisible(true);
+          return;
         }
-        try { await AsyncStorage.setItem('att_status_payload', JSON.stringify(payload)); } catch (_) {}
+
+        const authorized = normalized === 'authorized';
+
+        await pushAttPayload({ checked: true, status, authorized, at: Date.now() });
       } catch (_) {
-        const payload = { checked: true, status: 'error', authorized: false, at: Date.now() };
-        globalThis.__ATT_STATUS__ = payload;
-        if (globalThis.__ATT_LISTENERS__ instanceof Set) {
-          for (const fn of globalThis.__ATT_LISTENERS__) {
-            try { fn(payload); } catch (_) {}
-          }
+        await pushAttPayload({ checked: true, status: 'error', authorized: false, at: Date.now() });
+      } finally {
+        if (typeof attInitResolveRef.current === 'function') {
+          try { attInitResolveRef.current(true); } catch (_) {}
         }
-        try { await AsyncStorage.setItem('att_status_payload', JSON.stringify(payload)); } catch (_) {}
+        attInitResolveRef.current = null;
       }
     };
     hideSplash();
-  }, []);
+  }, [pushAttPayload, normalizeAttStatus]);
+
+  const acceptAtt = useCallback(async () => {
+    try {
+      const api = attApiRef.current;
+      if (!api?.requestTrackingPermissionsAsync) {
+        await pushAttPayload({ checked: true, status: 'error', authorized: false, at: Date.now() });
+        setAttGateVisible(false);
+        resolveAttGate();
+        return;
+      }
+
+      const req = await api.requestTrackingPermissionsAsync();
+      const status = req?.status ?? req;
+      console.log('[ATT] request result =', status);
+      const authorized = normalizeAttStatus(status) === 'authorized';
+
+      await pushAttPayload({ checked: true, status, authorized, at: Date.now() });
+    } catch (_) {
+      await pushAttPayload({ checked: true, status: 'error', authorized: false, at: Date.now() });
+    } finally {
+      setAttGateVisible(false);
+      resolveAttGate();
+    }
+  }, [pushAttPayload, resolveAttGate, normalizeAttStatus]);
+
+  const skipAtt = useCallback(async () => {
+    await pushAttPayload({ checked: true, status: 'skipped', authorized: false, at: Date.now() });
+    setAttGateVisible(false);
+    resolveAttGate();
+  }, [pushAttPayload, resolveAttGate]);
 
   useEffect(() => {
     let isMounted = true;
@@ -134,6 +189,14 @@ const WaitingScreen = ({ navigation }) => {
       
       if (!isMounted) return;
 
+      if (attInitPromiseRef.current) {
+        try { await attInitPromiseRef.current; } catch (_) {}
+      }
+
+      if (attGatePromiseRef.current) {
+        try { await attGatePromiseRef.current; } catch (_) {}
+      }
+
       // Petit délai minimal si tout est allé trop vite pour éviter le flash
       const elapsed = Date.now() - startTime;
       if (elapsed < 500) await new Promise(r => setTimeout(r, 500 - elapsed));
@@ -142,7 +205,7 @@ const WaitingScreen = ({ navigation }) => {
           navigation.replace('Home');
       } else {
           dispatch(logout());
-          navigation.replace('Login');
+          navigation.replace('Home');
       }
     };
 
@@ -166,6 +229,27 @@ const WaitingScreen = ({ navigation }) => {
         />
         <ActivityIndicator size="large" color="#ffffff" style={styles.loader} />
       </View>
+      {attGateVisible && (
+        <View style={styles.attOverlay}>
+          <View style={styles.attCard}>
+            <Text style={styles.attTitle}>Autoriser le suivi ?</Text>
+            <Text style={styles.attText}>
+              DeadPions utilise cette autorisation pour proposer des publicités personnalisées et mesurer la performance.
+            </Text>
+            <Text style={styles.attHint}>
+              Si la popup Apple n'apparaît pas: Réglages → Confidentialité et sécurité → Suivi → Autoriser les demandes de suivi des apps.
+            </Text>
+            <View style={styles.attButtons}>
+              <TouchableOpacity style={styles.attBtnSecondary} onPress={skipAtt} activeOpacity={0.9}>
+                <Text style={styles.attBtnSecondaryText}>Plus tard</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.attBtnPrimary} onPress={acceptAtt} activeOpacity={0.9}>
+                <Text style={styles.attBtnPrimaryText}>Continuer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 };
@@ -183,12 +267,74 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logo: {
-    width: isTablet ? SCREEN_WIDTH * 0.5 : SCREEN_WIDTH * 0.8,
-    height: isTablet ? SCREEN_WIDTH * 0.5 : SCREEN_WIDTH * 0.8,
+    width: SCREEN_WIDTH * (isTablet ? 0.5 : 0.8),
+    height: SCREEN_WIDTH * (isTablet ? 0.5 : 0.8),
     bottom: SCREEN_HEIGHT * 0.2,
   },
   loader: {
     marginTop: getResponsiveSize(50),
+  },
+  attOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  attCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: 'rgba(20, 20, 20, 0.95)',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  attTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  attText: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  attHint: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 12,
+    lineHeight: 16,
+    marginBottom: 14,
+  },
+  attButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  attBtnPrimary: {
+    flex: 1,
+    backgroundColor: '#0A84FF',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  attBtnPrimaryText: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 14,
+  },
+  attBtnSecondary: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  attBtnSecondaryText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '700',
+    fontSize: 14,
   },
 });
 

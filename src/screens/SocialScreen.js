@@ -13,7 +13,8 @@ import {
   ActivityIndicator,
   TouchableWithoutFeedback,
   Keyboard,
-  ScrollView
+  ScrollView,
+  useWindowDimensions
 } from 'react-native';
 import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,10 +24,12 @@ import { API_URL } from '../config';
 import socket from '../services/socket';
 import { setNotificationsCount } from '../redux/slices/socialSlice';
 import { getAvatarSource } from '../utils/avatarUtils';
-import { getResponsiveSize, isTablet } from '../utils/responsive';
+import { getResponsiveSize } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
 
 const SocialScreen = ({ navigation }) => {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
   // --- STATE ---
   const [activeTab, setActiveTab] = useState('discussions'); // discussions, friends, requests
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,6 +61,28 @@ const SocialScreen = ({ navigation }) => {
   const dispatch = useDispatch();
   const { user, token } = useSelector(state => state.auth);
   const coins = user?.coins || 0;
+
+  if (!user || !token) {
+    return (
+      <ImageBackground
+        source={require('../../assets/images/Background2-4.png')}
+        style={styles.background}
+        resizeMode="cover"
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.loginGate}>
+            <Text style={styles.loginGateTitle}>Connexion requise</Text>
+            <Text style={styles.loginGateText}>
+              Connectez-vous pour accéder aux amis, discussions et invitations.
+            </Text>
+            <TouchableOpacity style={[styles.loginGateBtn, isTablet && styles.loginGateBtnTablet]} onPress={() => navigation.navigate('Login')}>
+              <Text style={styles.loginGateBtnText}>Se connecter</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </ImageBackground>
+    );
+  }
 
   // --- HELPER ---
   const getAvatarUri = (avatarPath) => {
@@ -712,6 +737,8 @@ const SocialScreen = ({ navigation }) => {
     <FlatList
         data={filteredFriends}
         extraData={tick}
+        numColumns={isTablet ? 2 : 1}
+        key={isTablet ? 'friends-2col' : 'friends-1col'}
         keyExtractor={item => item.id.toString()}
         contentContainerStyle={styles.listContent}
       refreshing={loading}
@@ -721,9 +748,9 @@ const SocialScreen = ({ navigation }) => {
       renderItem={({ item }) => {
         const statusInfo = getStatusInfo(item.isOnline, item.lastSeen);
         return (
-          <View style={styles.friendItem}>
+          <View style={[styles.friendItem, isTablet && styles.friendItemTablet]}>
             <View style={styles.friendAvatarContainer}>
-              <Image source={item.avatar} style={styles.avatar} />
+              <Image source={item.avatar} style={[styles.avatar, isTablet && styles.avatarTablet]} />
               <View style={[styles.statusIndicator, { backgroundColor: statusInfo.color }]} />
             </View>
             <View style={styles.friendInfo}>
@@ -864,7 +891,7 @@ const SocialScreen = ({ navigation }) => {
             onRequestClose={() => setIsAddFriendVisible(false)}
           >
             <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
+              <View style={[styles.modalContent, isTablet && styles.modalContentTablet]}>
                 <Text style={styles.modalTitle}>Ajouter un ami</Text>
                 <TextInput 
                   style={styles.modalInput}
@@ -893,7 +920,7 @@ const SocialScreen = ({ navigation }) => {
             onRequestClose={() => setInviteConfigVisible(false)}
           >
             <View style={styles.modalOverlay}>
-              <View style={[styles.modalContent, { maxHeight: '80%' }]}>
+              <View style={[styles.modalContent, isTablet && styles.modalContentTablet, { maxHeight: '80%' }]}>
                 <ScrollView contentContainerStyle={{ alignItems: 'center', width: '100%' }} style={{ width: '100%' }}>
                 <Text style={styles.modalTitle}>Inviter {selectedFriend?.name}</Text>
                 
@@ -979,7 +1006,7 @@ const SocialScreen = ({ navigation }) => {
             onRequestClose={() => setIsWaitingForResponse(false)}
           >
             <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
+              <View style={[styles.modalContent, isTablet && styles.modalContentTablet]}>
                 <ActivityIndicator size="large" color="#041c55" style={{ marginBottom: getResponsiveSize(20) }} />
                 <Text style={styles.modalTitle}>En attente de l'adversaire...</Text>
                 <Text style={{ textAlign: 'center', marginBottom: getResponsiveSize(20), color: '#666' }}>
@@ -1004,7 +1031,7 @@ const SocialScreen = ({ navigation }) => {
             onRequestClose={handleDeclineInvite}
           >
             <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
+              <View style={[styles.modalContent, isTablet && styles.modalContentTablet]}>
                 <Text style={styles.modalTitle}>Invitation de {incomingInvite?.senderPseudo}</Text>
                 <Text style={styles.inviteDetails}>
                     Mode: {incomingInvite?.mode === 'tournament' ? `Tournoi (${incomingInvite?.seriesLength} parties)` : 'Simple'}{'\n'}
@@ -1039,6 +1066,42 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: 'rgba(4, 28, 85, 0.7)',
+  },
+  loginGate: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: getResponsiveSize(22),
+  },
+  loginGateTitle: {
+    color: '#fff',
+    fontSize: getResponsiveSize(22),
+    fontWeight: '800',
+    marginBottom: getResponsiveSize(10),
+    textAlign: 'center',
+  },
+  loginGateText: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: getResponsiveSize(14),
+    lineHeight: getResponsiveSize(20),
+    textAlign: 'center',
+    marginBottom: getResponsiveSize(18),
+  },
+  loginGateBtn: {
+    backgroundColor: '#f1c40f',
+    paddingVertical: getResponsiveSize(12),
+    paddingHorizontal: getResponsiveSize(22),
+    borderRadius: getResponsiveSize(14),
+    minWidth: getResponsiveSize(180),
+    alignItems: 'center',
+  },
+  loginGateBtnTablet: {
+    minWidth: getResponsiveSize(220),
+  },
+  loginGateBtnText: {
+    color: '#041c55',
+    fontWeight: '900',
+    fontSize: getResponsiveSize(14),
   },
   // Header
   header: {
@@ -1165,12 +1228,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatar: {
-    width: getResponsiveSize(50),
-    height: getResponsiveSize(50),
-    borderRadius: getResponsiveSize(25),
+    width: getResponsiveSize(40),
+    height: getResponsiveSize(40),
+    borderRadius: getResponsiveSize(20),
     marginRight: getResponsiveSize(12),
     borderWidth: getResponsiveSize(1),
     borderColor: 'rgba(255,255,255,0.3)',
+  },
+  avatarTablet: {
+    width: getResponsiveSize(48),
+    height: getResponsiveSize(48),
+    borderRadius: getResponsiveSize(24),
   },
   chatInfo: {
     flex: 1,
@@ -1244,6 +1312,12 @@ const styles = StyleSheet.create({
     borderRadius: getResponsiveSize(12),
     marginBottom: getResponsiveSize(10),
     alignItems: 'center',
+    minHeight: getResponsiveSize(64),
+  },
+  friendItemTablet: {
+    flex: 1,
+    marginHorizontal: getResponsiveSize(6),
+    minHeight: getResponsiveSize(72),
   },
   friendAvatarContainer: {
     position: 'relative',
@@ -1352,10 +1426,14 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: '#fff',
-    width: isTablet ? '50%' : '80%',
     padding: getResponsiveSize(20),
     borderRadius: getResponsiveSize(15),
     alignItems: 'center',
+  },
+  modalContentTablet: {
+    width: '55%',
+    maxWidth: 550,
+    alignSelf: 'center',
   },
   modalTitle: {
     fontSize: getResponsiveSize(18),

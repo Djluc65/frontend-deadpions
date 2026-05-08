@@ -9,19 +9,19 @@ import {
   ActivityIndicator,
   StyleSheet,
   Image,
-  Dimensions,
   Platform,
   KeyboardAvoidingView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getResponsiveSize } from '../../utils/responsive';
+import { getResponsiveSize, SCREEN_WIDTH, SCREEN_HEIGHT } from '../../utils/responsive';
 import { getAvatarSource } from '../../utils/avatarUtils';
 import { API_URL } from '../../config';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
 import { modalTheme } from '../../utils/modalTheme';
 
-const { width, height } = Dimensions.get('window');
+const width = SCREEN_WIDTH;
+const height = SCREEN_HEIGHT;
 
 const UserSearchModal = ({ visible, onClose, navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');

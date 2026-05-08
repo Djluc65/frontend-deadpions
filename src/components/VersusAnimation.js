@@ -1,9 +1,10 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Image, Animated, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Image, Animated } from 'react-native';
 import { getAvatarSource } from '../utils/avatarUtils';
-import { getResponsiveSize } from '../utils/responsive';
+import { getResponsiveSize, SCREEN_WIDTH, SCREEN_HEIGHT } from '../utils/responsive';
 
-const { width, height } = Dimensions.get('window');
+const width = SCREEN_WIDTH;
+const height = SCREEN_HEIGHT;
 
 const VersusAnimation = ({ player1, player2, onFinish, visible }) => {
     const slideLeft = useRef(new Animated.Value(-width)).current;

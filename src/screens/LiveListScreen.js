@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, ImageBackground, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, ImageBackground, Image, useWindowDimensions } from 'react-native';
 import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
@@ -26,6 +26,8 @@ const LiveListScreen = () => {
   const navigation = useNavigation();
   const isFocused = useIsFocused();
   const user = useSelector(state => state.auth.user);
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
   const [searchQuery, setSearchQuery] = useState('');
   const [lives, setLives] = useState([]); // Liste des lives
   const [filter, setFilter] = useState('all'); // 'all', 'bet', 'friendly'
@@ -158,7 +160,7 @@ const LiveListScreen = () => {
       source={require('../../assets/images/Background2-4.png')} 
       style={styles.container}
     >
-      <View style={styles.header}>
+      <View style={[styles.header, isTablet && styles.headerTablet]}>
         <Text style={styles.title}>Salles Live</Text>
         <View style={styles.searchContainer}>
             <Ionicons name="search" size={getResponsiveSize(20)} color="#9ca3af" style={styles.searchIcon} />
@@ -197,7 +199,10 @@ const LiveListScreen = () => {
         data={filteredLives}
         renderItem={renderLiveItem}
         keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContent}
+        numColumns={isTablet ? 2 : 1}
+        key={isTablet ? 'lives-2col' : 'lives-1col'}
+        columnWrapperStyle={isTablet ? styles.columnWrapper : undefined}
+        contentContainerStyle={[styles.listContent, isTablet && styles.listContentTablet]}
         ListEmptyComponent={
             <View style={styles.emptyState}>
                 <Ionicons name="videocam-off-outline" size={getResponsiveSize(48)} color="rgba(255,255,255,0.3)" />
@@ -217,6 +222,11 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: getResponsiveSize(20),
     marginBottom: getResponsiveSize(20),
+  },
+  headerTablet: {
+    maxWidth: 700,
+    width: '100%',
+    alignSelf: 'center',
   },
   title: {
     fontSize: getResponsiveSize(28),
@@ -272,6 +282,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSize(20),
     paddingBottom: getResponsiveSize(100),
   },
+  listContentTablet: {
+    maxWidth: 900,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: getResponsiveSize(20),
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
+    gap: getResponsiveSize(16),
+  },
   card: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: getResponsiveSize(16),
@@ -282,6 +302,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: getResponsiveSize(4),
     elevation: getResponsiveSize(3),
+    flex: 1,
   },
   cardHeader: {
     flexDirection: 'row',

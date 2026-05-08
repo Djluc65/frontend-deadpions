@@ -24,7 +24,7 @@ const IAP_SKUS = Platform.select({
     pack_pro:             'com.deadpions.app.pack_pro',
     pack_expert:          'com.deadpions.app.pack_expert',
     pack_whale:           'com.deadpions.app.pack_whale',
-    pack_premium_unlock:  'com.deadpions.app.premium_unlock',
+    pack_premium_unlock:  'com.deadpions.app.premium_unlock_v2',
     subscription_monthly: 'com.deadpions.app.premium_monthly_nonrenewing',
     subscription_yearly:  'com.deadpions.app.premium_yearly_nonrenewing',
   },
@@ -109,7 +109,6 @@ const ShopScreen = () => {
     const ready = await ensureIapReady();
     if (!ready) return false;
 
-    const isAndroid = Platform.OS === 'android';
     const productSkus = [
       IAP_SKUS.pack_beginner,
       IAP_SKUS.pack_popular,
@@ -125,12 +124,10 @@ const ShopScreen = () => {
       IAP_SKUS.subscription_yearly,
     ].filter(Boolean);
 
-    const inAppSkus = isIOS ? [...productSkus, ...subscriptionSkus] : productSkus;
-
     try {
       iapCatalogPromiseRef.current = (async () => {
-        await IAP.fetchProducts({ skus: inAppSkus, type: 'in-app' });
-        if (isAndroid) {
+        await IAP.fetchProducts({ skus: productSkus, type: 'in-app' });
+        if (subscriptionSkus.length) {
           await IAP.fetchProducts({ skus: subscriptionSkus, type: 'subs' });
         }
         iapCatalogReadyRef.current = true;
@@ -374,10 +371,53 @@ const ShopScreen = () => {
       await handleBuyCoins('pack_premium_unlock', 0, '4,99 €', 'Pions Premium Unlock');
   };
 
+  const handleRestorePurchases = async () => {
+    if (loading) return;
+    if (!user || !token) {
+      appAlert('Connexion requise', 'Connectez-vous pour restaurer vos achats.', [
+        { text: 'Plus tard', style: 'cancel' },
+        { text: 'Se connecter', onPress: () => navigation.navigate('Login') }
+      ]);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const ready = await ensureIapReady();
+      if (!ready) {
+        setLoading(false);
+        return;
+      }
+
+      if (Platform.OS === 'ios') {
+        await IAP.restorePurchases();
+        appAlert('Succès', 'Vos achats ont été restaurés avec succès !');
+      } else if (Platform.OS === 'android') {
+        await IAP.restorePurchases();
+        appAlert('Succès', 'Vos achats ont été restaurés avec succès !');
+      }
+      
+      await refreshUserProfile();
+    } catch (err) {
+      console.error('Restore Purchases Error:', err);
+      appAlert('Erreur', 'Impossible de restaurer vos achats. Veuillez réessayer.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubscription = async (plan) => {
     const isAndroid = Platform.OS === 'android';
     
     if (isIOS || isAndroid) {
+        if (loading) return;
+        if (!user || !token) {
+          appAlert('Connexion requise', 'Connectez-vous pour acheter et restaurer vos achats.', [
+            { text: 'Plus tard', style: 'cancel' },
+            { text: 'Se connecter', onPress: () => navigation.navigate('Login') }
+          ]);
+          return;
+        }
         if (purchaseInFlightRef.current) {
           appAlert('Info', "Un achat est déjà en cours. Si aucune fenêtre ne s'affiche, quitte et relance l'app, puis réessaie.");
           return;
@@ -386,17 +426,19 @@ const ShopScreen = () => {
         purchaseInFlightRef.current = true;
         try {
             const sku = plan === 'Mensuel' ? IAP_SKUS.subscription_monthly : IAP_SKUS.subscription_yearly;
+            if (!sku) throw new Error('Produit non configuré');
             const ready = await ensureIapReady();
             if (!ready) {
               setLoading(false);
               purchaseInFlightRef.current = false;
               return;
             }
+            await ensureIapCatalog();
             startPurchaseTimeout(sku);
 
             if (isIOS) {
               await IAP.requestPurchase({
-                type: 'in-app',
+                type: 'subs',
                 request: { apple: { sku, andDangerouslyFinishTransactionAutomatically: false } }
               });
             } else {
@@ -500,6 +542,13 @@ const ShopScreen = () => {
 
   const handleBuyCoins = async (packId, coins, price, label) => {
     if (loading) return;
+    if (!user || !token) {
+      appAlert('Connexion requise', 'Connectez-vous pour acheter et restaurer vos achats.', [
+        { text: 'Plus tard', style: 'cancel' },
+        { text: 'Se connecter', onPress: () => navigation.navigate('Login') }
+      ]);
+      return;
+    }
 
     const isIOS = Platform.OS === 'ios';
     const isAndroid = Platform.OS === 'android';
@@ -641,6 +690,20 @@ const ShopScreen = () => {
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
           
           <Text style={styles.headerTitle}>Boutique</Text>
+          
+          {isIOS && (
+            <TouchableOpacity 
+              style={styles.restoreButton}
+              onPress={handleRestorePurchases}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Text style={styles.restoreButtonText}>Restaurer les achats</Text>
+              )}
+            </TouchableOpacity>
+          )}
           
           {/* Section Premium */}
           <View style={styles.sectionContainer}>
@@ -818,20 +881,39 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     padding: getResponsiveSize(20),
-    paddingBottom: getResponsiveSize(100),
+    paddingBottom: getResponsiveSize(isTablet ? 120 : 100),
   },
   headerTitle: {
-    fontSize: getResponsiveSize(32),
+    fontSize: getResponsiveSize(isTablet ? 28 : 32),
     fontWeight: 'bold',
     color: 'white',
     textAlign: 'center',
-    marginBottom: getResponsiveSize(20),
+    marginBottom: getResponsiveSize(10),
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: getResponsiveSize(-1), height: getResponsiveSize(1) },
     textShadowRadius: getResponsiveSize(10),
   },
+  restoreButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    width: '80%',
+    paddingHorizontal: getResponsiveSize(20),
+    paddingVertical: getResponsiveSize(14),
+    borderRadius: getResponsiveSize(10),
+    alignSelf: 'center',
+    marginBottom: getResponsiveSize(20),
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  restoreButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: getResponsiveSize(14),
+  },
   sectionContainer: {
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    maxWidth: isTablet ? 700 : '100%',
+    width: '100%',
+    alignSelf: 'center',
     borderRadius: getResponsiveSize(15),
     padding: getResponsiveSize(15),
     marginBottom: getResponsiveSize(20),
@@ -852,7 +934,7 @@ const styles = StyleSheet.create({
   subscriptionContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: getResponsiveSize(10),
+    gap: getResponsiveSize(isTablet ? 14 : 10),
   },
   subCard: {
     flex: 1,

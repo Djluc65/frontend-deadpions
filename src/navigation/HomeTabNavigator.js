@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Platform, useWindowDimensions } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
 import { API_URL } from '../config';
 import socket from '../services/socket';
@@ -13,19 +14,32 @@ import SocialScreen from '../screens/SocialScreen';
 import ShopScreen from '../screens/ShopScreen';
 import LiveListScreen from '../screens/LiveListScreen';
 import { translations } from '../utils/translations';
+import { getResponsiveSize } from '../utils/responsive';
 
 const Tab = createBottomTabNavigator();
 
 const CustomTabIcon = ({ focused, iconName, label }) => {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+  
   return (
-    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-      <Ionicons name={iconName} size={24} color={focused ? '#f1c40f' : '#fff'} />
-      <Text style={{ 
-        color: focused ? '#f1c40f' : '#fff', 
-        fontSize: 12, 
-        fontWeight: 'bold',
-        marginTop: 2
-      }}>
+    <View style={{ alignItems: 'center', justifyContent: 'center', width: isTablet ? 80 : 60 }}>
+      <Ionicons
+        name={iconName}
+        size={getResponsiveSize(isTablet ? 26 : 24)}
+        color={focused ? '#f1c40f' : '#fff'}
+      />
+      <Text
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+        style={{
+          color: focused ? '#f1c40f' : '#fff',
+          fontSize: getResponsiveSize(isTablet ? 11 : 12),
+          fontWeight: 'bold',
+          marginTop: getResponsiveSize(2),
+        }}
+      >
         {label}
       </Text>
     </View>
@@ -38,6 +52,17 @@ const HomeTabNavigator = () => {
   const dispatch = useDispatch();
   const { token, user } = useSelector(state => state.auth);
   const notificationsCount = useSelector(state => state.social.notificationsCount);
+  const { width, height } = useWindowDimensions();
+  const isTablet = width >= 768;
+  const minDim = Math.min(width, height);
+  const maxDim = Math.max(width, height);
+  const isIPadMini =
+    Platform.OS === 'ios' &&
+    minDim >= 740 &&
+    minDim <= 760 &&
+    maxDim >= 1100 &&
+    maxDim <= 1140;
+  const insets = useSafeAreaInsets();
 
   // Fetch initial notifications count
   useEffect(() => {
@@ -96,10 +121,11 @@ const HomeTabNavigator = () => {
         tabBarShowLabel: false,
         tabBarStyle: {
           backgroundColor: 'rgba(4, 28, 85, 0.95)',
-          height: 70,
+          height: (isTablet ? 90 : (isIPadMini ? 65 : 40)) + insets.bottom,
           borderTopColor: '#f1c40f',
           borderTopWidth: 1,
-          paddingTop: 10,
+          paddingTop: isTablet ? 10 : 4,
+          paddingBottom: (isTablet ? 12 : 0) + insets.bottom,
           position: 'absolute',
           bottom: 0,
           left: 0,

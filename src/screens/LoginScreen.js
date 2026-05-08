@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableWithoutFeedback, Keyboard, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableWithoutFeedback, Keyboard, Platform, KeyboardAvoidingView, ScrollView, useWindowDimensions } from 'react-native';
 import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import { Image } from 'expo-image';
 import { useDispatch, useSelector } from 'react-redux';
@@ -30,6 +30,8 @@ const isUserCancelledAuth = (error) => {
 };
 
 const LoginScreen = ({ navigation }) => {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const dispatch = useDispatch();
@@ -255,36 +257,37 @@ const LoginScreen = ({ navigation }) => {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.title}>Connexion</Text>
+            <View style={[styles.formContainer, isTablet && styles.formContainerTablet]}>
+              <Text style={[styles.title, isTablet && styles.titleTablet]}>Connexion</Text>
 
-            {showGoogleAuth && (
-              <View style={{ width: '100%', marginBottom: getResponsiveSize(10) }}>
-                <Button
-                  title="Continuer avec Google"
-                  onPress={async () => {
-                    if (!googleConfigured) {
-                      appAlert('Configuration', 'Google Sign-In n’est pas configuré pour Android.');
-                      return;
-                    }
-                    try {
-                      const useProxy = Constants.appOwnership === 'expo';
-                      await promptAsync({ useProxy });
-                    } catch (e) {
-                      if (isUserCancelledAuth(e)) return;
-                      console.error(e);
-                      const message = typeof e?.message === 'string' ? e.message : '';
-                      if (message.toLowerCase().includes('redirect') || message.toLowerCase().includes('mismatch')) {
-                        appAlert('Erreur', 'Google OAuth est mal configuré (package/SHA-1/redirect).');
+              {showGoogleAuth && (
+                <View style={{ width: '100%', marginBottom: getResponsiveSize(10) }}>
+                  <Button
+                    title="Continuer avec Google"
+                    onPress={async () => {
+                      if (!googleConfigured) {
+                        appAlert('Configuration', 'Google Sign-In n’est pas configuré pour Android.');
                         return;
                       }
-                      appAlert('Erreur', e?.message || 'La connexion Google a échoué');
-                    }
-                  }}
-                  style={!googleConfigured ? styles.googleButtonDisabled : undefined}
-                  textStyle={{ color: '#fff' }}
-                />
-              </View>
-            )}
+                      try {
+                        const useProxy = Constants.appOwnership === 'expo';
+                        await promptAsync({ useProxy });
+                      } catch (e) {
+                        if (isUserCancelledAuth(e)) return;
+                        console.error(e);
+                        const message = typeof e?.message === 'string' ? e.message : '';
+                        if (message.toLowerCase().includes('redirect') || message.toLowerCase().includes('mismatch')) {
+                          appAlert('Erreur', 'Google OAuth est mal configuré (package/SHA-1/redirect).');
+                          return;
+                        }
+                        appAlert('Erreur', e?.message || 'La connexion Google a échoué');
+                      }
+                    }}
+                    style={!googleConfigured ? styles.googleButtonDisabled : undefined}
+                    textStyle={{ color: '#fff' }}
+                  />
+                </View>
+              )}
 
             <Input 
               placeholder="Email"
@@ -318,7 +321,7 @@ const LoginScreen = ({ navigation }) => {
                 buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
                 buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
                 cornerRadius={getResponsiveSize(8)}
-                style={styles.appleButton}
+                style={[styles.appleButton, isTablet && styles.appleButtonTablet]}
                 onPress={handleAppleLogin}
               />
             )}
@@ -333,6 +336,7 @@ const LoginScreen = ({ navigation }) => {
                 🔌 MODE LOCAL ({API_URL})
               </Text>
             )}
+            </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </TouchableWithoutFeedback>
@@ -354,6 +358,14 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  formContainer: {
+    width: '100%',
+  },
+  formContainerTablet: {
+    maxWidth: 480,
+    alignSelf: 'center',
   },
   title: {
     fontSize: getResponsiveSize(32),
@@ -361,6 +373,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: getResponsiveSize(30),
     textAlign: 'center',
+  },
+  titleTablet: {
+    fontSize: getResponsiveSize(28),
   },
   forgotPasswordContainer: {
     alignSelf: 'flex-end',
@@ -377,6 +392,9 @@ const styles = StyleSheet.create({
     height: getResponsiveSize(50), // Matches typical button height
     marginTop: getResponsiveSize(15),
     marginBottom: getResponsiveSize(5), // Slight spacing before Google button
+  },
+  appleButtonTablet: {
+    height: getResponsiveSize(52),
   },
   googleButton: {
     flexDirection: 'row',

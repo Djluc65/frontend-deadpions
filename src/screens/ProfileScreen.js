@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ImageBackground, Image, ScrollView, Modal, FlatList, TouchableWithoutFeedback, Keyboard, SafeAreaView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, Image, ScrollView, Modal, FlatList, TouchableWithoutFeedback, Keyboard, SafeAreaView, useWindowDimensions } from 'react-native';
 import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import { useFocusEffect } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
@@ -19,8 +19,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { getResponsiveSize } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
 
-const { width } = Dimensions.get('window');
-
 const AVATARS = [
   'https://cdn-icons-png.flaticon.com/512/147/147144.png',
   'https://cdn-icons-png.flaticon.com/512/147/147142.png',
@@ -31,6 +29,8 @@ const AVATARS = [
 ];
 
 const ProfileScreen = ({ navigation }) => {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
   const user = useSelector(state => state.auth.user);
   const token = useSelector(state => state.auth.token);
   const dispatch = useDispatch();
@@ -277,13 +277,13 @@ const ProfileScreen = ({ navigation }) => {
             </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, isTablet && styles.scrollContentTablet]} showsVerticalScrollIndicator={false}>
             
             {/* Profil Card */}
-            <View style={styles.profileCard}>
+            <View style={[styles.profileCard, isTablet && styles.centeredCard]}>
                 <View style={styles.avatarContainer}>
                     <TouchableOpacity onPress={() => isEditing && setShowAvatarModal(true)} disabled={!isEditing}>
-                        <View style={[styles.avatarWrapper, isEditing && styles.avatarEditable]}>
+                        <View style={[styles.avatarWrapper, isTablet && styles.avatarWrapperTablet, isEditing && styles.avatarEditable]}>
                             {renderAvatar()}
                             {isEditing && (
                                 <View style={styles.editIconBadge}>
@@ -330,7 +330,7 @@ const ProfileScreen = ({ navigation }) => {
             </View>
 
             {/* Actions Menu */}
-            <View style={styles.menuContainer}>
+            <View style={[styles.menuContainer, isTablet && styles.centeredCard]}>
                 <TouchableOpacity style={styles.menuItem} onPress={() => { navigation.navigate('PremiumPions'); }}>
                     <View style={[styles.iconBox, { backgroundColor: 'rgba(155, 89, 182, 0.2)' }]}>
                         <MaterialCommunityIcons name="chess-pawn" size={getResponsiveSize(24)} color="#9b59b6" />
@@ -366,7 +366,7 @@ const ProfileScreen = ({ navigation }) => {
 
             {/* Edit Form (Visible only when editing) */}
             {isEditing && (
-                <View style={styles.editForm}>
+                <View style={[styles.editForm, isTablet && styles.centeredCard]}>
                     <Text style={styles.sectionHeader}>Informations personnelles</Text>
                     
                     <Text style={styles.inputLabel}>Pseudo</Text>
@@ -390,7 +390,7 @@ const ProfileScreen = ({ navigation }) => {
             )}
 
             {/* Danger Zone */}
-            <View style={styles.dangerZone}>
+            <View style={[styles.dangerZone, isTablet && styles.centeredCard]}>
                 <Text style={styles.dangerTitle}>Zone de danger</Text>
                 <TouchableOpacity style={styles.dangerButton} onPress={handleDeactivate}>
                     <Ionicons name="pause-circle-outline" size={getResponsiveSize(20)} color="#f39c12" />
@@ -409,7 +409,7 @@ const ProfileScreen = ({ navigation }) => {
       {/* MODAL: Historique des transactions */}
       <Modal visible={showHistoryModal} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+            <View style={[styles.modalContent, isTablet && styles.modalContentTablet]}>
                 <View style={styles.modalHeader}>
                     <Text style={styles.modalTitle}>Historique</Text>
                     <TouchableOpacity onPress={() => setShowHistoryModal(false)} style={styles.closeButton}>
@@ -477,7 +477,7 @@ const ProfileScreen = ({ navigation }) => {
       {/* Modal choix Avatar */}
       <Modal visible={showAvatarModal} animationType="fade" transparent={true}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, isTablet && styles.modalContentTablet]}>
             <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Changer d'avatar</Text>
                 <TouchableOpacity onPress={() => setShowAvatarModal(false)} style={styles.closeButton}>
@@ -525,7 +525,7 @@ const ProfileScreen = ({ navigation }) => {
       {/* Modal choix Pays */}
       <Modal visible={showCountryModal} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, isTablet && styles.modalContentTablet]}>
             <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Choisir votre pays</Text>
                 <TouchableOpacity onPress={() => setShowCountryModal(false)} style={styles.closeButton}>
@@ -593,6 +593,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSize(20),
     paddingBottom: getResponsiveSize(40),
   },
+  scrollContentTablet: {
+    maxWidth: 650,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  centeredCard: {
+    width: '100%',
+    alignSelf: 'center',
+  },
   profileCard: {
     backgroundColor: '#041c55',
     borderRadius: getResponsiveSize(20),
@@ -615,15 +624,20 @@ const styles = StyleSheet.create({
     marginBottom: getResponsiveSize(20),
   },
   avatarWrapper: {
-    width: getResponsiveSize(100),
-    height: getResponsiveSize(100),
-    borderRadius: getResponsiveSize(50),
+    width: getResponsiveSize(80),
+    height: getResponsiveSize(80),
+    borderRadius: getResponsiveSize(40),
     borderWidth: getResponsiveSize(3),
     borderColor: '#3498db',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: getResponsiveSize(10),
     overflow: 'hidden',
+  },
+  avatarWrapperTablet: {
+    width: getResponsiveSize(100),
+    height: getResponsiveSize(100),
+    borderRadius: getResponsiveSize(50),
   },
   avatarEditable: {
     borderColor: '#2ecc71',
@@ -821,6 +835,14 @@ const styles = StyleSheet.create({
     maxHeight: '85%',
     minHeight: '50%',
   },
+  modalContentTablet: {
+    width: '55%',
+    maxWidth: 550,
+    alignSelf: 'center',
+    borderRadius: getResponsiveSize(20),
+    borderTopLeftRadius: getResponsiveSize(20),
+    borderTopRightRadius: getResponsiveSize(20),
+  },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -929,8 +951,6 @@ const styles = StyleSheet.create({
     marginBottom: getResponsiveSize(20),
   },
   avatarGridItem: {
-    width: (width - getResponsiveSize(60)) / 3,
-    height: (width - getResponsiveSize(60)) / 3,
     marginBottom: getResponsiveSize(10),
     borderRadius: getResponsiveSize(12),
     overflow: 'hidden',
@@ -950,7 +970,6 @@ const styles = StyleSheet.create({
   
   // Country Modal
   countryItem: {
-    width: (width - getResponsiveSize(60)) / 3,
     alignItems: 'center',
     marginBottom: getResponsiveSize(20),
     padding: getResponsiveSize(5),
