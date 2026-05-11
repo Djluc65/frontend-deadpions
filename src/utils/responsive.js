@@ -1,8 +1,13 @@
-import { Dimensions, Platform, PixelRatio } from 'react-native';
+import { Dimensions, Platform, PixelRatio, useWindowDimensions } from 'react-native';
 
 const BASE_WIDTH = 375; // iPhone 6/7/8 logical width baseline
 const TABLET_MIN_DP = 768;
 const TABLET_MAX_CONTENT_WIDTH = 820; // cap layout width on tablets to avoid huge scaling
+
+// ─── Web / Desktop constants ───────────────────────────────────────────────────
+export const isWeb = Platform.OS === 'web';
+export const DESKTOP_BREAKPOINT = 1024; // px — layout desktop activates ici
+export const WEB_MAX_CONTENT_WIDTH = 960; // largeur max du contenu sur desktop web
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
@@ -35,6 +40,23 @@ const getResponsiveWidth = (percentage, maxWidth = null) => {
 
 // Responsive size for fonts/icons (normalized with caps above).
 const getResponsiveSize = (size) => normalize(size);
+
+// ─── Hook réactif (se met à jour au redimensionnement — essentiel sur web) ─────
+// Retourne { width, height, isTablet, isDesktop, isWeb, contentWidth, rs }
+// rs(size) : version dynamique de getResponsiveSize liée à la largeur courante.
+export function useResponsive() {
+  const { width, height } = useWindowDimensions();
+  const isTabletDynamic = width >= TABLET_MIN_DP;
+  const isDesktop = Platform.OS === 'web' && width >= DESKTOP_BREAKPOINT;
+  const contentWidth = isDesktop
+    ? Math.min(width, WEB_MAX_CONTENT_WIDTH)
+    : isTabletDynamic
+    ? Math.min(width, TABLET_MAX_CONTENT_WIDTH)
+    : width;
+  const dynamicScale = clamp(contentWidth / BASE_WIDTH, 0.9, isTabletDynamic ? 1.25 : 1.6);
+  const rs = (size) => Math.round(size * dynamicScale);
+  return { width, height, isTablet: isTabletDynamic, isDesktop, isWeb, contentWidth, rs };
+}
 
 export {
   SCREEN_WIDTH,

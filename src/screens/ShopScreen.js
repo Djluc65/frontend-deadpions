@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, View, Text, StyleSheet, ImageBackground, ScrollView, ActivityIndicator, Platform } from 'react-native';
+import { AppState, View, Text, StyleSheet, ImageBackground, ScrollView, ActivityIndicator, Platform, useWindowDimensions } from 'react-native';
 import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -10,7 +10,7 @@ import { API_URL, WEBSITE_URL } from '../config';
 import CoinsService from '../services/CoinsService';
 import TransactionService from '../services/TransactionService';
 import { updateUser } from '../redux/slices/authSlice';
-import { getResponsiveSize, isTablet } from '../utils/responsive';
+import { getResponsiveSize, isTablet, DESKTOP_BREAKPOINT } from '../utils/responsive';
 import { useAdManager } from '../ads/AdSystem';
 import { appAlert } from '../services/appAlert';
 
@@ -46,6 +46,9 @@ const ShopScreen = () => {
   const { user, token } = useSelector(state => state.auth);
   const dispatch = useDispatch();
   const isIOS = Platform.OS === 'ios';
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= DESKTOP_BREAKPOINT;
+  const sectionMaxWidth = isDesktop ? 960 : isTablet ? 700 : '100%';
   
   // Stripe (Désactivé sur iOS pour conformité Apple)
   const stripe = !isIOS ? useStripe() : { initPaymentSheet: () => {}, presentPaymentSheet: () => {} };
@@ -624,7 +627,31 @@ const ShopScreen = () => {
       return;
     }
 
-    appAlert('Info', 'Les achats sont disponibles sur iOS et Android uniquement.');
+    if (Platform.OS === 'web') {
+      // Flow Stripe pour le Web
+      setLoading(true);
+      try {
+        const { clientSecret, paymentIntentId, pack } = await fetchPaymentSheetParams(packId);
+        if (!clientSecret) {
+          appAlert('Erreur', 'Impossible d\'initialiser le paiement Stripe.');
+          setLoading(false);
+          return;
+        }
+        // Sur le Web, on redirige vers une page de checkout ou on utilise Stripe Checkout
+        // Pour cet exemple, on peut utiliser Stripe.js ou rediriger vers une URL de paiement
+        appAlert('Paiement Web', 'Redirection vers la plateforme de paiement sécurisée...', [
+          { text: 'Annuler', style: 'cancel', onPress: () => setLoading(false) },
+          { text: 'Continuer', onPress: () => openWebShop({ packId, paymentIntentId }) }
+        ]);
+      } catch (err) {
+        console.error('Web Payment Error:', err);
+        appAlert('Erreur', 'Le service de paiement est indisponible sur le web.');
+        setLoading(false);
+      }
+      return;
+    }
+
+    appAlert('Info', 'Les achats In-App (IAP) sont disponibles sur iOS et Android uniquement. Utilisez la version Web pour les autres paiements.');
     return;
 
     try {
@@ -706,7 +733,7 @@ const ShopScreen = () => {
           )}
           
           {/* Section Premium */}
-          <View style={styles.sectionContainer}>
+          <View style={[styles.sectionContainer, { maxWidth: sectionMaxWidth }]}>
             <Text style={styles.sectionTitle}>💎 DeadPions+ Premium</Text>
             <Text style={styles.sectionSubtitle}>Salles illimitées, Coach IA, Stats avancées & Zéro pub !</Text>
             
@@ -763,7 +790,7 @@ const ShopScreen = () => {
           </View>
 
           {/* Section Pions Premium */}
-          <View style={styles.sectionContainer}>
+          <View style={[styles.sectionContainer, { maxWidth: sectionMaxWidth }]}>
             <Text style={styles.sectionTitle}>🏆 Collection Pions Premium</Text>
             <Text style={styles.sectionSubtitle}>Débloquez des pions uniques en 3D stylisés.</Text>
             
@@ -809,7 +836,7 @@ const ShopScreen = () => {
           </View>
 
           {/* Section Coins */}
-          <View style={styles.sectionContainer}>
+          <View style={[styles.sectionContainer, { maxWidth: sectionMaxWidth }]}>
             <Text style={styles.sectionTitle}>🪙 Packs de Coins</Text>
             <Text style={styles.sectionSubtitle}>Pour vos skins et personnalisations.</Text>
             
@@ -846,7 +873,7 @@ const ShopScreen = () => {
           </View>
 
           {!user?.isPremium && !user?.isEarlyAccess && (
-            <View style={styles.sectionContainer}>
+            <View style={[styles.sectionContainer, { maxWidth: sectionMaxWidth }]}>
               <Text style={styles.sectionTitle}>🎁 Coins gratuits</Text>
               <Text style={styles.sectionSubtitle}>Regardez une publicité récompensée pour gagner 10 coins.</Text>
 

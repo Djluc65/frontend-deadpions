@@ -10,7 +10,7 @@ import { loginStart, loginSuccess, loginFailure } from '../redux/slices/authSlic
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import { API_URL } from '../config';
-import { getResponsiveSize } from '../utils/responsive';
+import { getResponsiveSize, DESKTOP_BREAKPOINT } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -28,6 +28,7 @@ const isUserCancelledAuth = (error) => {
 const RegisterScreen = ({ navigation }) => {
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
+  const isDesktop = Platform.OS === 'web' && width >= DESKTOP_BREAKPOINT;
   const [pseudo, setPseudo] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -182,7 +183,7 @@ const RegisterScreen = ({ navigation }) => {
         resizeMode="cover"
       >
         <View style={styles.container}>
-          <View style={[styles.formContainer, isTablet && styles.formContainerTablet]}>
+          <View style={[styles.formContainer, isTablet && styles.formContainerTablet, isDesktop && styles.formContainerDesktop]}>
           <Text style={[styles.title, isTablet && styles.titleTablet]}>Inscription</Text>
           {showGoogleAuth && (
             <View style={{ width: '100%', marginBottom: getResponsiveSize(10) }}>
@@ -254,6 +255,15 @@ const styles = StyleSheet.create({
   formContainerTablet: {
     maxWidth: 480,
     alignSelf: 'center',
+  },
+  formContainerDesktop: {
+    maxWidth: 440,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(4, 28, 85, 0.55)',
+    borderRadius: 16,
+    padding: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(241, 196, 15, 0.3)',
   },
   title: {
     fontSize: getResponsiveSize(32),

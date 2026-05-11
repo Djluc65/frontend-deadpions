@@ -105,6 +105,11 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, navigation, appAlert, 
     if (error) setError('');
   };
 
+  const [showScanner, setShowScanner] = useState(false);
+
+  // Fallback pour le web si la caméra n'est pas dispo
+  const canScan = Platform.OS !== 'web'; 
+
   const handleJoin = useCallback(() => {
     Keyboard.dismiss();
     if (code.trim().length !== CODE_LENGTH) {
@@ -184,8 +189,28 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, navigation, appAlert, 
             <Text style={styles.title}>Rejoindre avec un code</Text>
           </View>
           <Text style={styles.subtitle}>
-            Entrez le code à {CODE_LENGTH} caractères reçu de votre ami.
+            {t?.enter_code_description || `Entrez le code à ${CODE_LENGTH} caractères reçu de votre ami.`}
           </Text>
+
+          {canScan && (
+            <TouchableOpacity 
+              style={styles.scanButton} 
+              onPress={() => appAlert('Info', 'La fonctionnalité de scan QR Code sera disponible prochainement.')}
+            >
+              <Ionicons name="qr-code-outline" size={20} color="#041c55" />
+              <Text style={styles.scanButtonText}>Scanner un QR Code</Text>
+            </TouchableOpacity>
+          )}
+
+          {!canScan && (
+            <View style={styles.webFallbackContainer}>
+              <Ionicons name="information-circle-outline" size={16} color="#aaa" />
+              <Text style={styles.webFallbackText}>
+                Le scan n'est pas disponible sur navigateur. Veuillez saisir le code manuellement.
+              </Text>
+            </View>
+          )}
+
           <View style={styles.codeInputWrapper}>
             <TouchableOpacity
               activeOpacity={1}
@@ -281,6 +306,35 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     marginBottom: getResponsiveSize(20),
+  },
+  scanButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f1c40f',
+    paddingVertical: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(10),
+    marginBottom: getResponsiveSize(20),
+    gap: 8,
+  },
+  scanButtonText: {
+    color: '#041c55',
+    fontWeight: 'bold',
+    fontSize: getResponsiveSize(14),
+  },
+  webFallbackContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    padding: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(8),
+    marginBottom: getResponsiveSize(20),
+    gap: 6,
+  },
+  webFallbackText: {
+    color: '#aaa',
+    fontSize: getResponsiveSize(12),
+    flex: 1,
   },
   codeBoxesRow: {
     flexDirection: 'row',

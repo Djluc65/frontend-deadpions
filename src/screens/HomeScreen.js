@@ -13,7 +13,7 @@ import { translations } from '../utils/translations';
 import { AudioController } from '../utils/AudioController';
 import { socket } from '../utils/socket';
 import { useCoinsContext } from '../context/CoinsContext';
-import { getResponsiveSize } from '../utils/responsive';
+import { getResponsiveSize, DESKTOP_BREAKPOINT } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
 
 // Components
@@ -27,6 +27,7 @@ import FriendsGameSetup from '../components/home/FriendsGameSetup';
 import LiveGameSetup from '../components/home/LiveGameSetup';
 import BattleAnimation from '../components/BattleAnimation';
 import UserSearchModal from '../components/home/UserSearchModal';
+import PwaInstallBanner from '../components/PwaInstallBanner';
 
 // ─── Constantes de layout ─────────────────────────────────────────────────────
 // Même layout sur iPhone et iPad (objectif : rendu iPad identique au rendu iPhone)
@@ -36,6 +37,7 @@ const SECTION_PADDING = 20;
 const HomeScreen = ({ navigation }) => {
   const { width, height } = useWindowDimensions();
   const isTablet = width >= 768;
+  const isDesktop = Platform.OS === 'web' && width >= DESKTOP_BREAKPOINT;
   const minDim = Math.min(width, height);
   const maxDim = Math.max(width, height);
   const isIPadAir105 =
@@ -207,6 +209,7 @@ const HomeScreen = ({ navigation }) => {
       style={styles.background}
       resizeMode="cover"
     >
+      <PwaInstallBanner />
       {/* ── Modals ── */}
       <SettingsModal
         visible={settingsVisible}
@@ -298,8 +301,9 @@ const HomeScreen = ({ navigation }) => {
           style={[
             styles.cardsWrapper,
             isTablet && styles.tabletCardsWrapper,
-            isIPadAir105 && styles.iPadAirCardsWrapper,
-            isIPadPro11 && styles.iPadPro11CardsWrapper,
+            isDesktop && styles.desktopCardsWrapper,
+            !isDesktop && isIPadAir105 && styles.iPadAirCardsWrapper,
+            !isDesktop && isIPadPro11 && styles.iPadPro11CardsWrapper,
           ]}
         >
           <View style={[styles.row, isTablet && styles.tabletRow]}>
@@ -504,6 +508,11 @@ const styles = StyleSheet.create({
   },
   tabletCardsWrapper: {
     maxWidth: 720,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  desktopCardsWrapper: {
+    maxWidth: 880,
     alignSelf: 'center',
     width: '100%',
   },

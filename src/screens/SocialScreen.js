@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ImageBackground, 
-  FlatList, 
-  Image, 
-  TextInput, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  ImageBackground,
+  FlatList,
+  Image,
+  TextInput,
   Modal,
   StatusBar,
   SafeAreaView,
@@ -14,6 +14,7 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   ScrollView,
+  Platform,
   useWindowDimensions
 } from 'react-native';
 import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
@@ -24,12 +25,13 @@ import { API_URL } from '../config';
 import socket from '../services/socket';
 import { setNotificationsCount } from '../redux/slices/socialSlice';
 import { getAvatarSource } from '../utils/avatarUtils';
-import { getResponsiveSize } from '../utils/responsive';
+import { getResponsiveSize, DESKTOP_BREAKPOINT } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
 
 const SocialScreen = ({ navigation }) => {
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
+  const isDesktop = Platform.OS === 'web' && width >= DESKTOP_BREAKPOINT;
   // --- STATE ---
   const [activeTab, setActiveTab] = useState('discussions'); // discussions, friends, requests
   const [searchQuery, setSearchQuery] = useState('');
@@ -737,8 +739,8 @@ const SocialScreen = ({ navigation }) => {
     <FlatList
         data={filteredFriends}
         extraData={tick}
-        numColumns={isTablet ? 2 : 1}
-        key={isTablet ? 'friends-2col' : 'friends-1col'}
+        numColumns={isDesktop ? 3 : isTablet ? 2 : 1}
+        key={isDesktop ? 'friends-3col' : isTablet ? 'friends-2col' : 'friends-1col'}
         keyExtractor={item => item.id.toString()}
         contentContainerStyle={styles.listContent}
       refreshing={loading}
@@ -891,7 +893,7 @@ const SocialScreen = ({ navigation }) => {
             onRequestClose={() => setIsAddFriendVisible(false)}
           >
             <View style={styles.modalOverlay}>
-              <View style={[styles.modalContent, isTablet && styles.modalContentTablet]}>
+              <View style={[styles.modalContent, isTablet && styles.modalContentTablet, isDesktop && styles.modalContentDesktop]}>
                 <Text style={styles.modalTitle}>Ajouter un ami</Text>
                 <TextInput 
                   style={styles.modalInput}
@@ -1006,7 +1008,7 @@ const SocialScreen = ({ navigation }) => {
             onRequestClose={() => setIsWaitingForResponse(false)}
           >
             <View style={styles.modalOverlay}>
-              <View style={[styles.modalContent, isTablet && styles.modalContentTablet]}>
+              <View style={[styles.modalContent, isTablet && styles.modalContentTablet, isDesktop && styles.modalContentDesktop]}>
                 <ActivityIndicator size="large" color="#041c55" style={{ marginBottom: getResponsiveSize(20) }} />
                 <Text style={styles.modalTitle}>En attente de l'adversaire...</Text>
                 <Text style={{ textAlign: 'center', marginBottom: getResponsiveSize(20), color: '#666' }}>
@@ -1031,7 +1033,7 @@ const SocialScreen = ({ navigation }) => {
             onRequestClose={handleDeclineInvite}
           >
             <View style={styles.modalOverlay}>
-              <View style={[styles.modalContent, isTablet && styles.modalContentTablet]}>
+              <View style={[styles.modalContent, isTablet && styles.modalContentTablet, isDesktop && styles.modalContentDesktop]}>
                 <Text style={styles.modalTitle}>Invitation de {incomingInvite?.senderPseudo}</Text>
                 <Text style={styles.inviteDetails}>
                     Mode: {incomingInvite?.mode === 'tournament' ? `Tournoi (${incomingInvite?.seriesLength} parties)` : 'Simple'}{'\n'}
@@ -1433,6 +1435,11 @@ const styles = StyleSheet.create({
   modalContentTablet: {
     width: '55%',
     maxWidth: 550,
+    alignSelf: 'center',
+  },
+  modalContentDesktop: {
+    width: '40%',
+    maxWidth: 500,
     alignSelf: 'center',
   },
   modalTitle: {

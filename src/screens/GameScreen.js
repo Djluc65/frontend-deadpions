@@ -37,30 +37,12 @@ import { modalTheme } from '../utils/modalTheme';
 import { getTournamentProgress } from '../utils/constants';
 
 import { isTablet, getResponsiveSize, SCREEN_WIDTH, SCREEN_HEIGHT } from '../utils/responsive';
+import ResponsiveWrapper from '../components/ResponsiveWrapper';
+
+import { useResponsive } from '../hooks/useResponsive';
 
 const width = SCREEN_WIDTH;
 const height = SCREEN_HEIGHT;
-
-// Configuration du plateau
-const COLS = isTablet ? 20 : 15; // A à M (13) ou A à S (19) sur iPad
-const ROWS = 19; // 1 à 19
-const PADDING_LEFT = getResponsiveSize(35); // Espace pour les numéros
-const PADDING_TOP = getResponsiveSize(35); // Espace pour les lettres
-const PADDING_RIGHT = getResponsiveSize(35);
-const PADDING_BOTTOM = getResponsiveSize(150);
-
-// Calcul de la taille des cellules pour tenir en largeur
-const AVAILABLE_WIDTH = width - PADDING_LEFT - PADDING_RIGHT;
-const WIDTH_CELL_SIZE = (AVAILABLE_WIDTH / (COLS - 1)) + getResponsiveSize(5);
-
-// Sur iPad, on limite la taille des cellules pour que le plateau tienne en hauteur
-// (Hauteur écran - Header estimé - Paddings) / Nombre de lignes
-const HEIGHT_CELL_SIZE = (height - 220 - PADDING_TOP - PADDING_BOTTOM) / (ROWS - 1);
-
-const CELL_SIZE = isTablet ? Math.min(WIDTH_CELL_SIZE, HEIGHT_CELL_SIZE) : WIDTH_CELL_SIZE;
-
-const BOARD_WIDTH = Math.max(width, PADDING_LEFT + (COLS - 1) * CELL_SIZE + PADDING_RIGHT);
-const BOARD_HEIGHT = PADDING_TOP + (ROWS - 1) * CELL_SIZE + PADDING_BOTTOM;
 
 const LETTERS = 'ABCDEFGHIJKLMNOPQRST'.split('');
 
@@ -164,6 +146,21 @@ const Pawn = ({ color, x, y, r, opacity = 1, onPress, skin }) => {
 };
 
 const GameScreen = ({ navigation, route }) => {
+  const { width, height } = useResponsive();
+  
+  // Configuration du plateau dynamique (Phase 2 Item 6)
+  const isTab = width >= 600;
+  const COLS = isTab ? 20 : 15;
+  const ROWS = 19;
+  const PADDING_LEFT = getResponsiveSize(35);
+  const PADDING_TOP = getResponsiveSize(35);
+  const PADDING_RIGHT = getResponsiveSize(35);
+  const PADDING_BOTTOM = getResponsiveSize(150);
+
+  const CELL_SIZE = Math.min(width * 0.9, height * 0.7) / 15;
+  const BOARD_WIDTH = Math.max(width, PADDING_LEFT + (COLS - 1) * CELL_SIZE + PADDING_RIGHT);
+  const BOARD_HEIGHT = PADDING_TOP + (ROWS - 1) * CELL_SIZE + PADDING_BOTTOM;
+
   const params = route.params || {};
   const configIA = params.configIA || {};
   const localConfig = params.localConfig || {};
@@ -4180,10 +4177,11 @@ const GameScreen = ({ navigation, route }) => {
   };
 
   return (
-    <ImageBackground 
-      source={require('../../assets/images/Background2-4.png')} 
-      style={styles.background}
-    >
+    <ResponsiveWrapper>
+      <ImageBackground 
+        source={require('../../assets/images/Background2-4.png')} 
+        style={styles.background}
+      >
       <View style={styles.header}>
         {renderProfileModal()}
         {mode !== 'live' && mode !== 'online_custom' && mode !== 'online' && mode !== 'ai' && mode !== 'ia' && mode !== 'local' && mode !== 'spectator' && renderGameMenu()}
@@ -4823,7 +4821,8 @@ const GameScreen = ({ navigation, route }) => {
               end={fe.end} 
           />
       ))}
-    </ImageBackground>
+      </ImageBackground>
+    </ResponsiveWrapper>
   );
 };
 
@@ -4935,7 +4934,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: getResponsiveSize(5),
     borderRadius: getResponsiveSize(10),
-    width: isTablet ? width * 0.20 : width * 0.3,
+    width: isTablet ? SCREEN_WIDTH * 0.20 : SCREEN_WIDTH * 0.3,
     height: getResponsiveSize(125),
     borderWidth: 1,
     borderColor: '#f1c40f6c',

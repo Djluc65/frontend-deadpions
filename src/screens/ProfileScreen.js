@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ImageBackground, Image, ScrollView, Modal, FlatList, TouchableWithoutFeedback, Keyboard, SafeAreaView, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, Image, ScrollView, Modal, FlatList, TouchableWithoutFeedback, Keyboard, SafeAreaView, Platform, useWindowDimensions } from 'react-native';
 import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import { useFocusEffect } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
@@ -16,7 +16,7 @@ import { COUNTRIES } from '../utils/countries';
 import { PREMIUM_AVATARS, getAvatarSource } from '../utils/avatarUtils';
 import TransactionService from '../services/TransactionService';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getResponsiveSize } from '../utils/responsive';
+import { getResponsiveSize, DESKTOP_BREAKPOINT } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
 
 const AVATARS = [
@@ -31,6 +31,7 @@ const AVATARS = [
 const ProfileScreen = ({ navigation }) => {
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
+  const isDesktop = Platform.OS === 'web' && width >= DESKTOP_BREAKPOINT;
   const user = useSelector(state => state.auth.user);
   const token = useSelector(state => state.auth.token);
   const dispatch = useDispatch();
@@ -277,7 +278,7 @@ const ProfileScreen = ({ navigation }) => {
             </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={[styles.scrollContent, isTablet && styles.scrollContentTablet]} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, isTablet && styles.scrollContentTablet, isDesktop && styles.scrollContentDesktop]} showsVerticalScrollIndicator={false}>
             
             {/* Profil Card */}
             <View style={[styles.profileCard, isTablet && styles.centeredCard]}>
@@ -595,6 +596,11 @@ const styles = StyleSheet.create({
   },
   scrollContentTablet: {
     maxWidth: 650,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  scrollContentDesktop: {
+    maxWidth: 760,
     width: '100%',
     alignSelf: 'center',
   },

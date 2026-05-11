@@ -33,4 +33,4 @@ if (__DEV__) {
   console.log('🌍 MODE:', API_URL.includes('railway') ? 'PRODUCTION (LIGNE)' : 'LOCAL');
 }
 
-export const WEBSITE_URL = 'https://deadpions.eu';
+export const WEBSITE_URL = 'https://play.deadpions.eu';
