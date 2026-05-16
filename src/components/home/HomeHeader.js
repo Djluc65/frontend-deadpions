@@ -6,6 +6,8 @@ import { API_URL } from '../../config';
 import { getAvatarSource } from '../../utils/avatarUtils';
 import { getResponsiveSize } from '../../utils/responsive';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { T } from '../../utils/theme';
+import GlowWrapper from '../ui/GlowWrapper';
 
 const rs = (size) => getResponsiveSize(size);
 
@@ -56,10 +58,11 @@ const HeaderTouchable = ({ onPress, onPlaySound, children, style, hitSlop }) => 
   );
 };
 
-const HomeHeader = memo(({ user, t, navigation, onSearch, onSettings, onPlaySound }) => {
+const HomeHeader = memo(({ user, t, navigation, onSearch, onSettings, onRewards, onPlaySound }) => {
   const { width } = useWindowDimensions();
   const isIPad = Platform.OS === 'ios' && Platform.isPad;
   const isTabletLayout = !isIPad && width >= 768;
+  const coinsText = Number.isFinite(user?.coins) ? user.coins.toLocaleString('fr-FR') : `${user?.coins || 0}`;
 
   const goProfileOrLogin = () => {
     if (!user) {
@@ -78,7 +81,8 @@ const HomeHeader = memo(({ user, t, navigation, onSearch, onSettings, onPlaySoun
   };
 
   return (
-    <SafeAreaView edges={['top']} style={styles.safeHeader}>
+    <View style={styles.headerOuter}>
+      <SafeAreaView edges={['top']} style={styles.safeHeader}>
       <View style={[styles.headerContent, headerContentStyle]}>
         <View style={[styles.headerRow, isTabletLayout && styles.tabletHeaderRow]}>
           <View style={styles.userInfo}>
@@ -103,21 +107,46 @@ const HomeHeader = memo(({ user, t, navigation, onSearch, onSettings, onPlaySoun
                 onPlaySound={onPlaySound}
                 hitSlop={{ top: rs(15), bottom: rs(15), left: rs(15), right: rs(15) }}
               >
-                <Text style={[styles.welcome, isTabletLayout && styles.welcomeTablet]}>{user?.pseudo || t.welcome}</Text>
+                <Text
+                  style={[styles.welcome, isTabletLayout && styles.welcomeTablet]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {user?.pseudo || t.welcome}
+                </Text>
               </HeaderTouchable>
-              <Text style={[styles.coins, isTabletLayout && styles.coinsTablet]}>💰 {user?.coins || 0}</Text>
+              <Text
+                style={[styles.coins, isTabletLayout && styles.coinsTablet]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                💰 {coinsText}
+              </Text>
             </View>
           </View>
 
           <View style={styles.headerIcons}>
-            <HeaderTouchable 
-              onPress={onSearch}
-              onPlaySound={onPlaySound}
-              hitSlop={{ top: rs(30), bottom: rs(30), left: rs(30), right: rs(30) }}
-              style={styles.iconButton}
-            >
-              <Ionicons name="search-outline" size={rs(isTabletLayout ? 26 : 28)} color="#fff" />
-            </HeaderTouchable>
+            <GlowWrapper style={styles.glowIconWrapper} intensity={0.4}>
+              <HeaderTouchable
+                onPress={onRewards}
+                onPlaySound={onPlaySound}
+                hitSlop={{ top: rs(30), bottom: rs(30), left: rs(30), right: rs(30) }}
+                style={styles.iconButton}
+              >
+                <Ionicons name="gift-outline" size={rs(isTabletLayout ? 26 : 28)} color="#fff" />
+              </HeaderTouchable>
+            </GlowWrapper>
+
+            <GlowWrapper style={styles.glowIconWrapper} intensity={0.4}>
+              <HeaderTouchable 
+                onPress={onSearch}
+                onPlaySound={onPlaySound}
+                hitSlop={{ top: rs(30), bottom: rs(30), left: rs(30), right: rs(30) }}
+                style={styles.iconButton}
+              >
+                <Ionicons name="search-outline" size={rs(isTabletLayout ? 26 : 28)} color="#fff" />
+              </HeaderTouchable>
+            </GlowWrapper>
             
             <HeaderTouchable 
               onPress={onSettings}
@@ -130,17 +159,24 @@ const HomeHeader = memo(({ user, t, navigation, onSearch, onSettings, onPlaySoun
           </View>
         </View>
       </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 });
 
 const styles = StyleSheet.create({
-  safeHeader: {
-    backgroundColor: 'rgba(4, 28, 85, 0.95)',
-    borderBottomWidth: rs(1),
-    borderBottomColor: '#f1c40f',
+  headerOuter: {
+    borderBottomWidth: 1.5,
+    borderBottomColor: T.gold,
+    shadowColor: T.gold,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 14,
     zIndex: 1000,
-    elevation: 5,
+  },
+  safeHeader: {
+    backgroundColor: T.bg1,
   },
   headerContent: {},
   headerRow: {
@@ -157,48 +193,64 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: rs(10),
+    flex: 1,
+    minWidth: 0,
+    paddingRight: rs(10),
   },
   avatar: {
-    width: rs(45),
-    height: rs(45),
-    borderRadius: rs(22.5),
-    borderWidth: rs(2),
-    borderColor: '#fff',
+    width: rs(42),
+    height: rs(42),
+    borderRadius: rs(21),
+    borderWidth: 2,
+    borderColor: T.gold,
   },
   avatarTablet: {
-    width: rs(52),
-    height: rs(52),
-    borderRadius: rs(26),
+    width: rs(50),
+    height: rs(50),
+    borderRadius: rs(25),
   },
   userText: {
     justifyContent: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: rs(10),
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: rs(2),
+    flex: 1,
+    minWidth: 0,
   },
   welcome: {
-    color: '#fff',
-    fontSize: rs(18),
-    fontWeight: 'bold',
+    color: T.text,
+    fontSize: rs(16),
+    fontWeight: '800',
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
   },
   welcomeTablet: {
-    fontSize: rs(16),
+    fontSize: rs(15),
   },
   coins: {
-    color: '#f1c40f',
-    fontSize: rs(18),
-    fontWeight: 'bold',
+    color: T.gold,
+    fontSize: rs(15),
+    fontWeight: '700',
   },
   coinsTablet: {
-    fontSize: rs(16),
+    fontSize: rs(14),
   },
   headerIcons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: rs(15),
+    gap: rs(12),
+    flexShrink: 0,
+  },
+  glowIconWrapper: {
+    borderRadius: rs(12),
+    padding: 1.5,
   },
   iconButton: {
     padding: rs(8),
+    borderRadius: T.radiusMd,
+    backgroundColor: T.bg2,
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
 });
 

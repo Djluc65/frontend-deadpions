@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   ImageBackground,
   FlatList,
   Image,
-  TextInput,
   Modal,
   StatusBar,
   SafeAreaView,
@@ -27,6 +26,9 @@ import { setNotificationsCount } from '../redux/slices/socialSlice';
 import { getAvatarSource } from '../utils/avatarUtils';
 import { getResponsiveSize, DESKTOP_BREAKPOINT } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
+import { T } from '../utils/theme';
+import AnimatedSearchBar from '../components/ui/AnimatedSearchBar';
+import GlowWrapper from '../components/ui/GlowWrapper';
 
 const SocialScreen = ({ navigation }) => {
   const { width } = useWindowDimensions();
@@ -47,6 +49,10 @@ const SocialScreen = ({ navigation }) => {
   // Modals
   const [isAddFriendVisible, setIsAddFriendVisible] = useState(false);
   const [newFriendName, setNewFriendName] = useState('');
+  const [friendSearchResults, setFriendSearchResults] = useState([]);
+  const [friendSearchLoading, setFriendSearchLoading] = useState(false);
+  const friendSearchTimerRef = useRef(null);
+  const friendSearchSeqRef = useRef(0);
   
   // Game Invite State
   const [inviteConfigVisible, setInviteConfigVisible] = useState(false);
@@ -57,7 +63,6 @@ const SocialScreen = ({ navigation }) => {
   const [inviteSeriesLength, setInviteSeriesLength] = useState(2);
   const [incomingInvite, setIncomingInvite] = useState(null);
   const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
-
 
   // Redux
   const dispatch = useDispatch();
@@ -71,6 +76,7 @@ const SocialScreen = ({ navigation }) => {
         style={styles.background}
         resizeMode="cover"
       >
+        <View style={styles.bgOverlay} pointerEvents="none" />
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.loginGate}>
             <Text style={styles.loginGateTitle}>Connexion requise</Text>
@@ -529,38 +535,16 @@ const SocialScreen = ({ navigation }) => {
     }
   };
 
-  const handleSendRequest = async () => {
-    if (newFriendName.trim().length === 0) return;
-
+  const sendFriendRequestToUser = useCallback(async (targetUser) => {
+    if (!targetUser?._id) {
+      appAlert('Erreur', "Utilisateur invalide.");
+      return;
+    }
+    if ((user?._id || user?.id) && (targetUser._id?.toString?.() === (user?._id || user?.id)?.toString?.())) {
+      appAlert('Info', "Vous ne pouvez pas vous ajouter vous-même.");
+      return;
+    }
     try {
-      // 1. Search user
-      const searchRes = await fetch(`${API_URL}/friends/search?q=${newFriendName}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      const responseData = await searchRes.json();
-
-      if (!searchRes.ok) {
-        appAlert("Erreur", responseData.message || "Erreur lors de la recherche.");
-        return;
-      }
-
-      const users = responseData;
-
-      if (!Array.isArray(users)) {
-        appAlert("Erreur", "Format de réponse invalide.");
-        return;
-      }
-
-      if (users.length === 0) {
-        appAlert("Erreur", "Utilisateur non trouvé.");
-        return;
-      }
-
-      // 2. Select first match (simplified)
-      const targetUser = users[0]; // You might want to show a list to pick from
-
-      // 3. Send Request
       const res = await fetch(`${API_URL}/friends/request`, {
         method: 'POST',
         headers: {
@@ -574,11 +558,103 @@ const SocialScreen = ({ navigation }) => {
       if (res.ok) {
         appAlert("Succès", `Demande envoyée à ${targetUser.pseudo}`);
         setNewFriendName('');
+        setFriendSearchResults([]);
         setIsAddFriendVisible(false);
         fetchData();
       } else {
         appAlert("Erreur", data.message);
       }
+    } catch (error) {
+      appAlert("Erreur", "Erreur réseau.");
+    }
+  }, [fetchData, token, user?._id, user?.id]);
+
+  useEffect(() => {
+    if (!isAddFriendVisible) {
+      if (friendSearchTimerRef.current) clearTimeout(friendSearchTimerRef.current);
+      friendSearchTimerRef.current = null;
+      setFriendSearchResults([]);
+      setFriendSearchLoading(false);
+      return;
+    }
+
+    const q = (newFriendName || '').trim();
+    if (friendSearchTimerRef.current) clearTimeout(friendSearchTimerRef.current);
+    friendSearchTimerRef.current = null;
+
+    if (!q) {
+      setFriendSearchResults([]);
+      setFriendSearchLoading(false);
+      return;
+    }
+
+    const seq = ++friendSearchSeqRef.current;
+    setFriendSearchLoading(true);
+    friendSearchTimerRef.current = setTimeout(async () => {
+      try {
+        const searchRes = await fetch(`${API_URL}/friends/search?q=${encodeURIComponent(q)}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const responseData = await searchRes.json();
+        if (seq !== friendSearchSeqRef.current) return;
+
+        if (!searchRes.ok) {
+          setFriendSearchResults([]);
+          setFriendSearchLoading(false);
+          return;
+        }
+
+        const users = Array.isArray(responseData) ? responseData : [];
+        setFriendSearchResults(users);
+        setFriendSearchLoading(false);
+      } catch (_) {
+        if (seq !== friendSearchSeqRef.current) return;
+        setFriendSearchResults([]);
+        setFriendSearchLoading(false);
+      }
+    }, 250);
+
+    return () => {
+      if (friendSearchTimerRef.current) clearTimeout(friendSearchTimerRef.current);
+      friendSearchTimerRef.current = null;
+    };
+  }, [isAddFriendVisible, newFriendName, token]);
+
+  const handleSendRequest = async () => {
+    if (newFriendName.trim().length === 0) return;
+
+    try {
+      const q = newFriendName.trim();
+      const exact = friendSearchResults.find(u => (u?.pseudo || '').toLowerCase() === q.toLowerCase());
+      if (exact) {
+        await sendFriendRequestToUser(exact);
+        return;
+      }
+
+      if (friendSearchResults.length === 1) {
+        await sendFriendRequestToUser(friendSearchResults[0]);
+        return;
+      }
+
+      const searchRes = await fetch(`${API_URL}/friends/search?q=${encodeURIComponent(q)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const responseData = await searchRes.json();
+
+      if (!searchRes.ok) {
+        appAlert("Erreur", responseData.message || "Erreur lors de la recherche.");
+        return;
+      }
+
+      const users = Array.isArray(responseData) ? responseData : [];
+
+      if (users.length === 0) {
+        appAlert("Erreur", "Utilisateur non trouvé.");
+        return;
+      }
+
+      await sendFriendRequestToUser(users[0]);
     } catch (error) {
       console.error(error);
       appAlert("Erreur", "Erreur réseau.");
@@ -638,9 +714,11 @@ const SocialScreen = ({ navigation }) => {
         <Text style={styles.coinText}>{coins}</Text>
       </View>
       <View style={styles.headerButtons}>
-        <TouchableOpacity style={styles.iconButton} onPress={() => setIsAddFriendVisible(true)}>
-          <Ionicons name="person-add" size={getResponsiveSize(24)} color="#fff" />
-        </TouchableOpacity>
+        <GlowWrapper intensity={0.5} style={{ borderRadius: getResponsiveSize(T.radiusMd) }}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => setIsAddFriendVisible(true)}>
+            <Ionicons name="person-add" size={getResponsiveSize(24)} color="#fff" />
+          </TouchableOpacity>
+        </GlowWrapper>
       </View>
     </View>
   );
@@ -684,17 +762,14 @@ const SocialScreen = ({ navigation }) => {
   );
 
   const renderSearchBar = () => (
-    <View style={styles.searchContainer}>
-      <Ionicons name="search" size={getResponsiveSize(20)} color="#ccc" style={styles.searchIcon} />
-      <TextInput
-        style={styles.searchInput}
+    <View style={{ paddingHorizontal: getResponsiveSize(20), marginBottom: getResponsiveSize(10) }}>
+      <AnimatedSearchBar
+        value={searchQuery}
+        onChangeText={setSearchQuery}
         placeholder={`Rechercher dans ${
           activeTab === 'discussions' ? 'les discussions' : 
           activeTab === 'friends' ? 'les amis' : 'les demandes'
         }...`}
-        placeholderTextColor="#999"
-        value={searchQuery}
-        onChangeText={setSearchQuery}
       />
     </View>
   );
@@ -867,11 +942,12 @@ const SocialScreen = ({ navigation }) => {
   );
 
   return (
-    <ImageBackground 
-      source={require('../../assets/images/Background2-4.png')} 
+    <ImageBackground
+      source={require('../../assets/images/Background2-4.png')}
       style={styles.background}
       resizeMode="cover"
     >
+      <View style={styles.bgOverlay} pointerEvents="none" />
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <SafeAreaView style={styles.safeArea}>
           {renderHeader()}
@@ -895,13 +971,52 @@ const SocialScreen = ({ navigation }) => {
             <View style={styles.modalOverlay}>
               <View style={[styles.modalContent, isTablet && styles.modalContentTablet, isDesktop && styles.modalContentDesktop]}>
                 <Text style={styles.modalTitle}>Ajouter un ami</Text>
-                <TextInput 
-                  style={styles.modalInput}
-                  placeholder="Entrez le pseudo..."
-                  placeholderTextColor="#999"
+                <AnimatedSearchBar
                   value={newFriendName}
                   onChangeText={setNewFriendName}
+                  placeholder="Entrez le pseudo..."
+                  showLeftIcon={true}
+                  leftIconName="person-add-outline"
+                  leftIconColor={T.textMuted}
+                  showRightIcon={false}
+                  autoCorrect={false}
+                  autoCapitalize="none"
                 />
+                {newFriendName.trim().length > 0 && (
+                  <View style={styles.addFriendResultsBox}>
+                    {friendSearchLoading ? (
+                      <View style={styles.addFriendLoadingRow}>
+                        <ActivityIndicator size="small" color={T.gold} />
+                        <Text style={styles.addFriendLoadingText}>Recherche…</Text>
+                      </View>
+                    ) : friendSearchResults.length > 0 ? (
+                      <FlatList
+                        data={friendSearchResults.slice(0, 10)}
+                        keyExtractor={(item) => item?._id?.toString?.() || item?.id?.toString?.() || item?.pseudo || Math.random().toString(36)}
+                        keyboardShouldPersistTaps="handled"
+                        renderItem={({ item }) => (
+                          <TouchableOpacity
+                            style={styles.addFriendResultItem}
+                            onPress={() => sendFriendRequestToUser(item)}
+                          >
+                            <Image source={getAvatarUri(item?.avatar)} style={styles.addFriendResultAvatar} />
+                            <View style={styles.addFriendResultInfo}>
+                              <Text style={styles.addFriendResultPseudo} numberOfLines={1}>{item?.pseudo || 'Inconnu'}</Text>
+                              {typeof item?.isOnline === 'boolean' && (
+                                <Text style={[styles.addFriendResultStatus, { color: item.isOnline ? '#10b981' : T.textMuted }]}>
+                                  {item.isOnline ? 'En ligne' : 'Hors ligne'}
+                                </Text>
+                              )}
+                            </View>
+                            <Ionicons name="add-circle" size={getResponsiveSize(22)} color={T.gold} />
+                          </TouchableOpacity>
+                        )}
+                      />
+                    ) : (
+                      <Text style={styles.addFriendEmptyText}>Aucun résultat</Text>
+                    )}
+                  </View>
+                )}
                 <View style={styles.modalButtons}>
                   <TouchableOpacity style={styles.modalButtonCancel} onPress={() => setIsAddFriendVisible(false)}>
                     <Text style={styles.modalButtonText}>Annuler</Text>
@@ -1060,14 +1175,18 @@ const SocialScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  bgOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(5,9,15,0.55)',
+  },
   background: {
     flex: 1,
     width: '100%',
     height: '100%',
+    backgroundColor: T.bg0,
   },
   safeArea: {
     flex: 1,
-    backgroundColor: 'rgba(4, 28, 85, 0.7)',
   },
   loginGate: {
     flex: 1,
@@ -1076,102 +1195,114 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSize(22),
   },
   loginGateTitle: {
-    color: '#fff',
+    color: T.text,
     fontSize: getResponsiveSize(22),
     fontWeight: '800',
     marginBottom: getResponsiveSize(10),
     textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   loginGateText: {
-    color: 'rgba(255,255,255,0.85)',
+    color: T.textDim,
     fontSize: getResponsiveSize(14),
     lineHeight: getResponsiveSize(20),
     textAlign: 'center',
     marginBottom: getResponsiveSize(18),
   },
   loginGateBtn: {
-    backgroundColor: '#f1c40f',
-    paddingVertical: getResponsiveSize(12),
-    paddingHorizontal: getResponsiveSize(22),
-    borderRadius: getResponsiveSize(14),
+    backgroundColor: T.gold,
+    paddingVertical: getResponsiveSize(13),
+    paddingHorizontal: getResponsiveSize(24),
+    borderRadius: getResponsiveSize(T.radiusMd),
     minWidth: getResponsiveSize(180),
     alignItems: 'center',
+    ...T.shadowBtn,
   },
   loginGateBtnTablet: {
     minWidth: getResponsiveSize(220),
   },
   loginGateBtnText: {
-    color: '#041c55',
-    fontWeight: '900',
+    color: '#1B1305',
+    fontWeight: '800',
     fontSize: getResponsiveSize(14),
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: getResponsiveSize(20),
-    paddingVertical: getResponsiveSize(15),
-    marginTop: getResponsiveSize(10),
+    paddingHorizontal: getResponsiveSize(16),
+    paddingVertical: getResponsiveSize(12),
+    marginTop: getResponsiveSize(6),
   },
   coinContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: T.bg2,
     paddingHorizontal: getResponsiveSize(12),
     paddingVertical: getResponsiveSize(6),
-    borderRadius: getResponsiveSize(20),
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f',
+    borderRadius: getResponsiveSize(T.radiusPill),
+    borderWidth: 1,
+    borderColor: T.border,
   },
   coinIcon: {
-    fontSize: getResponsiveSize(16),
+    fontSize: getResponsiveSize(14),
     marginRight: getResponsiveSize(5),
   },
   coinText: {
-    color: '#f1c40f',
-    fontWeight: 'bold',
-    fontSize: getResponsiveSize(16),
+    color: T.gold,
+    fontWeight: '700',
+    fontSize: getResponsiveSize(14),
   },
   headerButtons: {
     flexDirection: 'row',
-    gap: getResponsiveSize(10),
+    gap: getResponsiveSize(8),
   },
   iconButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: T.bg2,
     padding: getResponsiveSize(8),
-    borderRadius: getResponsiveSize(20),
+    borderRadius: getResponsiveSize(T.radiusMd),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
-  
+
   // Tabs
   tabContainer: {
     flexDirection: 'row',
     paddingHorizontal: getResponsiveSize(10),
-    marginBottom: getResponsiveSize(10),
+    marginBottom: getResponsiveSize(8),
+    borderBottomWidth: 1,
+    borderBottomColor: T.borderSoft,
+    backgroundColor: 'rgba(5,9,15,0.4)', // Légère transparence pour voir le fond
   },
   tab: {
     flex: 1,
     paddingVertical: getResponsiveSize(10),
     alignItems: 'center',
-    borderBottomWidth: getResponsiveSize(2),
+    borderBottomWidth: 2,
     borderBottomColor: 'transparent',
     flexDirection: 'row',
     justifyContent: 'center',
   },
   activeTab: {
-    borderBottomColor: '#f1c40f',
+    borderBottomColor: T.gold,
   },
   tabText: {
-    color: '#ccc',
-    fontSize: getResponsiveSize(14),
+    color: T.textMuted,
+    fontSize: getResponsiveSize(13),
     fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   activeTabText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: T.text,
+    fontWeight: '800',
   },
   badge: {
-    backgroundColor: '#e74c3c',
+    backgroundColor: T.red,
     borderRadius: getResponsiveSize(10),
     paddingHorizontal: getResponsiveSize(6),
     paddingVertical: getResponsiveSize(2),
@@ -1180,62 +1311,66 @@ const styles = StyleSheet.create({
   badgeText: {
     color: '#fff',
     fontSize: getResponsiveSize(10),
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
 
   // Search
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    marginHorizontal: getResponsiveSize(15),
-    borderRadius: getResponsiveSize(10),
-    paddingHorizontal: getResponsiveSize(10),
-    marginBottom: getResponsiveSize(15),
-    height: getResponsiveSize(40),
+    backgroundColor: T.bg2,
+    marginHorizontal: getResponsiveSize(14),
+    borderRadius: getResponsiveSize(T.radiusMd),
+    paddingHorizontal: getResponsiveSize(12),
+    marginBottom: getResponsiveSize(12),
+    height: getResponsiveSize(42),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   searchIcon: {
     marginRight: getResponsiveSize(10),
   },
   searchInput: {
     flex: 1,
-    color: '#fff',
-    fontSize: getResponsiveSize(16),
+    color: T.text,
+    fontSize: getResponsiveSize(15),
   },
 
   // Content
   contentContainer: {
     flex: 1,
-    paddingBottom: getResponsiveSize(80), // Space for bottom tab navigator
+    paddingBottom: getResponsiveSize(80),
   },
   listContent: {
-    paddingHorizontal: getResponsiveSize(15),
+    paddingHorizontal: getResponsiveSize(14),
     paddingBottom: getResponsiveSize(20),
   },
   emptyText: {
-    color: '#aaa',
+    color: T.textMuted,
     textAlign: 'center',
     marginTop: getResponsiveSize(50),
-    fontSize: getResponsiveSize(16),
+    fontSize: getResponsiveSize(15),
     fontStyle: 'italic',
   },
 
   // Chat Item
   chatItem: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: T.bg2,
     padding: getResponsiveSize(12),
-    borderRadius: getResponsiveSize(12),
-    marginBottom: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(T.radiusMd),
+    marginBottom: getResponsiveSize(8),
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   avatar: {
     width: getResponsiveSize(40),
     height: getResponsiveSize(40),
     borderRadius: getResponsiveSize(20),
     marginRight: getResponsiveSize(12),
-    borderWidth: getResponsiveSize(1),
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderWidth: 1,
+    borderColor: T.border,
   },
   avatarTablet: {
     width: getResponsiveSize(48),
@@ -1251,13 +1386,13 @@ const styles = StyleSheet.create({
     marginBottom: getResponsiveSize(4),
   },
   chatName: {
-    color: '#fff',
-    fontSize: getResponsiveSize(16),
-    fontWeight: 'bold',
+    color: T.text,
+    fontSize: getResponsiveSize(15),
+    fontWeight: '700',
   },
   chatTime: {
-    color: '#aaa',
-    fontSize: getResponsiveSize(12),
+    color: T.textMuted,
+    fontSize: getResponsiveSize(11),
   },
   chatFooter: {
     flexDirection: 'row',
@@ -1265,29 +1400,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   lastMessage: {
-    color: '#888',
-    fontSize: getResponsiveSize(14),
+    color: T.textMuted,
+    fontSize: getResponsiveSize(13),
     flex: 1,
     marginRight: getResponsiveSize(10),
   },
   unreadChatItem: {
-    backgroundColor: '#e0f2fe',
-    borderLeftWidth: getResponsiveSize(4),
-    borderLeftColor: '#3b82f6',
+    backgroundColor: T.bg3,
+    borderLeftWidth: 3,
+    borderLeftColor: T.blue,
   },
   unreadChatName: {
-    color: '#1e293b',
-    fontWeight: 'bold',
+    color: T.text,
+    fontWeight: '700',
   },
   unreadChatTime: {
-    color: '#64748b',
+    color: T.textDim,
   },
   unreadMessage: {
-    color: '#334155',
+    color: T.textDim,
     fontWeight: '600',
   },
   unreadBadge: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: T.blue,
     borderRadius: getResponsiveSize(10),
     width: getResponsiveSize(20),
     height: getResponsiveSize(20),
@@ -1297,10 +1432,10 @@ const styles = StyleSheet.create({
   unreadBadgeText: {
     color: '#fff',
     fontSize: getResponsiveSize(10),
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   lastRead: {
-    color: '#666',
+    color: T.textMuted,
     fontSize: getResponsiveSize(10),
     marginTop: getResponsiveSize(4),
     alignSelf: 'flex-start',
@@ -1309,12 +1444,14 @@ const styles = StyleSheet.create({
   // Friend Item
   friendItem: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: T.bg2,
     padding: getResponsiveSize(12),
-    borderRadius: getResponsiveSize(12),
-    marginBottom: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(T.radiusMd),
+    marginBottom: getResponsiveSize(8),
     alignItems: 'center',
     minHeight: getResponsiveSize(64),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   friendItemTablet: {
     flex: 1,
@@ -1329,19 +1466,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: getResponsiveSize(2),
     right: getResponsiveSize(2),
-    width: getResponsiveSize(12),
-    height: getResponsiveSize(12),
+    width: getResponsiveSize(11),
+    height: getResponsiveSize(11),
     borderRadius: getResponsiveSize(6),
-    borderWidth: getResponsiveSize(2),
-    borderColor: '#041c55',
+    borderWidth: 2,
+    borderColor: T.bg2,
   },
   friendInfo: {
     flex: 1,
   },
   friendName: {
-    color: '#fff',
-    fontSize: getResponsiveSize(16),
-    fontWeight: 'bold',
+    color: T.text,
+    fontSize: getResponsiveSize(15),
+    fontWeight: '700',
   },
   friendActions: {
     flexDirection: 'row',
@@ -1349,47 +1486,52 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     padding: getResponsiveSize(8),
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    borderRadius: getResponsiveSize(20),
+    backgroundColor: T.bg3,
+    borderRadius: getResponsiveSize(T.radiusMd),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   lastSeen: {
-    color: '#aaa',
-    fontSize: getResponsiveSize(12),
+    color: T.textMuted,
+    fontSize: getResponsiveSize(11),
     marginTop: getResponsiveSize(2),
   },
 
   // Request Item
   sectionTitle: {
-    color: '#f1c40f',
-    fontSize: getResponsiveSize(14),
-    fontWeight: 'bold',
-    marginBottom: getResponsiveSize(10),
-    marginTop: getResponsiveSize(5),
+    color: T.gold,
+    fontSize: getResponsiveSize(12),
+    fontWeight: '800',
+    marginBottom: getResponsiveSize(8),
+    marginTop: getResponsiveSize(4),
     textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   requestItem: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: T.bg2,
     padding: getResponsiveSize(12),
-    borderRadius: getResponsiveSize(12),
-    marginBottom: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(T.radiusMd),
+    marginBottom: getResponsiveSize(8),
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   requestInfo: {
     flex: 1,
   },
   requestName: {
-    color: '#fff',
-    fontSize: getResponsiveSize(16),
-    fontWeight: 'bold',
+    color: T.text,
+    fontSize: getResponsiveSize(15),
+    fontWeight: '700',
   },
   requestDate: {
-    color: '#aaa',
-    fontSize: getResponsiveSize(12),
+    color: T.textMuted,
+    fontSize: getResponsiveSize(11),
   },
   requestActions: {
     flexDirection: 'row',
-    gap: getResponsiveSize(10),
+    gap: getResponsiveSize(8),
   },
   requestButton: {
     width: getResponsiveSize(36),
@@ -1399,10 +1541,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   acceptButton: {
-    backgroundColor: '#2ecc71',
+    backgroundColor: T.green,
   },
   declineButton: {
-    backgroundColor: '#e74c3c',
+    backgroundColor: T.red,
   },
   cancelButton: {
     padding: getResponsiveSize(5),
@@ -1410,27 +1552,33 @@ const styles = StyleSheet.create({
   cancelLatestButton: {
     paddingVertical: getResponsiveSize(6),
     paddingHorizontal: getResponsiveSize(10),
-    backgroundColor: 'rgba(231, 76, 60, 0.2)',
-    borderRadius: getResponsiveSize(8),
+    backgroundColor: 'rgba(230,57,70,0.15)',
+    borderRadius: getResponsiveSize(T.radiusSm),
+    borderWidth: 1,
+    borderColor: T.red,
   },
   cancelLatestText: {
-    color: '#e74c3c',
-    fontWeight: 'bold',
+    color: T.red,
+    fontWeight: '700',
     fontSize: getResponsiveSize(12),
   },
 
   // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: T.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: T.bg2,
     padding: getResponsiveSize(20),
-    borderRadius: getResponsiveSize(15),
+    borderRadius: getResponsiveSize(T.radiusLg),
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: T.border,
+    ...T.shadowCard,
+    width: '85%',
   },
   modalContentTablet: {
     width: '55%',
@@ -1444,79 +1592,148 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: getResponsiveSize(18),
-    fontWeight: 'bold',
-    marginBottom: getResponsiveSize(15),
-    color: '#041c55',
+    fontWeight: '800',
+    marginBottom: getResponsiveSize(14),
+    color: T.text,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   modalInput: {
     width: '100%',
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#ccc',
-    borderRadius: getResponsiveSize(8),
-    padding: getResponsiveSize(10),
-    marginBottom: getResponsiveSize(20),
-    fontSize: getResponsiveSize(16),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
+    borderRadius: getResponsiveSize(T.radiusMd),
+    padding: getResponsiveSize(12),
+    marginBottom: getResponsiveSize(18),
+    fontSize: getResponsiveSize(15),
+    backgroundColor: T.bg3,
+    color: T.text,
   },
   modalButtons: {
     flexDirection: 'row',
-    gap: getResponsiveSize(15),
+    gap: getResponsiveSize(12),
   },
   modalButtonCancel: {
-    paddingVertical: getResponsiveSize(10),
+    paddingVertical: getResponsiveSize(11),
     paddingHorizontal: getResponsiveSize(20),
-    borderRadius: getResponsiveSize(8),
-    backgroundColor: '#95a5a6',
+    borderRadius: getResponsiveSize(T.radiusMd),
+    backgroundColor: T.bg3,
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   modalButtonConfirm: {
-    paddingVertical: getResponsiveSize(10),
+    paddingVertical: getResponsiveSize(11),
     paddingHorizontal: getResponsiveSize(20),
-    borderRadius: getResponsiveSize(8),
-    backgroundColor: '#041c55',
+    borderRadius: getResponsiveSize(T.radiusMd),
+    backgroundColor: T.gold,
   },
   modalButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: T.text,
+    fontWeight: '700',
+  },
+  addFriendResultsBox: {
+    width: '100%',
+    marginTop: getResponsiveSize(10),
+    marginBottom: getResponsiveSize(14),
+    backgroundColor: T.bg3,
+    borderRadius: getResponsiveSize(T.radiusMd),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
+    maxHeight: getResponsiveSize(220),
+    overflow: 'hidden',
+  },
+  addFriendLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: getResponsiveSize(10),
+    paddingVertical: getResponsiveSize(14),
+  },
+  addFriendLoadingText: {
+    color: T.textMuted,
+    fontWeight: '700',
+  },
+  addFriendEmptyText: {
+    color: T.textMuted,
+    textAlign: 'center',
+    paddingVertical: getResponsiveSize(16),
+    fontStyle: 'italic',
+  },
+  addFriendResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: getResponsiveSize(10),
+    paddingHorizontal: getResponsiveSize(12),
+    borderBottomWidth: 1,
+    borderBottomColor: T.borderSoft,
+    gap: getResponsiveSize(10),
+  },
+  addFriendResultAvatar: {
+    width: getResponsiveSize(34),
+    height: getResponsiveSize(34),
+    borderRadius: getResponsiveSize(17),
+    borderWidth: 1,
+    borderColor: T.border,
+    backgroundColor: T.bg2,
+  },
+  addFriendResultInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  addFriendResultPseudo: {
+    color: T.text,
+    fontWeight: '800',
+    fontSize: getResponsiveSize(14),
+  },
+  addFriendResultStatus: {
+    marginTop: getResponsiveSize(2),
+    fontSize: getResponsiveSize(12),
+    fontWeight: '600',
   },
 
   // Invite Config
   label: {
-    fontSize: getResponsiveSize(16),
-    fontWeight: 'bold',
-    color: '#041c55',
+    fontSize: getResponsiveSize(14),
+    fontWeight: '700',
+    color: T.textDim,
     marginBottom: getResponsiveSize(8),
     alignSelf: 'flex-start',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   optionsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: getResponsiveSize(8),
-    marginBottom: getResponsiveSize(16),
+    marginBottom: getResponsiveSize(14),
     justifyContent: 'center',
   },
   optionButton: {
     paddingVertical: getResponsiveSize(8),
-    paddingHorizontal: getResponsiveSize(12),
-    borderRadius: getResponsiveSize(8),
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#041c55',
-    backgroundColor: '#fff',
+    paddingHorizontal: getResponsiveSize(14),
+    borderRadius: getResponsiveSize(T.radiusMd),
+    borderWidth: 1,
+    borderColor: T.border,
+    backgroundColor: T.bg3,
   },
   optionButtonActive: {
-    backgroundColor: '#041c55',
+    backgroundColor: T.gold,
+    borderColor: T.gold,
   },
   optionText: {
-    color: '#041c55',
+    color: T.textDim,
     fontWeight: '600',
   },
   optionTextActive: {
-    color: '#fff',
+    color: '#1B1305',
+    fontWeight: '800',
   },
   inviteDetails: {
-      fontSize: getResponsiveSize(16),
-      color: '#333',
-      marginBottom: getResponsiveSize(20),
-      textAlign: 'center',
-      lineHeight: getResponsiveSize(24),
+    fontSize: getResponsiveSize(14),
+    color: T.textDim,
+    marginBottom: getResponsiveSize(18),
+    textAlign: 'center',
+    lineHeight: getResponsiveSize(22),
   },
 });
 

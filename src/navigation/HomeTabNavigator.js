@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, Text, Platform, useWindowDimensions, StyleSheet } from 'react-native';
 import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
+import { T } from '../utils/theme';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -68,49 +69,62 @@ const sidebarStyles = StyleSheet.create({
     position: 'absolute',
     top: 0, left: 0, bottom: 0,
     width: SIDEBAR_WIDTH,
-    backgroundColor: 'rgba(4, 28, 85, 0.97)',
-    borderRightColor: '#f1c40f',
-    borderRightWidth: 2,
-    zIndex: 100,
+    backgroundColor: T.bg1,
+    borderRightColor: T.border,
+    borderRightWidth: 1,
+    // zIndex: 100,
     paddingVertical: 30,
+    borderBottomWidth: 1.5,
+        borderBottomColor: T.gold,
+        borderTopWidth: 1.5,
+        borderTopColor: 'rgba(255,230,120,0.45)',
+        shadowColor: T.gold,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.35,
+        shadowRadius: 10,
+        elevation: 14,
+        zIndex: 1000,
   },
   header: {
     paddingHorizontal: 20,
     marginBottom: 40,
   },
   brand: {
-    color: '#f1c40f',
+    color: T.gold,
     fontSize: 22,
-    fontWeight: 'bold',
+    fontWeight: '900',
     letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   links: {
     flex: 1,
     paddingHorizontal: 10,
-    gap: 8,
+    gap: 4,
   },
   link: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: T.radiusMd,
     gap: 12,
   },
   linkActive: {
-    backgroundColor: 'rgba(241, 196, 15, 0.15)',
+    backgroundColor: 'rgba(244,180,26,0.12)',
   },
   linkText: {
-    color: '#ccc',
-    fontSize: 16,
-    fontWeight: '400',
+    color: T.textDim,
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
   },
   linkTextActive: {
-    color: '#f1c40f',
-    fontWeight: 'bold',
+    color: T.gold,
+    fontWeight: '800',
   },
   badge: {
-    backgroundColor: '#e74c3c',
+    backgroundColor: T.red,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -120,8 +134,8 @@ const sidebarStyles = StyleSheet.create({
   },
   badgeText: {
     color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
+    fontSize: 11,
+    fontWeight: '700',
   },
 });
 
@@ -134,17 +148,19 @@ const CustomTabIcon = ({ focused, iconName, label }) => {
       <Ionicons
         name={iconName}
         size={getResponsiveSize(isTablet ? 26 : 24)}
-        color={focused ? '#f1c40f' : '#fff'}
+        color={focused ? T.gold : T.textMuted}
       />
       <Text
         numberOfLines={1}
         adjustsFontSizeToFit
         minimumFontScale={0.7}
         style={{
-          color: focused ? '#f1c40f' : '#fff',
-          fontSize: getResponsiveSize(isTablet ? 11 : 12),
-          fontWeight: 'bold',
+          color: focused ? T.gold : T.textMuted,
+          fontSize: getResponsiveSize(isTablet ? 10 : 11),
+          fontWeight: '700',
           marginTop: getResponsiveSize(2),
+          letterSpacing: 0.3,
+          textTransform: 'uppercase',
         }}
       >
         {label}
@@ -168,16 +184,22 @@ const MobileBottomNav = ({ state, navigation, t, notificationsCount, insets, wid
   return (
     <View
       style={{
-        backgroundColor: 'rgba(4, 28, 85, 0.95)',
+        backgroundColor: T.bg1,
         height: tabHeight,
-        borderTopColor: '#f1c40f',
-        borderTopWidth: 1,
+        borderTopColor: T.gold,
+        borderTopWidth: 1.5,
         paddingTop: isTablet ? 10 : 4,
         paddingBottom: (isTablet ? 12 : 0) + insets.bottom,
         position: 'absolute',
         bottom: 0, left: 0, right: 0,
-        elevation: 0,
         flexDirection: 'row',
+        // Box shadow global 1.5px
+        shadowColor: T.gold,
+        shadowOffset: { width: 0, height: 6  },
+        shadowOpacity: 0.35,
+        shadowRadius: 1.5,
+        elevation: 14,
+        zIndex: 1000,
       }}
     >
       {state.routes.map((route, index) => {

@@ -12,7 +12,11 @@ const LiveChatOverlay = ({
     onSendMessage, 
     onSendReaction, 
     visible = true,
-    currentUser
+    showMessages = true,
+    messagesLeftOffset = getResponsiveSize(20),
+    inputLeftOffset = getResponsiveSize(90),
+    currentUser,
+    bottomOffset = getResponsiveSize(20)
 }) => {
     const [inputText, setInputText] = useState('');
     const [floatingReactions, setFloatingReactions] = useState([]);
@@ -68,34 +72,40 @@ const LiveChatOverlay = ({
     return (
         <View style={styles.container} pointerEvents="box-none">
             {/* Zone de Messages (Bottom Left) */}
-            <View style={styles.messagesContainer} pointerEvents="box-none">
-                <FlatList
-                    ref={flatListRef}
-                    data={messages}
-                    keyExtractor={(item, index) => item.id ? item.id.toString() : `msg-${index}-${Date.now()}`}
-                    renderItem={({ item }) => (
-                        <View style={styles.messageRow}>
-                            <Text style={styles.messageAuthor}>{item.auteur}: </Text>
-                            {item.type === 'emoji' ? (
-                                getEmojiSource(item.contenu) ? (
-                                    <EmojiAnimation
-                                        source={getEmojiSource(item.contenu)}
-                                        style={{ width: getResponsiveSize(24), height: getResponsiveSize(24) }}
-                                    />
+            {showMessages && (
+                <View
+                    testID="live-chat-messages-container"
+                    style={[styles.messagesContainer, { bottom: bottomOffset + getResponsiveSize(100), left: messagesLeftOffset }]}
+                    pointerEvents="none"
+                >
+                    <FlatList
+                        ref={flatListRef}
+                        data={messages}
+                        keyExtractor={(item, index) => item.id ? item.id.toString() : `msg-${index}-${Date.now()}`}
+                        renderItem={({ item }) => (
+                            <View style={styles.messageRow}>
+                                <Text style={styles.messageAuthor}>{item.auteur}: </Text>
+                                {item.type === 'emoji' ? (
+                                    getEmojiSource(item.contenu) ? (
+                                        <EmojiAnimation
+                                            source={getEmojiSource(item.contenu)}
+                                            style={{ width: getResponsiveSize(24), height: getResponsiveSize(24) }}
+                                        />
+                                    ) : (
+                                        <Text style={styles.messageEmoji}>{item.contenu}</Text>
+                                    )
                                 ) : (
-                                    <Text style={styles.messageEmoji}>{item.contenu}</Text>
-                                )
-                            ) : (
-                                <Text style={styles.messageText}>{item.contenu}</Text>
-                            )}
-                        </View>
-                    )}
-                    style={styles.messageList}
-                    contentContainerStyle={styles.messageListContent}
-                    showsVerticalScrollIndicator={false}
-                    pointerEvents="auto" // Allow scrolling
-                />
-            </View>
+                                    <Text style={styles.messageText}>{item.contenu}</Text>
+                                )}
+                            </View>
+                        )}
+                        style={styles.messageList}
+                        contentContainerStyle={styles.messageListContent}
+                        showsVerticalScrollIndicator={false}
+                        pointerEvents="none"
+                    />
+                </View>
+            )}
 
             {/* Zone de Réactions Flottantes (Full Screen Overlay) */}
             {floatingReactions.map(r => (
@@ -105,7 +115,8 @@ const LiveChatOverlay = ({
             {/* Barre d'Input Persistante */}
             <KeyboardAvoidingView 
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
-                style={styles.inputWrapper}
+                testID="live-chat-input-wrapper"
+                style={[styles.inputWrapper, { bottom: bottomOffset, left: inputLeftOffset }]}
                 pointerEvents="box-none"
             >
                 {/* Quick Reactions Panel (Conditional) */}
@@ -204,7 +215,6 @@ const styles = StyleSheet.create({
     messagesContainer: {
         position: 'absolute',
         bottom: getResponsiveSize(100), // Just above input bar
-        left: getResponsiveSize(20),
         width: width * 0.6,
         height: getResponsiveSize(150),
         justifyContent: 'flex-end',

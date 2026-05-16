@@ -12,11 +12,13 @@ import {
   ActivityIndicator,
   useWindowDimensions
 } from 'react-native';
+import { T } from '../utils/theme';
 import Svg, { Circle, Path, G, Defs, RadialGradient, Stop, LinearGradient, Ellipse } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateUser } from '../redux/slices/authSlice';
+import { selectHasTempPremiumPions } from '../redux/slices/rewardsSlice';
 import { API_URL } from '../config';
 import PionSVG, { PION_COLORS } from '../components/PionSVG';
 import { appAlert } from '../services/appAlert';
@@ -43,6 +45,8 @@ function PionCard({
   color,
   config,
   onPress,
+  locked,
+  onLockedPress,
   selected,
   equipped,
   cardWidth,
@@ -76,7 +80,11 @@ function PionCard({
   const glowOpacity = glow.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.9] });
 
   return (
-    <TouchableOpacity onPress={handlePress} activeOpacity={0.85}>
+    <TouchableOpacity
+      onPress={locked ? onLockedPress : handlePress}
+      activeOpacity={0.85}
+      disabled={locked}
+    >
       <Animated.View
         style={[
           styles.pionCard,
@@ -112,6 +120,12 @@ function PionCard({
         <Text style={[styles.pionLabel, { color: selected ? c.light : '#AAA' }]}>
           {config.labelFR}
         </Text>
+
+        {locked && (
+          <View style={styles.lockOverlay}>
+            <Ionicons name="lock-closed" size={18} color={T.gold} />
+          </View>
+        )}
       </Animated.View>
     </TouchableOpacity>
   );
@@ -123,6 +137,7 @@ export default function PremiumPionsScreen() {
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const { user, token } = useSelector(state => state.auth);
+  const hasTempPremiumPions = useSelector(selectHasTempPremiumPions);
   const { width } = useWindowDimensions();
   
   const [selectedType, setSelectedType] = useState(user?.pawnSkin || 'skull');
@@ -132,6 +147,7 @@ export default function PremiumPionsScreen() {
 
   const selectedConfig = PION_TYPES.find(p => p.id === selectedType) || PION_TYPES[0];
   const isEquipped = user?.pawnSkin === selectedType;
+  const canAccessPremium = Boolean(user?.isPremium || user?.isEarlyAccess || hasTempPremiumPions);
 
   const gridGap = 12;
   const scrollPaddingHorizontal = 20;
@@ -141,6 +157,10 @@ export default function PremiumPionsScreen() {
   const handleEquip = async () => {
     if (!user) {
       appAlert('Connexion requise', 'Veuillez vous connecter pour équiper un pion.');
+      return;
+    }
+    if (selectedConfig.isPremium && !canAccessPremium) {
+      appAlert('Récompense requise', 'Débloquez les pions premium via le centre de récompenses (ou Premium).');
       return;
     }
 
@@ -225,6 +245,8 @@ export default function PremiumPionsScreen() {
               color={selectedColor}
               config={config}
               onPress={() => setSelectedType(config.id)}
+              locked={Boolean(config.isPremium && !canAccessPremium)}
+              onLockedPress={() => appAlert('Verrouillé', 'Débloquez les pions premium via le centre de récompenses.')}
               selected={selectedType === config.id}
               equipped={user?.pawnSkin === config.id}
               cardWidth={pionCardWidth}
@@ -287,7 +309,7 @@ export default function PremiumPionsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.bg,
+    backgroundColor: T.bg0,
   },
   scroll: {
     padding: 20,
@@ -308,54 +330,54 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 42,
     fontWeight: '900',
-    color: '#CC0000',
+    color: T.red,
     letterSpacing: 4,
     textTransform: 'uppercase',
   },
   titleBlue: {
-    color: '#0088FF',
+    color: T.blue,
   },
   subtitle: {
     fontSize: 13,
-    color: '#666',
+    color: T.textMuted,
     letterSpacing: 6,
     textTransform: 'uppercase',
     marginTop: 2,
   },
   colorToggle: {
     flexDirection: 'row',
-    borderRadius: 12,
+    borderRadius: T.radiusMd,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#222',
+    borderColor: T.borderSoft,
     marginBottom: 24,
   },
   colorBtn: {
     flex: 1,
     paddingVertical: 12,
     alignItems: 'center',
-    backgroundColor: COLORS.card,
+    backgroundColor: T.bg2,
   },
   colorBtnActiveRed: {
-    backgroundColor: '#3D0000',
+    backgroundColor: 'rgba(230,57,70,0.2)',
   },
   colorBtnActiveBlue: {
-    backgroundColor: '#001144',
+    backgroundColor: 'rgba(77,163,255,0.2)',
   },
   colorBtnText: {
-    color: '#CCC',
+    color: T.textDim,
     fontWeight: '700',
     letterSpacing: 2,
     fontSize: 13,
   },
   previewContainer: {
     alignItems: 'center',
-    backgroundColor: COLORS.card,
-    borderRadius: 24,
+    backgroundColor: T.bg2,
+    borderRadius: T.radiusLg,
     paddingVertical: 32,
     marginBottom: 28,
     borderWidth: 1,
-    borderColor: '#222',
+    borderColor: T.borderSoft,
     overflow: 'hidden',
   },
   previewGlow: {
@@ -368,7 +390,7 @@ const styles = StyleSheet.create({
     marginTop: -90,
   },
   previewLabel: {
-    color: '#FFF',
+    color: T.text,
     fontSize: 20,
     fontWeight: '900',
     letterSpacing: 3,
@@ -376,13 +398,13 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   previewHint: {
-    color: '#444',
+    color: T.textMuted,
     fontSize: 11,
     marginTop: 6,
     letterSpacing: 1,
   },
   sectionTitle: {
-    color: '#555',
+    color: T.textMuted,
     fontSize: 11,
     letterSpacing: 4,
     textTransform: 'uppercase',
@@ -397,12 +419,12 @@ const styles = StyleSheet.create({
   },
   pionCard: {
     aspectRatio: 0.9,
-    backgroundColor: COLORS.card,
-    borderRadius: 16,
+    backgroundColor: T.bg2,
+    borderRadius: T.radiusMd,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#222',
+    borderColor: T.borderSoft,
     overflow: 'hidden',
     paddingVertical: 12,
   },
@@ -410,7 +432,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 6,
     right: 6,
-    backgroundColor: '#FFD700',
+    backgroundColor: T.gold,
     borderRadius: 4,
     paddingHorizontal: 5,
     paddingVertical: 2,
@@ -418,7 +440,7 @@ const styles = StyleSheet.create({
   premiumText: {
     fontSize: 9,
     fontWeight: '900',
-    color: '#000',
+    color: '#1B1305',
     letterSpacing: 1,
   },
   equippedBadge: {
@@ -430,7 +452,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   selectedGlow: {
-    borderRadius: 16,
+    borderRadius: T.radiusMd,
+  },
+  lockOverlay: {
+    position: 'absolute',
+    right: 8,
+    bottom: 8,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.35)',
   },
   pionLabel: {
     fontSize: 9,
@@ -441,52 +474,53 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   unlockBanner: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 20,
+    backgroundColor: T.bg2,
+    borderRadius: T.radiusLg,
     padding: 24,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: T.borderSoft,
   },
   unlockTitle: {
-    color: '#FFF',
+    color: T.text,
     fontSize: 18,
     fontWeight: '900',
     marginBottom: 4,
   },
   unlockSub: {
-    color: '#777',
+    color: T.textMuted,
     fontSize: 13,
     marginBottom: 16,
   },
   unlockBtn: {
-    backgroundColor: '#CC0000',
+    backgroundColor: T.red,
     paddingHorizontal: 28,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: T.radiusMd,
   },
   unlockBtnText: {
     color: '#FFF',
-    fontWeight: '700',
+    fontWeight: '800',
     fontSize: 14,
     letterSpacing: 1,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.85)',
+    backgroundColor: T.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   modalCard: {
     width: '100%',
-    backgroundColor: COLORS.card,
-    borderRadius: 32,
+    backgroundColor: T.bg2,
+    borderRadius: T.radiusXl,
     padding: 32,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: T.borderSoft,
     overflow: 'hidden',
+    ...T.shadowCard,
   },
   modalGlow: {
     position: 'absolute',
@@ -497,7 +531,7 @@ const styles = StyleSheet.create({
     top: -50,
   },
   modalTitle: {
-    color: '#FFF',
+    color: T.text,
     fontSize: 28,
     fontWeight: '900',
     letterSpacing: 2,
@@ -512,39 +546,35 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   proBadgeLarge: {
-    backgroundColor: COLORS.gold,
+    backgroundColor: T.gold,
     paddingHorizontal: 16,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: T.radiusPill,
     marginBottom: 24,
   },
   proBadgeText: {
-    color: '#000',
+    color: '#1B1305',
     fontWeight: '800',
     fontSize: 12,
     letterSpacing: 1,
   },
   modalClose: {
-    color: '#888',
+    color: T.textMuted,
     fontSize: 14,
   },
   equipButton: {
     paddingVertical: 12,
     paddingHorizontal: 30,
-    borderRadius: 25,
+    borderRadius: T.radiusPill,
     marginTop: 20,
     minWidth: 200,
     alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
+    ...T.shadowBtn,
   },
   equipButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '800',
     letterSpacing: 1,
   },
 });

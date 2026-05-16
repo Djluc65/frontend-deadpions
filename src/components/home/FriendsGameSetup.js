@@ -59,22 +59,6 @@ const FriendsGameSetup = ({ visible, onClose, navigation, user, onOpenLiveConfig
   }, []);
 
   const handleCreateRoom = useCallback(() => {
-    // Check quota for free users
-    if (!user?.isPremium && !user?.isEarlyAccess && user?.dailyCreatedRooms >= 5) {
-        appAlert(
-            "Limite atteinte",
-            [
-                { text: "Annuler", style: "cancel" },
-                { text: "Devenir Premium", onPress: () => {
-                    onClose();
-                    // Naviguer vers le TabNavigator 'Home' puis vers l'onglet 'Magasin'
-                    navigation.navigate('Home', { screen: 'Magasin' });
-                }}
-            ]
-        );
-        return;
-    }
-
     // Emit create_room event
     socket.emit('create_room', {
         betAmount: inviteBet,
@@ -94,7 +78,8 @@ const FriendsGameSetup = ({ visible, onClose, navigation, user, onOpenLiveConfig
   const handleCloseCreateRoom = useCallback(() => {
     setShowCreateRoom(false);
     setShowMenu(true);
-  }, []);
+    onClose();
+  }, [onClose]);
 
   return (
     <>

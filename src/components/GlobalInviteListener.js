@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Modal, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
@@ -14,6 +14,7 @@ const GlobalInviteListener = () => {
     const user = useSelector(state => state.auth.user);
     // Stocke l'invitation en cours (null si aucune)
     const [invitation, setInvitation] = useState(null);
+    const lastLiveRoomNavRef = useRef({ gameId: null, ts: 0 });
 
     // Connexion globale au socket + inscription dans la room utilisateur
     useEffect(() => {
@@ -63,6 +64,20 @@ const GlobalInviteListener = () => {
         // Quand on rejoint une salle "Live" (jeu en direct), on navigue vers l'écran d'attente
         const handleLiveRoomJoined = (data) => {
              console.log('Joined Live Room:', data);
+             const now = Date.now();
+             if (data?.gameId && lastLiveRoomNavRef.current.gameId === data.gameId && now - lastLiveRoomNavRef.current.ts < 1500) {
+                 return;
+             }
+             const state = navigation.getState();
+             if (state) {
+                 const currentRoute = state.routes[state.index];
+                 if (currentRoute?.name === 'SalleAttenteLive') {
+                     const currentRoomId = currentRoute?.params?.roomId || currentRoute?.params?.configSalle?.id;
+                     if (currentRoomId && data?.gameId && currentRoomId.toString() === data.gameId.toString()) {
+                         return;
+                     }
+                 }
+             }
              const configSalle = data.config || {
                  id: data.gameId,
                  createur: data.players.black,
@@ -72,7 +87,15 @@ const GlobalInviteListener = () => {
                  },
                  spectateurs: data.spectators || []
              };
-             navigation.navigate('SalleAttenteLive', { configSalle });
+             lastLiveRoomNavRef.current = { gameId: data?.gameId ?? null, ts: now };
+             navigation.replace('SalleAttenteLive', {
+                 configSalle,
+                 roomId: data.gameId,
+                 players: data.players,
+                 betAmount: data.betAmount,
+                 timeControl: data.timeControl,
+                 spectators: data.spectators || []
+             });
         };
         socket.on('live_room_joined', handleLiveRoomJoined);
 
@@ -98,15 +121,32 @@ const GlobalInviteListener = () => {
             timeControl: invitation.timeControl,
             gameId: invitation.gameId
         });
-        
-        if (!isLive) {
-            navigation.navigate('Game', {
-                mode: gameMode,
-                gameId: invitation.gameId,
-                betAmount: invitation.betAmount,
-                timeControl: invitation.timeControl
+
+        if (isLive) {
+            setInvitation(null);
+            navigation.reset({
+                index: 1,
+                routes: [
+                    { name: 'Home' },
+                    {
+                        name: 'SalleAttenteLive',
+                        params: {
+                            roomId: invitation.gameId,
+                            betAmount: invitation.betAmount,
+                            timeControl: invitation.timeControl
+                        }
+                    }
+                ]
             });
+            return;
         }
+
+        navigation.navigate('Game', {
+            mode: gameMode,
+            gameId: invitation.gameId,
+            betAmount: invitation.betAmount,
+            timeControl: invitation.timeControl
+        });
 
         setInvitation(null);
     };
@@ -168,17 +208,28 @@ const GlobalInviteListener = () => {
             }
         }
 
+        const getPlayerId = (p) => (p?._id || p?.id)?.toString?.();
+        const myId = (user?._id || user?.id)?.toString?.();
+        const blackId = getPlayerId(data?.players?.black);
+        const opponent = (myId && blackId && myId === blackId) ? data?.players?.white : data?.players?.black;
+        const effectiveTimeControl =
+            data?.timeControl ??
+            data?.roomConfig?.parametres?.tempsParCoup ??
+            data?.roomConfig?.parametres?.timeControl ??
+            undefined;
+
         // Navigation vers l'écran de jeu avec toutes les données nécessaires
         navigation.navigate('Game', {
             mode: gameMode,
             gameId: data.gameId,
+            roomConfig: isLive ? (data.roomConfig || null) : undefined,
             players: data.players,
             currentTurn: data.currentTurn,
             betAmount: data.betAmount,
-            timeControl: data.timeControl,
+            timeControl: effectiveTimeControl,
             gameType: data.mode,
             tournamentSettings: data.tournamentSettings,
-            opponent: data.players.black.id.toString() === (user._id || user.id).toString() ? data.players.white : data.players.black
+            opponent
         });
         
         // Nettoie l'invitation en cours

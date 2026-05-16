@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
 import { translations } from '../utils/translations';
 import { getResponsiveSize } from '../utils/responsive';
+import { T } from '../utils/theme';
 import { appAlert } from '../services/appAlert';
 
 const InfoScreen = ({ navigation }) => {
@@ -76,11 +77,12 @@ const InfoScreen = ({ navigation }) => {
   ];
 
   return (
-    <ImageBackground 
-      source={require('../../assets/images/Background2-4.png')} 
+    <ImageBackground
+      source={require('../../assets/images/Background2-4.png')}
       style={styles.background}
       resizeMode="cover"
     >
+      <View style={styles.bgOverlay} pointerEvents="none" />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={getResponsiveSize(28)} color="#fff" />
@@ -133,8 +135,13 @@ const InfoScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  bgOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(5,9,15,0.55)',
+  },
   background: {
     flex: 1,
+    backgroundColor: T.bg0,
   },
   header: {
     flexDirection: 'row',
@@ -142,26 +149,32 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: getResponsiveSize(Platform.OS === 'ios' ? 60 : 40),
     paddingHorizontal: getResponsiveSize(20),
-    paddingBottom: getResponsiveSize(20),
-    backgroundColor: 'rgba(4, 28, 85, 0.9)',
-    borderBottomWidth: getResponsiveSize(1),
-    borderBottomColor: '#f1c40f',
+    paddingBottom: getResponsiveSize(18),
+    backgroundColor: T.bg1,
+    borderBottomWidth: 1,
+    borderBottomColor: T.borderSoft,
   },
   backButton: {
-    padding: getResponsiveSize(5),
+    padding: getResponsiveSize(8),
+    borderRadius: T.radiusMd,
+    backgroundColor: T.bg2,
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   headerTitle: {
-    color: '#fff',
+    color: T.text,
     fontSize: getResponsiveSize(20),
-    fontWeight: 'bold',
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   container: {
-    padding: getResponsiveSize(20),
+    padding: getResponsiveSize(18),
     paddingBottom: getResponsiveSize(40),
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: getResponsiveSize(30),
+    marginBottom: getResponsiveSize(28),
   },
   logo: {
     width: getResponsiveSize(100),
@@ -169,33 +182,25 @@ const styles = StyleSheet.create({
     marginBottom: getResponsiveSize(10),
   },
   appName: {
-    color: '#f1c40f',
+    color: T.gold,
     fontSize: getResponsiveSize(28),
-    fontWeight: 'bold',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: getResponsiveSize(-1), height: getResponsiveSize(1) },
-    textShadowRadius: getResponsiveSize(10),
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   version: {
-    color: '#bdc3c7',
-    fontSize: getResponsiveSize(14),
+    color: T.textMuted,
+    fontSize: getResponsiveSize(13),
     marginTop: getResponsiveSize(5),
   },
   card: {
-    backgroundColor: 'rgba(4, 28, 85, 0.8)',
-    borderRadius: getResponsiveSize(15),
-    padding: getResponsiveSize(20),
-    marginBottom: getResponsiveSize(20),
-    borderWidth: getResponsiveSize(1),
-    borderColor: 'rgba(241, 196, 15, 0.3)',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: getResponsiveSize(2),
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: getResponsiveSize(3.84),
-    elevation: 5,
+    backgroundColor: T.bg2,
+    borderRadius: getResponsiveSize(T.radiusMd),
+    padding: getResponsiveSize(18),
+    marginBottom: getResponsiveSize(16),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
+    ...T.shadowCard,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -206,37 +211,42 @@ const styles = StyleSheet.create({
     marginRight: getResponsiveSize(10),
   },
   cardTitle: {
-    color: '#fff',
-    fontSize: getResponsiveSize(18),
-    fontWeight: 'bold',
+    color: T.text,
+    fontSize: getResponsiveSize(17),
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.2,
   },
   cardContent: {
-    color: '#ecf0f1',
-    fontSize: getResponsiveSize(15),
-    lineHeight: getResponsiveSize(22),
+    color: T.textDim,
+    fontSize: getResponsiveSize(14),
+    lineHeight: getResponsiveSize(21),
   },
   actionButton: {
-    backgroundColor: '#f1c40f',
+    backgroundColor: T.gold,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: getResponsiveSize(10),
-    paddingHorizontal: getResponsiveSize(15),
-    borderRadius: getResponsiveSize(8),
-    marginTop: getResponsiveSize(15),
+    paddingHorizontal: getResponsiveSize(16),
+    borderRadius: getResponsiveSize(T.radiusMd),
+    marginTop: getResponsiveSize(14),
     alignSelf: 'flex-start',
+    ...T.shadowBtn,
   },
   actionButtonText: {
-    color: '#041c55',
-    fontWeight: 'bold',
+    color: '#1B1305',
+    fontWeight: '800',
     marginRight: getResponsiveSize(5),
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   footer: {
     alignItems: 'center',
     marginTop: getResponsiveSize(20),
   },
   copyright: {
-    color: '#7f8c8d',
+    color: T.textMuted,
     fontSize: getResponsiveSize(12),
   },
 });

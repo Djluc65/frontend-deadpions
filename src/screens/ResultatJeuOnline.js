@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ImageBackground } from 'react-native';
+import { T } from '../utils/theme';
 import { CommonActions } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import { getResponsiveSize } from '../utils/responsive';
@@ -12,10 +13,11 @@ const ResultatJeuOnline = ({ route, navigation }) => {
   const canShowRewardedCta = !victoire && showAds;
 
   return (
-    <ImageBackground 
-      source={require('../../assets/images/Background2-4.png')} 
+    <ImageBackground
+      source={require('../../assets/images/Background2-4.png')}
       style={styles.container}
     >
+      <View style={styles.bgOverlay} pointerEvents="none" />
       <View style={styles.card}>
         <Text style={styles.emoji}>{victoire ? '🏆' : '😢'}</Text>
         <Text style={styles.titre}>{victoire ? 'VICTOIRE !' : 'DÉFAITE'}</Text>
@@ -87,6 +89,10 @@ const ResultatJeuOnline = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  bgOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(5,9,15,0.55)',
+  },
   container: {
     flex: 1,
     justifyContent: 'center',
@@ -94,153 +100,163 @@ const styles = StyleSheet.create({
     padding: getResponsiveSize(24),
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: getResponsiveSize(20),
-    padding: getResponsiveSize(32),
+    backgroundColor: T.bg2,
+    borderRadius: getResponsiveSize(T.radiusXl),
+    padding: getResponsiveSize(28),
     alignItems: 'center',
     width: '100%',
     maxWidth: getResponsiveSize(400),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: getResponsiveSize(4)},
-    shadowOpacity: 0.1,
-    shadowRadius: getResponsiveSize(12),
-    elevation: 8,
+    borderWidth: 1.5,
+    borderColor: T.gold,
+    ...T.shadowCard,
   },
   emoji: {
-    fontSize: getResponsiveSize(80),
-    marginBottom: getResponsiveSize(16),
+    fontSize: getResponsiveSize(72),
+    marginBottom: getResponsiveSize(14),
   },
   titre: {
-    fontSize: getResponsiveSize(32),
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: getResponsiveSize(8),
+    fontSize: getResponsiveSize(30),
+    fontWeight: '900',
+    color: T.text,
+    marginBottom: getResponsiveSize(6),
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   adversaire: {
-    fontSize: getResponsiveSize(16),
-    color: '#6b7280',
-    marginBottom: getResponsiveSize(24),
+    fontSize: getResponsiveSize(14),
+    color: T.textMuted,
+    marginBottom: getResponsiveSize(20),
   },
   gainsContainer: {
-    backgroundColor: '#d1fae5',
-    borderRadius: getResponsiveSize(12),
-    padding: getResponsiveSize(20),
+    backgroundColor: 'rgba(46,194,126,0.1)',
+    borderRadius: getResponsiveSize(T.radiusMd),
+    padding: getResponsiveSize(18),
     width: '100%',
     alignItems: 'center',
-    marginBottom: getResponsiveSize(24),
+    marginBottom: getResponsiveSize(20),
+    borderWidth: 1,
+    borderColor: 'rgba(46,194,126,0.3)',
   },
   gainsLabel: {
-    fontSize: getResponsiveSize(14),
-    color: '#065f46',
-    marginBottom: getResponsiveSize(8),
+    fontSize: getResponsiveSize(13),
+    color: T.green,
+    marginBottom: getResponsiveSize(6),
+    fontWeight: '600',
   },
   gainsMontant: {
-    fontSize: getResponsiveSize(36),
-    fontWeight: 'bold',
-    color: '#059669',
+    fontSize: getResponsiveSize(34),
+    fontWeight: '900',
+    color: T.green,
     marginBottom: getResponsiveSize(4),
   },
   gainsInfo: {
-    fontSize: getResponsiveSize(12),
-    color: '#065f46',
+    fontSize: getResponsiveSize(11),
+    color: T.textMuted,
   },
   perteContainer: {
-    backgroundColor: '#fee2e2',
-    borderRadius: getResponsiveSize(12),
-    padding: getResponsiveSize(20),
+    backgroundColor: 'rgba(230,57,70,0.1)',
+    borderRadius: getResponsiveSize(T.radiusMd),
+    padding: getResponsiveSize(18),
     width: '100%',
     alignItems: 'center',
-    marginBottom: getResponsiveSize(24),
+    marginBottom: getResponsiveSize(20),
+    borderWidth: 1,
+    borderColor: 'rgba(230,57,70,0.3)',
   },
   perteLabel: {
-    fontSize: getResponsiveSize(14),
-    color: '#991b1b',
-    marginBottom: getResponsiveSize(8),
+    fontSize: getResponsiveSize(13),
+    color: T.red,
+    marginBottom: getResponsiveSize(6),
+    fontWeight: '600',
   },
   perteMontant: {
-    fontSize: getResponsiveSize(36),
-    fontWeight: 'bold',
-    color: '#dc2626',
+    fontSize: getResponsiveSize(34),
+    fontWeight: '900',
+    color: T.red,
   },
   soldeContainer: {
-    marginBottom: getResponsiveSize(24),
+    marginBottom: getResponsiveSize(20),
     alignItems: 'center',
   },
   soldeLabel: {
-    fontSize: getResponsiveSize(16),
-    color: '#4b5563',
+    fontSize: getResponsiveSize(14),
+    color: T.textDim,
     marginBottom: getResponsiveSize(4),
   },
   soldeMontant: {
-    fontSize: getResponsiveSize(24),
-    fontWeight: 'bold',
-    color: '#111827',
+    fontSize: getResponsiveSize(22),
+    fontWeight: '800',
+    color: T.gold,
   },
   boutonRewarded: {
     width: '100%',
-    backgroundColor: '#f59e0b',
+    backgroundColor: T.gold,
     paddingVertical: getResponsiveSize(10),
-    borderRadius: getResponsiveSize(12),
+    borderRadius: getResponsiveSize(T.radiusMd),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: getResponsiveSize(10),
     borderWidth: 1,
-    borderColor: '#fbbf24',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    elevation: 5,
+    borderColor: T.goldDeep,
+    ...T.shadowBtn,
   },
   boutonRewardedTexte: {
-    color: '#111827',
-    fontSize: getResponsiveSize(14),
-    fontWeight: 'bold',
+    color: '#1B1305',
+    fontSize: getResponsiveSize(13),
+    fontWeight: '800',
     textAlign: 'center',
   },
   boutons: {
     flexDirection: 'row',
-    gap: getResponsiveSize(12),
+    gap: getResponsiveSize(10),
     width: '100%',
   },
   boutonRejouer: {
     flex: 1,
-    backgroundColor: '#3b82f6',
-    paddingVertical: getResponsiveSize(14),
-    borderRadius: getResponsiveSize(12),
+    backgroundColor: T.blue,
+    paddingVertical: getResponsiveSize(13),
+    borderRadius: getResponsiveSize(T.radiusMd),
     alignItems: 'center',
+    ...T.shadowBtn,
   },
   boutonMenu: {
     flex: 1,
-    backgroundColor: '#6b7280',
-    paddingVertical: getResponsiveSize(14),
-    borderRadius: getResponsiveSize(12),
+    backgroundColor: T.bg3,
+    paddingVertical: getResponsiveSize(13),
+    borderRadius: getResponsiveSize(T.radiusMd),
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   boutonTexte: {
-    color: '#fff',
-    fontSize: getResponsiveSize(16),
-    fontWeight: 'bold',
+    color: T.text,
+    fontSize: getResponsiveSize(14),
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   raisonContainer: {
-    backgroundColor: '#ecfccb',
+    backgroundColor: 'rgba(46,194,126,0.1)',
     padding: getResponsiveSize(12),
-    borderRadius: getResponsiveSize(8),
-    marginBottom: getResponsiveSize(16),
+    borderRadius: getResponsiveSize(T.radiusSm),
+    marginBottom: getResponsiveSize(14),
     width: '100%',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(46,194,126,0.3)',
   },
   raisonDefaite: {
-      backgroundColor: '#fee2e2',
+    backgroundColor: 'rgba(230,57,70,0.1)',
+    borderColor: 'rgba(230,57,70,0.3)',
   },
   raisonTexte: {
-      fontSize: getResponsiveSize(14),
-      fontWeight: '600',
-      color: '#3f6212',
-      textAlign: 'center'
+    fontSize: getResponsiveSize(13),
+    fontWeight: '700',
+    color: T.green,
+    textAlign: 'center',
   },
   raisonTexteDefaite: {
-      color: '#991b1b',
+    color: T.red,
   },
 });
 

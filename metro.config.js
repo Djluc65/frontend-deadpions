@@ -3,8 +3,8 @@ const { resolve } = require('metro-resolver');
 
 const config = getDefaultConfig(__dirname);
 
-// Liste des modules natifs à désactiver complètement sur le web
-const nativeModulesToBlock = [
+// Liste des modules natifs à désactiver uniquement sur le web
+const nativeModulesToBlockOnWeb = [
   'react-native-google-mobile-ads',
   'react-native-iap',
   'react-native-webrtc',
@@ -17,7 +17,7 @@ const nativeModulesToBlock = [
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (platform === 'web') {
     // Bloquer les modules natifs connus pour poser problème sur le web
-    if (nativeModulesToBlock.some(m => moduleName === m || moduleName.startsWith(m + '/'))) {
+    if (nativeModulesToBlockOnWeb.some(m => moduleName === m || moduleName.startsWith(m + '/'))) {
       return { type: 'empty' };
     }
 
@@ -28,13 +28,13 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
       return { type: 'empty' };
     }
     
-    // Forcer react-native vers react-native-web
+    // Forcer react-native vers react-native-web sur navigateur
     if (moduleName === 'react-native') {
       return resolve(context, 'react-native-web', platform);
     }
   }
 
-  // Correction spécifique pour axios
+  // Correction spécifique pour axios (toutes plateformes)
   if (moduleName === 'axios') {
     try {
       const axiosBrowserEntrypoint = require.resolve('axios/dist/browser/axios.cjs');
@@ -42,11 +42,13 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     } catch (e) {}
   }
   
+  // Pour iOS et Android, on laisse Metro gérer normalement
   return resolve(context, moduleName, platform);
 };
 
-// Configuration pour Expo 52 Web
-config.resolver.unstable_enablePackageExports = false;
-config.resolver.resolverMainFields = ['browser', 'module', 'main'];
+// Configuration des champs prioritaires adaptée à la plateforme
+// Pour le web, on veut 'browser' en premier. 
+// Pour le natif, on DOIT avoir 'react-native' en premier.
+config.resolver.resolverMainFields = ['react-native', 'browser', 'module', 'main'];
 
 module.exports = config;

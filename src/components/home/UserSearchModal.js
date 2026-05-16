@@ -19,6 +19,8 @@ import { API_URL } from '../../config';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
 import { modalTheme } from '../../utils/modalTheme';
+import { T } from '../../utils/theme';
+import AnimatedSearchBar from '../ui/AnimatedSearchBar';
 
 const width = SCREEN_WIDTH;
 const height = SCREEN_HEIGHT;
@@ -117,23 +119,13 @@ const UserSearchModal = ({ visible, onClose, navigation }) => {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.searchContainer}>
-              <Ionicons name="search" size={20} color="#f1c40f" style={styles.searchIcon} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Pseudo du joueur..."
-                placeholderTextColor="rgba(255,255,255,0.6)"
+            <View style={{ marginBottom: getResponsiveSize(15) }}>
+              <AnimatedSearchBar
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                autoFocus
-                autoCorrect={false}
-                autoCapitalize="none"
+                placeholder="Rechercher un joueur..."
+                autoFocus={true}
               />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <Ionicons name="close-circle" size={18} color="#f1c40f" />
-                </TouchableOpacity>
-              )}
             </View>
 
             {loading ? (

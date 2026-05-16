@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Modal, Pressable, ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Modal, Pressable, ScrollView, View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { playButtonSound } from '../../utils/soundManager';
 import { getResponsiveSize } from '../../utils/responsive';
@@ -24,6 +24,9 @@ const CreateRoomModal = memo(({
   userCoins,
   betOptions
 }) => {
+  const { height: windowHeight } = useWindowDimensions();
+  const modalMaxHeight = windowHeight * 0.7 + getResponsiveSize(20);
+
   return (
     <Modal
         visible={visible}
@@ -32,8 +35,12 @@ const CreateRoomModal = memo(({
         onRequestClose={onClose}
     >
         <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable style={[styles.friendsModalContent, { maxHeight: '80%' }]} onPress={() => {}}>
-            <ScrollView contentContainerStyle={{ alignItems: 'center', width: '100%' }} style={{ width: '100%' }}>
+        <Pressable style={[styles.friendsModalContent, { maxHeight: modalMaxHeight }]} onPress={() => {}}>
+            <ScrollView
+              contentContainerStyle={{ alignItems: 'center', width: '100%', paddingBottom: getResponsiveSize(24) }}
+              style={{ width: '100%' }}
+              keyboardShouldPersistTaps="handled"
+            >
             <Text style={styles.friendsModalTitle}>Jouer avec un ami</Text>
             
             <Text style={styles.friendsLabel}>Mode de jeu:</Text>
@@ -188,13 +195,14 @@ const CreateRoomModal = memo(({
             </View>
 
             <View style={styles.modalButtons}>
-            <TouchableOpacity style={styles.modalButtonCancel} onPress={() => { playButtonSound(); onClose(); }}>
-                <Text style={[styles.modalButtonText, styles.modalButtonCancelText]}>Annuler</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.modalButtonConfirm} onPress={() => { playButtonSound(); handleCreateRoom(); }}>
-                <Text style={styles.modalButtonText}>Créer</Text>
-            </TouchableOpacity>
+              <TouchableOpacity style={styles.modalButtonCancel} onPress={() => { playButtonSound(); onClose(); }}>
+                  <Text style={[styles.modalButtonText, styles.modalButtonCancelText]} numberOfLines={1}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalButtonConfirm} onPress={() => { playButtonSound(); handleCreateRoom(); }}>
+                  <Text style={styles.modalButtonText} numberOfLines={1}>Créer</Text>
+              </TouchableOpacity>
             </View>
+
             </ScrollView>
         </Pressable>
         </Pressable>
@@ -242,7 +250,7 @@ const styles = StyleSheet.create({
   },
   friendsOptionText: {
     color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: getResponsiveSize(13),
+    fontSize: getResponsiveSize(12),
     fontWeight: '500',
   },
   friendsOptionTextActive: {
@@ -256,22 +264,34 @@ const styles = StyleSheet.create({
     marginTop: getResponsiveSize(10),
     gap: getResponsiveSize(10),
   },
+  modalButtonsFixed: {
+    position: 'absolute',
+    left: getResponsiveSize(16),
+    right: getResponsiveSize(16),
+    bottom: getResponsiveSize(20),
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: getResponsiveSize(10),
+  },
   modalButtonCancel: {
     flex: 1,
     ...modalTheme.buttonBase,
     ...modalTheme.buttonCancel,
     alignItems: 'center',
+    paddingVertical: getResponsiveSize(10),
   },
   modalButtonConfirm: {
     flex: 1,
     ...modalTheme.buttonBase,
     ...modalTheme.buttonPrimary,
     alignItems: 'center',
+    paddingVertical: getResponsiveSize(10),
   },
   modalButtonText: {
     ...modalTheme.buttonTextBase,
     ...modalTheme.buttonTextPrimary,
-    fontSize: getResponsiveSize(14)
+    fontSize: getResponsiveSize(13)
   },
   modalButtonCancelText: modalTheme.buttonTextOnDark,
   betDisplay: {

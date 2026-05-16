@@ -1,12 +1,22 @@
 import React, { useState, memo, useEffect } from 'react';
 import { View, Text, Modal, Pressable, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useDispatch, useSelector } from 'react-redux';
 import { playButtonSound } from '../../utils/soundManager';
 import { BET_OPTIONS, ONLINE_TIME_OPTIONS } from '../../utils/constants';
 import { getResponsiveSize } from '../../utils/responsive';
 import { appAlert } from '../../services/appAlert';
+import { T } from '../../utils/theme';
+import { modalTheme } from '../../utils/modalTheme';
+import { useAdManager } from '../../ads/AdSystem';
+import { ensureDailyReset, selectHardAiUnlockUntil, unlockHardAi } from '../../redux/slices/rewardsSlice';
 
 const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
+  const dispatch = useDispatch();
+  const hardAiUntil = useSelector(selectHardAiUnlockUntil);
+  const hardAiActive = typeof hardAiUntil === 'number' && hardAiUntil > Date.now();
+  const { showAds, prepareRewarded, showRewarded } = useAdManager();
+
   const [step, setStep] = useState(1); // 1: Config (Mode, Bet, Time), 2: Options (Diff, Start, Color)
   
   // State from HomeScreen
@@ -27,8 +37,10 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
   useEffect(() => {
     if (visible) {
       setStep(1);
+      dispatch(ensureDailyReset({ nowTs: Date.now() }));
+      prepareRewarded();
     }
-  }, [visible]);
+  }, [visible, dispatch, prepareRewarded]);
 
   // Ensure bet is valid
   useEffect(() => {
@@ -103,24 +115,40 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
   const niveaux = [
     { id: 'facile', titre: 'Facile', emoji: '🟢', description: 'Parfait pour débuter' },
     { id: 'moyen', titre: 'Moyen', emoji: '🟡', description: 'Challenge équilibré' },
-    { id: 'difficile', titre: 'Difficile', emoji: '🔴', description: 'Pour les experts', locked: !user?.isPremium && !user?.isEarlyAccess }
+    { id: 'difficile', titre: 'Difficile', emoji: '🔴', description: 'Pour les experts', locked: !user?.isPremium && !user?.isEarlyAccess && !hardAiActive }
   ];
 
   const handleLevelSelect = (level) => {
     if (level.locked) {
-        appAlert(
-            "Fonctionnalité Premium", 
-            "L'IA Expert est réservée aux membres DeadPions+. Abonnez-vous pour débloquer le coach stratégique !",
-            [
-                { text: "Annuler", style: "cancel" },
-                { text: "Voir l'offre", onPress: () => {
-                    onClose();
-                    // Naviguer vers le TabNavigator 'Home' puis vers l'onglet 'Magasin'
-                    navigation.navigate('Home', { screen: 'Magasin' });
-                }}
-            ]
-        );
+      if (!showAds) {
+        appAlert('Verrouillé', "Le mode difficile se débloque via une pub récompensée (indisponible sur ce build).");
         return;
+      }
+      appAlert(
+        'Mode difficile',
+        'Regarder 1 vidéo pour débloquer le mode difficile pendant 1 heure ?',
+        [
+          { text: 'Non merci', style: 'cancel' },
+          {
+            text: 'Regarder',
+            onPress: () => {
+              dispatch(ensureDailyReset({ nowTs: Date.now() }));
+              prepareRewarded();
+              showRewarded({
+                amount: 0,
+                reason: 'Déblocage mode difficile',
+                metadata: { reward: 'ai_hard' },
+                onEarned: async () => {
+                  dispatch(unlockHardAi({ nowTs: Date.now() }));
+                  setAiDifficulte('difficile');
+                  appAlert('Débloqué', 'Mode difficile débloqué pendant 1 heure.');
+                }
+              });
+            }
+          }
+        ]
+      );
+      return;
     }
     setAiDifficulte(level.id);
   };
@@ -135,11 +163,11 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
         onRequestClose={onClose}
     >
         <Pressable style={styles.modalOverlay} onPress={onClose}>
-            <Pressable style={[styles.friendsModalContent, { maxHeight: '90%', backgroundColor: '#041c55', borderColor: '#f1c40f', borderWidth: getResponsiveSize(1) }]} onPress={() => {}}>
+            <Pressable style={[styles.friendsModalContent, { maxHeight: '72%' }]} onPress={() => {}}>
                 <ScrollView contentContainerStyle={{ alignItems: 'center', width: '100%' }} style={{ width: '100%' }}>
                     {step === 1 ? (
                         <>
-                            <Text style={[styles.friendsModalTitle, { color: '#f1c40f', textShadowColor: 'rgba(241, 196, 15, 0.5)', textShadowRadius: getResponsiveSize(10), marginBottom: getResponsiveSize(30) }]}>Options de jeu</Text>
+                            <Text style={[styles.friendsModalTitle, { marginBottom: getResponsiveSize(18) }]}>Options de jeu</Text>
 
                             {/* MODE DE JEU */}
                             <Text style={styles.friendsLabel}>Mode de jeu:</Text>
@@ -168,7 +196,7 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
                                                 style={[styles.numberOptionButton, aiSeriesLength === num && styles.friendsOptionButtonActive]}
                                                 onPress={() => { playButtonSound(); setAiSeriesLength(num); }}
                                             >
-                                                <Text style={[styles.friendsOptionText, aiSeriesLength === num && styles.friendsOptionTextActive, { fontSize: getResponsiveSize(16) }]}>{num}</Text>
+                                                <Text style={[styles.friendsOptionText, aiSeriesLength === num && styles.friendsOptionTextActive, { fontSize: getResponsiveSize(12) }]}>{num}</Text>
                                             </TouchableOpacity>
                                         ))}
                                     </View>
@@ -176,8 +204,8 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
                             )}
 
                             {canBet && (
-                                <View style={{ width: '100%', backgroundColor: '#041c55', borderRadius: getResponsiveSize(20), padding: getResponsiveSize(4), marginBottom: getResponsiveSize(20), borderWidth: getResponsiveSize(1), borderColor: 'rgba(255,255,255,0.1)' }}>
-                                    <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: getResponsiveSize(16), textAlign: 'center' }}>Mise (coins)</Text>
+                                <View style={{ width: '100%', backgroundColor: T.bg2, borderRadius: getResponsiveSize(T.radiusMd), padding: getResponsiveSize(4), marginBottom: getResponsiveSize(14), borderWidth: 1, borderColor: T.borderSoft }}>
+                                    <Text style={{ color: T.textDim, fontSize: getResponsiveSize(14), textAlign: 'center' }}>Mise (coins)</Text>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
                                         {(() => {
                                             const availableBets = BET_OPTIONS.filter(b => b <= (user?.coins || 0));
@@ -188,23 +216,23 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
 
                                             return (
                                                 <>
-                                                    <TouchableOpacity onPress={() => { playButtonSound(); canGoPrev && setAiBet(effectiveBets[currentIndex - 1]); }} disabled={!canGoPrev} style={{ padding: getResponsiveSize(10), opacity: !canGoPrev ? 0.3 : 1 }}>
-                                                        <Ionicons name="remove-circle" size={getResponsiveSize(40)} color="#f1c40f" />
+                                                    <TouchableOpacity onPress={() => { playButtonSound(); canGoPrev && setAiBet(effectiveBets[currentIndex - 1]); }} disabled={!canGoPrev} style={{ padding: getResponsiveSize(8), opacity: !canGoPrev ? 0.3 : 1 }}>
+                                                        <Ionicons name="remove-circle" size={getResponsiveSize(32)} color={T.gold} />
                                                     </TouchableOpacity>
-                                                    <View style={{ 
-                                                        width: getResponsiveSize(140), height: getResponsiveSize(50), 
-                                                        backgroundColor: 'rgba(0,0,0,0.3)', 
-                                                        borderRadius: getResponsiveSize(25), 
-                                                        marginHorizontal: getResponsiveSize(10), 
-                                                        borderWidth: getResponsiveSize(1), 
-                                                        borderColor: '#f1c40f',
+                                                    <View style={{
+                                                        width: getResponsiveSize(124), height: getResponsiveSize(44),
+                                                        backgroundColor: T.bg3,
+                                                        borderRadius: getResponsiveSize(T.radiusPill),
+                                                        marginHorizontal: getResponsiveSize(8),
+                                                        borderWidth: 1,
+                                                        borderColor: T.border,
                                                         alignItems: 'center',
                                                         justifyContent: 'center'
                                                     }}>
-                                                        <Text style={{ color: '#f1c40f', fontSize: getResponsiveSize(22), fontWeight: 'bold' }}>{aiBet.toLocaleString()}</Text>
+                                                        <Text style={{ color: T.gold, fontSize: getResponsiveSize(18), fontWeight: 'bold' }}>{aiBet.toLocaleString()}</Text>
                                                     </View>
-                                                    <TouchableOpacity onPress={() => { playButtonSound(); canGoNext && setAiBet(effectiveBets[currentIndex + 1]); }} disabled={!canGoNext} style={{ padding: getResponsiveSize(10), opacity: !canGoNext ? 0.3 : 1 }}>
-                                                        <Ionicons name="add-circle" size={getResponsiveSize(40)} color="#f1c40f" />
+                                                    <TouchableOpacity onPress={() => { playButtonSound(); canGoNext && setAiBet(effectiveBets[currentIndex + 1]); }} disabled={!canGoNext} style={{ padding: getResponsiveSize(8), opacity: !canGoNext ? 0.3 : 1 }}>
+                                                        <Ionicons name="add-circle" size={getResponsiveSize(32)} color={T.gold} />
                                                     </TouchableOpacity>
                                                 </>
                                             );
@@ -238,13 +266,12 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
                                 </TouchableOpacity>
                             </View>
                         </>
-                    ) : (
+                    ) : step === 2 ? (
                         <>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: getResponsiveSize(30), justifyContent: 'center', position: 'relative' }}>
-                                <Text style={[styles.friendsModalTitle, { color: '#f1c40f', textShadowColor: 'rgba(241, 196, 15, 0.5)', textShadowRadius: getResponsiveSize(10), marginBottom: 0 }]}>Configuration IA</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: getResponsiveSize(18), justifyContent: 'center', position: 'relative' }}>
+                                <Text style={[styles.friendsModalTitle, { marginBottom: 0 }]}>Configuration IA</Text>
                             </View>
-                            
-                            {/* DIFFICULTÉ */}
+
                             <Text style={styles.friendsLabel}>Difficulté:</Text>
                             <View style={{ width: '100%', gap: getResponsiveSize(10), marginBottom: getResponsiveSize(20) }}>
                                 {niveaux.map((niveau) => (
@@ -256,10 +283,10 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
                                                 alignItems: 'center',
                                                 justifyContent: 'flex-start',
                                                 padding: getResponsiveSize(15),
-                                                backgroundColor: '#041c55',
-                                                borderRadius: getResponsiveSize(20),
-                                                borderWidth: getResponsiveSize(2),
-                                                borderColor: aiDifficulte === niveau.id ? '#f1c40f' : 'rgba(255,255,255,0.1)',
+                                                backgroundColor: T.bg2,
+                                                borderRadius: getResponsiveSize(T.radiusMd),
+                                                borderWidth: 2,
+                                                borderColor: aiDifficulte === niveau.id ? T.gold : T.borderSoft,
                                                 opacity: niveau.locked ? 0.7 : 1
                                             }
                                         ]}
@@ -267,46 +294,60 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
                                     >
                                         <Text style={{ fontSize: getResponsiveSize(24), marginRight: getResponsiveSize(15) }}>{niveau.emoji}</Text>
                                         <View style={{ flex: 1 }}>
-                                            <Text style={{ 
-                                                fontSize: getResponsiveSize(18), 
-                                                fontWeight: 'bold', 
-                                                color: aiDifficulte === niveau.id ? '#f1c40f' : 'white',
+                                            <Text style={{
+                                                fontSize: getResponsiveSize(18),
+                                                fontWeight: 'bold',
+                                                color: aiDifficulte === niveau.id ? T.gold : T.text,
                                             }}>
                                                 {niveau.titre}
                                             </Text>
-                                            <Text style={{ fontSize: getResponsiveSize(12), color: 'rgba(255,255,255,0.6)' }}>
+                                            <Text style={{ fontSize: getResponsiveSize(12), color: T.textMuted }}>
                                                 {niveau.description}
                                             </Text>
                                         </View>
                                         {niveau.locked && (
-                                            <Ionicons name="lock-closed" size={getResponsiveSize(24)} color="#f1c40f" />
+                                            <Ionicons name="lock-closed" size={getResponsiveSize(24)} color={T.gold} />
                                         )}
                                     </TouchableOpacity>
                                 ))}
                             </View>
 
-                            {/* QUI COMMENCE */}
-                            <View style={{ width: '100%', backgroundColor: '#041c55', borderRadius: getResponsiveSize(20), padding: getResponsiveSize(10), marginBottom: getResponsiveSize(20), borderWidth: getResponsiveSize(1), borderColor: 'rgba(255,255,255,0.1)' }}>
-                                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: getResponsiveSize(16), marginBottom: getResponsiveSize(15), textAlign: 'center' }}>Qui commence ?</Text>
+                            <View style={styles.modalButtons}>
+                                <TouchableOpacity style={styles.modalButtonCancel} onPress={() => { playButtonSound(); setStep(1); }}>
+                                    <Text style={styles.modalButtonText}>Retour</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.modalButtonConfirm} onPress={() => { playButtonSound(); setStep(3); }}>
+                                    <Text style={styles.modalButtonText}>Suivant</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </>
+                    ) : (
+                        <>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: getResponsiveSize(18), justifyContent: 'center', position: 'relative' }}>
+                                <Text style={[styles.friendsModalTitle, { marginBottom: 0 }]}>Configuration IA</Text>
+                            </View>
+
+                            <View style={{ width: '100%', backgroundColor: T.bg2, borderRadius: getResponsiveSize(T.radiusMd), padding: getResponsiveSize(10), marginBottom: getResponsiveSize(20), borderWidth: 1, borderColor: T.borderSoft }}>
+                                <Text style={{ color: T.textDim, fontSize: getResponsiveSize(16), marginBottom: getResponsiveSize(15), textAlign: 'center' }}>Qui commence ?</Text>
                                 <View style={{ flexDirection: 'row', gap: getResponsiveSize(10), width: '100%' }}>
                                     {['joueur', 'ia', 'aleatoire'].map(opt => (
-                                        <TouchableOpacity 
-                                            key={opt} 
-                                            style={{ 
-                                                flex: 1, 
+                                        <TouchableOpacity
+                                            key={opt}
+                                            style={{
+                                                flex: 1,
                                                 paddingVertical: getResponsiveSize(12),
-                                                backgroundColor: aiPremierJoueur === opt ? '#f1c40f' : 'rgba(255,255,255,0.05)',
-                                                borderRadius: getResponsiveSize(12),
+                                                backgroundColor: aiPremierJoueur === opt ? T.gold : T.bg3,
+                                                borderRadius: getResponsiveSize(T.radiusSm),
                                                 alignItems: 'center',
-                                                borderWidth: getResponsiveSize(1),
-                                                borderColor: aiPremierJoueur === opt ? '#f1c40f' : 'rgba(255,255,255,0.1)'
-                                            }} 
+                                                borderWidth: 1,
+                                                borderColor: aiPremierJoueur === opt ? T.gold : T.borderSoft
+                                            }}
                                             onPress={() => { playButtonSound(); setAiPremierJoueur(opt); }}
                                         >
-                                            <Text style={{ 
-                                                fontSize: getResponsiveSize(14), 
-                                                fontWeight: 'bold', 
-                                                color: aiPremierJoueur === opt ? '#000' : 'rgba(255,255,255,0.6)' 
+                                            <Text style={{
+                                                fontSize: getResponsiveSize(14),
+                                                fontWeight: 'bold',
+                                                color: aiPremierJoueur === opt ? '#1B1305' : T.textDim
                                             }}>
                                                 {opt === 'joueur' ? 'Vous' : opt === 'ia' ? 'IA' : 'Aléatoire'}
                                             </Text>
@@ -315,33 +356,32 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
                                 </View>
                             </View>
 
-                            {/* COULEUR */}
-                            <View style={{ width: '100%', backgroundColor: '#041c55', borderRadius: getResponsiveSize(20), padding: getResponsiveSize(8), marginBottom: getResponsiveSize(30), borderWidth: getResponsiveSize(1), borderColor: 'rgba(255,255,255,0.1)' }}>
-                                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: getResponsiveSize(16), marginBottom: getResponsiveSize(15), textAlign: 'center' }}>Votre couleur</Text>
+                            <View style={{ width: '100%', backgroundColor: T.bg2, borderRadius: getResponsiveSize(T.radiusMd), padding: getResponsiveSize(8), marginBottom: getResponsiveSize(22), borderWidth: 1, borderColor: T.borderSoft }}>
+                                <Text style={{ color: T.textDim, fontSize: getResponsiveSize(16), marginBottom: getResponsiveSize(15), textAlign: 'center' }}>Votre couleur</Text>
                                 <View style={{ flexDirection: 'row', gap: getResponsiveSize(10), width: '100%' }}>
                                      {[
                                         { id: 'noir', icon: '🔴', label: 'Rouge' },
                                         { id: 'blanc', icon: '✖', label: 'Bleu' },
                                         { id: 'aleatoire', icon: '🎲', label: 'Aléa.' }
                                       ].map(opt => (
-                                        <TouchableOpacity 
-                                            key={opt.id} 
-                                            style={{ 
-                                                flex: 1, 
+                                        <TouchableOpacity
+                                            key={opt.id}
+                                            style={{
+                                                flex: 1,
                                                 paddingVertical: getResponsiveSize(8),
-                                                backgroundColor: aiCouleurJoueur === opt.id ? '#f1c40f' : 'rgba(255,255,255,0.05)',
-                                                borderRadius: getResponsiveSize(12),
+                                                backgroundColor: aiCouleurJoueur === opt.id ? T.gold : T.bg3,
+                                                borderRadius: getResponsiveSize(T.radiusSm),
                                                 alignItems: 'center',
-                                                borderWidth: getResponsiveSize(1),
-                                                borderColor: aiCouleurJoueur === opt.id ? '#f1c40f' : 'rgba(255,255,255,0.1)'
-                                            }} 
+                                                borderWidth: 1,
+                                                borderColor: aiCouleurJoueur === opt.id ? T.gold : T.borderSoft
+                                            }}
                                             onPress={() => { playButtonSound(); setAiCouleurJoueur(opt.id); }}
                                         >
                                             <Text style={{ fontSize: getResponsiveSize(20), marginBottom: getResponsiveSize(5) }}>{opt.icon}</Text>
-                                            <Text style={{ 
-                                                fontSize: getResponsiveSize(14), 
-                                                fontWeight: 'bold', 
-                                                color: aiCouleurJoueur === opt.id ? '#000' : 'rgba(255,255,255,0.6)'
+                                            <Text style={{
+                                                fontSize: getResponsiveSize(14),
+                                                fontWeight: 'bold',
+                                                color: aiCouleurJoueur === opt.id ? '#1B1305' : T.textDim
                                             }}>
                                                 {opt.label}
                                             </Text>
@@ -351,7 +391,7 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
                             </View>
 
                             <View style={styles.modalButtons}>
-                                <TouchableOpacity style={styles.modalButtonCancel} onPress={() => { playButtonSound(); setStep(1); }}>
+                                <TouchableOpacity style={styles.modalButtonCancel} onPress={() => { playButtonSound(); setStep(2); }}>
                                     <Text style={styles.modalButtonText}>Retour</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity style={styles.modalButtonConfirm} onPress={() => { playButtonSound(); handleStartGame(); }}>
@@ -368,128 +408,109 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
 });
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  modalOverlay: modalTheme.overlay,
   friendsModalContent: {
-    width: '90%',
-    backgroundColor: '#041c55',
-    borderRadius: getResponsiveSize(20),
-    padding: getResponsiveSize(20),
+    ...modalTheme.card,
+    width: '86%',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: getResponsiveSize(10) },
-    shadowOpacity: 0.5,
-    shadowRadius: getResponsiveSize(10),
-    elevation: 10,
-    borderWidth: getResponsiveSize(1),
-    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   friendsModalTitle: {
-    fontSize: getResponsiveSize(24),
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: getResponsiveSize(20),
-    textAlign: 'center',
+    ...modalTheme.title,
+    fontSize: getResponsiveSize(22),
+    textTransform: 'uppercase'
   },
   friendsLabel: {
-    fontSize: getResponsiveSize(16),
-    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: getResponsiveSize(14),
+    color: T.textDim,
     alignSelf: 'flex-start',
-    marginBottom: getResponsiveSize(10),
-    marginTop: getResponsiveSize(10),
-    fontWeight: '600',
+    marginBottom: getResponsiveSize(8),
+    marginTop: getResponsiveSize(8),
+    fontWeight: '700',
   },
   optionsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: getResponsiveSize(10),
-    marginBottom: getResponsiveSize(20),
+    gap: getResponsiveSize(8),
+    marginBottom: getResponsiveSize(14),
     width: '100%',
   },
   friendsOptionButton: {
     flex: 1,
     minWidth: '30%',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    paddingVertical: getResponsiveSize(10),
+    backgroundColor: T.bg3,
+    paddingVertical: getResponsiveSize(8),
     paddingHorizontal: getResponsiveSize(5),
-    borderRadius: getResponsiveSize(12),
+    borderRadius: getResponsiveSize(T.radiusSm),
     alignItems: 'center',
-    borderWidth: getResponsiveSize(1),
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   friendsOptionButtonActive: {
-    backgroundColor: '#f1c40f',
-    borderColor: '#f1c40f',
+    backgroundColor: T.gold,
+    borderColor: T.gold,
   },
   friendsOptionText: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: T.textDim,
     fontWeight: '600',
-    fontSize: getResponsiveSize(14),
+    fontSize: getResponsiveSize(12),
   },
   friendsOptionTextActive: {
-    color: '#000',
+    color: '#1B1305',
     fontWeight: 'bold',
   },
   friendsCloseButton: {
     paddingVertical: getResponsiveSize(12),
     paddingHorizontal: getResponsiveSize(30),
-    borderRadius: getResponsiveSize(25),
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: getResponsiveSize(T.radiusPill),
+    backgroundColor: T.bg3,
     alignItems: 'center',
     marginTop: getResponsiveSize(10),
   },
   friendsCloseButtonText: {
-    color: '#fff',
+    color: T.text,
     fontSize: getResponsiveSize(16),
     fontWeight: '600',
   },
   numberOptionButton: {
-    minWidth: getResponsiveSize(40),
-    width: getResponsiveSize(45),
-    height: getResponsiveSize(45),
+    minWidth: getResponsiveSize(36),
+    width: getResponsiveSize(40),
+    height: getResponsiveSize(40),
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: T.bg3,
     paddingVertical: 0,
     paddingHorizontal: 0,
-    borderRadius: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(T.radiusSm),
     alignItems: 'center',
-    borderWidth: getResponsiveSize(1),
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    marginTop: getResponsiveSize(20),
+    marginTop: getResponsiveSize(14),
   },
   modalButtonCancel: {
     flex: 1,
-    backgroundColor: '#e74c3c',
-    padding: getResponsiveSize(15),
-    borderRadius: getResponsiveSize(15),
+    backgroundColor: T.red,
+    padding: getResponsiveSize(12),
+    borderRadius: getResponsiveSize(T.radiusPill),
     marginRight: getResponsiveSize(10),
     alignItems: 'center',
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#c0392b',
   },
   modalButtonConfirm: {
     flex: 1,
-    backgroundColor: '#2ecc71',
-    padding: getResponsiveSize(15),
-    borderRadius: getResponsiveSize(15),
+    backgroundColor: T.green,
+    padding: getResponsiveSize(12),
+    borderRadius: getResponsiveSize(T.radiusPill),
     marginLeft: getResponsiveSize(10),
     alignItems: 'center',
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#27ae60',
+    ...T.shadowBtn,
   },
   modalButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: getResponsiveSize(16),
+    fontSize: getResponsiveSize(14),
     textTransform: 'uppercase',
   },
 });

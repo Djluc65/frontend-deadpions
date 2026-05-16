@@ -15,6 +15,7 @@ import { socket } from '../utils/socket';
 import { useCoinsContext } from '../context/CoinsContext';
 import { getResponsiveSize, DESKTOP_BREAKPOINT } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
+import { T } from '../utils/theme';
 
 // Components
 import GameCard from '../components/common/GameCard';
@@ -28,6 +29,7 @@ import LiveGameSetup from '../components/home/LiveGameSetup';
 import BattleAnimation from '../components/BattleAnimation';
 import UserSearchModal from '../components/home/UserSearchModal';
 import PwaInstallBanner from '../components/PwaInstallBanner';
+import RewardsModal from '../components/home/RewardsModal';
 
 // ─── Constantes de layout ─────────────────────────────────────────────────────
 // Même layout sur iPhone et iPad (objectif : rendu iPad identique au rendu iPhone)
@@ -67,6 +69,7 @@ const HomeScreen = ({ navigation }) => {
   const [onlineConfigVisible,setOnlineConfigVisible]=useState(false);
   const [aiConfigVisible,   setAiConfigVisible]   = useState(false);
   const [localConfigVisible,setLocalConfigVisible]= useState(false);
+  const [rewardsVisible, setRewardsVisible] = useState(false);
 
   const spinValue  = useRef(new Animated.Value(0)).current;
   const pulseValue = useRef(new Animated.Value(1)).current;
@@ -153,11 +156,12 @@ const HomeScreen = ({ navigation }) => {
   }, []);
 
   useEffect(() => {
-    if (user?._id) {
+    const userId = user?._id || user?.id;
+    if (userId) {
       if (!socket.connected) socket.connect();
-      socket.emit('join_user_room', user._id);
+      socket.emit('join_user_room', userId);
     }
-  }, [user]);
+  }, [user?._id, user?.id]);
 
   useEffect(() => {
     if (!AudioController.isRematchMode) {
@@ -209,7 +213,12 @@ const HomeScreen = ({ navigation }) => {
       style={styles.background}
       resizeMode="cover"
     >
+      <View style={styles.bgOverlay} pointerEvents="none" />
       <PwaInstallBanner />
+      <RewardsModal
+        visible={rewardsVisible}
+        onClose={() => setRewardsVisible(false)}
+      />
       {/* ── Modals ── */}
       <SettingsModal
         visible={settingsVisible}
@@ -257,6 +266,7 @@ const HomeScreen = ({ navigation }) => {
         user={user}
         t={t}
         navigation={navigation}
+        onRewards={() => setRewardsVisible(true)}
         onSearch={() => {
           if (!user || !token) {
             appAlert('Connexion requise', 'Connectez-vous pour rechercher des joueurs.', [
@@ -455,9 +465,11 @@ const cardStyles = StyleSheet.create({
     width: '100%',
   },
   iconWrapper: {
-    backgroundColor: 'rgba(4, 28, 85, 0.95)',
-    borderTopLeftRadius: getResponsiveSize(20),
-    borderTopRightRadius: getResponsiveSize(20),
+    backgroundColor: T.bg3,
+    borderWidth: 1.5,
+    borderColor: T.gold,
+    borderTopLeftRadius: getResponsiveSize(13),
+    borderTopRightRadius: getResponsiveSize(13),
     paddingVertical: getResponsiveSize(14),
     paddingHorizontal: getResponsiveSize(12),
     marginBottom: getResponsiveSize(8),
@@ -468,15 +480,21 @@ const cardStyles = StyleSheet.create({
     gap: getResponsiveSize(5),
   },
   label: {
-    color: 'rgba(4, 28, 85, 0.95)',
-    fontSize: getResponsiveSize(17),
-    fontWeight: 'bold',
+    color: T.gold,
+    fontSize: getResponsiveSize(15),
+    fontWeight: '800',
     paddingBottom: getResponsiveSize(4),
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   },
 });
 
 // ─── Styles principaux ────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
+  bgOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(5,9,15,0.55)',
+  },
   background: {
     flex: 1,
     width: '100%',
@@ -532,13 +550,14 @@ const styles = StyleSheet.create({
   },
   card: {
     padding: getResponsiveSize(5),
-    borderRadius: getResponsiveSize(15),
-    borderWidth: getResponsiveSize(3),
-    borderColor: 'rgba(4, 28, 85, 0.95)',
-    shadowColor: 'rgba(255,255,255,1)',
+    borderRadius: getResponsiveSize(14),
+    borderWidth: 1.5,
+    borderColor: T.gold,
+    shadowColor: T.gold,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: getResponsiveSize(4),
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 6,
   },
   cardTablet: {
     height: getResponsiveSize(200),

@@ -23,6 +23,7 @@ import socket from '../services/socket';
 import { AudioController } from '../utils/AudioController';
 import { getResponsiveSize, isTablet, SCREEN_WIDTH, SCREEN_HEIGHT } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
+import { T } from '../utils/theme';
 
 const width = SCREEN_WIDTH;
 const height = SCREEN_HEIGHT;
@@ -1182,61 +1183,66 @@ const ChatScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a1a3c',
+    backgroundColor: T.bg0,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: getResponsiveSize(15),
-    backgroundColor: 'rgba(4, 28, 85, 0.95)',
-    borderBottomWidth: getResponsiveSize(1),
-    borderBottomColor: '#f1c40f',
+    padding: getResponsiveSize(14),
+    backgroundColor: T.bg1,
+    borderBottomWidth: 1,
+    borderBottomColor: T.borderSoft,
   },
   headerInfo: {
     flex: 1,
-    marginLeft: getResponsiveSize(15),
+    marginLeft: getResponsiveSize(14),
   },
   headerName: {
-    color: '#fff',
-    fontSize: getResponsiveSize(18),
-    fontWeight: 'bold',
+    color: T.text,
+    fontSize: getResponsiveSize(17),
+    fontWeight: '800',
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
   },
   headerStatus: {
-    color: '#2ecc71',
-    fontSize: getResponsiveSize(12),
+    color: T.green,
+    fontSize: getResponsiveSize(11),
+    fontWeight: '600',
   },
   headerIcons: {
     flexDirection: 'row',
   },
   headerIcon: {
-    marginLeft: getResponsiveSize(15),
+    marginLeft: getResponsiveSize(14),
   },
   listContent: {
-    padding: getResponsiveSize(15),
+    padding: getResponsiveSize(14),
     paddingBottom: getResponsiveSize(20),
   },
   messageBubble: {
     maxWidth: '80%',
     padding: getResponsiveSize(10),
-    borderRadius: getResponsiveSize(15),
+    borderRadius: getResponsiveSize(14),
     marginBottom: getResponsiveSize(10),
   },
   myMessage: {
     alignSelf: 'flex-end',
-    backgroundColor: '#3498db',
+    backgroundColor: T.blue,
     borderBottomRightRadius: getResponsiveSize(2),
   },
   theirMessage: {
     alignSelf: 'flex-start',
-    backgroundColor: '#ecf0f1',
+    backgroundColor: T.bg3,
     borderBottomLeftRadius: getResponsiveSize(2),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   myText: {
     color: '#fff',
     fontSize: getResponsiveSize(14),
   },
   theirText: {
-    color: '#333',
+    color: T.text,
     fontSize: getResponsiveSize(14),
   },
   timestampContainer: {
@@ -1250,14 +1256,14 @@ const styles = StyleSheet.create({
   },
   infoMessage: {
     alignSelf: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: T.bg3,
     padding: getResponsiveSize(5),
-    borderRadius: getResponsiveSize(5),
+    borderRadius: getResponsiveSize(8),
     marginBottom: getResponsiveSize(10),
   },
   infoText: {
-    color: '#ccc',
-    fontSize: getResponsiveSize(12),
+    color: T.textMuted,
+    fontSize: getResponsiveSize(11),
   },
   audioContainer: {
     flexDirection: 'row',
@@ -1276,31 +1282,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: getResponsiveSize(10),
-    backgroundColor: 'rgba(4, 28, 85, 0.95)',
-    borderTopWidth: getResponsiveSize(1),
-    borderTopColor: '#333',
+    backgroundColor: T.bg1,
+    borderTopWidth: 1,
+    borderTopColor: T.borderSoft,
   },
   input: {
     flex: 1,
-    backgroundColor: '#1a2a4c',
-    color: '#fff',
-    borderRadius: getResponsiveSize(20),
+    backgroundColor: T.bg2,
+    color: T.text,
+    borderRadius: getResponsiveSize(T.radiusPill),
     paddingHorizontal: getResponsiveSize(15),
     paddingVertical: getResponsiveSize(10),
     maxHeight: getResponsiveSize(100),
     marginRight: getResponsiveSize(10),
-    fontSize: getResponsiveSize(16),
+    fontSize: getResponsiveSize(15),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   sendButton: {
     padding: getResponsiveSize(10),
   },
   micButton: {
     padding: getResponsiveSize(10),
-    backgroundColor: '#3498db',
-    borderRadius: getResponsiveSize(25),
+    backgroundColor: T.blue,
+    borderRadius: getResponsiveSize(T.radiusPill),
   },
   recordingBtn: {
-    backgroundColor: '#e74c3c',
+    backgroundColor: T.red,
   },
   
   // Call Overlay

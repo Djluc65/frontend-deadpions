@@ -1,18 +1,26 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Switch, ImageBackground } from 'react-native';
-import { useSelector } from 'react-redux';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Switch, ImageBackground, Platform, useWindowDimensions } from 'react-native';
+import { T } from '../utils/theme';
+import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
 import { socket } from '../utils/socket';
 import { playButtonSound } from '../utils/soundManager';
 import { getResponsiveSize } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
+import { useAdManager } from '../ads/AdSystem';
+import { consumeLiveRoom, ensureDailyReset, incrementLiveBonus, selectLiveRemaining } from '../redux/slices/rewardsSlice';
 
 /**
  * Écran de configuration pour la création d'une salle live.
  * Permet à l'utilisateur de définir les paramètres de la salle (nom, confidentialité, spectateurs, etc.).
  */
 const ConfigurationSalleLive = ({ navigation }) => {
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 1024;
+  const dispatch = useDispatch();
   const user = useSelector(state => state.auth.user);
+  const liveRemaining = useSelector((state) => selectLiveRemaining(state));
+  const { showAds, prepareRewarded, showRewarded } = useAdManager();
   // --- États pour les paramètres de la salle ---
   const [nomSalle, setNomSalle] = useState(''); // Nom de la salle
   const [description, setDescription] = useState(''); // Description optionnelle
@@ -50,12 +58,64 @@ const ConfigurationSalleLive = ({ navigation }) => {
     10000000, 25000000, 50000000, 100000000, 250000000, 
     500000000, 1000000000, 2500000000, 5000000000
   ];
+
+  const grantLiveBonusOnServer = async (userId) => {
+    if (!userId) return { ok: false, message: 'Utilisateur requis' };
+    if (!socket.connected) socket.connect();
+    socket.emit('join_user_room', userId);
+
+    return await new Promise((resolve) => {
+      try {
+        socket.emit('grant_live_room_bonus', { amount: 1 }, (res) => {
+          resolve(res || { ok: false, message: 'Réponse invalide' });
+        });
+      } catch {
+        resolve({ ok: false, message: 'Erreur réseau.' });
+      }
+    });
+  };
   
   /**
    * Fonction pour créer la salle live.
    * Valide les entrées et navigue vers la salle d'attente.
    */
   const creerSalleLive = () => {
+    dispatch(ensureDailyReset({ nowTs: Date.now() }));
+    if (liveRemaining <= 0) {
+      if (!showAds) {
+        appAlert('Limite atteinte', "Vous avez atteint la limite de salles live pour aujourd'hui.");
+        return;
+      }
+      appAlert(
+        'Limite atteinte',
+        "Vous avez atteint la limite de 5 salles live aujourd'hui. Regarder une pub pour +1 salle ?",
+        [
+          { text: 'Non merci', style: 'cancel' },
+          {
+            text: 'Regarder',
+            onPress: () => {
+              prepareRewarded();
+              showRewarded({
+                amount: 0,
+                reason: 'Salle live supplémentaire',
+                metadata: { reward: 'live_extra' },
+                onEarned: async () => {
+                  dispatch(incrementLiveBonus({ nowTs: Date.now() }));
+                  const userId = user?._id || user?.id;
+                  const res = await grantLiveBonusOnServer(userId);
+                  if (res?.ok) {
+                    appAlert('OK', '+1 salle live ajoutée. Vous pouvez créer votre salle.');
+                  } else {
+                    appAlert('Erreur', res?.message || "Impossible d'activer l'accès Live.");
+                  }
+                }
+              });
+            }
+          }
+        ]
+      );
+      return;
+    }
     // --- Validation des champs obligatoires ---
     if (!nomSalle.trim()) {
       appAlert('❌ Erreur', 'Veuillez donner un nom à votre salle');
@@ -113,6 +173,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
     // Setup one-time listener for success
     const handleRoomCreated = (createdConfig) => {
         cleanup();
+        dispatch(consumeLiveRoom({ nowTs: Date.now() }));
         navigation.navigate('SalleAttenteLive', { configSalle: createdConfig });
     };
 
@@ -134,12 +195,13 @@ const ConfigurationSalleLive = ({ navigation }) => {
   };
   
   return (
-    <ImageBackground 
-      source={require('../../assets/images/Background2-4.png')} 
+    <ImageBackground
+      source={require('../../assets/images/Background2-4.png')}
       style={styles.background}
       resizeMode="cover"
     >
-        <ScrollView style={styles.container}>
+        <View style={styles.bgOverlay} pointerEvents="none" />
+        <ScrollView style={styles.container} contentContainerStyle={isDesktop && styles.containerDesktop}>
         {/* EN-TÊTE */}
         <View style={styles.header}>
             <View style={styles.headerContent}>
@@ -511,6 +573,10 @@ const ConfigurationSalleLive = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  bgOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(5,9,15,0.55)',
+  },
   background: {
     flex: 1,
     width: '100%',
@@ -519,20 +585,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  containerDesktop: {
+    maxWidth: 800,
+    width: '100%',
+    alignSelf: 'center',
+  },
   header: {
-    backgroundColor: '#041c55',
-    paddingVertical: getResponsiveSize(30),
+    backgroundColor: T.bg1,
+    paddingVertical: getResponsiveSize(28),
     paddingHorizontal: getResponsiveSize(20),
-    borderBottomLeftRadius: getResponsiveSize(30),
-    borderBottomRightRadius: getResponsiveSize(30),
-    marginBottom: getResponsiveSize(20),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: getResponsiveSize(4) },
-    shadowOpacity: 0.3,
-    shadowRadius: getResponsiveSize(5),
-    elevation: 8,
-    borderBottomWidth: getResponsiveSize(1),
-    borderBottomColor: '#f1c40f',
+    marginBottom: getResponsiveSize(16),
+    borderBottomWidth: 1,
+    borderBottomColor: T.borderSoft,
   },
   headerContent: {
     alignItems: 'center',
@@ -540,88 +604,90 @@ const styles = StyleSheet.create({
   liveBadgeLarge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    backgroundColor: 'rgba(230,57,70,0.15)',
     paddingHorizontal: getResponsiveSize(12),
     paddingVertical: getResponsiveSize(6),
-    borderRadius: getResponsiveSize(20),
+    borderRadius: getResponsiveSize(T.radiusPill),
     marginBottom: getResponsiveSize(10),
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#ef4444',
+    borderWidth: 1,
+    borderColor: T.red,
   },
   liveIndicator: {
     width: getResponsiveSize(8),
     height: getResponsiveSize(8),
     borderRadius: getResponsiveSize(4),
-    backgroundColor: '#ef4444',
+    backgroundColor: T.red,
     marginRight: getResponsiveSize(8),
   },
   liveBadgeLargeTexte: {
-    color: '#ef4444',
-    fontWeight: 'bold',
+    color: T.red,
+    fontWeight: '800',
     fontSize: getResponsiveSize(12),
-    letterSpacing: getResponsiveSize(1),
+    letterSpacing: 1,
   },
   titre: {
-    fontSize: getResponsiveSize(28),
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: getResponsiveSize(5),
+    fontSize: getResponsiveSize(24),
+    fontWeight: '900',
+    color: T.text,
+    marginBottom: getResponsiveSize(4),
     textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   sousTitre: {
-    fontSize: getResponsiveSize(14),
-    color: '#d1d5db',
+    fontSize: getResponsiveSize(13),
+    color: T.textDim,
     textAlign: 'center',
     maxWidth: '80%',
   },
   sectionCard: {
-    backgroundColor: '#041c55',
-    marginHorizontal: getResponsiveSize(20),
-    marginBottom: getResponsiveSize(20),
-    borderRadius: getResponsiveSize(16),
-    padding: getResponsiveSize(20),
-    shadowColor: '#f1c40f',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: getResponsiveSize(3),
-    elevation: getResponsiveSize(5),
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f',
+    backgroundColor: T.bg2,
+    marginHorizontal: getResponsiveSize(16),
+    marginBottom: getResponsiveSize(16),
+    borderRadius: getResponsiveSize(T.radiusMd),
+    padding: getResponsiveSize(18),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
+    ...T.shadowCard,
   },
   sectionTitre: {
-    fontSize: getResponsiveSize(18),
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: getResponsiveSize(15),
-    borderBottomWidth: getResponsiveSize(1),
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    fontSize: getResponsiveSize(16),
+    fontWeight: '800',
+    color: T.text,
+    marginBottom: getResponsiveSize(14),
+    borderBottomWidth: 1,
+    borderBottomColor: T.borderSoft,
     paddingBottom: getResponsiveSize(10),
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   inputGroup: {
-    marginBottom: getResponsiveSize(15),
+    marginBottom: getResponsiveSize(14),
   },
   label: {
-    fontSize: getResponsiveSize(14),
-    fontWeight: '600',
-    color: '#f1c40f',
-    marginBottom: getResponsiveSize(8),
+    fontSize: getResponsiveSize(13),
+    fontWeight: '700',
+    color: T.gold,
+    marginBottom: getResponsiveSize(7),
+    textTransform: 'uppercase',
+    letterSpacing: 0.2,
   },
   input: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f',
-    borderRadius: getResponsiveSize(10),
+    backgroundColor: T.bg3,
+    borderWidth: 1,
+    borderColor: T.borderSoft,
+    borderRadius: getResponsiveSize(T.radiusSm),
     padding: getResponsiveSize(12),
-    fontSize: getResponsiveSize(16),
-    color: '#fff',
+    fontSize: getResponsiveSize(15),
+    color: T.text,
   },
   textArea: {
     minHeight: getResponsiveSize(80),
     textAlignVertical: 'top',
   },
   helperText: {
-    fontSize: getResponsiveSize(12),
-    color: '#9ca3af',
+    fontSize: getResponsiveSize(11),
+    color: T.textMuted,
     marginTop: getResponsiveSize(4),
     textAlign: 'right',
   },
@@ -629,22 +695,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: getResponsiveSize(20),
-    paddingVertical: getResponsiveSize(5),
+    marginBottom: getResponsiveSize(16),
+    paddingVertical: getResponsiveSize(4),
   },
   switchInfo: {
     flex: 1,
     paddingRight: getResponsiveSize(10),
   },
   switchLabel: {
-    fontSize: getResponsiveSize(16),
-    fontWeight: '600',
-    color: '#f1c40f',
+    fontSize: getResponsiveSize(14),
+    fontWeight: '700',
+    color: T.text,
     marginBottom: getResponsiveSize(2),
   },
   switchDescription: {
-    fontSize: getResponsiveSize(13),
-    color: '#d1d5db',
+    fontSize: getResponsiveSize(12),
+    color: T.textMuted,
   },
   optionsGrid: {
     flexDirection: 'row',
@@ -652,27 +718,27 @@ const styles = StyleSheet.create({
     gap: getResponsiveSize(8),
   },
   optionChip: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f',
-    paddingVertical: getResponsiveSize(8),
+    backgroundColor: T.bg3,
+    borderWidth: 1,
+    borderColor: T.borderSoft,
+    paddingVertical: getResponsiveSize(7),
     paddingHorizontal: getResponsiveSize(12),
-    borderRadius: getResponsiveSize(20),
-    minWidth: getResponsiveSize(60),
+    borderRadius: getResponsiveSize(T.radiusPill),
+    minWidth: getResponsiveSize(56),
     alignItems: 'center',
   },
   optionChipActive: {
-    backgroundColor: '#f1c40f',
-    borderColor: '#f1c40f',
+    backgroundColor: T.gold,
+    borderColor: T.gold,
   },
   optionChipTexte: {
-    fontSize: getResponsiveSize(14),
-    color: '#fff',
-    fontWeight: '500',
+    fontSize: getResponsiveSize(13),
+    color: T.textDim,
+    fontWeight: '600',
   },
   optionChipTexteActive: {
-    color: '#041c55',
-    fontWeight: 'bold',
+    color: '#1B1305',
+    fontWeight: '800',
   },
   modeContainer: {
     flexDirection: 'row',
@@ -680,58 +746,60 @@ const styles = StyleSheet.create({
   },
   modeButton: {
     flex: 1,
-    padding: getResponsiveSize(15),
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: getResponsiveSize(12),
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f',
+    padding: getResponsiveSize(13),
+    backgroundColor: T.bg3,
+    borderRadius: getResponsiveSize(T.radiusMd),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
     alignItems: 'center',
   },
   modeButtonActive: {
-    backgroundColor: '#f1c40f',
-    borderColor: '#f1c40f',
+    backgroundColor: T.gold,
+    borderColor: T.gold,
   },
   modeButtonTexte: {
-    fontSize: getResponsiveSize(16),
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: getResponsiveSize(5),
+    fontSize: getResponsiveSize(14),
+    fontWeight: '800',
+    color: T.text,
+    marginBottom: getResponsiveSize(4),
   },
   modeButtonTexteActive: {
-    color: '#041c55',
+    color: '#1B1305',
   },
   modeDescription: {
-    fontSize: getResponsiveSize(12),
-    color: '#d1d5db',
+    fontSize: getResponsiveSize(11),
+    color: T.textMuted,
     textAlign: 'center',
   },
   footer: {
-    paddingHorizontal: getResponsiveSize(20),
+    paddingHorizontal: getResponsiveSize(16),
     marginBottom: getResponsiveSize(20),
   },
   boutonCreer: {
-    backgroundColor: '#ef4444',
+    backgroundColor: T.red,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: getResponsiveSize(16),
-    borderRadius: getResponsiveSize(16),
-    shadowColor: '#ef4444',
-    shadowOffset: { width: 0, height: getResponsiveSize(4) },
-    shadowOpacity: 0.3,
-    shadowRadius: getResponsiveSize(5),
+    padding: getResponsiveSize(15),
+    borderRadius: getResponsiveSize(T.radiusMd),
+    shadowColor: T.red,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
     elevation: 8,
-    borderWidth: getResponsiveSize(2),
-    borderColor: '#fff',
+    borderWidth: 1,
+    borderColor: 'rgba(230,57,70,0.5)',
   },
   boutonCreerTexte: {
     color: '#fff',
-    fontSize: getResponsiveSize(18),
-    fontWeight: 'bold',
+    fontSize: getResponsiveSize(15),
+    fontWeight: '800',
     marginRight: getResponsiveSize(10),
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   liveBadgeSmall: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     padding: getResponsiveSize(4),
     borderRadius: getResponsiveSize(4),
   },
@@ -757,28 +825,25 @@ const styles = StyleSheet.create({
     width: getResponsiveSize(280),
     height: getResponsiveSize(50),
     overflow: 'hidden',
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    borderRadius: getResponsiveSize(25),
+    backgroundColor: T.bg3,
+    borderRadius: getResponsiveSize(T.radiusPill),
     marginHorizontal: getResponsiveSize(10),
-    borderWidth: getResponsiveSize(1),
-    borderColor: 'rgba(241, 196, 15, 0.3)',
+    borderWidth: 1,
+    borderColor: T.border,
   },
   betTextSmall: {
-    color: '#f1c40f',
+    color: T.gold,
     fontSize: getResponsiveSize(14),
-    opacity: 0.5,
+    opacity: 0.45,
     width: getResponsiveSize(70),
     textAlign: 'center',
   },
   betTextLarge: {
-    color: '#f1c40f',
+    color: T.gold,
     fontSize: getResponsiveSize(22),
-    fontWeight: 'bold',
+    fontWeight: '900',
     width: getResponsiveSize(120),
     textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: {width: getResponsiveSize(-1), height: getResponsiveSize(1)},
-    textShadowRadius: getResponsiveSize(10),
   },
 });
 

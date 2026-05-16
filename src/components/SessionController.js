@@ -9,6 +9,7 @@ import { appAlert } from '../services/appAlert';
 import { getResponsiveSize } from '../utils/responsive';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { updateUser } from '../redux/slices/authSlice';
+import { ensureDailyReset } from '../redux/slices/rewardsSlice';
 
 const SessionController = () => {
     const navigation = useNavigation();
@@ -96,6 +97,7 @@ const SessionController = () => {
 
     useEffect(() => {
         if (!token) return;
+        dispatch(ensureDailyReset({ nowTs: Date.now() }));
 
         const maybeShowLoginRewardPrompt = () => {
             if (!showAds) return;
@@ -152,6 +154,7 @@ const SessionController = () => {
                 nextAppState === 'active'
             ) {
                 console.log('App has come to the foreground!');
+                dispatch(ensureDailyReset({ nowTs: Date.now() }));
                 checkSessionStatus();
             }
 

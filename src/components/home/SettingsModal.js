@@ -8,6 +8,7 @@ import { translations } from '../../utils/translations';
 import { playButtonSound } from '../../utils/soundManager';
 import { getResponsiveSize } from '../../utils/responsive';
 import { modalTheme } from '../../utils/modalTheme';
+import { T } from '../../utils/theme';
 
 const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
   const dispatch = useDispatch();
@@ -29,7 +30,7 @@ const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
           <View style={styles.settingRow}>
             <Text style={styles.settingText}>{t.music}</Text>
             <Switch
-              trackColor={{ false: "#767577", true: "#81b0ff" }}
+              trackColor={{ false: T.bg3, true: T.blue }}
               thumbColor={settings.isMusicEnabled ? "#f5dd4b" : "#f4f3f4"}
               onValueChange={() => {
                 handlePlaySound();
@@ -42,7 +43,7 @@ const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
           <View style={styles.settingRow}>
             <Text style={styles.settingText}>{t.sound}</Text>
             <Switch
-              trackColor={{ false: "#767577", true: "#81b0ff" }}
+              trackColor={{ false: T.bg3, true: T.blue }}
               thumbColor={settings.isSoundEnabled ? "#f5dd4b" : "#f4f3f4"}
               onValueChange={() => {
                 playButtonSound();
@@ -88,7 +89,7 @@ const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
               navigation.navigate('Info');
             }}
           >
-            <Ionicons name="information-circle-outline" size={getResponsiveSize(24)} color="#f1c40f" />
+            <Ionicons name="information-circle-outline" size={getResponsiveSize(24)} color={T.gold} />
             <Text style={styles.infoButtonText}>{settings.language === 'en' ? 'About & Rules' : 'Infos & Règles'}</Text>
           </TouchableOpacity>
 
@@ -122,8 +123,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSize(10),
   },
   settingText: {
-    fontSize: getResponsiveSize(18),
-    color: '#fff',
+    fontSize: getResponsiveSize(16),
+    color: T.text,
+    fontWeight: '600',
   },
   languageContainer: {
     flexDirection: 'row',
@@ -131,48 +133,56 @@ const styles = StyleSheet.create({
   },
   langButton: {
     padding: getResponsiveSize(8),
-    borderRadius: getResponsiveSize(5),
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f',
+    borderRadius: getResponsiveSize(T.radiusSm),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
+    backgroundColor: T.bg3,
+    minWidth: getResponsiveSize(36),
+    alignItems: 'center',
   },
   langButtonActive: {
-    backgroundColor: '#f1c40f',
+    backgroundColor: T.gold,
+    borderColor: T.gold,
   },
   langText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: T.textDim,
+    fontWeight: '700',
   },
   langTextActive: {
-    color: '#041c55',
+    color: '#1B1305',
   },
   infoButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: getResponsiveSize(20),
+    marginBottom: getResponsiveSize(18),
     padding: getResponsiveSize(10),
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f',
-    borderRadius: getResponsiveSize(10),
+    borderWidth: 1,
+    borderColor: T.border,
+    borderRadius: getResponsiveSize(T.radiusMd),
     width: '100%',
     justifyContent: 'center',
+    backgroundColor: 'rgba(244,180,26,0.06)',
   },
   infoButtonText: {
-    color: '#fff',
+    color: T.text,
     marginLeft: getResponsiveSize(10),
-    fontWeight: 'bold',
-    fontSize: getResponsiveSize(16),
+    fontWeight: '700',
+    fontSize: getResponsiveSize(15),
   },
   closeButton: {
-    backgroundColor: '#eb4141ff',
-    borderRadius: getResponsiveSize(20),
+    backgroundColor: T.red,
+    borderRadius: getResponsiveSize(T.radiusPill),
     padding: getResponsiveSize(10),
     paddingHorizontal: getResponsiveSize(30),
     marginTop: getResponsiveSize(10),
+    ...T.shadowBtn,
   },
   closeButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
+    color: '#fff',
+    fontWeight: '800',
     textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
 });
 

@@ -12,6 +12,7 @@ import Input from '../components/common/Input';
 import { API_URL } from '../config';
 import { getResponsiveSize, DESKTOP_BREAKPOINT } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
+import { T } from '../utils/theme';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -177,11 +178,12 @@ const RegisterScreen = ({ navigation }) => {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <ImageBackground 
-        source={require('../../assets/images/Background2-4.png')} 
+      <ImageBackground
+        source={require('../../assets/images/Background2-4.png')}
         style={styles.background}
         resizeMode="cover"
       >
+        <View style={styles.bgOverlay} pointerEvents="none" />
         <View style={styles.container}>
           <View style={[styles.formContainer, isTablet && styles.formContainerTablet, isDesktop && styles.formContainerDesktop]}>
           <Text style={[styles.title, isTablet && styles.titleTablet]}>Inscription</Text>
@@ -228,7 +230,9 @@ const RegisterScreen = ({ navigation }) => {
           <Button 
             title="Retour" 
             onPress={() => navigation.goBack()} 
-            style={{ backgroundColor: 'transparent' }}
+            tone="ghost"
+            style={{ borderWidth: 0 }}
+            textStyle={{ color: T.textMuted }}
           />
           </View>
         </View>
@@ -238,16 +242,21 @@ const RegisterScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  bgOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(5,9,15,0.55)',
+  },
   background: {
     flex: 1,
     width: '100%',
     height: '100%',
+    backgroundColor: T.bg0,
   },
   container: {
     flex: 1,
     justifyContent: 'center',
     padding: getResponsiveSize(20),
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: T.overlayLight,
   },
   formContainer: {
     width: '100%',
@@ -259,38 +268,43 @@ const styles = StyleSheet.create({
   formContainerDesktop: {
     maxWidth: 440,
     alignSelf: 'center',
-    backgroundColor: 'rgba(4, 28, 85, 0.55)',
-    borderRadius: 16,
+    backgroundColor: T.bg2,
+    borderRadius: T.radiusLg,
     padding: 32,
     borderWidth: 1,
-    borderColor: 'rgba(241, 196, 15, 0.3)',
+    borderColor: T.border,
+    ...T.shadowCard,
   },
   title: {
-    fontSize: getResponsiveSize(32),
-    color: '#fff',
-    fontWeight: 'bold',
-    marginBottom: getResponsiveSize(30),
+    fontSize: getResponsiveSize(34),
+    color: T.text,
+    fontWeight: '900',
+    marginBottom: getResponsiveSize(24),
     textAlign: 'center',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   titleTablet: {
-    fontSize: getResponsiveSize(28),
+    fontSize: getResponsiveSize(30),
   },
   googleButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
-    padding: getResponsiveSize(15),
-    borderRadius: getResponsiveSize(8),
-    marginBottom: getResponsiveSize(15),
+    backgroundColor: T.bg2,
+    padding: getResponsiveSize(14),
+    borderRadius: T.radiusMd,
+    marginBottom: getResponsiveSize(10),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   googleButtonDisabled: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   googleButtonText: {
-    color: '#000',
-    fontSize: getResponsiveSize(16),
-    fontWeight: 'bold',
+    color: T.text,
+    fontSize: getResponsiveSize(15),
+    fontWeight: '700',
     marginLeft: getResponsiveSize(10),
   },
 });

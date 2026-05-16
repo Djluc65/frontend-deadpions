@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Easing } from 'react-native';
+import { Animated, StyleSheet, Easing, View, Text } from 'react-native';
 import EmojiAnimation from './EmojiAnimation';
 import { getEmojiSource } from '../utils/emojis';
 import { getResponsiveSize } from '../utils/responsive';
 
-const FlyingEmoji = ({ emoji, start, end, onComplete }) => {
+const FlyingEmoji = ({ emoji, text, start, end, onComplete }) => {
     const position = useRef(new Animated.ValueXY(start)).current;
     const opacity = useRef(new Animated.Value(1)).current;
     const scale = useRef(new Animated.Value(0.5)).current;
@@ -40,9 +40,15 @@ const FlyingEmoji = ({ emoji, start, end, onComplete }) => {
         });
     }, []);
 
-    const source = getEmojiSource(emoji);
+    const source = emoji ? getEmojiSource(emoji) : null;
 
-    if (!source) return null;
+    const displayText = typeof text === 'string' ? text.trim() : '';
+    const hasText = !!displayText;
+    const textPreview = hasText
+      ? (displayText.length > 26 ? `${displayText.slice(0, 26)}…` : displayText)
+      : '';
+
+    if (!source && !hasText) return null;
 
     return (
         <Animated.View
@@ -58,7 +64,13 @@ const FlyingEmoji = ({ emoji, start, end, onComplete }) => {
                 }
             ]}
         >
-            <EmojiAnimation source={source} style={{ width: getResponsiveSize(60), height: getResponsiveSize(60) }} />
+            {source ? (
+              <EmojiAnimation source={source} style={{ width: getResponsiveSize(60), height: getResponsiveSize(60) }} />
+            ) : (
+              <View style={styles.textBubble}>
+                <Text style={styles.textBubbleText} numberOfLines={2}>{textPreview}</Text>
+              </View>
+            )}
         </Animated.View>
     );
 };
@@ -69,7 +81,22 @@ const styles = StyleSheet.create({
         zIndex: 9999, // Ensure it's on top of everything
         top: 0,
         left: 0,
-    }
+    },
+    textBubble: {
+        maxWidth: getResponsiveSize(190),
+        backgroundColor: 'rgba(16, 24, 48, 0.95)',
+        borderWidth: 1.5,
+        borderColor: 'rgba(244, 180, 26, 0.9)',
+        borderRadius: getResponsiveSize(14),
+        paddingHorizontal: getResponsiveSize(10),
+        paddingVertical: getResponsiveSize(8),
+    },
+    textBubbleText: {
+        color: '#fff',
+        fontSize: getResponsiveSize(13),
+        fontWeight: '800',
+        textAlign: 'center',
+    },
 });
 
 export default FlyingEmoji;

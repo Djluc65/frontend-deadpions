@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { T } from '../utils/theme';
 import { CommonActions } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -125,112 +126,116 @@ const ResultatJeuIA = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: T.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: getResponsiveSize(20)
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: getResponsiveSize(24),
-    padding: getResponsiveSize(30),
+    backgroundColor: T.bg2,
+    borderRadius: getResponsiveSize(T.radiusXl),
+    padding: getResponsiveSize(28),
     width: '100%',
     maxWidth: getResponsiveSize(400),
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: getResponsiveSize(4) },
-    shadowOpacity: 0.3,
-    shadowRadius: getResponsiveSize(8),
-    elevation: 8
+    borderWidth: 1.5,
+    borderColor: T.gold,
+    ...T.shadowCard,
   },
   emoji: {
     fontSize: getResponsiveSize(60),
-    marginBottom: getResponsiveSize(20)
+    marginBottom: getResponsiveSize(16)
   },
   titre: {
-    fontSize: getResponsiveSize(32),
-    fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: getResponsiveSize(10)
+    fontSize: getResponsiveSize(30),
+    fontWeight: '900',
+    color: T.text,
+    marginBottom: getResponsiveSize(8),
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   message: {
-    fontSize: getResponsiveSize(18),
-    color: '#4b5563',
+    fontSize: getResponsiveSize(15),
+    color: T.textDim,
     textAlign: 'center',
-    marginBottom: getResponsiveSize(30)
+    marginBottom: getResponsiveSize(24)
   },
   statsContainer: {
-    backgroundColor: '#f3f4f6',
-    padding: getResponsiveSize(20),
-    borderRadius: getResponsiveSize(16),
+    backgroundColor: T.bg3,
+    padding: getResponsiveSize(18),
+    borderRadius: getResponsiveSize(T.radiusMd),
     width: '100%',
     alignItems: 'center',
-    marginBottom: getResponsiveSize(30)
+    marginBottom: getResponsiveSize(24),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   statsLabel: {
-    fontSize: getResponsiveSize(14),
-    color: '#6b7280',
+    fontSize: getResponsiveSize(12),
+    color: T.textMuted,
     textTransform: 'uppercase',
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.5,
     marginBottom: getResponsiveSize(8)
   },
   statsTaux: {
     fontSize: getResponsiveSize(36),
-    fontWeight: 'bold',
-    color: '#3b82f6',
+    fontWeight: '900',
+    color: T.blue,
     marginBottom: getResponsiveSize(4)
   },
   statsParties: {
-    fontSize: getResponsiveSize(14),
-    color: '#9ca3af'
+    fontSize: getResponsiveSize(13),
+    color: T.textMuted
   },
   boutonRewarded: {
     width: '100%',
-    backgroundColor: '#f59e0b',
+    backgroundColor: T.gold,
     paddingVertical: getResponsiveSize(10),
-    borderRadius: getResponsiveSize(12),
+    borderRadius: getResponsiveSize(T.radiusMd),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: getResponsiveSize(10),
     borderWidth: 1,
-    borderColor: '#fbbf24',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    elevation: 5
+    borderColor: T.goldDeep,
+    ...T.shadowBtn,
   },
   boutonRewardedTexte: {
-    fontSize: getResponsiveSize(14),
-    fontWeight: 'bold',
-    color: '#111827',
+    fontSize: getResponsiveSize(13),
+    fontWeight: '800',
+    color: '#1B1305',
     textAlign: 'center'
   },
   boutons: {
     width: '100%',
-    gap: getResponsiveSize(12)
+    gap: getResponsiveSize(10)
   },
   boutonRejouer: {
-    backgroundColor: '#3b82f6',
-    paddingVertical: getResponsiveSize(16),
-    borderRadius: getResponsiveSize(12),
-    alignItems: 'center'
+    backgroundColor: T.blue,
+    paddingVertical: getResponsiveSize(14),
+    borderRadius: getResponsiveSize(T.radiusMd),
+    alignItems: 'center',
+    ...T.shadowBtn,
   },
   boutonMenu: {
-    backgroundColor: '#f3f4f6',
-    paddingVertical: getResponsiveSize(16),
-    borderRadius: getResponsiveSize(12),
-    alignItems: 'center'
+    backgroundColor: T.bg3,
+    paddingVertical: getResponsiveSize(14),
+    borderRadius: getResponsiveSize(T.radiusMd),
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   boutonTexte: {
-    fontSize: getResponsiveSize(16),
-    fontWeight: 'bold',
-    color: '#fff'
+    fontSize: getResponsiveSize(15),
+    fontWeight: '800',
+    color: '#fff',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   boutonTexteMenu: {
-    fontSize: getResponsiveSize(16),
-    fontWeight: 'bold',
-    color: '#374151'
+    fontSize: getResponsiveSize(15),
+    fontWeight: '700',
+    color: T.textDim,
   }
 });
 

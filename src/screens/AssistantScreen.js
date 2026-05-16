@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../config';
 import { getResponsiveSize } from '../utils/responsive';
+import { T } from '../utils/theme';
 
 const AssistantScreen = ({ navigation }) => {
   const token = useSelector(state => state.auth.token);
@@ -104,11 +105,12 @@ const AssistantScreen = ({ navigation }) => {
   );
 
   return (
-    <ImageBackground 
-      source={require('../../assets/images/Background2-4.png')} 
+    <ImageBackground
+      source={require('../../assets/images/Background2-4.png')}
       style={styles.background}
       resizeMode="cover"
     >
+      <View style={styles.bgOverlay} pointerEvents="none" />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={getResponsiveSize(28)} color="#fff" />
@@ -159,8 +161,13 @@ const AssistantScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  bgOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(5,9,15,0.55)',
+  },
   background: {
     flex: 1,
+    backgroundColor: T.bg0,
   },
   header: {
     flexDirection: 'row',
@@ -168,82 +175,94 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: getResponsiveSize(Platform.OS === 'ios' ? 60 : 40),
     paddingHorizontal: getResponsiveSize(20),
-    paddingBottom: getResponsiveSize(20),
-    backgroundColor: 'rgba(4, 28, 85, 0.9)',
-    borderBottomWidth: getResponsiveSize(1),
-    borderBottomColor: '#f1c40f',
+    paddingBottom: getResponsiveSize(18),
+    backgroundColor: T.bg1,
+    borderBottomWidth: 1,
+    borderBottomColor: T.borderSoft,
   },
   backButton: {
-    padding: getResponsiveSize(5),
+    padding: getResponsiveSize(8),
+    borderRadius: T.radiusMd,
+    backgroundColor: T.bg2,
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   headerTitle: {
-    color: '#fff',
+    color: T.text,
     fontSize: getResponsiveSize(20),
-    fontWeight: 'bold',
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   container: {
     flex: 1,
   },
   messagesList: {
-    padding: getResponsiveSize(20),
+    padding: getResponsiveSize(16),
     paddingBottom: getResponsiveSize(20),
   },
   messageBubble: {
     maxWidth: '80%',
     padding: getResponsiveSize(12),
-    borderRadius: getResponsiveSize(15),
+    borderRadius: getResponsiveSize(T.radiusMd),
     marginBottom: getResponsiveSize(10),
   },
   userBubble: {
     alignSelf: 'flex-end',
-    backgroundColor: '#f1c40f',
+    backgroundColor: T.gold,
     borderBottomRightRadius: getResponsiveSize(2),
   },
   aiBubble: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(4, 28, 85, 0.8)',
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f',
+    backgroundColor: T.bg2,
+    borderWidth: 1,
+    borderColor: T.border,
     borderBottomLeftRadius: getResponsiveSize(2),
   },
   messageText: {
-    fontSize: getResponsiveSize(16),
-    lineHeight: getResponsiveSize(22),
+    fontSize: getResponsiveSize(15),
+    lineHeight: getResponsiveSize(21),
   },
   userText: {
-    color: '#041c55',
+    color: '#1B1305',
+    fontWeight: '600',
   },
   aiText: {
-    color: '#fff',
+    color: T.text,
   },
   inputContainer: {
     flexDirection: 'row',
-    padding: getResponsiveSize(15),
-    backgroundColor: 'rgba(4, 28, 85, 0.95)',
-    borderTopWidth: getResponsiveSize(1),
-    borderTopColor: '#f1c40f',
+    padding: getResponsiveSize(12),
+    backgroundColor: T.bg1,
+    borderTopWidth: 1,
+    borderTopColor: T.borderSoft,
     alignItems: 'center',
   },
   input: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    color: '#fff',
-    borderRadius: getResponsiveSize(20),
+    backgroundColor: T.bg2,
+    color: T.text,
+    borderRadius: getResponsiveSize(T.radiusPill),
     paddingHorizontal: getResponsiveSize(15),
     paddingVertical: getResponsiveSize(10),
     marginRight: getResponsiveSize(10),
     maxHeight: getResponsiveSize(100),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
+    fontSize: getResponsiveSize(15),
   },
   sendButton: {
-    backgroundColor: '#f1c40f',
-    width: getResponsiveSize(45),
-    height: getResponsiveSize(45),
-    borderRadius: getResponsiveSize(22.5),
+    backgroundColor: T.gold,
+    width: getResponsiveSize(44),
+    height: getResponsiveSize(44),
+    borderRadius: getResponsiveSize(22),
     justifyContent: 'center',
     alignItems: 'center',
+    ...T.shadowBtn,
   },
   sendButtonDisabled: {
-    backgroundColor: '#95a5a6',
+    backgroundColor: T.bg3,
+    opacity: 0.6,
   },
 });
 

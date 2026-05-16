@@ -2,11 +2,12 @@ import React, { createContext, useContext, useEffect, useState, useRef } from 'r
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
-import { updateUser, updateAccessToken } from '../redux/slices/authSlice';
+import { updateUser, updateAccessToken, logout } from '../redux/slices/authSlice';
 import CoinsService from '../services/CoinsService';
 import { socket } from '../utils/socket';
 import CoinsFeedback from '../components/CoinsFeedback';
 import { API_URL } from '../config';
+import { appAlert } from '../services/appAlert';
 
 const CoinsContext = createContext(null);
 
@@ -18,6 +19,8 @@ export const CoinsProvider = ({ children }) => {
     const [lastSync, setLastSync] = useState(null);
     const [feedback, setFeedback] = useState({ visible: false, amount: 0 });
     const isSyncingRef = useRef(false);
+    const lastAuthErrorAtRef = useRef(0);
+    const authErrorAlertedRef = useRef(false);
 
     // Initialisation et écouteurs
     useEffect(() => {
@@ -75,6 +78,9 @@ export const CoinsProvider = ({ children }) => {
         isSyncingRef.current = true;
         setIsLoading(true);
         try {
+            if (lastAuthErrorAtRef.current && Date.now() - lastAuthErrorAtRef.current < 15000) {
+                return;
+            }
             // 1. D'abord synchroniser les transactions locales en attente (Push)
             // Cela permet de mettre à jour le serveur avec nos gains/pertes locaux
             const syncResult = await syncTransactions();
@@ -89,7 +95,8 @@ export const CoinsProvider = ({ children }) => {
             // 2. Ensuite, récupérer la vérité terrain du serveur (Pull)
             // Cela assure que nous avons le solde final (incluant ce qu'on vient de pousser + d'autres changements)
             // Utiliser le token potentiellement rafraîchi
-            const balance = await CoinsService.reconcileBalance(user?.id, syncResult.token);
+            const userId = user?._id || user?.id;
+            const balance = await CoinsService.reconcileBalance(userId, syncResult.token);
             
             if (balance !== null && user && user.coins !== balance) {
                 dispatch(updateUser({ coins: balance }));
@@ -128,11 +135,22 @@ export const CoinsProvider = ({ children }) => {
                         dispatch(updateAccessToken(currentToken));
                         // Réessayer avec le nouveau token
                         res = await CoinsService.synchroniser(currentToken);
+                        authErrorAlertedRef.current = false;
                     }
                 } catch (e) {
                     console.error('Erreur refresh token:', e);
+                    lastAuthErrorAtRef.current = Date.now();
                     return { success: false, token: currentToken };
                 }
+            }
+            if (res && res.ok === false && res.status === 401) {
+                lastAuthErrorAtRef.current = Date.now();
+                if (!authErrorAlertedRef.current) {
+                    authErrorAlertedRef.current = true;
+                    appAlert('Session expirée', 'Veuillez vous reconnecter pour synchroniser vos coins.');
+                }
+                dispatch(logout());
+                return { success: false, token: null };
             }
             
             return { success: res?.ok || false, token: currentToken };

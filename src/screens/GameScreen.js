@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ImageBackground, Dimensions, ScrollView, Animated, Image, Modal, Keyboard, Platform, Share, ActivityIndicator, FlatList, AppState } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, Dimensions, ScrollView, Animated, Image, Modal, Keyboard, Platform, Share, ActivityIndicator, FlatList, AppState, Pressable } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -26,6 +26,7 @@ import VoiceChat from '../components/VoiceChat';
 import LiveChatOverlay from '../components/LiveChatOverlay';
 import { useCoinsContext } from '../context/CoinsContext';
 import PlayerProfileCard from '../components/PlayerProfileCard';
+import PlayerHUD from '../components/PlayerHUD';
 import CustomAlert from '../components/CustomAlert';
 import VersusAnimation from '../components/VersusAnimation';
 import NextMatchModal from '../components/NextMatchModal';
@@ -35,6 +36,7 @@ import { useAdManager } from '../ads/AdSystem';
 import { appAlert } from '../services/appAlert';
 import { modalTheme } from '../utils/modalTheme';
 import { getTournamentProgress } from '../utils/constants';
+import { T } from '../utils/theme';
 
 import { isTablet, getResponsiveSize, SCREEN_WIDTH, SCREEN_HEIGHT } from '../utils/responsive';
 import ResponsiveWrapper from '../components/ResponsiveWrapper';
@@ -152,12 +154,13 @@ const GameScreen = ({ navigation, route }) => {
   const isTab = width >= 600;
   const COLS = isTab ? 20 : 15;
   const ROWS = 19;
-  const PADDING_LEFT = getResponsiveSize(35);
+  const PADDING_LEFT = getResponsiveSize(40);
   const PADDING_TOP = getResponsiveSize(35);
-  const PADDING_RIGHT = getResponsiveSize(35);
-  const PADDING_BOTTOM = getResponsiveSize(150);
+  const PADDING_RIGHT = getResponsiveSize(40);
+  const PADDING_BOTTOM = getResponsiveSize(35);
 
-  const CELL_SIZE = Math.min(width * 0.9, height * 0.7) / 15;
+  const CELL_DIVISOR = width >= 1024 ? 11.5 : isTab ? 18.5 : 13.5;
+  const CELL_SIZE = Math.min(width * 0.9, height * 0.7) / CELL_DIVISOR;
   const BOARD_WIDTH = Math.max(width, PADDING_LEFT + (COLS - 1) * CELL_SIZE + PADDING_RIGHT);
   const BOARD_HEIGHT = PADDING_TOP + (ROWS - 1) * CELL_SIZE + PADDING_BOTTOM;
 
@@ -193,7 +196,12 @@ const GameScreen = ({ navigation, route }) => {
   const currentUserId = getPlayerId(user);
 
   const [playersData, setPlayersData] = useState(params.players || {});
-  const [timeControlSetting, setTimeControlSetting] = useState(params.timeControl || configIA?.timeControl || localConfig?.timeControl);
+  const [timeControlSetting, setTimeControlSetting] = useState(() => {
+    const v = params.timeControl ?? configIA?.timeControl ?? localConfig?.timeControl;
+    if (v === null || v === undefined) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  });
 
   const playersDataRef = useRef(playersData);
   const timeControlSettingRef = useRef(timeControlSetting);
@@ -336,6 +344,13 @@ const GameScreen = ({ navigation, route }) => {
   const [nextAiConfig, setNextAiConfig] = useState(null);
   // Waiting message for spectators while opponent left / creator choosing
   const [waitingMessage, setWaitingMessage] = useState(null);
+  const [liveStartedAtMs, setLiveStartedAtMs] = useState(() => {
+      const ts = Number(params?.liveStartedAt);
+      return (mode === 'live' && Number.isFinite(ts) && ts > 0) ? ts : null;
+  });
+  const [liveElapsedSec, setLiveElapsedSec] = useState(0);
+  const liveElapsedIntervalRef = useRef(null);
+  const [bottomPlayerHudHeight, setBottomPlayerHudHeight] = useState(0);
 
   // Versus Animation State
   const [showVersusAnim, setShowVersusAnim] = useState(false);
@@ -356,11 +371,56 @@ const GameScreen = ({ navigation, route }) => {
   }, [mode, player2?.pseudo]);
 
   const isExitingRef = useRef(false);
+  const isMountedRef = useRef(true);
+  const lastHandledActionRequestIdRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const showAlert = (title, message, buttons = []) => {
       if (isExitingRef.current) return;
+      if (!isMountedRef.current) return;
       setCustomAlert({ visible: true, title, message, buttons });
   };
+
+  const formatElapsed = (seconds) => {
+      const s = Math.max(0, Math.floor(Number(seconds) || 0));
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const ss = s % 60;
+      const two = (n) => `${n}`.padStart(2, '0');
+      if (h > 0) return `${h}:${two(m)}:${two(ss)}`;
+      return `${m}:${two(ss)}`;
+  };
+
+  useEffect(() => {
+      if (liveElapsedIntervalRef.current) {
+          clearInterval(liveElapsedIntervalRef.current);
+          liveElapsedIntervalRef.current = null;
+      }
+
+      if (mode !== 'live' || !liveStartedAtMs || gameOver) {
+          setLiveElapsedSec(0);
+          return;
+      }
+
+      const tick = () => {
+          const diff = Date.now() - liveStartedAtMs;
+          setLiveElapsedSec(Math.max(0, Math.floor(diff / 1000)));
+      };
+
+      tick();
+      liveElapsedIntervalRef.current = setInterval(tick, 1000);
+      return () => {
+          if (liveElapsedIntervalRef.current) {
+              clearInterval(liveElapsedIntervalRef.current);
+              liveElapsedIntervalRef.current = null;
+          }
+      };
+  }, [mode, liveStartedAtMs, gameOver]);
 
 
 
@@ -481,6 +541,7 @@ const GameScreen = ({ navigation, route }) => {
   const [showGameMenu, setShowGameMenu] = useState(false);
   const [activeModal, setActiveModal] = useState(null); // 'chat', 'emoji', null
   const [flyingEmojis, setFlyingEmojis] = useState([]);
+  const [flyingTexts, setFlyingTexts] = useState([]);
 
   const triggerFlyingEmoji = (emoji, senderId) => {
     // Only in PVP modes (Online, Live, Spectator)
@@ -514,12 +575,42 @@ const GameScreen = ({ navigation, route }) => {
         setFlyingEmojis(prev => prev.filter(e => e.id !== id));
     }, 2000);
   };
+
+  const triggerFlyingText = (text, senderId) => {
+    if (mode !== 'online' && mode !== 'online_custom') return;
+    const message = typeof text === 'string' ? text.trim() : '';
+    if (!message) return;
+
+    const player1Pos = { x: SCREEN_WIDTH * 0.25, y: getResponsiveSize(100) };
+    const player2Pos = { x: SCREEN_WIDTH * 0.75, y: getResponsiveSize(100) };
+
+    let start, end;
+    if (senderId?.toString() === player1.id?.toString()) {
+        start = player1Pos;
+        end = player2Pos;
+    } else if (senderId?.toString() === player2.id?.toString()) {
+        start = player2Pos;
+        end = player1Pos;
+    } else {
+        return;
+    }
+
+    const id = Date.now().toString() + Math.random().toString(36).substr(2, 5);
+    setFlyingTexts(prev => [...prev, { id, text: message, start, end }]);
+    setTimeout(() => {
+        setFlyingTexts(prev => prev.filter(e => e.id !== id));
+    }, 2000);
+  };
   const [chatMessages, setChatMessages] = useState([]);
+  const [showLobbyMessages, setShowLobbyMessages] = useState(true);
   const [bubbles, setBubbles] = useState({ player1: null, player2: null });
   const [rematchRequested, setRematchRequested] = useState(false);
   const isRematching = useRef(false);
+  const pendingReplaceGameIdRef = useRef(null);
   const listenersReadyRef = useRef(false);
   const hasJoinedRoomRef = useRef(false);
+  const lastUserRoomJoinedRef = useRef(null);
+  const lastLiveRoomJoinedRef = useRef(null);
   const syncReadyRef = useRef(true);
 
   useEffect(() => {
@@ -533,11 +624,28 @@ const GameScreen = ({ navigation, route }) => {
 
   // Ensure socket is identified for online modes (user room only)
   useEffect(() => {
-    if (user && (mode === 'online' || mode === 'online_custom' || mode === 'spectator' || mode === 'live')) {
-         if (!socket.connected) socket.connect();
-         socket.emit('join_user_room', user._id);
+    const userId = user?._id || user?.id;
+    const shouldJoin = Boolean(userId) && (mode === 'online' || mode === 'online_custom' || mode === 'spectator' || mode === 'live');
+    if (!shouldJoin) {
+      lastUserRoomJoinedRef.current = null;
+      return;
     }
-  }, [user, mode]);
+    if (!socket.connected) socket.connect();
+
+    const join = () => {
+      const id = user?._id || user?.id;
+      if (!id) return;
+      if (lastUserRoomJoinedRef.current === id) return;
+      socket.emit('join_user_room', id);
+      lastUserRoomJoinedRef.current = id;
+    };
+
+    join();
+    socket.on('connect', join);
+    return () => {
+      socket.off('connect', join);
+    };
+  }, [user?._id, user?.id, mode]);
 
   useEffect(() => {
       if (bubbles.player2) {
@@ -572,6 +680,36 @@ const GameScreen = ({ navigation, route }) => {
   const timeControl = timeControlSetting;
   const [timeLeft, setTimeLeft] = useState(timeControl);
   const [timeouts, setTimeouts] = useState({ black: 0, white: 0 });
+  const timeLeftRef = useRef(timeLeft);
+  const turnDeadlineRef = useRef(null);
+  const lastTurnKeyRef = useRef(null);
+  const timeoutHandledRef = useRef(false);
+
+  useEffect(() => {
+    timeLeftRef.current = timeLeft;
+  }, [timeLeft]);
+
+  const setTurnTimer = useCallback((seconds) => {
+    if (seconds === null || seconds === undefined) {
+      turnDeadlineRef.current = null;
+      timeoutHandledRef.current = false;
+      setTimeLeft(null);
+      return;
+    }
+
+    const n = Number(seconds);
+    if (!Number.isFinite(n) || n <= 0) {
+      turnDeadlineRef.current = null;
+      timeoutHandledRef.current = false;
+      setTimeLeft(null);
+      return;
+    }
+
+    const sec = Math.max(1, Math.floor(n));
+    turnDeadlineRef.current = Date.now() + sec * 1000;
+    timeoutHandledRef.current = false;
+    setTimeLeft(sec);
+  }, []);
 
   const getInitialPlayer = () => {
     if (params.currentTurn) return params.currentTurn;
@@ -614,6 +752,9 @@ const GameScreen = ({ navigation, route }) => {
   const paramsRef = useRef(params);
   useEffect(() => {
       paramsRef.current = params;
+      if (pendingReplaceGameIdRef.current && params?.gameId && params.gameId === pendingReplaceGameIdRef.current) {
+        pendingReplaceGameIdRef.current = null;
+      }
   }, [params]);
 
   // --- ONLINE MODE LOGIC ---
@@ -625,7 +766,10 @@ const GameScreen = ({ navigation, route }) => {
     if (mode === 'spectator' && initialParams.gameId) {
         socket.emit('join_spectator', { gameId: initialParams.gameId });
     } else if (mode === 'live' && initialParams.gameId) {
-        socket.emit('join_live_room', { gameId: initialParams.gameId });
+        if (lastLiveRoomJoinedRef.current !== initialParams.gameId) {
+            socket.emit('join_live_room', { gameId: initialParams.gameId });
+            lastLiveRoomJoinedRef.current = initialParams.gameId;
+        }
     }
 
     const handleSpectatorJoined = (data) => {
@@ -642,9 +786,26 @@ const GameScreen = ({ navigation, route }) => {
         if (data.players && JSON.stringify(data.players) !== JSON.stringify(playersDataRef.current)) {
             setPlayersData(data.players);
         }
-        if (data.timeControl && data.timeControl !== timeControlSettingRef.current) {
-            setTimeControlSetting(data.timeControl);
-            setTimeLeft(data.timeControl);
+        if (data.players) {
+            const pBlack = data.players.black;
+            const pWhite = data.players.white;
+            const isBlackMe = (getPlayerId(pBlack)?.toString() === currentUserId?.toString());
+            const newOpponent = isBlackMe ? pWhite : pBlack;
+            if (newOpponent) {
+                setOpponent(newOpponent);
+                if (newOpponent.coins != null) setOpponentCoins(newOpponent.coins);
+            }
+            dispatch(setPlayers(data.players));
+        }
+        if (data.timeControl !== undefined) {
+            const tc = data.timeControl === null ? null : Number(data.timeControl);
+            if (tc === null) {
+                if (timeControlSettingRef.current !== null) setTimeControlSetting(null);
+                setTurnTimer(null);
+            } else if (Number.isFinite(tc)) {
+                if (tc !== timeControlSettingRef.current) setTimeControlSetting(tc);
+                setTurnTimer(tc);
+            }
         }
         if (data.timeouts) {
             setTimeouts(data.timeouts);
@@ -655,10 +816,15 @@ const GameScreen = ({ navigation, route }) => {
         const currentParams = paramsRef.current;
         // console.log('Game start received in GameScreen:', data);
 
-        if (data.gameId && data.gameId !== currentParams.gameId) {
+        const currentGameId = currentParams.gameId || currentParams.roomId || currentParams.matchId;
+        if (currentGameId && data?.gameId && data.gameId !== currentGameId) {
+             if (pendingReplaceGameIdRef.current === data.gameId) return;
+             pendingReplaceGameIdRef.current = data.gameId;
              console.log('New Game ID detected, reloading screen...');
-             isRematching.current = true;
-             AudioController.setRematchMode(true);
+             isRematching.current = mode !== 'live';
+             if (mode !== 'live') {
+               AudioController.setRematchMode(true);
+             }
 
              // Reset local state aggressively before navigation to avoid UI artifacts
              setBoard([]);
@@ -670,21 +836,22 @@ const GameScreen = ({ navigation, route }) => {
              setWaitingMessage(null);
              setCurrentPlayer(null);
              setSelectedCell(null);
-             setTimeLeft(undefined);
+             setTurnTimer(null);
              setTimeouts({ black: 0, white: 0 });
              setTournamentScore({ black: 0, white: 0 });
              setTournamentGameNumber(1);
 
              // Calculer le nouvel adversaire pour mettre à jour les coins dans les params
-             const pBlack = data.players.black;
-             const pWhite = data.players.white;
+             const pBlack = data?.players?.black;
+             const pWhite = data?.players?.white;
              // Utiliser currentUserId pour identifier l'adversaire
-             const isBlackMe = (pBlack.id || pBlack._id)?.toString() === currentUserId?.toString();
+             const isBlackMe = (pBlack?.id || pBlack?._id)?.toString() === currentUserId?.toString();
              const newOpponent = isBlackMe ? pWhite : pBlack;
 
              navigation.replace('Game', {
                  ...currentParams, 
                  gameId: data.gameId,
+                 roomId: data.gameId,
                  players: data.players,
                  opponent: newOpponent,
                  betAmount: data.betAmount,
@@ -708,6 +875,12 @@ const GameScreen = ({ navigation, route }) => {
         setWaitingMessage(null);
         setCurrentPlayer(data.currentTurn ?? null);
         setTimeouts({ black: 0, white: 0 });
+        if (mode === 'live') {
+            const ts = Number(data?.liveStartedAt);
+            setLiveStartedAtMs(Number.isFinite(ts) && ts > 0 ? ts : Date.now());
+        } else {
+            setLiveStartedAtMs(null);
+        }
         if (data.tournamentSettings) {
             setTournamentScore(data.tournamentSettings.score);
             setTournamentGameNumber(data.tournamentSettings.gameNumber);
@@ -727,10 +900,15 @@ const GameScreen = ({ navigation, route }) => {
             hasShownVersus.current = true;
         }
 
-        // state already set above
-        if (data.timeControl && data.timeControl !== timeControlSettingRef.current) {
-             setTimeControlSetting(data.timeControl);
-             setTimeLeft(data.timeControl);
+        if (data.timeControl !== undefined) {
+            const tc = data.timeControl === null ? null : Number(data.timeControl);
+            if (tc === null) {
+                if (timeControlSettingRef.current !== null) setTimeControlSetting(null);
+                setTurnTimer(null);
+            } else if (Number.isFinite(tc)) {
+                if (tc !== timeControlSettingRef.current) setTimeControlSetting(tc);
+                setTurnTimer(tc);
+            }
         }
         setWinner(null);
     };
@@ -748,7 +926,7 @@ const GameScreen = ({ navigation, route }) => {
           setWaitingForNextRound(true); // Lock board immediately while waiting for game/round over event
       }
 
-      if (timeControl) setTimeLeft(timeControl);
+      setTurnTimer(timeControl);
 
       if (newAutoPlayCount !== undefined) {
           setTimeouts(prev => ({ ...prev, [player]: newAutoPlayCount }));
@@ -867,7 +1045,7 @@ const GameScreen = ({ navigation, route }) => {
 
       }
 
-      if (data.reason !== 'timeout' && data.reason !== 'resign' && data.reason !== 'draw_timeout') {
+      if (data.reason !== 'timeout' && data.reason !== 'resign' && data.reason !== 'draw_timeout' && data.reason !== 'cancel_by_agreement' && data.reason !== 'draw') {
         AudioController.playVictorySound(isSoundEnabled);
       }
 
@@ -875,8 +1053,46 @@ const GameScreen = ({ navigation, route }) => {
       
       if (isWinner && data.gains > 0) {
           setFeedback({ visible: true, amount: data.gains, type: 'CREDIT' });
-      } else if (data.reason === 'draw' && (currentParams.betAmount || 0) > 0) {
+      } else if ((data.reason === 'draw' || data.reason === 'cancel_by_agreement') && (currentParams.betAmount || 0) > 0) {
           setFeedback({ visible: true, amount: currentParams.betAmount || 0, type: 'REMBOURSEMENT' });
+      }
+
+      if (data.reason === 'resign' && (mode === 'online' || mode === 'online_custom')) {
+        const loserPseudo = opponent?.pseudo || "Votre adversaire";
+        const coinsMsg = (data.gains || 0) > 0 ? `\n🏆 +${data.gains} coins crédités !` : '';
+        if (isWinner) {
+          showAlert(
+            "🎉 Victoire par forfait !",
+            `${loserPseudo} a quitté la partie. Vous remportez la victoire !${coinsMsg}`,
+            [
+              {
+                text: 'Super !',
+                onPress: () => {
+                  try { setShowGameMenu(false); } catch (_) {}
+                  navigation.navigate('Home');
+                }
+              }
+            ],
+            { cancelable: false }
+          );
+          return;
+        }
+
+        showAlert(
+          "Partie terminée",
+          "Vous avez quitté la partie. Retour à l'accueil.",
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                try { setShowGameMenu(false); } catch (_) {}
+                navigation.navigate('Home');
+              }
+            }
+          ],
+          { cancelable: false }
+        );
+        return;
       }
 
       setTimeout(() => {
@@ -889,7 +1105,8 @@ const GameScreen = ({ navigation, route }) => {
                 raisonDefaite: !isWinner && data.reason === 'timeout' ? 'timeout' : null,
                 timeouts: data.timeouts,
                 type: mode,
-                isTournament: !!currentParams.tournamentSettings
+                isTournament: !!currentParams.tournamentSettings,
+                reason: data.reason
             });
         setShowResultModal(true);
       }, 1500);
@@ -914,6 +1131,35 @@ const GameScreen = ({ navigation, route }) => {
       dispatch(updateUser({ coins: newBalance }));
     };
 
+    const handlePlayersCoinsUpdated = ({ updatedCoins } = {}) => {
+      if (!updatedCoins) return;
+
+      const myId = (userRef.current?._id || userRef.current?.id || '').toString();
+      if (myId && updatedCoins[myId] !== undefined) {
+        dispatch(updateUser({ coins: updatedCoins[myId] }));
+      }
+
+      const opponentId = player2?.id?.toString?.() || '';
+      if (opponentId && updatedCoins[opponentId] !== undefined) {
+        setOpponentCoins(updatedCoins[opponentId]);
+      }
+
+      setPlayersData(prev => {
+        if (!prev) return prev;
+        const updated = { ...prev };
+        const blackId = getPlayerId(prev.black)?.toString?.();
+        const whiteId = getPlayerId(prev.white)?.toString?.();
+
+        if (blackId && updatedCoins[blackId] !== undefined) {
+          updated.black = { ...prev.black, coins: updatedCoins[blackId] };
+        }
+        if (whiteId && updatedCoins[whiteId] !== undefined) {
+          updated.white = { ...prev.white, coins: updatedCoins[whiteId] };
+        }
+        return updated;
+      });
+    };
+
     const handleMessageTexte = (data) => {
         const msgId = data.id || Date.now().toString() + Math.random().toString(36).substr(2, 5);
         
@@ -931,13 +1177,22 @@ const GameScreen = ({ navigation, route }) => {
             return [...prev, nouveauMessage];
         });
 
-        if (mode === 'spectator' || mode === 'live') {
-            if (data.senderId === player1.id) {
-                setBubbles(prev => ({ ...prev, player1: { content: data.message, type: 'text' } }));
-            } else if (data.senderId === player2.id) {
-                setBubbles(prev => ({ ...prev, player2: { content: data.message, type: 'text' } }));
-            }
-        } else {
+        if (mode === 'online' || mode === 'online_custom') {
+            triggerFlyingText(data.message, data.senderId);
+        }
+
+        const senderIdStr = (data.senderId || '').toString();
+        const p1IdStr = (player1.id || '').toString();
+        const p2IdStr = (player2.id || '').toString();
+        if (senderIdStr && senderIdStr === p1IdStr) {
+            setBubbles(prev => ({ ...prev, player1: { content: data.message, type: 'text' } }));
+            return;
+        }
+        if (senderIdStr && senderIdStr === p2IdStr) {
+            setBubbles(prev => ({ ...prev, player2: { content: data.message, type: 'text' } }));
+            return;
+        }
+        if (mode !== 'spectator' && mode !== 'live') {
             setBubbles(prev => ({ ...prev, player2: { content: data.message, type: 'text' } }));
         }
     };
@@ -962,13 +1217,18 @@ const GameScreen = ({ navigation, route }) => {
             return [...prev, nouveauMessage];
         });
 
-        if (mode === 'spectator' || mode === 'live') {
-            if (data.senderId === player1.id) {
-                setBubbles(prev => ({ ...prev, player1: { content: data.emoji, type: 'emoji' } }));
-            } else if (data.senderId === player2.id) {
-                setBubbles(prev => ({ ...prev, player2: { content: data.emoji, type: 'emoji' } }));
-            }
-        } else {
+        const senderIdStr = (data.senderId || '').toString();
+        const p1IdStr = (player1.id || '').toString();
+        const p2IdStr = (player2.id || '').toString();
+        if (senderIdStr && senderIdStr === p1IdStr) {
+            setBubbles(prev => ({ ...prev, player1: { content: data.emoji, type: 'emoji' } }));
+            return;
+        }
+        if (senderIdStr && senderIdStr === p2IdStr) {
+            setBubbles(prev => ({ ...prev, player2: { content: data.emoji, type: 'emoji' } }));
+            return;
+        }
+        if (mode !== 'spectator' && mode !== 'live') {
             setBubbles(prev => ({ ...prev, player2: { content: data.emoji, type: 'emoji' } }));
         }
     };
@@ -1028,7 +1288,16 @@ const GameScreen = ({ navigation, route }) => {
         setTournamentGameNumber(data.nextGameNumber);
         setCurrentPlayer(data.nextTurn);
         setSelectedCell(null);
-        if (data.timeControl) setTimeLeft(data.timeControl);
+        if (data.timeControl !== undefined) {
+            const tc = data.timeControl === null ? null : Number(data.timeControl);
+            if (tc === null) {
+                if (timeControlSettingRef.current !== null) setTimeControlSetting(null);
+                setTurnTimer(null);
+            } else if (Number.isFinite(tc)) {
+                if (tc !== timeControlSettingRef.current) setTimeControlSetting(tc);
+                setTurnTimer(tc);
+            }
+        }
 
         // Reset game state for next round
         setGameOver(false);
@@ -1090,9 +1359,15 @@ const GameScreen = ({ navigation, route }) => {
             syncReadyRef.current = true;
             if (Array.isArray(data.board)) setBoard(data.board);
             if (data.currentTurn) setCurrentPlayer(data.currentTurn);
-            if (data.timeControl) {
-                setTimeControlSetting(data.timeControl);
-                setTimeLeft(data.timeControl);
+            if (data.timeControl !== undefined) {
+                const tc = data.timeControl === null ? null : Number(data.timeControl);
+                if (tc === null) {
+                    if (timeControlSettingRef.current !== null) setTimeControlSetting(null);
+                    setTurnTimer(null);
+                } else if (Number.isFinite(tc)) {
+                    if (tc !== timeControlSettingRef.current) setTimeControlSetting(tc);
+                    setTurnTimer(tc);
+                }
             }
             if (data.tournamentSettings) {
                 if (data.tournamentSettings.score) setTournamentScore(data.tournamentSettings.score);
@@ -1312,6 +1587,151 @@ const GameScreen = ({ navigation, route }) => {
         }
     };
 
+    const handleLiveGameCancelled = (data) => {
+        if (isExitingRef.current) return;
+        setBoard([]);
+        setWinningLine(null);
+        setWinner(null);
+        setGameOver(false);
+        setShowResultModal(false);
+        setNextMatchVisible(false);
+        setCurrentPlayer(null);
+        setSelectedCell(null);
+        setTimeouts({ black: 0, white: 0 });
+        setTurnTimer(null);
+        setLiveStartedAtMs(null);
+        setLiveElapsedSec(0);
+        setWaitingForNextRound(true);
+        setShowGameMenu(false);
+        setWaitingMessage("Partie annulée. En attente du créateur...");
+
+        const myId = (userRef.current?._id || userRef.current?.id || '').toString();
+        const updatedCoins = data?.updatedCoins || {};
+        if (myId && updatedCoins[myId] !== undefined) {
+            dispatch(updateUser({ coins: updatedCoins[myId] }));
+        }
+
+        const betAmount = Number(data?.betAmount ?? paramsRef.current?.betAmount ?? 0) || 0;
+        const refundMsg = betAmount > 0 ? `\n🪙 Mise remboursée : ${betAmount.toLocaleString()}` : '';
+        const currentParams = paramsRef.current || {};
+        const creatorId = currentParams?.roomConfig?.createur?._id || currentParams?.roomConfig?.createur?.id;
+        const isCreator = creatorId && myId && creatorId.toString() === myId.toString();
+        const gameId = currentParams.gameId || currentParams.roomId || currentParams.matchId;
+
+        if (isCreator) {
+            showAlert(
+                "Partie annulée",
+                `Annulation acceptée. La partie est annulée pour les deux joueurs.${refundMsg}\n\nVous pouvez relancer la partie.`,
+                [
+                    {
+                        text: "Retour salle",
+                        style: 'cancel',
+                        onPress: () => {
+                            if (currentParams.roomConfig) {
+                                navigation.replace('SalleAttenteLive', { configSalle: currentParams.roomConfig, roomId: gameId });
+                            } else {
+                                navigation.navigate('Home');
+                            }
+                        }
+                    },
+                    {
+                        text: "Relancer",
+                        onPress: () => {
+                            try { socket.emit('start_live_game', { gameId }); } catch (_) {}
+                        }
+                    }
+                ],
+                { cancelable: false }
+            );
+            return;
+        }
+
+        showAlert(
+            "Partie annulée",
+            `Annulation acceptée. La partie est annulée pour les deux joueurs.${refundMsg}\n\nEn attente du créateur...`,
+            [{ text: "OK", style: 'cancel' }],
+            { cancelable: false }
+        );
+    };
+
+    const handleActionRequested = (data) => {
+        if (isExitingRef.current) return;
+        if (mode === 'spectator') return;
+        if (isSpectatorMode) return;
+        if (gameOver) return;
+
+        const myId = (userRef.current?._id || userRef.current?.id || '').toString();
+        const toUserId = (data?.toUserId || '').toString();
+        const requestId = (data?.requestId || '').toString();
+        const type = (data?.type || '').toString();
+
+        if (!myId || !requestId || toUserId !== myId) return;
+        if (lastHandledActionRequestIdRef.current === requestId) return;
+        lastHandledActionRequestIdRef.current = requestId;
+
+        const fromPseudo = data?.fromPseudo || opponent?.pseudo || 'Adversaire';
+        const currentParams = paramsRef.current;
+        const isTournament = !!currentParams?.tournamentSettings;
+        const title = type === 'cancel' ? "Demande d'annulation" : "Demande d'abandon";
+        const message = type === 'cancel'
+            ? (
+                isTournament
+                  ? `${fromPseudo} demande d'annuler cette manche.\nSi vous acceptez, la manche sera rejouée (plateau réinitialisé) et le score ne change pas.`
+                  : `${fromPseudo} demande d'annuler la partie.\nSi vous acceptez, la mise est remboursée aux deux joueurs.`
+              )
+            : `${fromPseudo} vous demande d'abandonner.\nSi vous acceptez, vous perdez la partie.`;
+
+        showAlert(title, message, [
+            {
+                text: "Refuser",
+                style: "cancel",
+                onPress: () => {
+                    playButtonSound();
+                    try { socket.emit('respond_action', { requestId, accepted: false }); } catch (_) {}
+                }
+            },
+            {
+                text: "Accepter",
+                style: "destructive",
+                onPress: () => {
+                    playButtonSound();
+                    try { socket.emit('respond_action', { requestId, accepted: true }); } catch (_) {}
+                }
+            }
+        ]);
+    };
+
+    const handleActionResolved = (data) => {
+        if (isExitingRef.current) return;
+        const myId = (userRef.current?._id || userRef.current?.id || '').toString();
+        const fromUserId = (data?.fromUserId || '').toString();
+        if (!myId || fromUserId !== myId) return;
+
+        const currentParams = paramsRef.current;
+        const isTournament = !!currentParams?.tournamentSettings;
+        const type = (data?.type || '').toString();
+        const accepted = !!data?.accepted;
+        const reason = (data?.reason || '').toString();
+
+        if (!accepted) {
+            const msg =
+                reason === 'expired' ? 'Votre demande a expiré.' :
+                reason === 'move_started' ? 'Votre demande a été annulée (la partie a commencé).' :
+                reason === 'too_early' ? "Votre demande a été refusée (moins de 20 pions posés par vous)." :
+                'Votre demande a été refusée.';
+            showAlert('Demande', msg, [{ text: 'OK', style: 'cancel' }]);
+            return;
+        }
+
+        showAlert(
+            'Demande acceptée',
+            type === 'cancel'
+              ? (isTournament ? "La manche va être rejouée (plateau réinitialisé)." : "La partie va être annulée pour les deux joueurs.")
+              : "L'adversaire a accepté d'abandonner.",
+            [{ text: 'OK', style: 'cancel' }]
+        );
+    };
+
     listenersReadyRef.current = true;
     if (user && (mode === 'online' || mode === 'online_custom') && params.gameId && !hasJoinedRoomRef.current) {
         console.log('Attempting to rejoin game room (with listeners ready):', params.gameId);
@@ -1328,8 +1748,12 @@ const GameScreen = ({ navigation, route }) => {
     socket.on('opponent_left_live', handleOpponentLeftLive);
     socket.on('live_room_closed', handleLiveRoomClosed);
     socket.on('live_game_ended', handleLiveGameEnded);
+    socket.on('live_game_cancelled', handleLiveGameCancelled);
     socket.on('downgraded_to_spectator', handleDowngradedToSpectator);
+    socket.on('action_requested', handleActionRequested);
+    socket.on('action_resolved', handleActionResolved);
     socket.on('balance_updated', handleBalanceUpdated);
+    socket.on('players_coins_updated', handlePlayersCoinsUpdated);
     socket.on('MESSAGE_TEXTE', handleMessageTexte);
     socket.on('MESSAGE_EMOJI', handleMessageEmoji);
     socket.on('round_over', handleRoundOver);
@@ -1350,8 +1774,12 @@ const GameScreen = ({ navigation, route }) => {
       socket.off('opponent_left_live', handleOpponentLeftLive);
       socket.off('live_room_closed', handleLiveRoomClosed);
       socket.off('live_game_ended', handleLiveGameEnded);
+      socket.off('live_game_cancelled', handleLiveGameCancelled);
       socket.off('downgraded_to_spectator', handleDowngradedToSpectator);
+      socket.off('action_requested', handleActionRequested);
+      socket.off('action_resolved', handleActionResolved);
       socket.off('balance_updated', handleBalanceUpdated);
+      socket.off('players_coins_updated', handlePlayersCoinsUpdated);
       socket.off('MESSAGE_TEXTE', handleMessageTexte);
       socket.off('MESSAGE_EMOJI', handleMessageEmoji);
       socket.off('round_over', handleRoundOver);
@@ -1417,6 +1845,9 @@ const GameScreen = ({ navigation, route }) => {
       // Trigger Flying Emoji if it's an emoji
       if (socketMsg.type === 'MESSAGE_EMOJI') {
           triggerFlyingEmoji(socketMsg.emoji, user?._id || user?.id);
+      }
+      if (socketMsg.type === 'MESSAGE_TEXTE') {
+          triggerFlyingText(socketMsg.message, user?._id || user?.id);
       }
 
       const content = socketMsg.type === 'MESSAGE_TEXTE' ? socketMsg.message : socketMsg.emoji;
@@ -1741,7 +2172,7 @@ const GameScreen = ({ navigation, route }) => {
                 text: "Quitter", 
                 style: "destructive",
                 onPress: () => {
-                    if (mode === 'online') {
+                    if (mode === 'online' || mode === 'online_custom') {
                         socket.emit('resign');
                     }
                     setShowGameMenu(false);
@@ -1749,6 +2180,65 @@ const GameScreen = ({ navigation, route }) => {
                 }
             }
         ]
+    );
+  };
+
+  const sendActionRequest = (type) => {
+    const gameId = params.gameId || params.roomId || params.matchId;
+    if (!gameId) return;
+    if (mode === 'spectator') return;
+    if (gameOver) return;
+
+    try {
+      setShowGameMenu(false);
+      setActiveModal(null);
+      setCustomAlert(prev => ({ ...prev, visible: false }));
+    } catch (_) {}
+
+    setTimeout(() => {
+      try {
+        socket.emit('request_action', { gameId, type }, (res) => {
+          if (!res?.ok) {
+            showAlert('Erreur', res?.message || "Impossible d'envoyer la demande.", [{ text: 'OK', style: 'cancel' }]);
+            return;
+          }
+          showAlert(
+            'Demande envoyée',
+            type === 'cancel' ? "Votre demande d'annulation a été envoyée." : "Votre demande d'abandon a été envoyée.",
+            [{ text: 'OK', style: 'cancel' }]
+          );
+        });
+      } catch (e) {
+        showAlert('Erreur', "Impossible d'envoyer la demande.", [{ text: 'OK', style: 'cancel' }]);
+      }
+    }, 50);
+  };
+
+  const handleRequestCancel = () => {
+    playButtonSound();
+    const currentParams = paramsRef.current;
+    const isTournament = !!currentParams?.tournamentSettings;
+    showAlert(
+      "Annuler la partie",
+      isTournament
+        ? "Vous allez envoyer une demande d'annulation à votre adversaire.\nS'il accepte, la manche sera rejouée (plateau réinitialisé) et le score ne change pas."
+        : "Vous allez envoyer une demande d'annulation à votre adversaire.\nSi l'adversaire accepte, la partie est annulée pour les deux joueurs et la mise est remboursée.",
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Envoyer', onPress: () => { playButtonSound(); sendActionRequest('cancel'); } }
+      ]
+    );
+  };
+
+  const handleRequestAbandon = () => {
+    playButtonSound();
+    showAlert(
+      "Abandonner",
+      "Vous allez demander à votre adversaire d'abandonner.\nSi l'adversaire accepte, c'est lui qui abandonne et vous gagnez la partie.",
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Envoyer', style: 'destructive', onPress: () => { playButtonSound(); sendActionRequest('abandon'); } }
+      ]
     );
   };
 
@@ -1774,6 +2264,57 @@ const GameScreen = ({ navigation, route }) => {
                 </TouchableOpacity>
                 
                 <View style={styles.menuDivider} />
+
+                {(mode === 'online' || mode === 'online_custom' || mode === 'live') && !isSpectatorMode && (
+                  <>
+                    <TouchableOpacity
+                      style={[styles.menuItem, { opacity: (!gameOver && (Array.isArray(board) ? board.filter(s => s && s.player === player1.color).length : 0) >= 20 && !!(params.gameId || params.roomId || params.matchId)) ? 1 : 0.45 }]}
+                      onPress={() => {
+                        playButtonSound();
+                        if (gameOver) {
+                          showAlert('Info', 'La partie est déjà terminée.', [{ text: 'OK', style: 'cancel' }]);
+                          return;
+                        }
+                        const myPlacedStonesCount = Array.isArray(board) ? board.filter(s => s && s.player === player1.color).length : 0;
+                        if (myPlacedStonesCount < 20) {
+                          showAlert('Info', "L'annulation est possible à partir de 20 pions posés par vous.", [{ text: 'OK', style: 'cancel' }]);
+                          return;
+                        }
+                        if (!(params.gameId || params.roomId || params.matchId)) {
+                          showAlert('Erreur', 'ID de partie manquant.', [{ text: 'OK', style: 'cancel' }]);
+                          return;
+                        }
+                        handleRequestCancel();
+                      }}
+                    >
+                        <Ionicons name="close-circle-outline" size={24} color="#ffffffff" />
+                        <Text style={styles.menuText}>Annuler la partie</Text>
+                    </TouchableOpacity>
+
+                    <View style={styles.menuDivider} />
+
+                    <TouchableOpacity
+                      style={[styles.menuItem, { opacity: (!gameOver && !!(params.gameId || params.roomId || params.matchId)) ? 1 : 0.45 }]}
+                      onPress={() => {
+                        playButtonSound();
+                        if (gameOver) {
+                          showAlert('Info', 'La partie est déjà terminée.', [{ text: 'OK', style: 'cancel' }]);
+                          return;
+                        }
+                        if (!(params.gameId || params.roomId || params.matchId)) {
+                          showAlert('Erreur', 'ID de partie manquant.', [{ text: 'OK', style: 'cancel' }]);
+                          return;
+                        }
+                        handleRequestAbandon();
+                      }}
+                    >
+                        <Ionicons name="hand-left-outline" size={24} color="#ffffffff" />
+                        <Text style={styles.menuText}>Abandonner</Text>
+                    </TouchableOpacity>
+
+                    <View style={styles.menuDivider} />
+                  </>
+                )}
 
                 <TouchableOpacity style={styles.menuItem} onPress={() => { playButtonSound(); dispatch(toggleSound()); setShowGameMenu(false); }}>
                     <Ionicons name={isSoundEnabled ? "volume-high" : "volume-mute"} size={24} color="#ffffffff" />
@@ -1921,54 +2462,24 @@ const GameScreen = ({ navigation, route }) => {
             ]} numberOfLines={1}>{player.pseudo}</Text>
 
             <View style={{ marginTop: 0, alignItems: 'center', justifyContent: 'center' }}>
-                {player.color === 'black' ? (
-                    <View style={{
-                        width: getResponsiveSize(20),
-                        height: getResponsiveSize(20),
-                        borderRadius: getResponsiveSize(10),
-                        borderWidth: 2,
-                        borderColor: '#FF0000',
-                        backgroundColor: "#ffffffff", 
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        left: getResponsiveSize(42),
-                        top: getResponsiveSize(3),
-                    }}>
-                        <View style={{ width: getResponsiveSize(8), height: getResponsiveSize(8), borderRadius: getResponsiveSize(4), backgroundColor: '#FF0000' }} />
-                    </View>
-                ) : (
-                    <View style={{ 
-                        width: getResponsiveSize(22), 
-                        height: getResponsiveSize(22), 
-                        borderRadius: getResponsiveSize(11),
-                        borderWidth: 1,
-                        borderColor: "#0000FF",
-                        justifyContent: 'center', 
-                        alignItems: 'center', 
-                        backgroundColor: "#ffffffff", 
-                        left: getResponsiveSize(42),
-                        top: getResponsiveSize(3),
-                    }}>
-                        <Ionicons name="close" size={getResponsiveSize(20)} color="#0000FF"  />
-                    </View>
-                )}
+                <View style={{
+                    width: getResponsiveSize(12),
+                    height: getResponsiveSize(12),
+                    borderRadius: getResponsiveSize(6),
+                    backgroundColor: player.color === 'black' ? '#F4B41A' : '#ECE6D6',
+                    borderWidth: 1,
+                    borderColor: player.color === 'black' ? '#9A6800' : '#8A8F9C',
+                    left: getResponsiveSize(42),
+                    top: getResponsiveSize(3),
+                }} />
             </View>
 
             {timeControl && (
-                <View style={{ position: 'absolute', bottom: 5, width: '100%', alignItems: 'center' }}>
+                <View style={{ position: 'absolute', bottom: 14, width: '100%', alignItems: 'center' }}>
                     <View style={[styles.chronoPrincipal, { bottom: 0, marginTop: 0 }]}>
-                    <Text style={[styles.chronoPrincipalTexte, { color: getCouleurChrono(isCurrent ? timeLeft : timeControl, timeControl), fontSize: getResponsiveSize(12), marginBottom: 2 }]}>
+                    <Text style={[styles.chronoPrincipalTexte, { color: (isCurrent ? timeLeft : timeControl) <= 10 ? '#E85D4A' : '#F4B41A', fontSize: getResponsiveSize(12), marginBottom: 2 }]}>
                         ⏱️ {formatTemps(isCurrent ? timeLeft : timeControl)}
                     </Text>
-                        <View style={[styles.progressBar, { height: 4 }]}>
-                            <View style={[
-                                styles.progressFill, 
-                                { 
-                                    width: `${((isCurrent ? timeLeft : timeControl) / timeControl) * 100}%`, 
-                                    backgroundColor: getCouleurChrono(isCurrent ? timeLeft : timeControl, timeControl) 
-                                }
-                            ]} />
-                        </View>
                     </View>
                     
                     {/* TIMEOUTS COUNT */}
@@ -1995,6 +2506,15 @@ const GameScreen = ({ navigation, route }) => {
                                   </Text>
                               )}
                           </View>
+                </View>
+            )}
+            {/* Barre timer fine (design spec) */}
+            {timeControl && (
+                <View style={styles.progressBar}>
+                    <View style={[styles.progressFill, {
+                        width: `${Math.min(100, ((isCurrent ? timeLeft : timeControl) / timeControl) * 100)}%`,
+                        backgroundColor: (isCurrent ? timeLeft : timeControl) <= 10 ? '#E85D4A' : '#F4B41A',
+                    }]} />
                 </View>
             )}
         </TouchableOpacity>
@@ -2081,66 +2601,31 @@ const GameScreen = ({ navigation, route }) => {
           </View>
       )}
 
-      {/* Pawn Indicator (Red Circle / Blue Cross) */}
+      {/* Pawn Indicator */}
       <View style={{ marginTop: 0, alignItems: 'center', justifyContent: 'center' }}>
-          {player.color === 'black' ? (
-              <View style={{
-                width: getResponsiveSize(20),
-                height: getResponsiveSize(20),
-                borderRadius: getResponsiveSize(10),
-                borderWidth: 2,
-                borderColor: '#FF0000',
-                backgroundColor: "#ffffffff", 
-                justifyContent: 'center',
-                alignItems: 'center',
-                left: getResponsiveSize(42),
-                top: getResponsiveSize(3),
-              }}>
-                  <View style={{
-                      width: getResponsiveSize(8),
-                      height: getResponsiveSize(8),
-                      borderRadius: getResponsiveSize(4),
-                      backgroundColor: '#FF0000',
-                  }} />
-              </View>
-          ) : (
-              <View style={{ 
-                width: getResponsiveSize(22), 
-                height: getResponsiveSize(22), 
-                borderRadius: getResponsiveSize(11),
-                borderWidth: 1,
-                borderColor: "#0000FF",
-                justifyContent: 'center', 
-                alignItems: 'center', 
-                backgroundColor: "#ffffffff", 
-                left: getResponsiveSize(42),
-                top: getResponsiveSize(3),
-                }}>
-                  <Ionicons name="close" size={getResponsiveSize(20)} color="#0000FF"  />
-              </View>
-          )}
+          <View style={{
+              width: getResponsiveSize(12),
+              height: getResponsiveSize(12),
+              borderRadius: getResponsiveSize(6),
+              backgroundColor: player.color === 'black' ? '#F4B41A' : '#ECE6D6',
+              borderWidth: 1,
+              borderColor: player.color === 'black' ? '#9A6800' : '#8A8F9C',
+              left: getResponsiveSize(42),
+              top: getResponsiveSize(3),
+          }} />
       </View>
 
 
 
       {/* ONLINE INFO FOOTER (Timer + Timeouts) */}
       {(mode === 'online' || mode === 'online_custom' || mode === 'live' || mode === 'spectator' || mode === 'ai' || mode === 'local') && (
-          <View style={{ position: 'absolute', bottom: 5, width: '100%', alignItems: 'center' }}>
+          <View style={{ position: 'absolute', bottom: 14, width: '100%', alignItems: 'center' }}>
               {/* CHRONOMÈTRE */}
               {!gameOver && timeControl && (
                  <View style={styles.chronoPrincipal}>
-                    <Text style={[styles.chronoPrincipalTexte, { color: getCouleurChrono(isCurrent ? timeLeft : timeControl, timeControl) }]}>
+                    <Text style={[styles.chronoPrincipalTexte, { color: (isCurrent ? timeLeft : timeControl) <= 10 ? '#E85D4A' : '#F4B41A' }]}>
                         ⏱️ {formatTemps(isCurrent ? timeLeft : timeControl)}
                     </Text>
-                    <View style={styles.progressBar}>
-                        <View style={[
-                            styles.progressFill, 
-                            { 
-                                width: `${((isCurrent ? timeLeft : timeControl) / timeControl) * 100}%`, 
-                                backgroundColor: getCouleurChrono(isCurrent ? timeLeft : timeControl, timeControl) 
-                            }
-                        ]} />
-                    </View>
                  </View>
               )}
 
@@ -2148,21 +2633,30 @@ const GameScreen = ({ navigation, route }) => {
               <View style={styles.timeoutsContainer}>
                   <View style={{ flexDirection: 'row' }}>
                     {[...Array(5)].map((_, i) => (
-                        <View 
-                                        key={i} 
-                                        style={{
-                                            width: getResponsiveSize(8), 
-                                            height: getResponsiveSize(8), 
-                                            borderRadius: getResponsiveSize(4), 
-                                            backgroundColor: i < (timeouts[player.color] || 0) ? '#FFD700' : '#4ade80', // Yellow : Green
-                                            marginHorizontal: getResponsiveSize(2),
-                                            borderWidth: getResponsiveSize(0.5),
-                                            borderColor: 'rgba(0,0,0,0.2)'
-                                        }} 
-                                    />
+                        <View
+                            key={i}
+                            style={{
+                                width: getResponsiveSize(8),
+                                height: getResponsiveSize(8),
+                                borderRadius: getResponsiveSize(4),
+                                backgroundColor: i < (timeouts[player.color] || 0) ? '#F4B41A' : '#1F2840',
+                                marginHorizontal: getResponsiveSize(2),
+                                borderWidth: getResponsiveSize(0.5),
+                                borderColor: 'rgba(0,0,0,0.2)'
+                            }}
+                        />
                     ))}
                   </View>
               </View>
+          </View>
+      )}
+      {/* Barre timer fine (design spec) */}
+      {timeControl && (
+          <View style={styles.progressBar}>
+              <View style={[styles.progressFill, {
+                  width: `${Math.min(100, ((isCurrent ? timeLeft : timeControl) / timeControl) * 100)}%`,
+                  backgroundColor: (isCurrent ? timeLeft : timeControl) <= 10 ? '#E85D4A' : '#F4B41A',
+              }]} />
           </View>
       )}
 
@@ -2784,7 +3278,7 @@ const GameScreen = ({ navigation, route }) => {
                 }, 500);
             } else {
                 setCurrentPlayer(currentPlayer === 'black' ? 'white' : 'black');
-                if (timeControl) setTimeLeft(timeControl);
+                setTurnTimer(timeControl);
             }
             setIaEnReflexion(false);
         }, 300);
@@ -3262,11 +3756,8 @@ const GameScreen = ({ navigation, route }) => {
     }
 
     setCurrentPlayer(currentPlayer === 'black' ? 'white' : 'black');
-    if (timeControl) setTimeLeft(timeControl);
+    setTurnTimer(timeControl);
   };
-
-  // Global timeout lock to éviter les doubles déclenchements pour un même tour
-  const timeoutHandledRef = useRef(false);
 
   const jouerCoupLocalOuIAParTimer = useCallback((row, col, player) => {
     if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return;
@@ -3290,7 +3781,7 @@ const GameScreen = ({ navigation, route }) => {
     }
 
     setCurrentPlayer(player === 'black' ? 'white' : 'black');
-    if (timeControl) setTimeLeft(timeControl);
+    setTurnTimer(timeControl);
   }, [board, isSoundEnabled, timeControl]);
 
   const handleLocalTimeout = useCallback(() => {
@@ -3576,28 +4067,32 @@ const GameScreen = ({ navigation, route }) => {
     if ((mode === 'online' || mode === 'online_custom' || mode === 'live' || mode === 'spectator') && 
         (!playersData || !playersData.white || !playersData.black)) return;
 
-    timeoutHandledRef.current = false;
+    const turnKey = `${(paramsRef.current?.gameId || '')}:${currentPlayer}`;
+    if (lastTurnKeyRef.current !== turnKey) {
+      lastTurnKeyRef.current = turnKey;
+      setTurnTimer(timeControl);
+    } else if (!turnDeadlineRef.current) {
+      const fallback = Number.isFinite(timeLeftRef.current) ? timeLeftRef.current : timeControl;
+      setTurnTimer(fallback);
+    }
 
     const intervalId = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          // Déclencher le timeout uniquement quand prev === 1
-          if (prev === 1 && !timeoutHandledRef.current) {
-            timeoutHandledRef.current = true;
-            if (mode === 'local') {
-              handleLocalTimeout();
-            } else if (mode === 'ai') {
-              handleAiTimeout();
-            } else if (mode === 'online' || mode === 'online_custom' || mode === 'live') {
-              handleOnlineTimeout();
-            }
-          }
-          // Toujours borner à 0
-          return 0;
+      if (!turnDeadlineRef.current) return;
+      const remaining = Math.max(0, Math.ceil((turnDeadlineRef.current - Date.now()) / 1000));
+
+      if (remaining === 0 && !timeoutHandledRef.current) {
+        timeoutHandledRef.current = true;
+        if (mode === 'local') {
+          handleLocalTimeout();
+        } else if (mode === 'ai') {
+          handleAiTimeout();
+        } else if (mode === 'online' || mode === 'online_custom' || mode === 'live') {
+          handleOnlineTimeout();
         }
-        return prev - 1;
-      });
-    }, 1000);
+      }
+
+      setTimeLeft(prev => (prev === remaining ? prev : remaining));
+    }, 250);
 
     return () => {
       if (intervalId) clearInterval(intervalId);
@@ -3629,7 +4124,7 @@ const GameScreen = ({ navigation, route }) => {
         setTimeouts({ black: 0, white: 0 });
         setTournamentScore({ black: 0, white: 0 });
         setTournamentGameNumber(1);
-        if (params.timeControl) setTimeLeft(params.timeControl);
+        setTurnTimer(params.timeControl ?? null);
         
         // Ensure current player is set correctly based on new params
         if (params.currentTurn) setCurrentPlayer(params.currentTurn);
@@ -3639,23 +4134,30 @@ const GameScreen = ({ navigation, route }) => {
   useEffect(() => {
     if (mode === 'online' || mode === 'online_custom' || mode === 'live') {
         const handleRematchRequested = (data) => {
+             const gameIdToUse = data?.gameId || paramsRef.current?.gameId;
+             const requiredBet = Number(paramsRef.current?.betAmount ?? 0);
+             const myCoins = Number(user?.coins ?? 0);
              showAlert(
                  'Revanche !',
                  'Votre adversaire souhaite rejouer. Acceptez-vous ?',
                  [
                      { 
                          text: 'Refuser', 
-                         onPress: () => socket.emit('respond_rematch', { gameId: params.gameId, accepted: false }),
+                         onPress: () => {
+                             if (!gameIdToUse) return;
+                             socket.emit('respond_rematch', { gameId: gameIdToUse, accepted: false });
+                         },
                          style: 'cancel'
                      },
                      { 
                          text: 'Accepter', 
                          onPress: () => {
-                             if (user.coins < params.betAmount) {
+                             if (!gameIdToUse) return;
+                             if (myCoins < requiredBet) {
                                  showAlert('Erreur', 'Pas assez de coins pour rejouer.', [{ text: 'OK', style: 'cancel' }]);
                                  return;
                              }
-                             socket.emit('respond_rematch', { gameId: params.gameId, accepted: true });
+                             socket.emit('respond_rematch', { gameId: gameIdToUse, accepted: true });
                          } 
                      }
                  ]
@@ -3718,104 +4220,201 @@ const GameScreen = ({ navigation, route }) => {
       const tauxVictoire = statsIA ? ((statsIA.gagnees / statsIA.jouees) * 100).toFixed(0) : 0;
 
       const isDraw = reason === 'draw';
+      const isCancel = reason === 'cancel_by_agreement';
       const isTournamentDraw = (type === 'local' || type === 'ia' || type === 'ai') && isTournament && tournamentOver && resultData.tournamentScore?.black === resultData.tournamentScore?.white;
+      const canShowOpponent = (type === 'online' || type === 'live' || type === 'ia' || type === 'ai');
+      const isAiResult = type === 'ia' || type === 'ai';
+      const isLiveResult = type === 'live';
+      const fullHeightResult = isAiResult || isLiveResult;
 
       return (
-          <View 
-            style={styles.modalOverlay} 
-            pointerEvents="box-none"
-          >
-              <View 
-                style={[styles.resultCard, (type === 'online' || type === 'live' || type === 'ia') && { padding: getResponsiveSize(16), width: '90%' }]}
+          <ImageBackground source={require('../../assets/images/Background2-4.png')} style={styles.resultOverlay}>
+              <View style={styles.bgOverlay} pointerEvents="none" />
+              <View
+                style={[
+                  styles.resultCard,
+                  {
+                    maxHeight: Math.round(height * 0.92),
+                    padding: getResponsiveSize(isTablet ? 24 : 18),
+                  },
+                  fullHeightResult && { height: Math.round(height * 0.9) },
+                ]}
                 pointerEvents={mode === 'spectator' ? 'none' : 'auto'}
               >
-              <Text style={[styles.emojiResult, (type === 'online' || type === 'live' || type === 'ia' || type === 'ai') && { fontSize: getResponsiveSize(40), marginBottom: getResponsiveSize(5) }]}>
-                {isDraw || isTournamentDraw ? '🤝' : (victoire ? '🏆' : '😢')}
-              </Text>
-              <Text style={[styles.titreResult, (type === 'online' || type === 'live' || type === 'ia' || type === 'ai') && { fontSize: getResponsiveSize(24), marginBottom: getResponsiveSize(5) }]}>
-                {isDraw || isTournamentDraw ? 'MATCH NUL' : (victoire ? 'VICTOIRE !' : 'DÉFAITE')}
-              </Text>
-              
-              {(type === 'live' || type === 'online' || type === 'online_custom' || type === 'ai' || type === 'ia') && resultData?.isTournament && (
-                  <Text style={{ color: '#f1c40f', fontWeight: 'bold', textAlign: 'center', marginBottom: getResponsiveSize(8) }}>
-                      Score: {(tournamentScore?.black ?? 0)} - {(tournamentScore?.white ?? 0)}
+                  <Text style={styles.emojiResult}>
+                    {isDraw || isTournamentDraw || isCancel ? '🤝' : (victoire ? '🏆' : '😢')}
                   </Text>
-              )}
-              
-              {(type === 'online' || type === 'live' || type === 'ia' || type === 'ai') && (
-                  <>
-                      <Text style={[styles.adversaireResult, { marginBottom: getResponsiveSize(10) }]}>Contre {adversaire?.pseudo || 'Adversaire'}</Text>
-                          
-                          {raisonVictoire === 'timeout_adverse' && (
-                              <View style={styles.raisonContainer}>
-                                  <Text style={styles.raisonTexte}>⏰ Votre adversaire a dépassé le temps limite</Text>
-                              </View>
-                          )}
-                          
-                          {raisonVictoire === 'disconnect' && (
-                              <View style={styles.raisonContainer}>
-                                  <Text style={styles.raisonTexte}>🔌 Adversaire déconnecté</Text>
-                              </View>
-                          )}
+                  <Text style={styles.titreResult}>
+                    {isCancel ? 'PARTIE ANNULÉE' : (isDraw || isTournamentDraw ? 'MATCH NUL' : (victoire ? 'VICTOIRE !' : 'DÉFAITE'))}
+                  </Text>
 
-                          {raisonDefaite === 'timeout' && (
-                              <View style={[styles.raisonContainer, styles.raisonDefaite]}>
-                                  <Text style={[styles.raisonTexte, styles.raisonTexteDefaite]}>⏰ Vous avez dépassé le temps limite</Text>
-                              </View>
-                          )}
+                  {(type === 'live' || type === 'online' || type === 'online_custom' || type === 'ai' || type === 'ia') && resultData?.isTournament && (
+                      <Text style={styles.scoreTournament}>
+                          Score: {(tournamentScore?.black ?? 0)} - {(tournamentScore?.white ?? 0)}
+                      </Text>
+                  )}
 
-                          {(isDraw || isTournamentDraw) ? (
-                              <View style={[styles.gainsContainer, { padding: getResponsiveSize(10), marginBottom: getResponsiveSize(10), backgroundColor: '#34495e' }]}>
-                                  <Text style={styles.gainsLabel}>Mise remboursée :</Text>
-                                  <Text style={[styles.gainsMontant, { fontSize: getResponsiveSize(24), color: '#ecf0f1' }]}>🪙 {Number(gains ?? 0).toLocaleString()}</Text>
+                  {canShowOpponent && (
+                      <Text style={styles.adversaireResult} numberOfLines={1}>
+                          Contre {adversaire?.pseudo || 'Adversaire'}
+                      </Text>
+                  )}
+
+                  <ScrollView
+                    style={[styles.resultScroll, fullHeightResult ? { flex: 1 } : { maxHeight: Math.round(height * 0.58) }]}
+                    contentContainerStyle={[styles.resultScrollContent, isLiveResult && { paddingBottom: getResponsiveSize(30) }]}
+                    showsVerticalScrollIndicator={false}
+                  >
+                      <View style={styles.miniBoardWrapper}>
+                          <Text style={styles.miniBoardLabel}>Plateau final</Text>
+                          <View style={styles.resultMiniBoard}>
+                              {(() => {
+                                  const miniWidth = getResponsiveSize(isTablet ? 170 : (isLiveResult ? 122 : 135));
+                                  const cell = miniWidth / COLS;
+                                  const miniHeight = cell * ROWS;
+                                  const originX = cell / 2;
+                                  const originY = cell / 2;
+                                  const last = board.length > 0 ? board[board.length - 1] : null;
+                                  return (
+                                      <Svg width={miniWidth} height={miniHeight}>
+                                          <Rect x={0} y={0} width={miniWidth} height={miniHeight} fill="#0E1320" rx={getResponsiveSize(10)} />
+
+                                          {Array.from({ length: COLS }).map((_, col) => {
+                                              const x = originX + col * cell;
+                                              return (
+                                                  <Line
+                                                      key={`mini-v-${col}`}
+                                                      x1={x}
+                                                      y1={originY}
+                                                      x2={x}
+                                                      y2={originY + (ROWS - 1) * cell}
+                                                      stroke="#1F2840"
+                                                      strokeWidth="0.8"
+                                                      opacity={0.85}
+                                                  />
+                                              );
+                                          })}
+
+                                          {Array.from({ length: ROWS }).map((_, row) => {
+                                              const y = originY + row * cell;
+                                              return (
+                                                  <Line
+                                                      key={`mini-h-${row}`}
+                                                      x1={originX}
+                                                      y1={y}
+                                                      x2={originX + (COLS - 1) * cell}
+                                                      y2={y}
+                                                      stroke="#1F2840"
+                                                      strokeWidth="0.8"
+                                                      opacity={0.85}
+                                                  />
+                                              );
+                                          })}
+
+                                          {board.map((stone, index) => {
+                                              const cx = originX + stone.col * cell;
+                                              const cy = originY + stone.row * cell;
+                                              const r = cell * 0.35;
+                                              const isBlack = stone.player === 'black';
+                                              const fill = isBlack ? '#ff0808ff' : '#4dabf7';
+                                              const stroke = isBlack ? '#500000' : '#1e272fff';
+
+                                              return (
+                                                  <Circle
+                                                      key={`mini-stone-${stone.row}-${stone.col}-${index}`}
+                                                      cx={cx}
+                                                      cy={cy}
+                                                      r={r}
+                                                      fill={fill}
+                                                      stroke={stroke}
+                                                      strokeWidth={0.8}
+                                                  />
+                                              );
+                                          })}
+
+                                          {last && (
+                                              <Circle
+                                                  cx={originX + last.col * cell}
+                                                  cy={originY + last.row * cell}
+                                                  r={cell * 0.12}
+                                                  fill="#E85D4A"
+                                                  opacity={0.9}
+                                              />
+                                          )}
+                                      </Svg>
+                                  );
+                              })()}
+                          </View>
+                      </View>
+
+                      {canShowOpponent && (
+                          <>
+                              {raisonVictoire === 'timeout_adverse' && (
+                                  <View style={styles.raisonContainer}>
+                                      <Text style={styles.raisonTexte}>⏰ Votre adversaire a dépassé le temps limite</Text>
+                                  </View>
+                              )}
+                              
+                              {raisonVictoire === 'disconnect' && (
+                                  <View style={styles.raisonContainer}>
+                                      <Text style={styles.raisonTexte}>🔌 Adversaire déconnecté</Text>
+                                  </View>
+                              )}
+
+                              {raisonDefaite === 'timeout' && (
+                                  <View style={[styles.raisonContainer, styles.raisonDefaite]}>
+                                      <Text style={[styles.raisonTexte, styles.raisonTexteDefaite]}>⏰ Vous avez dépassé le temps limite</Text>
+                                  </View>
+                              )}
+                          </>
+                      )}
+
+                      {(isDraw || isTournamentDraw || isCancel) ? (
+                          <View style={styles.drawContainer}>
+                              <Text style={styles.drawLabel}>Mise remboursée :</Text>
+                              <Text style={styles.drawMontant}>🪙 {Number(gains ?? 0).toLocaleString()}</Text>
+                          </View>
+                      ) : (
+                          victoire ? (
+                              <View style={styles.gainsContainer}>
+                                  <Text style={styles.gainsLabel}>Vous avez gagné :</Text>
+                                  <Text style={styles.gainsMontant}>+🪙 {Number(gains ?? 0).toLocaleString()}</Text>
                               </View>
                           ) : (
-                              victoire ? (
-                                  <View style={[styles.gainsContainer, { padding: getResponsiveSize(10), marginBottom: getResponsiveSize(10) }]}>
-                                      <Text style={styles.gainsLabel}>Vous avez gagné :</Text>
-                                      <Text style={[styles.gainsMontant, { fontSize: getResponsiveSize(24) }]}>+🪙 {Number(gains ?? 0).toLocaleString()}</Text>
-                                  </View>
-                              ) : (
-                                  <View style={[styles.perteContainer, { padding: getResponsiveSize(10), marginBottom: getResponsiveSize(10) }]}>
-                                      <Text style={styles.perteLabel}>Vous avez perdu :</Text>
-                                      <Text style={[styles.perteMontant, { fontSize: getResponsiveSize(24) }]}>-🪙 {Number(montantPari ?? 0).toLocaleString()}</Text>
-                                  </View>
-                              )
-                          )}
-                      </>
-                  )}
-
-                  {!victoire && !isDraw && !isTournamentDraw && showAds && mode !== 'spectator' && (
-                      <TouchableOpacity
-                          style={styles.boutonRewardedResult}
-                          onPress={() => {
-                              playButtonSound();
-                              showRewarded({ amount: 10, reason: 'Récompense défaite', metadata: { source: 'defeat_reward', context: type } });
-                          }}
-                      >
-                          <Text style={styles.boutonRewardedTexteResult}>🎁 Regarder une pub — +10 coins</Text>
-                      </TouchableOpacity>
-                  )}
-
-                  {type === 'ia' && (
-                      <>
-                          {statsIA && (
-                              <View style={styles.statsContainer}>
-                                  <Text style={styles.statsLabel}>Mode {difficulte.charAt(0).toUpperCase() + difficulte.slice(1)}</Text>
-                                  <Text style={styles.statsTaux}>{tauxVictoire}% de victoires</Text>
-                                  <Text style={styles.statsParties}>{statsIA.jouees} parties jouées</Text>
+                              <View style={styles.perteContainer}>
+                                  <Text style={styles.perteLabel}>Vous avez perdu :</Text>
+                                  <Text style={styles.perteMontant}>-🪙 {Number(montantPari ?? 0).toLocaleString()}</Text>
                               </View>
-                          )}
-                      </>
-                  )}
+                          )
+                      )}
 
-                  {type === 'local' && (
-                       <Text style={styles.messageResult}>
-                           {isTournamentDraw ? 'Match nul – pas de victoire pour le tournoi' : (isDraw ? 'Match nul !' : `Le joueur ${resultData.winnerColor === 'black' ? 'Rouge' : 'Bleu'} a gagné !`)}
-                       </Text>
-                  )}
+                      {!victoire && !isDraw && !isCancel && !isTournamentDraw && showAds && mode !== 'spectator' && (
+                          <TouchableOpacity
+                              style={styles.boutonRewardedResult}
+                              onPress={() => {
+                                  playButtonSound();
+                                  showRewarded({ amount: 10, reason: 'Récompense défaite', metadata: { source: 'defeat_reward', context: type } });
+                              }}
+                          >
+                              <Text style={styles.boutonRewardedTexteResult}>🎁 Regarder une pub — +10 coins</Text>
+                          </TouchableOpacity>
+                      )}
 
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: getResponsiveSize(12) }}>
+                      {type === 'ia' && statsIA && (
+                          <View style={styles.statsContainer}>
+                              <Text style={styles.statsLabel}>Mode {difficulte.charAt(0).toUpperCase() + difficulte.slice(1)}</Text>
+                              <Text style={styles.statsTaux}>{tauxVictoire}% de victoires</Text>
+                              <Text style={styles.statsParties}>{statsIA.jouees} parties jouées</Text>
+                          </View>
+                      )}
+
+                      {type === 'local' && (
+                           <Text style={styles.messageResult}>
+                               {isTournamentDraw ? 'Match nul – pas de victoire pour le tournoi' : (isDraw ? 'Match nul !' : `Le joueur ${resultData.winnerColor === 'black' ? 'Rouge' : 'Bleu'} a gagné !`)}
+                           </Text>
+                      )}
+
+                  <View style={styles.resultTopActionsRow}>
                       {(type === 'online' || type === 'online_custom') && mode !== 'spectator' && (
                         <TouchableOpacity 
                             style={[
@@ -3877,7 +4476,7 @@ const GameScreen = ({ navigation, route }) => {
                               }}
                           >
                               <Text style={styles.boutonTexteResult}>
-                                 <Ionicons name="share-social-outline" size={28} color="#fff" />
+                                 <Ionicons name="share-social-outline" size={getResponsiveSize(18)} color="#fff" />
                               </Text>
                           </TouchableOpacity>
                       )}
@@ -4031,242 +4630,368 @@ const GameScreen = ({ navigation, route }) => {
                       )}
                   </View>
                   )}
+                  </ScrollView>
               </View>
-          </View>
+          </ImageBackground>
       );
   };
 
-  const renderFloatingMenu = () => {
-    // Case 1: Live, Online, AI, Local -> Enhanced Menu
-    if (mode === 'live' || mode === 'online_custom' || mode === 'online' || mode === 'ai' || mode === 'ia' || mode === 'local') {
-        const isLocal = mode === 'local';
-        const fabStyle = isLocal ? { left: undefined, right: getResponsiveSize(20) } : {};
-        
-        // Identify if current user is the Creator of the Live Room
-        const isLiveCreator = mode === 'live' && (params.roomConfig?.createur?._id || params.roomConfig?.createur?.id) === (user?._id || user?.id);
+  // ── NEW LAYOUT HELPERS ────────────────────────────────────────────────────
+  // Renders the compact top HUD (player 2).
+  const renderTopHUDNew = () => {
+    if (nextMatchVisible) return null;
+    const isCurrent = !gameOver && currentPlayer === player2.color;
+    const displayTime = timeControl ? (isCurrent ? timeLeft : timeControl) : null;
+    const showTournament =
+      (mode === 'local' && localConfig?.mode === 'tournament') ||
+      (mode !== 'local' && tournamentTotalGames > 1);
 
-        return (
-            <>
-                {showGameMenu && (
-                    <View style={[styles.liveMenuContainer, isLocal ? { left: undefined, right: 0, alignItems: 'flex-end' } : {}]}>
-                        <TouchableOpacity 
-                            style={[styles.menuFab, fabStyle, { bottom: getResponsiveSize(170), backgroundColor: '#e74c3c' }]} 
-                            onPress={() => {
-                                playButtonSound();
-                                setShowGameMenu(false);
-                                
-                                if (isLiveCreator) {
-                                    showAlert(
-                                        "Gestion du Live",
-                                        "Que voulez-vous faire ?",
-                                        [
-                                            { text: "Annuler", style: "cancel" },
-                                            { 
-                                                text: "Arrêter le Live", 
-                                                onPress: () => {
-                                                    isExitingRef.current = true;
-                                                    try { socket.emit('stop_live_room', { gameId: params.gameId, userId: user?._id || user?.id }); } catch (_) {}
-                                                    try { socket.emit('leave_live_room', { gameId: params.gameId }); } catch (_) {}
-                                                    navigation.navigate('Home');
-                                                }, 
-                                                style: 'destructive' 
-                                            }
-                                        ]
-                                    );
-                                } else {
-                                    if (mode === 'live') {
-                                        handleQuitGame();
-                                        return;
-                                    }
+    const betAmount = Number(
+      params.betAmount ??
+      params.roomConfig?.parametres?.betAmount ??
+      params.roomConfig?.betAmount ??
+      0
+    ) || 0;
+    const prizeAmount = betAmount > 0 ? Math.floor(betAmount * 2 * 0.95) : 0;
 
-                                    showAlert(
-                                        "Quitter la partie",
-                                        "Voulez-vous vraiment quitter la partie ?",
-                                        [
-                                            { text: "Annuler", style: "cancel" },
-                                            {
-                                                text: "Quitter",
-                                                onPress: () => {
-                                                    isExitingRef.current = true;
-                                                    try {
-                                                        if (mode === 'online_custom' || mode === 'online') {
-                                                            socket.emit('resign');
-                                                        }
-                                                    } catch (_) {}
-                                                    navigation.navigate('Home');
-                                                },
-                                                style: 'destructive'
-                                            }
-                                        ]
-                                    );
-                                }
-                            }}
-                        >
-                            <Ionicons name="log-out-outline" size={28} color="#fff" />
-                        </TouchableOpacity>
-
-                        <TouchableOpacity 
-                            style={[styles.menuFab, fabStyle, { bottom: getResponsiveSize(100), backgroundColor: isSoundEnabled ? '#3b82f6' : '#95a5a6' }]} 
-                            onPress={() => {
-                                playButtonSound();
-                                dispatch(toggleSound());
-                            }}
-                        >
-                            <Ionicons name={isSoundEnabled ? "volume-high" : "volume-mute"} size={28} color="#fff" />
-                        </TouchableOpacity>
-                    </View>
-                )}
-
-                {/* Main Toggle Button */}
-                <TouchableOpacity 
-                    style={[styles.menuFab, fabStyle]}
-                    onPress={() => {
-                        playButtonSound();
-                        setShowGameMenu(!showGameMenu);
-                    }}
-                >
-                    <Ionicons name={showGameMenu ? "close" : "menu"} size={30} color="#fff" />
-                </TouchableOpacity>
-            </>
-        );
-    } 
-    
-    // Case 2: Spectator -> Quit Button
-    if (mode === 'spectator') {
-        return (
-            <TouchableOpacity 
-                style={[styles.menuFab, { backgroundColor: '#e74c3c' }]}
-                onPress={() => {
-                    appAlert(
-                        "Quitter",
-                        "Voulez-vous quitter le mode spectateur ?",
-                        [
-                            { text: "Annuler", style: "cancel" },
-                            { 
-                                text: "Quitter", 
-                                onPress: () => {
-                                    if (navigation.canGoBack()) {
-                                        navigation.goBack();
-                                    } else {
-                                        navigation.navigate('Home');
-                                    }
-                                }, 
-                                style: 'destructive' 
-                            }
-                        ]
-                    );
-                }}
-            >
-                <Ionicons name="log-out-outline" size={30} color="#fff" />
-            </TouchableOpacity>
-        );
-    }
-
-    // Case 3: Local / Friend -> Simple Menu (triggers Modal)
     return (
-        <TouchableOpacity 
-            style={styles.menuFab}
-            onPress={() => {
-                playButtonSound();
-                setShowGameMenu(true);
-            }}
+      <View style={styles.topHUDSection}>
+        {showTournament && (
+          <View style={styles.tournamentBadge}>
+            <Text style={styles.tournamentBadgeText}>
+              Match {tournamentGameNumber}/{tournamentTotalGames}
+              {'  '}
+              {tournamentScore[player1.color] || 0}–{tournamentScore[player2.color] || 0}
+            </Text>
+          </View>
+        )}
+        <TouchableOpacity
+          onPress={() => { playButtonSound(); setSelectedProfile(player2); }}
+          activeOpacity={0.85}
+          style={styles.hudTouchable}
         >
-            <Ionicons name="menu" size={30} color="#fff" />
+          <PlayerHUD
+            name={player2.pseudo}
+            flag={player2.country}
+            coins={player2.coins}
+            time={displayTime}
+            isTurn={isCurrent}
+            small={!isTab}
+            rotated={mode === 'local'}
+            moves={board.filter(p => p.player === player2.color).length}
+            pawnColor={player2.color}
+            avatar={player2.avatar}
+            timeouts={timeouts[player2.color] || 0}
+            maxTimeouts={5}
+          />
         </TouchableOpacity>
+
+        {mode === 'live' && liveStartedAtMs && !gameOver ? (
+          <View style={styles.liveMetaRow}>
+            {prizeAmount > 0 ? (
+              <View style={[styles.prizeBadge, { marginTop: 0 }]}>
+                <Text style={styles.prizeBadgeText}>
+                  🏆 {prizeAmount.toLocaleString()} 💰
+                </Text>
+                <Text style={styles.prizeBadgeSub}>à gagner</Text>
+              </View>
+            ) : null}
+            <View style={[styles.liveDurationBadge, { marginTop: 0 }]}>
+              <Text style={styles.liveDurationText}>⏱️ {formatElapsed(liveElapsedSec)}</Text>
+            </View>
+          </View>
+        ) : (
+          prizeAmount > 0 && !gameOver ? (
+            <View style={styles.prizeBadge}>
+              <Text style={styles.prizeBadgeText}>
+                🏆 {prizeAmount.toLocaleString()} 💰
+              </Text>
+              <Text style={styles.prizeBadgeSub}>à gagner</Text>
+            </View>
+          ) : null
+        )}
+      </View>
+    );
+  };
+
+  // Renders the bottom section: popup menu (en flux) + player 1 HUD + action bar.
+  const renderBottomSection = () => {
+    if (nextMatchVisible) return null;
+    const isCurrent = !gameOver && currentPlayer === player1.color;
+    const displayTime = timeControl ? (isCurrent ? timeLeft : timeControl) : null;
+    const gameId = params.gameId || params.roomId || params.matchId;
+    const canShowRequests = (mode === 'online' || mode === 'online_custom') && !isSpectatorMode && mode !== 'spectator';
+    const myPlacedStonesCount = Array.isArray(board) ? board.filter(s => s && s.player === player1.color).length : 0;
+    const canRequestCancel = !!gameId && !gameOver && myPlacedStonesCount >= 20;
+    const canRequestAbandon = !!gameId && !gameOver;
+
+    return (
+      <View style={styles.bottomSection}>
+
+        {/* ── HUD joueur 1 ── */}
+        <TouchableOpacity
+          onPress={() => { playButtonSound(); setSelectedProfile(player1); }}
+          activeOpacity={0.85}
+          onLayout={(e) => {
+            const h = e?.nativeEvent?.layout?.height;
+            if (typeof h === 'number' && h > 0) {
+              setBottomPlayerHudHeight(prev => (prev === h ? prev : h));
+            }
+          }}
+          style={styles.hudTouchable}
+        >
+          <PlayerHUD
+            name={player1.pseudo}
+            flag={player1.country}
+            coins={player1.coins}
+            time={displayTime}
+            isTurn={isCurrent}
+            small={!isTab}
+            moves={board.filter(p => p.player === player1.color).length}
+            pawnColor={player1.color}
+            avatar={player1.avatar}
+            timeouts={timeouts[player1.color] || 0}
+            maxTimeouts={5}
+          />
+        </TouchableOpacity>
+
+        {/* ── Barre d'actions groupées ── */}
+        <View style={styles.actionBar}>
+
+          <View style={styles.actionGroupLeft}>
+            {mode !== 'spectator' && (
+              <TouchableOpacity
+                style={[styles.actionBtn, showGameMenu && styles.actionBtnActive]}
+                onPress={() => { playButtonSound(); setShowGameMenu(!showGameMenu); }}
+              >
+                <Ionicons
+                  name={showGameMenu ? 'close' : 'menu'}
+                  size={getResponsiveSize(22)}
+                  color={showGameMenu ? T.gold : T.text}
+                />
+              </TouchableOpacity>
+            )}
+
+            {(mode === 'live' || mode === 'spectator') && (
+              <TouchableOpacity
+                style={[styles.actionBtn, !showLobbyMessages && styles.actionBtnActive]}
+                onPress={() => { playButtonSound(); setShowLobbyMessages(v => !v); }}
+              >
+                <Ionicons
+                  name={showLobbyMessages ? 'eye-off-outline' : 'eye-outline'}
+                  size={getResponsiveSize(22)}
+                  color={!showLobbyMessages ? T.gold : T.text}
+                />
+              </TouchableOpacity>
+            )}
+
+            {canShowRequests && (
+              <>
+                <TouchableOpacity
+                  style={[styles.actionBtn, !canRequestCancel && { opacity: 0.45 }]}
+                  onPress={() => {
+                    playButtonSound();
+                    if (!canRequestCancel) {
+                      if (gameOver) {
+                        showAlert('Info', 'La partie est déjà terminée.', [{ text: 'OK', style: 'cancel' }]);
+                        return;
+                      }
+                      if (!gameId) {
+                        showAlert('Erreur', 'ID de partie manquant.', [{ text: 'OK', style: 'cancel' }]);
+                        return;
+                      }
+                      showAlert('Info', "L'annulation est possible à partir de 20 pions posés par vous.", [{ text: 'OK', style: 'cancel' }]);
+                      return;
+                    }
+                    handleRequestCancel();
+                  }}
+                >
+                  <Ionicons name="close-circle-outline" size={getResponsiveSize(22)} color={T.text} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.actionBtn, !canRequestAbandon && { opacity: 0.45 }]}
+                  onPress={() => {
+                    playButtonSound();
+                    if (!canRequestAbandon) {
+                      if (gameOver) {
+                        showAlert('Info', 'La partie est déjà terminée.', [{ text: 'OK', style: 'cancel' }]);
+                        return;
+                      }
+                      showAlert('Erreur', 'ID de partie manquant.', [{ text: 'OK', style: 'cancel' }]);
+                      return;
+                    }
+                    handleRequestAbandon();
+                  }}
+                >
+                  <Ionicons name="hand-left-outline" size={getResponsiveSize(22)} color={T.text} />
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+
+          <View style={styles.actionGroupRight}>
+            {(mode === 'online' || mode === 'online_custom') && (
+              <>
+                <TouchableOpacity
+                  style={[styles.actionBtn, activeModal === 'chat' && styles.actionBtnActive]}
+                  onPress={() => { playButtonSound(); setActiveModal(activeModal === 'chat' ? null : 'chat'); }}
+                >
+                  <Ionicons name="chatbox-ellipses" size={getResponsiveSize(22)} color={activeModal === 'chat' ? T.gold : T.text} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionBtn, activeModal === 'emoji' && styles.actionBtnActive]}
+                  onPress={() => { playButtonSound(); setActiveModal(activeModal === 'emoji' ? null : 'emoji'); }}
+                >
+                  <Ionicons name="happy" size={getResponsiveSize(22)} color={activeModal === 'emoji' ? T.gold : T.text} />
+                </TouchableOpacity>
+              </>
+            )}
+
+            {mode === 'spectator' && (
+              <TouchableOpacity
+                style={[styles.actionBtn, { borderColor: T.red }]}
+                onPress={() => {
+                  appAlert('Quitter', 'Voulez-vous quitter le mode spectateur ?', [
+                    { text: 'Annuler', style: 'cancel' },
+                    {
+                      text: 'Quitter', style: 'destructive',
+                      onPress: () => {
+                        if (navigation.canGoBack()) navigation.goBack();
+                        else navigation.navigate('Home');
+                      },
+                    },
+                  ]);
+                }}
+              >
+                <Ionicons name="log-out-outline" size={getResponsiveSize(22)} color={T.red} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </View>
+    );
+  };
+  // ── END NEW LAYOUT HELPERS ────────────────────────────────────────────────
+
+  const renderFloatingMenu = () => {
+    if (!showGameMenu) return null;
+    if (mode !== 'live' && mode !== 'online_custom' && mode !== 'online' && mode !== 'ai' && mode !== 'ia' && mode !== 'local') return null;
+
+    const isLocal = mode === 'local';
+    const fabStyle = isLocal ? { left: undefined, right: getResponsiveSize(20) } : {};
+    const isLiveCreator = mode === 'live' && (params.roomConfig?.createur?._id || params.roomConfig?.createur?.id) === (user?._id || user?.id);
+    const bottomHudPadding = isTablet ? getResponsiveSize(24) : getResponsiveSize(16);
+    const menuBaseBottom = bottomPlayerHudHeight + bottomHudPadding + getResponsiveSize(12);
+    const itemGap = getResponsiveSize(38);
+
+    const gameId = params.gameId || params.roomId || params.matchId;
+    const myPlacedStonesCount = Array.isArray(board) ? board.filter(s => s && s.player === player1.color).length : 0;
+    const canRequestCancel = !!gameId && !gameOver && myPlacedStonesCount >= 20;
+    const canShowLiveRequests = mode === 'live' && !isSpectatorMode && mode !== 'spectator';
+
+    return (
+      <View style={[styles.liveMenuContainer, isLocal ? { left: undefined, right: 0, alignItems: 'flex-end' } : {}]}>
+
+        {/* Son */}
+        <TouchableOpacity
+          style={[styles.menuFabSmall, fabStyle, { bottom: menuBaseBottom, backgroundColor: isSoundEnabled ? '#3b82f6' : '#95a5a6' }]}
+          onPress={() => { playButtonSound(); dispatch(toggleSound()); }}
+        >
+          <Ionicons name={isSoundEnabled ? 'volume-high' : 'volume-mute'} size={getResponsiveSize(20)} color="#fff" />
+        </TouchableOpacity>
+
+        {canShowLiveRequests && (
+          <TouchableOpacity
+            style={[styles.menuFabSmall, fabStyle, { bottom: menuBaseBottom + itemGap, backgroundColor: '#3f3f46', opacity: canRequestCancel ? 1 : 0.45 }]}
+            onPress={() => {
+              playButtonSound();
+              if (!canRequestCancel) {
+                if (gameOver) {
+                  showAlert('Info', 'La partie est déjà terminée.', [{ text: 'OK', style: 'cancel' }]);
+                  return;
+                }
+                if (!gameId) {
+                  showAlert('Erreur', 'ID de partie manquant.', [{ text: 'OK', style: 'cancel' }]);
+                  return;
+                }
+                showAlert('Info', "L'annulation est possible à partir de 20 pions posés par vous.", [{ text: 'OK', style: 'cancel' }]);
+                return;
+              }
+              setShowGameMenu(false);
+              handleRequestCancel();
+            }}
+          >
+            <Ionicons name="close-circle-outline" size={getResponsiveSize(20)} color="#fff" />
+          </TouchableOpacity>
+        )}
+
+        {/* Quitter */}
+        <TouchableOpacity
+              style={[styles.menuFabSmall, fabStyle, { bottom: menuBaseBottom + (canShowLiveRequests ? itemGap * 2 : itemGap), backgroundColor: '#e74c3c' }]}
+              onPress={() => {
+                playButtonSound();
+                setShowGameMenu(false);
+                if (isLiveCreator) {
+                  showAlert('Gestion du Live', 'Que voulez-vous faire ?', [
+                    { text: 'Annuler', style: 'cancel' },
+                    {
+                      text: 'Arrêter le Live',
+                      style: 'destructive',
+                      onPress: () => {
+                        isExitingRef.current = true;
+                        try { socket.emit('stop_live_room', { gameId: params.gameId, userId: user?._id || user?.id }); } catch (_) {}
+                        try { socket.emit('leave_live_room', { gameId: params.gameId }); } catch (_) {}
+                        navigation.navigate('Home');
+                      },
+                    },
+                  ]);
+                } else {
+                  if (mode === 'live') { handleQuitGame(); return; }
+                  showAlert('Quitter la partie', 'Voulez-vous vraiment quitter la partie ?', [
+                    { text: 'Annuler', style: 'cancel' },
+                    {
+                      text: 'Quitter',
+                      style: 'destructive',
+                      onPress: () => {
+                        isExitingRef.current = true;
+                        try {
+                          if (mode === 'online_custom' || mode === 'online') socket.emit('resign');
+                        } catch (_) {}
+                        navigation.navigate('Home');
+                      },
+                    },
+                  ]);
+                }
+              }}
+            >
+              <Ionicons name="log-out-outline" size={getResponsiveSize(20)} color="#fff" />
+            </TouchableOpacity>
+      </View>
     );
   };
 
   return (
     <ResponsiveWrapper>
-      <ImageBackground 
-        source={require('../../assets/images/Background2-4.png')} 
+      <ImageBackground
+        source={require('../../assets/images/Background2-4.png')}
         style={styles.background}
       >
-      <View style={styles.header}>
-        {renderProfileModal()}
-        {mode !== 'live' && mode !== 'online_custom' && mode !== 'online' && mode !== 'ai' && mode !== 'ia' && mode !== 'local' && mode !== 'spectator' && renderGameMenu()}
-        {(mode === 'spectator' || isSpectatorMode) && (
-            <View style={{ position: 'absolute', top: 10, alignSelf: 'center', backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 15, paddingVertical: 5, borderRadius: 20, zIndex: 10 }}>
-                <Text style={{ color: '#fff', fontWeight: 'bold' }}>👁️ Mode Spectateur</Text>
-            </View>
-        )}
-        
-        {!nextMatchVisible && (
-        mode === 'local' ? (
-             // MODE LOCAL : Joueur 2 (Haut Droite Inversé)
-             <View style={[styles.headerIA, { justifyContent: localConfig?.mode === 'tournament' ? 'space-between' : 'flex-end', alignItems: 'center' }]}>
-                 {localConfig?.mode === 'tournament' && (
-                     <View style={{ backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 }}>
-                         <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: getResponsiveSize(16), textAlign: 'center' }}>
-                             Match {tournamentGameNumber} / {tournamentTotalGames}
-                         </Text>
-                         <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 2 }}>
-                             <Text style={{ color: '#f1c40f', fontSize: getResponsiveSize(12), fontWeight: 'bold' }}>
-                                 {tournamentScore[player1.color] || 0}
-                             </Text>
-                             <Text style={{ color: '#fff', fontSize: getResponsiveSize(12), marginHorizontal: 4 }}>-</Text>
-                             <Text style={{ color: '#f1c40f', fontSize: getResponsiveSize(12), fontWeight: 'bold' }}>
-                                 {tournamentScore[player2.color] || 0}
-                             </Text>
-                         </View>
-                     </View>
-                 )}
-                 <View style={{ transform: [{ rotate: '180deg' }] }}>
-                     {renderLocalPlayer(player2)}
-                 </View>
-             </View>
-        ) : (
-             // MODE PVP (Online / Live / AI) : Affichage normal
-            (!gameOver || (mode !== 'online' && mode !== 'live' && mode !== 'spectator')) && (
-            <View style={styles.headerPVP}>
+      <View style={styles.bgOverlay} pointerEvents="none" />
 
+      {/* Modals sans layout */}
+      {renderProfileModal()}
+      {mode !== 'live' && mode !== 'online_custom' && mode !== 'online' && mode !== 'ai' && mode !== 'ia' && mode !== 'local' && mode !== 'spectator' && renderGameMenu()}
 
-                <View style={styles.playersWrapper}>
-                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                      {renderPlayer(player1, currentPlayer === player1.color, bubbles.player1)}
-                      <View style={{ alignItems: 'center', marginLeft: 10 }}>
-                          <View style={{ minHeight: 18, justifyContent: 'center' }}>
-                              {player1.country && (
-                                  <Text style={[styles.flagOutsideRight, { marginLeft: 0 }]}>{player1.country}</Text>
-                              )}
-                          </View>
-                          {(mode === 'online_custom' || mode === 'online' || mode === 'live' || mode === 'ai') && tournamentTotalGames > 1 && (
-                              <Text style={{ color: '#f1c40f', fontWeight: 'bold', fontSize: getResponsiveSize(14) }}>
-                                  {tournamentScore[player1.color] || 0}
-                              </Text>
-                          )}
-                      </View>
-                  </View>
-                  <View style={{ alignItems: 'center' }}>
-                      <Text style={styles.vsText}>VS</Text>
-                      {(mode === 'online_custom' || mode === 'online' || mode === 'live' || mode === 'ai') && tournamentTotalGames > 1 && (
-                          <View style={{ marginTop: 2, alignItems: 'center' }}>
-                              <Text style={{ color: '#ccc', fontSize: getResponsiveSize(10) }}>
-                                  Match {tournamentGameNumber}/{tournamentTotalGames}
-                              </Text>
-                          </View>
-                      )}
-                  </View>
-                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                      <View style={{ alignItems: 'center', marginRight: 10 }}>
-                          <View style={{ minHeight: 18, justifyContent: 'center' }}>
-                              {player2.country && (
-                                  <Text style={[styles.flagOutsideLeft, { marginRight: 0 }]}>{player2.country}</Text>
-                              )}
-                          </View>
-                          {(mode === 'online_custom' || mode === 'online' || mode === 'live' || mode === 'ai') && tournamentTotalGames > 1 && (
-                              <Text style={{ color: '#f1c40f', fontWeight: 'bold', fontSize: getResponsiveSize(14) }}>
-                                  {tournamentScore[player2.color] || 0}
-                              </Text>
-                          )}
-                      </View>
-                      {renderPlayer(player2, currentPlayer === player2.color, bubbles.player2)}
-                  </View>
-                </View>
-            </View>
-            )
-        ))}
-      </View>
+      {/* Badge spectateur */}
+      {(mode === 'spectator' || isSpectatorMode) && (
+        <View style={styles.spectatorBadgeWrapper} pointerEvents="none">
+          <Text style={styles.spectatorBadgeText}>👁️ Mode Spectateur</Text>
+        </View>
+      )}
+
+      {/* ── HUD joueur 2 (haut) ── */}
+      {renderTopHUDNew()}
       
       {/* Indicateur du tour actuel en mode IA */}
       {/* {mode === 'ai' && (
@@ -4290,8 +5015,9 @@ const GameScreen = ({ navigation, route }) => {
           </View>
       )}
 
-      <View 
-        style={[styles.boardContainer, (mode === 'online' || mode === 'live') && !isTablet && { marginTop: gameOver ? -50 : 0 }]} 
+      {/* ── Plateau (flex: 1, centré) ── */}
+      <View
+        style={styles.boardContainer}
         onLayout={(e) => containerDimensions.current = e.nativeEvent.layout}
         pointerEvents={mode === 'spectator' ? 'none' : 'auto'}
       >
@@ -4325,40 +5051,39 @@ const GameScreen = ({ navigation, route }) => {
                         <Stop offset="100%" stopColor="#1e272fff" stopOpacity="1" />
                     </LinearGradient>
                 </Defs>
-                {/* Fond du plateau pour lisibilité */}
-                <Rect 
-                    x={PADDING_LEFT - 10} 
-                    y={PADDING_TOP - 10} 
-                    width={(COLS - 1) * CELL_SIZE + 20} 
-                    height={(ROWS - 1) * CELL_SIZE + 20} 
-                    fill="rgba(255, 255, 255, 1)" // Couleur bois clair
+                {/* Fond du plateau */}
+                <Rect
+                    x={PADDING_LEFT - 10}
+                    y={PADDING_TOP - 10}
+                    width={(COLS - 1) * CELL_SIZE + 20}
+                    height={(ROWS - 1) * CELL_SIZE + 20}
+                    fill="#0E1320"
                     rx="5"
-                    onPress={() => setSelectedCell(null)} // Click background to cancel selection
+                    onPress={() => setSelectedCell(null)}
                 />
 
                 {/* Lignes verticales et Lettres (A-R) */}
                 {Array.from({ length: COLS }).map((_, i) => {
                     const x = PADDING_LEFT + i * CELL_SIZE;
-                    // Ajouter la dernière colonne (COLS - 1) aux colonnes rouges
-                    const isRedCol = [0, 7, 14, COLS - 1].includes(i);
+                    const isAccentCol = [0, 7, 14, COLS - 1].includes(i);
                     return (
                         <React.Fragment key={`v-${i}`}>
                             <SvgText
                                 x={x}
-                                y={PADDING_TOP - getResponsiveSize(2)}
+                                y={PADDING_TOP - getResponsiveSize(3)}
                                 fontSize={getResponsiveSize(10)}
                                 fontWeight="bold"
-                                fill={isRedCol ? "red" : "#000000ff"}
+                                fill={isAccentCol ? "#F4B41A" : "#8A8F9C"}
                                 textAnchor="middle"
                             >
                                 {LETTERS[i]}
                             </SvgText>
                             <SvgText
                                 x={x}
-                                y={PADDING_TOP + (ROWS - 1) * CELL_SIZE + getResponsiveSize(9)}
+                                y={PADDING_TOP + (ROWS - 1) * CELL_SIZE + getResponsiveSize(10)}
                                 fontSize={getResponsiveSize(10)}
                                 fontWeight="bold"
-                                fill={isRedCol ? "red" : "#000000ff"}
+                                fill={isAccentCol ? "#F4B41A" : "#8A8F9C"}
                                 textAnchor="middle"
                             >
                                 {LETTERS[i]}
@@ -4368,35 +5093,36 @@ const GameScreen = ({ navigation, route }) => {
                                 y1={PADDING_TOP}
                                 x2={x}
                                 y2={PADDING_TOP + (ROWS - 1) * CELL_SIZE}
-                                stroke={isRedCol ? "red" : "#8B4513"}
-                                strokeWidth={isRedCol ? "1.4" : "1"}
+                                stroke={isAccentCol ? "#F4B41A" : "#e8e8e8db"}
+                                strokeWidth={isAccentCol ? "1.2" : "0.8"}
+                                opacity={isAccentCol ? 1 : 0.7}
                             />
                         </React.Fragment>
                     );
                 })}
 
-                {/* Lignes horizontales et Numéros (1-28) */}
+                {/* Lignes horizontales et Numéros (1-19) */}
                 {Array.from({ length: ROWS }).map((_, i) => {
                     const y = PADDING_TOP + i * CELL_SIZE;
-                    const isRedRow = [0, 6, 12, 18].includes(i);
+                    const isAccentRow = [0, 6, 12, 18].includes(i);
                     return (
                         <React.Fragment key={`h-${i}`}>
                             <SvgText
-                                x={PADDING_LEFT - getResponsiveSize(3)}
+                                x={PADDING_LEFT - getResponsiveSize(14)}
                                 y={y + getResponsiveSize(3)}
                                 fontSize={getResponsiveSize(10)}
                                 fontWeight="bold"
-                                fill={isRedRow ? "red" : "#000000ff"}
+                                fill={isAccentRow ? "#F4B41A" : "#e8e8e8db"}
                                 textAnchor="start"
                             >
                                 {i + 1}
                             </SvgText>
                             <SvgText
-                                x={PADDING_LEFT + (COLS - 1) * CELL_SIZE + getResponsiveSize(3)}
+                                x={PADDING_LEFT + (COLS - 1) * CELL_SIZE + getResponsiveSize(14)}
                                 y={y + getResponsiveSize(3)}
                                 fontSize={getResponsiveSize(10)}
                                 fontWeight="bold"
-                                fill={isRedRow ? "red" : "#000000ff"}
+                                fill={isAccentRow ? "#F4B41A" : "#e8e8e8db"}
                                 textAnchor="end"
                             >
                                 {i + 1}
@@ -4406,8 +5132,9 @@ const GameScreen = ({ navigation, route }) => {
                                 y1={y}
                                 x2={PADDING_LEFT + (COLS - 1) * CELL_SIZE}
                                 y2={y}
-                                stroke={isRedRow ? "red" : "#8B4513"}
-                                strokeWidth={isRedRow ? "1.4" : "1"}
+                                stroke={isAccentRow ? "#F4B41A" : "#e8e8e8db"}
+                                strokeWidth={isAccentRow ? "1.2" : "0.8"}
+                                opacity={isAccentRow ? 1 : 0.7}
                             />
                         </React.Fragment>
                     );
@@ -4440,8 +5167,8 @@ const GameScreen = ({ navigation, route }) => {
                     return (
                         <Line
                             x1={x1} y1={y1} x2={x2} y2={y2}
-                            stroke="#000000"
-                            strokeWidth="10"
+                            stroke="#F4B41A"
+                            strokeWidth="8"
                             strokeLinecap="round"
                         />
                     );
@@ -4465,6 +5192,20 @@ const GameScreen = ({ navigation, route }) => {
                       />
                   );
                 })}
+
+                {/* Marqueur dernier coup */}
+                {board.length > 0 && !winningLine && (() => {
+                    const last = board[board.length - 1];
+                    return (
+                        <Circle
+                            cx={PADDING_LEFT + last.col * CELL_SIZE}
+                            cy={PADDING_TOP + last.row * CELL_SIZE}
+                            r={CELL_SIZE * 0.18}
+                            fill="#E85D4A"
+                            opacity={0.85}
+                        />
+                    );
+                })()}
 
                 {/* Guides de visée (Crosshair) lors de la pré-sélection */}
                 {selectedCell && (
@@ -4567,6 +5308,9 @@ const GameScreen = ({ navigation, route }) => {
         </PanGestureHandler>
       </View>
 
+      {/* ── HUD joueur 1 (bas) ── */}
+      {renderBottomSection()}
+
       {/* Message de fin */}
       {gameOver && mode === 'ai' && (
         <View style={styles.gameOverContainer}>
@@ -4660,31 +5404,14 @@ const GameScreen = ({ navigation, route }) => {
                 </TouchableOpacity>
             )}
 
-            {/* Menu FAB Logic Moved to renderFloatingMenu at the end */}
-            {/* Chat FAB (Texte) - Standard Online Only */}
-            {(mode === 'online' || mode === 'online_custom') && (
-            <TouchableOpacity 
-                style={styles.chatFab}
-                onPress={() => setActiveModal('chat')}
-            >
-                <Ionicons name="chatbox-ellipses" size={getResponsiveSize(30)} color="#fff" />
-            </TouchableOpacity>
-            )}
-
-            {/* Emoji FAB (Réactions) - Standard Online Only */}
-            {(mode === 'online' || mode === 'online_custom') && (
-            <TouchableOpacity 
-                style={styles.emojiFab}
-                onPress={() => setActiveModal('emoji')}
-            >
-                <Ionicons name="happy" size={getResponsiveSize(30)} color="#fff" />
-            </TouchableOpacity>
-            )}
-
             {/* Live Chat Overlay - Live & Spectator Only */}
             {(mode === 'live' || mode === 'spectator') && (
                 <LiveChatOverlay 
                     messages={chatMessages}
+                    showMessages={showLobbyMessages}
+                    messagesLeftOffset={mode === 'live' ? getResponsiveSize(20) : getResponsiveSize(20)}
+                    inputLeftOffset={getResponsiveSize(100)}
+                    bottomOffset={mode === 'live' ? (isTablet ? getResponsiveSize(24) : getResponsiveSize(6)) : undefined}
                     onSendMessage={(text) => {
                         const msg = { 
                             id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
@@ -4715,7 +5442,7 @@ const GameScreen = ({ navigation, route }) => {
 
             {/* Voice Chat - Not for Custom Online Games or Standard Online Games */}
             {mode !== 'online_custom' && mode !== 'online' && (
-                <View style={styles.voiceContainer}>
+                <View style={[styles.voiceContainer, mode === 'live' ? { top: undefined, bottom: isTablet ? getResponsiveSize(24) : getResponsiveSize(10) } : null]}>
                      <VoiceChat
                         gameId={params.gameId}
                         userId={user?._id || user?.id}
@@ -4725,21 +5452,35 @@ const GameScreen = ({ navigation, route }) => {
                 </View>
             )}
 
-            {/* Modal Commun */}
+            {/* Modal Commun — messages & réactions */}
             <Modal
                 visible={activeModal !== null}
                 animationType="slide"
                 transparent={true}
                 onRequestClose={() => setActiveModal(null)}
             >
-                <View style={[styles.chatModalOverlay, { paddingBottom: keyboardHeight > 0 ? keyboardHeight : 100 }]}>
-                    <View style={styles.chatModalContent}>
+                <Pressable
+                    style={[styles.chatModalOverlay, { paddingBottom: keyboardHeight > 0 ? keyboardHeight : 0 }]}
+                    onPress={() => setActiveModal(null)}
+                >
+                    <Pressable style={styles.chatModalContent} onPress={() => {}}>
+                        {/* En-tête */}
                         <View style={styles.chatModalHeader}>
-                            <Text style={styles.chatModalTitle}>
-                                {activeModal === 'chat' ? 'Discussion' : 'Réactions'}
-                            </Text>
-                            <TouchableOpacity onPress={() => setActiveModal(null)}>
-                                <Ionicons name="close-circle" size={getResponsiveSize(30)} color="#f1c40f" />
+                            <View style={styles.chatModalHeaderLeft}>
+                                <Ionicons
+                                    name={activeModal === 'chat' ? 'chatbox-ellipses' : 'happy'}
+                                    size={getResponsiveSize(16)}
+                                    color={T.gold}
+                                />
+                                <Text style={styles.chatModalTitle}>
+                                    {activeModal === 'chat' ? 'Discussion' : 'Réactions'}
+                                </Text>
+                            </View>
+                            <TouchableOpacity
+                                style={styles.chatModalClose}
+                                onPress={() => { playButtonSound(); setActiveModal(null); }}
+                            >
+                                <Ionicons name="close" size={getResponsiveSize(18)} color={T.textMuted} />
                             </TouchableOpacity>
                         </View>
                         <ChatEnLigne
@@ -4750,27 +5491,11 @@ const GameScreen = ({ navigation, route }) => {
                             messages={chatMessages}
                             displayMode={activeModal === 'chat' ? 'text' : 'emoji'}
                         />
-                    </View>
-                </View>
+                    </Pressable>
+                </Pressable>
             </Modal>
         </>
       )}
-
-      {/* FOOTER USER PROFILE (MODE LOCAL) */}
-      {mode === 'local' && (
-        <View style={{ 
-            position: 'absolute', 
-            bottom: getResponsiveSize(-5), 
-            width: '100%', 
-            padding: getResponsiveSize(20), 
-            flexDirection: 'row',
-            justifyContent: 'flex-start'
-        }}>
-            {/* Joueur 1 (Bas Gauche) */}
-            {renderLocalPlayer(player1)}
-        </View>
-      )}
-      {/* Spectator overlay removed to avoid duplicate profiles; spectator uses standard header */}
 
       {renderInviteModal()}
       {renderResultModal()}
@@ -4821,12 +5546,24 @@ const GameScreen = ({ navigation, route }) => {
               end={fe.end} 
           />
       ))}
+      {flyingTexts.map(ft => (
+          <FlyingEmoji
+              key={ft.id}
+              text={ft.text}
+              start={ft.start}
+              end={ft.end}
+          />
+      ))}
       </ImageBackground>
     </ResponsiveWrapper>
   );
 };
 
 const styles = StyleSheet.create({
+  bgOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(5,9,15,0.55)',
+  },
   spectatorOverlay: {
       position: 'absolute',
       top: getResponsiveSize(50),
@@ -4893,8 +5630,147 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  // ── Nouveau layout ─────────────────────────────────────────────────────────
+  topHUDSection: {
+    paddingTop: isTablet ? getResponsiveSize(48) : getResponsiveSize(44),
+    paddingHorizontal: getResponsiveSize(10),
+    paddingBottom: getResponsiveSize(4),
+    zIndex: 10,
+  },
+  bottomSection: {
+    paddingHorizontal: getResponsiveSize(10),
+    paddingBottom: isTablet ? getResponsiveSize(24) : getResponsiveSize(16),
+    paddingTop: getResponsiveSize(4),
+    zIndex: 10,
+  },
+  hudTouchable: {
+    width: '100%',
+  },
+  actionBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: getResponsiveSize(8),
+    paddingTop: getResponsiveSize(6),
+    paddingHorizontal: getResponsiveSize(4),
+  },
+  actionGroupLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: getResponsiveSize(8),
+  },
+  actionGroupRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: getResponsiveSize(8),
+  },
+  actionBtn: {
+    width: getResponsiveSize(38),
+    height: getResponsiveSize(38),
+    borderRadius: getResponsiveSize(T.radiusMd),
+    backgroundColor: T.bg3,
+    borderWidth: 1,
+    borderColor: T.borderSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionBtnActive: {
+    borderColor: T.gold,
+    backgroundColor: 'rgba(244,180,26,0.15)',
+    shadowColor: T.gold,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  tournamentBadge: {
+    alignSelf: 'center',
+    backgroundColor: 'rgba(244,180,26,0.12)',
+    borderWidth: 1,
+    borderColor: T.border,
+    borderRadius: getResponsiveSize(T.radiusPill),
+    paddingHorizontal: getResponsiveSize(12),
+    paddingVertical: getResponsiveSize(3),
+    marginBottom: getResponsiveSize(6),
+  },
+  tournamentBadgeText: {
+    color: T.gold,
+    fontSize: getResponsiveSize(11),
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  prizeBadge: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: getResponsiveSize(6),
+    marginTop: getResponsiveSize(6),
+    backgroundColor: 'rgba(244,180,26,0.10)',
+    borderWidth: 1,
+    borderColor: T.border,
+    borderRadius: getResponsiveSize(T.radiusPill),
+    paddingHorizontal: getResponsiveSize(14),
+    paddingVertical: getResponsiveSize(4),
+  },
+  prizeBadgeText: {
+    color: T.gold,
+    fontSize: getResponsiveSize(14),
+    fontWeight: '900',
+    letterSpacing: 0.3,
+  },
+  prizeBadgeSub: {
+    color: T.textMuted,
+    fontSize: getResponsiveSize(10),
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  liveMetaRow: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: getResponsiveSize(10),
+    marginTop: getResponsiveSize(6),
+  },
+  liveDurationBadge: {
+    alignSelf: 'center',
+    marginTop: getResponsiveSize(6),
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: T.border,
+    borderRadius: getResponsiveSize(T.radiusPill),
+    paddingHorizontal: getResponsiveSize(12),
+    paddingVertical: getResponsiveSize(3),
+  },
+  liveDurationText: {
+    color: T.textMuted,
+    fontSize: getResponsiveSize(11),
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  spectatorBadgeWrapper: {
+    position: 'absolute',
+    top: getResponsiveSize(8),
+    alignSelf: 'center',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 20,
+  },
+  spectatorBadgeText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: getResponsiveSize(12),
+    paddingVertical: getResponsiveSize(4),
+    borderRadius: getResponsiveSize(T.radiusPill),
+    overflow: 'hidden',
+  },
+  // ── Ancien layout (gardé pour compatibilité) ───────────────────────────────
   header: {
-    paddingTop: isTablet ? getResponsiveSize(80) : getResponsiveSize(40), // Augmenté pour iPad
+    paddingTop: isTablet ? getResponsiveSize(80) : getResponsiveSize(40),
     marginBottom: getResponsiveSize(10),
     zIndex: 10,
     ...(isTablet && { flexShrink: 0 }),
@@ -4903,9 +5779,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: getResponsiveSize(10),
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(14,19,32,0.92)',
     paddingBottom: getResponsiveSize(10),
-    ...(isTablet && { minHeight: 160 }), // Modification: Suppression de maxHeight et overflow hidden pour afficher tout le profil
+    ...(isTablet && { minHeight: 160 }),
   },
   headerIA: {
     flexDirection: 'row',
@@ -4937,18 +5813,19 @@ const styles = StyleSheet.create({
     width: isTablet ? SCREEN_WIDTH * 0.20 : SCREEN_WIDTH * 0.3,
     height: getResponsiveSize(125),
     borderWidth: 1,
-    borderColor: '#f1c40f6c',
-    backgroundColor: 'rgba(4, 28, 85, 0.95)',
+    borderColor: '#1F2840',
+    backgroundColor: '#0E1320',
+    overflow: 'hidden',
   },
   activePlayer: {
     height: getResponsiveSize(125),
-    backgroundColor: 'rgba(4, 28, 85, 0.95)',
+    backgroundColor: '#0E1320',
     borderWidth: 1,
-    borderColor: '#f1c40f',
-    shadowColor: '#f1c40f',
+    borderColor: '#F4B41A',
+    shadowColor: '#F4B41A',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 6,
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
     elevation: 5,
   },
   avatarContainer: {
@@ -4970,8 +5847,8 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveSize(16),
   },
   playerName: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: '#ECE6D6',
+    fontWeight: '700',
     bottom: getResponsiveSize(45),
     right: getResponsiveSize(20),
     fontSize: getResponsiveSize(12),
@@ -5019,14 +5896,18 @@ const styles = StyleSheet.create({
     borderRadius: getResponsiveSize(5),
   },
   vsText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: '#F4B41A',
+    fontWeight: '900',
     fontSize: getResponsiveSize(18),
+    letterSpacing: 1,
   },
   boardContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  boardContainerWithResult: {
+    paddingBottom: getResponsiveSize(isTablet ? 260 : 220) + getResponsiveSize(12),
   },
   footer: {
     padding: getResponsiveSize(20),
@@ -5331,15 +6212,16 @@ const styles = StyleSheet.create({
     marginBottom: getResponsiveSize(4),
   },
   progressBar: {
-    width: '80%',
-    height: getResponsiveSize(6),
-    backgroundColor: '#e5e7eb',
-    borderRadius: getResponsiveSize(4),
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: '#1F2840',
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    borderRadius: getResponsiveSize(4),
   },
   avertissementIA: {
       backgroundColor: '#fef3c7',
@@ -5436,38 +6318,77 @@ const styles = StyleSheet.create({
     shadowRadius: getResponsiveSize(3),
     zIndex: 100
   },
+  menuFabSmall: {
+    position: 'absolute',
+    bottom: getResponsiveSize(20),
+    left: getResponsiveSize(20),
+    width: getResponsiveSize(34),
+    height: getResponsiveSize(34),
+    borderRadius: getResponsiveSize(17),
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: getResponsiveSize(3),
+    zIndex: 100
+  },
   liveMenuContainer: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 35,
     left: 0,
     zIndex: 99,
   },
   chatModalOverlay: {
-    ...modalTheme.overlay,
+    flex: 1,
+    backgroundColor: T.overlay,
     justifyContent: 'flex-end',
-    paddingBottom: getResponsiveSize(100)
   },
   chatModalContent: {
-    ...modalTheme.card,
-    width: isTablet ? '50%' : '80%',
-    height: getResponsiveSize(300),
-    overflow: 'hidden'
+    backgroundColor: T.bg2,
+    borderTopLeftRadius: getResponsiveSize(T.radiusXl),
+    borderTopRightRadius: getResponsiveSize(T.radiusXl),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
+    borderBottomWidth: 0,
+    width: isTablet ? '60%' : '100%',
+    alignSelf: 'center',
+    height: getResponsiveSize(340),
+    overflow: 'hidden',
+    ...T.shadowCard,
   },
   chatModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingLeft: getResponsiveSize(15),
-    paddingRight: getResponsiveSize(15),
-    borderBottomWidth: getResponsiveSize(1),
-    borderBottomColor: '#f1c40f',
-    backgroundColor: '#041c55',
+    paddingHorizontal: getResponsiveSize(16),
+    paddingVertical: getResponsiveSize(12),
+    borderBottomWidth: 1,
+    borderBottomColor: T.border,
+    backgroundColor: T.bg3,
+  },
+  chatModalHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: getResponsiveSize(8),
   },
   chatModalTitle: {
-    ...modalTheme.title,
-    fontSize: getResponsiveSize(18),
-    marginBottom: 0,
-    textAlign: 'left'
+    fontSize: getResponsiveSize(13),
+    fontWeight: '800',
+    color: T.text,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  chatModalClose: {
+    width: getResponsiveSize(30),
+    height: getResponsiveSize(30),
+    borderRadius: getResponsiveSize(T.radiusSm),
+    backgroundColor: T.bg2,
+    borderWidth: 1,
+    borderColor: T.borderSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   bubbleContainer: {
     position: 'absolute',
@@ -5500,183 +6421,296 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveSize(28),
   },
   // Result Modal Styles
-  modalOverlay: {
+  resultOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     top: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingBottom: getResponsiveSize(20),
+    padding: getResponsiveSize(16),
     zIndex: 1000,
   },
   resultCard: {
-    backgroundColor: '#041c55',
-    borderRadius: getResponsiveSize(20),
-    padding: getResponsiveSize(24),
+    backgroundColor: T.bg2,
+    borderRadius: getResponsiveSize(T.radiusXl),
+    padding: getResponsiveSize(20),
     alignItems: 'center',
-    width: isTablet ? '60%' : '95%',
-    maxWidth: getResponsiveSize(500),
-    elevation: 5,
-    shadowColor: '#f1c40f',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: getResponsiveSize(3),
+    width: '100%',
+    maxWidth: getResponsiveSize(400),
+    borderWidth: 1.5,
+    borderColor: T.gold,
+    ...T.shadowCard,
+  },
+  resultScroll: {
+    width: '100%',
+    alignSelf: 'stretch',
+    marginTop: getResponsiveSize(10),
+  },
+  resultScrollContent: {
+    paddingBottom: getResponsiveSize(18),
+  },
+  resultTopActionsRow: {
+    flexDirection: 'row',
+    gap: getResponsiveSize(8),
+    width: '100%',
+    marginTop: getResponsiveSize(8),
+    marginBottom: getResponsiveSize(10),
+    alignItems: 'center',
+  },
+  miniBoardWrapper: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: getResponsiveSize(12),
+  },
+  miniBoardLabel: {
+    fontSize: getResponsiveSize(12),
+    fontWeight: '800',
+    color: T.textDim,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: getResponsiveSize(8),
+  },
+  resultMiniBoard: {
+    borderRadius: getResponsiveSize(10),
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#f1c40f',
+    borderColor: T.borderSoft,
+  },
+  resultPanelWrapper: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: getResponsiveSize(12),
+    alignItems: 'center',
+    zIndex: 1200,
+  },
+  resultPanelCard: {
+    backgroundColor: T.bg2,
+    borderRadius: getResponsiveSize(T.radiusXl),
+    padding: getResponsiveSize(16),
+    width: '100%',
+    maxWidth: getResponsiveSize(440),
+    height: getResponsiveSize(isTablet ? 260 : 220),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
+    ...T.shadowCard,
+  },
+  resultPanelHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: getResponsiveSize(12),
+    marginBottom: getResponsiveSize(10),
+  },
+  resultPanelHeaderLeft: {
+    flex: 1,
+    minWidth: 0,
+  },
+  resultPanelMiniBoard: {
+    borderRadius: getResponsiveSize(10),
     overflow: 'hidden',
   },
+  resultPanelBody: {
+    flex: 1,
+  },
+  resultPanelBodyContent: {
+    paddingBottom: getResponsiveSize(10),
+  },
   emojiResult: {
-    fontSize: getResponsiveSize(60),
-    marginBottom: getResponsiveSize(10),
+    fontSize: getResponsiveSize(40),
+    marginBottom: getResponsiveSize(4),
   },
   titreResult: {
-    fontSize: getResponsiveSize(28),
-    fontWeight: 'bold',
-    color: '#f1c40f',
-    marginBottom: getResponsiveSize(10),
+    fontSize: getResponsiveSize(20),
+    fontWeight: '900',
+    color: T.text,
+    marginBottom: getResponsiveSize(2),
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  scoreTournament: {
+    color: T.gold,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: getResponsiveSize(6),
   },
   adversaireResult: {
-    fontSize: getResponsiveSize(16),
-    color: '#ffffffff',
-    marginBottom: getResponsiveSize(20),
+    fontSize: getResponsiveSize(14),
+    color: T.textMuted,
+    marginBottom: getResponsiveSize(6),
   },
   messageResult: {
-    fontSize: getResponsiveSize(18),
-    color: '#4b5563',
+    fontSize: getResponsiveSize(14),
+    color: T.textMuted,
     textAlign: 'center',
     marginBottom: getResponsiveSize(20),
   },
   gainsContainer: {
-    backgroundColor: '#f1c40fff',
-    borderRadius: getResponsiveSize(12),
-    padding: getResponsiveSize(16),
+    backgroundColor: 'rgba(46,194,126,0.1)',
+    borderRadius: getResponsiveSize(T.radiusMd),
+    padding: getResponsiveSize(14),
     width: '100%',
     alignItems: 'center',
-    marginBottom: getResponsiveSize(20),
+    marginBottom: getResponsiveSize(14),
+    borderWidth: 1,
+    borderColor: 'rgba(46,194,126,0.3)',
   },
   gainsLabel: {
-    fontSize: getResponsiveSize(14),
-    color: '#ffffffff',
-    marginBottom: getResponsiveSize(4),
+    fontSize: getResponsiveSize(13),
+    color: T.green,
+    marginBottom: getResponsiveSize(6),
+    fontWeight: '600',
   },
   gainsMontant: {
-    fontSize: getResponsiveSize(32),
-    fontWeight: 'bold',
-    color: '#ffffffff',
-  },
-  perteContainer: {
-    backgroundColor: '#f1c40fff',
-    borderRadius: getResponsiveSize(12),
-    padding: getResponsiveSize(16),
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: getResponsiveSize(20),
-  },
-  perteLabel: {
-    fontSize: getResponsiveSize(14),
-    color: '#ffffffff',
+    fontSize: getResponsiveSize(30),
+    fontWeight: '900',
+    color: T.green,
     marginBottom: getResponsiveSize(4),
   },
+  perteContainer: {
+    backgroundColor: 'rgba(230,57,70,0.1)',
+    borderRadius: getResponsiveSize(T.radiusMd),
+    padding: getResponsiveSize(14),
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: getResponsiveSize(14),
+    borderWidth: 1,
+    borderColor: 'rgba(230,57,70,0.3)',
+  },
+  perteLabel: {
+    fontSize: getResponsiveSize(13),
+    color: T.red,
+    marginBottom: getResponsiveSize(6),
+    fontWeight: '600',
+  },
   perteMontant: {
-    fontSize: getResponsiveSize(32),
-    fontWeight: 'bold',
-    color: '#ffffffff',
+    fontSize: getResponsiveSize(30),
+    fontWeight: '900',
+    color: T.red,
+  },
+  drawContainer: {
+    backgroundColor: T.bg3,
+    borderRadius: getResponsiveSize(T.radiusMd),
+    padding: getResponsiveSize(14),
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: getResponsiveSize(14),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
+  },
+  drawLabel: {
+    fontSize: getResponsiveSize(13),
+    color: T.textDim,
+    marginBottom: getResponsiveSize(6),
+    fontWeight: '600',
+  },
+  drawMontant: {
+    fontSize: getResponsiveSize(30),
+    fontWeight: '900',
+    color: T.gold,
   },
   raisonContainer: {
-    backgroundColor: '#ecfccb',
+    backgroundColor: 'rgba(46,194,126,0.1)',
     padding: getResponsiveSize(10),
-    borderRadius: getResponsiveSize(8),
+    borderRadius: getResponsiveSize(T.radiusSm),
     marginBottom: getResponsiveSize(10),
     width: '100%',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(46,194,126,0.3)',
   },
   raisonDefaite: {
-      backgroundColor: '#fee2e2',
+      backgroundColor: 'rgba(230,57,70,0.1)',
+      borderColor: 'rgba(230,57,70,0.3)',
   },
   raisonTexte: {
-      fontSize: getResponsiveSize(14),
-      fontWeight: '600',
-      color: '#3f6212',
-      textAlign: 'center'
+      fontSize: getResponsiveSize(12),
+      fontWeight: '700',
+      color: T.green,
+      textAlign: 'center',
   },
   raisonTexteDefaite: {
-      color: '#991b1b',
+      color: T.red,
   },
   statsContainer: {
-    backgroundColor: '#f3f4f6',
-    padding: getResponsiveSize(16),
-    borderRadius: getResponsiveSize(16),
+    backgroundColor: T.bg3,
+    padding: getResponsiveSize(14),
+    borderRadius: getResponsiveSize(T.radiusMd),
     width: '100%',
     alignItems: 'center',
-    marginBottom: getResponsiveSize(20)
+    marginBottom: getResponsiveSize(14),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   statsLabel: {
     fontSize: getResponsiveSize(12),
-    color: '#6b7280',
+    color: T.textMuted,
     textTransform: 'uppercase',
-    fontWeight: '600',
-    marginBottom: getResponsiveSize(4)
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: getResponsiveSize(8),
   },
   statsTaux: {
     fontSize: getResponsiveSize(28),
-    fontWeight: 'bold',
-    color: '#3b82f6',
-    marginBottom: getResponsiveSize(2)
+    fontWeight: '900',
+    color: T.blue,
+    marginBottom: getResponsiveSize(4),
   },
   statsParties: {
     fontSize: getResponsiveSize(12),
-    color: '#9ca3af'
+    color: T.textMuted,
   },
   boutonsResult: {
     flexDirection: 'row',
-    gap: getResponsiveSize(12),
+    gap: getResponsiveSize(8),
     width: '100%',
   },
   boutonRejouer: {
     flex: 1,
-    backgroundColor: '#3b82f6',
-    paddingVertical: getResponsiveSize(12),
-    borderRadius: getResponsiveSize(12),
+    backgroundColor: T.blue,
+    paddingVertical: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(T.radiusMd),
     alignItems: 'center',
     justifyContent: 'center',
+    ...T.shadowBtn,
   },
   boutonMenuResult: {
     flex: 1,
-    backgroundColor: '#6b7280',
-    paddingVertical: getResponsiveSize(12),
-    borderRadius: getResponsiveSize(12),
+    backgroundColor: T.bg3,
+    paddingVertical: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(T.radiusMd),
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   boutonRewardedResult: {
     width: '100%',
-    backgroundColor: '#f59e0b',
-    paddingVertical: getResponsiveSize(10),
-    borderRadius: getResponsiveSize(12),
+    backgroundColor: T.gold,
+    paddingVertical: getResponsiveSize(8),
+    borderRadius: getResponsiveSize(T.radiusMd),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: getResponsiveSize(10),
     borderWidth: 1,
-    borderColor: '#fbbf24',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.22,
-    shadowRadius: 6,
-    elevation: 6,
+    borderColor: T.goldDeep,
+    ...T.shadowBtn,
   },
   boutonTexteResult: {
-    color: '#fff',
-    fontSize: getResponsiveSize(16),
-    fontWeight: 'bold',
+    color: T.text,
+    fontSize: getResponsiveSize(13),
+    fontWeight: '800',
     textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.2,
   },
   boutonRewardedTexteResult: {
-    color: '#111827',
-    fontSize: getResponsiveSize(14),
-    fontWeight: 'bold',
+    color: '#1B1305',
+    fontSize: getResponsiveSize(12),
+    fontWeight: '800',
     textAlign: 'center',
   },
   overlay: { 

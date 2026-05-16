@@ -14,6 +14,7 @@ import Input from '../components/common/Input';
 import { API_URL } from '../config';
 import { getResponsiveSize, DESKTOP_BREAKPOINT } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
+import { T } from '../utils/theme';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -244,11 +245,12 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <View style={styles.background}>
-      <Image 
-        source={require('../../assets/images/Background2-4.png')} 
+      <Image
+        source={require('../../assets/images/Background2-4.png')}
         style={StyleSheet.absoluteFill}
         contentFit="cover"
       />
+      <View style={styles.bgOverlay} pointerEvents="none" />
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <KeyboardAvoidingView
           style={styles.container}
@@ -332,7 +334,9 @@ const LoginScreen = ({ navigation }) => {
             <Button 
               title="S'inscrire" 
               onPress={() => navigation.navigate('Register')} 
-              style={{ backgroundColor: 'transparent', borderWidth: getResponsiveSize(1), borderColor: '#fff' }}
+              tone="ghost"
+              style={{ borderWidth: getResponsiveSize(1.5), borderColor: T.gold }}
+              textStyle={{ color: T.gold }}
             />
             {!API_URL.includes('railway') && (
               <Text style={{ color: '#00ff00', textAlign: 'center', marginTop: getResponsiveSize(20), fontWeight: 'bold' }}>
@@ -348,15 +352,20 @@ const LoginScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  bgOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(5,9,15,0.55)',
+  },
   background: {
     flex: 1,
     width: '100%',
     height: '100%',
+    backgroundColor: T.bg0,
   },
   container: {
     flex: 1,
     padding: getResponsiveSize(20),
-    backgroundColor: 'rgba(0,0,0,0.5)', // Overlay for better readability
+    backgroundColor: T.overlayLight,
   },
   content: {
     flexGrow: 1,
@@ -373,37 +382,40 @@ const styles = StyleSheet.create({
   formContainerDesktop: {
     maxWidth: 440,
     alignSelf: 'center',
-    backgroundColor: 'rgba(4, 28, 85, 0.55)',
-    borderRadius: 16,
+    backgroundColor: T.bg2,
+    borderRadius: T.radiusLg,
     padding: 32,
     borderWidth: 1,
-    borderColor: 'rgba(241, 196, 15, 0.3)',
+    borderColor: T.border,
+    ...T.shadowCard,
   },
   title: {
-    fontSize: getResponsiveSize(32),
-    color: '#fff',
-    fontWeight: 'bold',
-    marginBottom: getResponsiveSize(30),
+    fontSize: getResponsiveSize(34),
+    color: T.text,
+    fontWeight: '900',
+    marginBottom: getResponsiveSize(28),
     textAlign: 'center',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   titleTablet: {
-    fontSize: getResponsiveSize(28),
+    fontSize: getResponsiveSize(30),
   },
   forgotPasswordContainer: {
     alignSelf: 'flex-end',
-    marginBottom: getResponsiveSize(15),
-    marginTop: getResponsiveSize(-10),
+    marginBottom: getResponsiveSize(14),
+    marginTop: getResponsiveSize(-4),
   },
   forgotPasswordText: {
-    color: '#fff',
-    textDecorationLine: 'underline',
-    fontSize: getResponsiveSize(14),
+    color: T.gold,
+    fontSize: getResponsiveSize(13),
+    fontWeight: '600',
   },
   appleButton: {
     width: '100%',
-    height: getResponsiveSize(50), // Matches typical button height
-    marginTop: getResponsiveSize(15),
-    marginBottom: getResponsiveSize(5), // Slight spacing before Google button
+    height: getResponsiveSize(50),
+    marginTop: getResponsiveSize(10),
+    marginBottom: getResponsiveSize(4),
   },
   appleButtonTablet: {
     height: getResponsiveSize(52),
@@ -412,19 +424,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
-    padding: getResponsiveSize(15),
-    borderRadius: getResponsiveSize(8),
-    marginTop: getResponsiveSize(15),
-    marginBottom: getResponsiveSize(15),
+    backgroundColor: T.bg2,
+    padding: getResponsiveSize(14),
+    borderRadius: T.radiusMd,
+    marginTop: getResponsiveSize(10),
+    marginBottom: getResponsiveSize(10),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   googleButtonDisabled: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   googleButtonText: {
-    color: '#000',
-    fontSize: getResponsiveSize(16),
-    fontWeight: 'bold',
+    color: T.text,
+    fontSize: getResponsiveSize(15),
+    fontWeight: '700',
     marginLeft: getResponsiveSize(10),
   },
 });

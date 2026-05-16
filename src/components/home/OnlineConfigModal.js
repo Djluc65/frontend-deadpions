@@ -39,8 +39,8 @@ const OnlineConfigModal = memo(({
             <View style={{ alignItems: 'center', width: '100%' }}>
                 <Text style={styles.friendsModalTitle}>Recherche d'adversaire...</Text>
                 <ActivityIndicator size="large" color="#f1c40f" style={{ marginVertical: getResponsiveSize(20) }} />
-                <Text style={{ color: '#f1c40f', fontSize: getResponsiveSize(32), fontWeight: 'bold', marginBottom: getResponsiveSize(10) }}>{onlineSearchTimer}s</Text>
-                <Text style={{ color: '#fff', fontSize: getResponsiveSize(14), marginBottom: getResponsiveSize(20) }}>Mise : {onlineBet.toLocaleString()} 💰</Text>
+                <Text style={{ color: '#f1c40f', fontSize: getResponsiveSize(26), fontWeight: 'bold', marginBottom: getResponsiveSize(8) }}>{onlineSearchTimer}s</Text>
+                <Text style={{ color: '#fff', fontSize: getResponsiveSize(13), marginBottom: getResponsiveSize(14) }}>Mise : {onlineBet.toLocaleString()} 💰</Text>
                 
                 <TouchableOpacity 
                     style={styles.cancelSearchButton} 
@@ -104,9 +104,9 @@ const OnlineConfigModal = memo(({
                                         if (canGoPrev) setOnlineBet(effectiveBets[currentIndex - 1]);
                                     }}
                                     disabled={!canGoPrev}
-                                    style={{ padding: getResponsiveSize(10), opacity: !canGoPrev ? 0.3 : 1 }}
+                                    style={{ padding: getResponsiveSize(8), opacity: !canGoPrev ? 0.3 : 1 }}
                                 >
-                                    <Ionicons name="remove-circle-outline" size={getResponsiveSize(40)} color="#fff" />
+                                    <Ionicons name="remove-circle-outline" size={getResponsiveSize(32)} color="#fff" />
                                 </TouchableOpacity>
                                 
                                 <View style={styles.betDisplay}>
@@ -142,9 +142,9 @@ const OnlineConfigModal = memo(({
                                         if (canGoNext) setOnlineBet(effectiveBets[currentIndex + 1]);
                                     }}
                                     disabled={!canGoNext}
-                                    style={{ padding: getResponsiveSize(10), opacity: !canGoNext ? 0.3 : 1 }}
+                                    style={{ padding: getResponsiveSize(8), opacity: !canGoNext ? 0.3 : 1 }}
                                 >
-                                    <Ionicons name="add-circle-outline" size={getResponsiveSize(40)} color="#fff" />
+                                    <Ionicons name="add-circle-outline" size={getResponsiveSize(32)} color="#fff" />
                                 </TouchableOpacity>
                             </>
                         );
@@ -187,27 +187,27 @@ const styles = StyleSheet.create({
   friendsModalContent: modalTheme.card,
   friendsModalTitle: modalTheme.title,
   friendsLabel: {
-    fontSize: getResponsiveSize(16),
+    fontSize: getResponsiveSize(14),
     color: '#f1c40f',
     alignSelf: 'flex-start',
-    marginBottom: getResponsiveSize(10),
+    marginBottom: getResponsiveSize(8),
     fontWeight: 'bold',
   },
   optionsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: getResponsiveSize(10),
-    marginBottom: getResponsiveSize(20),
+    gap: getResponsiveSize(8),
+    marginBottom: getResponsiveSize(14),
     width: '100%',
   },
   friendsOptionButton: {
-    paddingVertical: getResponsiveSize(12),
-    paddingHorizontal: getResponsiveSize(15),
-    borderRadius: getResponsiveSize(15),
+    paddingVertical: getResponsiveSize(8),
+    paddingHorizontal: getResponsiveSize(12),
+    borderRadius: getResponsiveSize(12),
     borderWidth: getResponsiveSize(1),
     borderColor: 'rgba(241, 196, 15, 0.5)',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    marginBottom: getResponsiveSize(5),
+    marginBottom: getResponsiveSize(4),
   },
   friendsOptionButtonActive: {
     backgroundColor: '#f1c40f',
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
   },
   friendsOptionText: {
     color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: getResponsiveSize(16),
+    fontSize: getResponsiveSize(12),
     fontWeight: '500',
   },
   friendsOptionTextActive: {
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
     marginTop: getResponsiveSize(10),
-    gap: getResponsiveSize(15),
+    gap: getResponsiveSize(10),
   },
   modalButtonCancel: {
     flex: 1,
@@ -265,27 +265,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row', 
     alignItems: 'center', 
     justifyContent: 'center',
-    width: getResponsiveSize(140),
-    height: getResponsiveSize(50),
+    width: getResponsiveSize(124),
+    height: getResponsiveSize(44),
     overflow: 'hidden',
     backgroundColor: 'rgba(0,0,0,0.3)',
-    borderRadius: getResponsiveSize(25),
-    marginHorizontal: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(22),
+    marginHorizontal: getResponsiveSize(8),
     borderWidth: getResponsiveSize(1),
     borderColor: 'rgba(241, 196, 15, 0.3)'
   },
   prevBetText: {
     color: '#f1c40f', 
-    fontSize: getResponsiveSize(14), 
+    fontSize: getResponsiveSize(12), 
     opacity: 0.5, 
-    width: getResponsiveSize(70), 
+    width: getResponsiveSize(60), 
     textAlign: 'center'
   },
   currentBetText: {
     color: '#f1c40f', 
-    fontSize: getResponsiveSize(22), 
+    fontSize: getResponsiveSize(18), 
     fontWeight: 'bold', 
-    width: getResponsiveSize(120),
+    width: getResponsiveSize(100),
     textAlign: 'center',
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: {width: getResponsiveSize(-1), height: getResponsiveSize(1)},
@@ -293,9 +293,9 @@ const styles = StyleSheet.create({
   },
   nextBetText: {
     color: '#f1c40f', 
-    fontSize: getResponsiveSize(14), 
+    fontSize: getResponsiveSize(12), 
     opacity: 0.5, 
-    width: getResponsiveSize(70), 
+    width: getResponsiveSize(60), 
     textAlign: 'center' 
   }
 });

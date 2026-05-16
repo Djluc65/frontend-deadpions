@@ -1,43 +1,51 @@
 import React, { useState } from 'react';
-import { TextInput, View, StyleSheet } from 'react-native';
-import { AppTouchableOpacity as TouchableOpacity } from './AppTouchable';
-import { Ionicons } from '@expo/vector-icons';
+import { View, StyleSheet } from 'react-native';
+import AnimatedSearchBar from '../ui/AnimatedSearchBar';
 import { getResponsiveSize } from '../../utils/responsive';
+import { T } from '../../utils/theme';
 
-const Input = ({ value, onChangeText, placeholder, secureTextEntry, style, keyboardType, autoCapitalize, ...props }) => {
+const Input = ({
+  value,
+  onChangeText,
+  placeholder,
+  secureTextEntry,
+  style,
+  containerStyle,
+  keyboardType,
+  autoCapitalize,
+  iconName,
+  ...props
+}) => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  
-  // Si secureTextEntry est true, on utilise l'état local pour gérer la visibilité
-  // Si secureTextEntry est false (champ normal), isSecure est toujours false
+  const [isFocused, setIsFocused] = useState(false);
+
   const isSecure = secureTextEntry && !isPasswordVisible;
+  const resolvedIconName =
+    iconName ||
+    (secureTextEntry ? 'lock-closed-outline' : keyboardType === 'email-address' ? 'mail-outline' : 'person-outline');
 
   return (
-    <View style={styles.container}>
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={[styles.input, style, secureTextEntry && styles.passwordInput]}
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          placeholderTextColor="rgba(3, 3, 3, 0.6)"
-          secureTextEntry={isSecure}
-          keyboardType={keyboardType}
-          autoCapitalize={autoCapitalize}
-          {...props}
-        />
-        {secureTextEntry && (
-          <TouchableOpacity 
-            onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-            style={styles.eyeIcon}
-          >
-            <Ionicons 
-              name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} 
-              size={getResponsiveSize(24)} 
-              color="#666" 
-            />
-          </TouchableOpacity>
-        )}
-      </View>
+    <View style={[styles.container, containerStyle]}>
+      <AnimatedSearchBar
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
+        secureTextEntry={isSecure}
+        showLeftIcon={true}
+        leftIconName={resolvedIconName}
+        leftIconColor={T.textMuted}
+        showRightIcon={!!secureTextEntry}
+        rightIconName={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'}
+        rightIconColor={T.textMuted}
+        onRightIconPress={secureTextEntry ? () => setIsPasswordVisible(v => !v) : undefined}
+        innerStyle={[styles.inner, isFocused && styles.innerFocused]}
+        inputStyle={[styles.input, style]}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        {...props}
+      />
     </View>
   );
 };
@@ -45,30 +53,18 @@ const Input = ({ value, onChangeText, placeholder, secureTextEntry, style, keybo
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    marginVertical: getResponsiveSize(10),
+    marginVertical: getResponsiveSize(6),
   },
-  inputContainer: {
-    position: 'relative',
-    justifyContent: 'center',
+  inner: {
+    backgroundColor: T.bg2,
+  },
+  innerFocused: {
+    backgroundColor: T.bg3,
   },
   input: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    padding: getResponsiveSize(15),
-    borderRadius: getResponsiveSize(8),
-    fontSize: getResponsiveSize(16),
-    color: '#000',
-    width: '100%',
+    fontSize: getResponsiveSize(15),
+    color: T.text,
   },
-  passwordInput: {
-    paddingRight: getResponsiveSize(50), // Espace pour l'icône
-  },
-  eyeIcon: {
-    position: 'absolute',
-    right: getResponsiveSize(15),
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  }
 });
 
 export default Input;

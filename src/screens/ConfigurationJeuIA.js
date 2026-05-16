@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Switch, ImageBackground, SafeAreaView } from 'react-native';
+import { T } from '../utils/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
@@ -193,7 +194,7 @@ const ConfigurationJeuIA = ({ navigation }) => {
             <Text style={styles.niveauTitre}>{niveau.titre}</Text>
             <Text style={styles.niveauDesc}>{niveau.description}</Text>
             {niveau.id === 'difficile' && !user?.isPremium && !user?.isEarlyAccess && (
-                 <Text style={{color: '#f1c40f', fontSize: getResponsiveSize(12), marginTop: getResponsiveSize(4)}}>🔒 Premium Requis</Text>
+                 <Text style={{color: T.gold, fontSize: getResponsiveSize(12), marginTop: getResponsiveSize(4)}}>🔒 Premium Requis</Text>
             )}
             <Text style={styles.niveauTaux}>
               IA gagne à {niveau.tauxVictoire}
@@ -371,11 +372,12 @@ const ConfigurationJeuIA = ({ navigation }) => {
   );
   
   return (
-    <ImageBackground 
-      source={require('../../assets/images/Background2-4.png')} 
+    <ImageBackground
+      source={require('../../assets/images/Background2-4.png')}
       style={styles.container}
       resizeMode="cover"
     >
+        <View style={styles.bgOverlay} pointerEvents="none" />
         {/* HEADER */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -431,6 +433,10 @@ const ConfigurationJeuIA = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  bgOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(5,9,15,0.55)',
+  },
   container: {
     flex: 1,
   },
@@ -440,109 +446,116 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: getResponsiveSize(20),
     paddingTop: getResponsiveSize(50),
-    backgroundColor: 'rgba(4, 28, 85, 0.9)',
+    backgroundColor: T.bg1,
+    borderBottomWidth: 1,
+    borderBottomColor: T.borderSoft,
   },
   coinContainer: {
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    padding: getResponsiveSize(8),
-    borderRadius: getResponsiveSize(15),
+    backgroundColor: T.bg2,
+    paddingVertical: getResponsiveSize(6),
+    paddingHorizontal: getResponsiveSize(12),
+    borderRadius: getResponsiveSize(T.radiusPill),
+    borderWidth: 1,
+    borderColor: T.border,
   },
   coinText: {
-    color: '#f1c40f',
-    fontWeight: 'bold',
-    fontSize: getResponsiveSize(16),
+    color: T.gold,
+    fontWeight: '800',
+    fontSize: getResponsiveSize(14),
   },
   backButton: {
-    padding: getResponsiveSize(5),
+    padding: getResponsiveSize(8),
+    backgroundColor: T.bg2,
+    borderRadius: getResponsiveSize(T.radiusMd),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   titre: {
-    fontSize: getResponsiveSize(24),
-    fontWeight: 'bold',
-    color: '#fff',
+    fontSize: getResponsiveSize(18),
+    fontWeight: '800',
+    color: T.text,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   sousTitre: {
-    fontSize: getResponsiveSize(14),
-    color: '#f1c40f',
+    fontSize: getResponsiveSize(12),
+    color: T.gold,
+    textAlign: 'right',
   },
   tabContainer: {
     flexDirection: 'row',
     marginHorizontal: getResponsiveSize(16),
-    marginBottom: getResponsiveSize(16),
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    borderRadius: getResponsiveSize(12),
+    marginVertical: getResponsiveSize(12),
+    backgroundColor: T.bg2,
+    borderRadius: getResponsiveSize(T.radiusMd),
     padding: getResponsiveSize(4),
-    borderWidth: getResponsiveSize(1),
-    borderColor: 'rgba(241, 196, 15, 0.3)'
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   tab: {
     flex: 1,
-    paddingVertical: getResponsiveSize(12),
+    paddingVertical: getResponsiveSize(10),
     alignItems: 'center',
-    borderRadius: getResponsiveSize(8)
+    borderRadius: getResponsiveSize(T.radiusSm),
   },
   activeTab: {
-    backgroundColor: '#f1c40f',
+    backgroundColor: T.gold,
   },
   tabText: {
-    fontSize: getResponsiveSize(14),
+    fontSize: getResponsiveSize(13),
     fontWeight: '600',
-    color: '#ccc'
+    color: T.textMuted,
   },
   activeTabText: {
-    color: '#041c55',
-    fontWeight: 'bold'
+    color: '#1B1305',
+    fontWeight: '800',
   },
   contentContainer: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: getResponsiveSize(16),
-    paddingBottom: getResponsiveSize(20)
+    paddingBottom: getResponsiveSize(20),
   },
   tabContent: {
-    gap: getResponsiveSize(16)
+    gap: getResponsiveSize(14),
   },
   niveauCard: {
-    backgroundColor: '#041c55',
-    borderRadius: getResponsiveSize(16),
-    padding: getResponsiveSize(16),
+    backgroundColor: T.bg2,
+    borderRadius: getResponsiveSize(T.radiusMd),
+    padding: getResponsiveSize(14),
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f',
-    shadowColor: '#f1c40f',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: getResponsiveSize(5),
-    elevation: 5
+    borderWidth: 1,
+    borderColor: T.borderSoft,
+    ...T.shadowCard,
   },
   niveauCardActive: {
-      backgroundColor: 'rgba(4, 28, 85, 0.8)',
-      borderColor: '#f1c40f',
-      borderWidth: getResponsiveSize(2),
+    borderColor: T.gold,
+    borderWidth: 2,
   },
   niveauEmoji: {
-    fontSize: getResponsiveSize(40),
-    marginRight: getResponsiveSize(16)
+    fontSize: getResponsiveSize(36),
+    marginRight: getResponsiveSize(14),
   },
   niveauInfo: {
-    flex: 1
+    flex: 1,
   },
   niveauTitre: {
-    fontSize: getResponsiveSize(18),
-    fontWeight: 'bold',
-    color: '#f1c40f',
-    marginBottom: getResponsiveSize(4)
+    fontSize: getResponsiveSize(16),
+    fontWeight: '800',
+    color: T.text,
+    marginBottom: getResponsiveSize(3),
   },
   niveauDesc: {
-    fontSize: getResponsiveSize(14),
-    color: '#fff',
-    marginBottom: getResponsiveSize(4)
+    fontSize: getResponsiveSize(13),
+    color: T.textDim,
+    marginBottom: getResponsiveSize(3),
   },
   niveauTaux: {
-    fontSize: getResponsiveSize(12),
-    color: '#ccc',
-    fontStyle: 'italic'
+    fontSize: getResponsiveSize(11),
+    color: T.textMuted,
+    fontStyle: 'italic',
   },
   selectedIndicator: {
     width: getResponsiveSize(24),
@@ -551,112 +564,104 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: getResponsiveSize(8),
-    backgroundColor: '#f1c40f'
+    backgroundColor: T.gold,
   },
   statsContainer: {
-    marginTop: getResponsiveSize(8),
-    paddingTop: getResponsiveSize(8),
-    borderTopWidth: getResponsiveSize(1),
-    borderTopColor: 'rgba(241, 196, 15, 0.3)'
+    marginTop: getResponsiveSize(6),
+    paddingTop: getResponsiveSize(6),
+    borderTopWidth: 1,
+    borderTopColor: T.borderSoft,
   },
   statsTexte: {
-    fontSize: getResponsiveSize(12),
+    fontSize: getResponsiveSize(11),
     fontWeight: '600',
-    color: '#f1c40f'
+    color: T.gold,
   },
   option: {
-    backgroundColor: '#041c55',
-    borderRadius: getResponsiveSize(16),
-    padding: getResponsiveSize(16),
-    marginBottom: getResponsiveSize(12),
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f',
-    shadowColor: '#f1c40f',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: getResponsiveSize(3),
-    elevation: 3
+    backgroundColor: T.bg2,
+    borderRadius: getResponsiveSize(T.radiusMd),
+    padding: getResponsiveSize(14),
+    marginBottom: getResponsiveSize(10),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   optionLabel: {
-    fontSize: getResponsiveSize(16),
-    fontWeight: 'bold',
-    color: '#f1c40f',
-    marginBottom: getResponsiveSize(12)
+    fontSize: getResponsiveSize(14),
+    fontWeight: '800',
+    color: T.gold,
+    marginBottom: getResponsiveSize(10),
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   buttonGroup: {
     flexDirection: 'row',
-    gap: getResponsiveSize(8)
+    gap: getResponsiveSize(8),
   },
   optionButton: {
     flex: 1,
-    paddingVertical: getResponsiveSize(12),
+    paddingVertical: getResponsiveSize(10),
     paddingHorizontal: getResponsiveSize(8),
-    borderRadius: getResponsiveSize(10),
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f',
+    borderRadius: getResponsiveSize(T.radiusSm),
+    backgroundColor: T.bg3,
+    borderWidth: 1,
+    borderColor: T.borderSoft,
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
   },
   optionButtonActive: {
-    backgroundColor: '#f1c40f',
-    borderColor: '#f1c40f'
+    backgroundColor: T.gold,
+    borderColor: T.gold,
   },
   optionButtonText: {
-    fontSize: getResponsiveSize(13),
-    fontWeight: '600',
-    color: '#fff',
-    textAlign: 'center'
+    fontSize: getResponsiveSize(12),
+    fontWeight: '700',
+    color: T.textDim,
+    textAlign: 'center',
   },
   optionButtonTextActive: {
-    color: '#041c55'
+    color: '#1B1305',
   },
   pickerContainer: {
-    gap: getResponsiveSize(8)
+    gap: getResponsiveSize(8),
   },
   vitesseOption: {
-    paddingVertical: getResponsiveSize(12),
-    paddingHorizontal: getResponsiveSize(16),
-    borderRadius: getResponsiveSize(10),
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center'
-  },
-  vitesseOptionActive: {
-    backgroundColor: '#f1c40f',
-    borderColor: '#f1c40f'
-  },
-  vitesseTexte: {
-    fontSize: getResponsiveSize(14),
-    fontWeight: '600',
-    color: '#fff'
-  },
-  vitesseTexteActive: {
-    color: '#041c55'
-  },
-  switchOption: {
-    backgroundColor: '#041c55',
-    borderRadius: getResponsiveSize(20),
-    padding: getResponsiveSize(16),
-    marginBottom: getResponsiveSize(12),
+    paddingVertical: getResponsiveSize(10),
+    paddingHorizontal: getResponsiveSize(14),
+    borderRadius: getResponsiveSize(T.radiusSm),
+    backgroundColor: T.bg3,
+    borderWidth: 1,
+    borderColor: T.borderSoft,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f',
-    shadowColor: '#f1c40f',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: getResponsiveSize(3),
-    elevation: 3
+  },
+  vitesseOptionActive: {
+    backgroundColor: T.gold,
+    borderColor: T.gold,
+  },
+  vitesseTexte: {
+    fontSize: getResponsiveSize(13),
+    fontWeight: '600',
+    color: T.textDim,
+  },
+  vitesseTexteActive: {
+    color: '#1B1305',
+  },
+  switchOption: {
+    backgroundColor: T.bg2,
+    borderRadius: getResponsiveSize(T.radiusMd),
+    padding: getResponsiveSize(14),
+    marginBottom: getResponsiveSize(10),
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   switchLabel: {
-    fontSize: getResponsiveSize(16),
-    fontWeight: 'bold',
-    color: '#f1c40f'
+    fontSize: getResponsiveSize(14),
+    fontWeight: '700',
+    color: T.text,
   },
   footer: {
     position: 'absolute',
@@ -664,49 +669,44 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: getResponsiveSize(16),
-    backgroundColor: 'rgba(4, 28, 85, 0.9)',
-    borderTopWidth: getResponsiveSize(1),
-    borderTopColor: '#f1c40f'
+    backgroundColor: T.bg1,
+    borderTopWidth: 1,
+    borderTopColor: T.borderSoft,
   },
   boutonLancer: {
-    backgroundColor: '#2ecc71',
-    paddingVertical: getResponsiveSize(16),
-    borderRadius: getResponsiveSize(10),
+    backgroundColor: T.green,
+    paddingVertical: getResponsiveSize(14),
+    borderRadius: getResponsiveSize(T.radiusMd),
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: getResponsiveSize(4) },
-    shadowOpacity: 0.3,
-    shadowRadius: getResponsiveSize(8),
-    elevation: 8
+    ...T.shadowBtn,
   },
   boutonLancerTexte: {
-    fontSize: getResponsiveSize(18),
-    fontWeight: 'bold',
-    color: '#fff'
+    fontSize: getResponsiveSize(16),
+    fontWeight: '800',
+    color: '#fff',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   betDisplay: {
-      flexDirection: 'row', 
-      alignItems: 'center', 
-      justifyContent: 'center',
-      width: getResponsiveSize(140),
-      height: getResponsiveSize(50),
-      overflow: 'hidden',
-      backgroundColor: 'rgba(0,0,0,0.3)',
-      borderRadius: getResponsiveSize(25),
-      marginHorizontal: getResponsiveSize(10),
-      borderWidth: getResponsiveSize(1),
-      borderColor: 'rgba(241, 196, 15, 0.3)'
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: getResponsiveSize(140),
+    height: getResponsiveSize(50),
+    overflow: 'hidden',
+    backgroundColor: T.bg3,
+    borderRadius: getResponsiveSize(T.radiusPill),
+    marginHorizontal: getResponsiveSize(10),
+    borderWidth: 1,
+    borderColor: T.border,
   },
   betDisplayText: {
-      color: '#f1c40f', 
-      fontSize: getResponsiveSize(22), 
-      fontWeight: 'bold', 
-      width: getResponsiveSize(120),
-      textAlign: 'center',
-      textShadowColor: 'rgba(0, 0, 0, 0.75)',
-      textShadowOffset: {width: getResponsiveSize(-1), height: getResponsiveSize(1)},
-      textShadowRadius: getResponsiveSize(10)
-  }
+    color: T.gold,
+    fontSize: getResponsiveSize(22),
+    fontWeight: '900',
+    width: getResponsiveSize(120),
+    textAlign: 'center',
+  },
 });
 
 export default ConfigurationJeuIA;

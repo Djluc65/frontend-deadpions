@@ -4,10 +4,15 @@ import { playButtonSound } from '../utils/soundManager';
 import { getResponsiveSize } from '../utils/responsive';
 import { modalTheme } from '../utils/modalTheme';
 
-const CustomAlert = ({ visible, title, message, buttons = [], onClose }) => {
+const CustomAlert = ({ visible, title, message, buttons = [], onClose, dismissOnBackdropPress = false }) => {
   const isSingleButton = !Array.isArray(buttons) || buttons.length <= 1;
+  const isThreeButtons = Array.isArray(buttons) && buttons.length === 3;
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
+
+  const handleBackdropPress = () => {
+    if (dismissOnBackdropPress && onClose) onClose();
+  };
 
   return (
     <Modal
@@ -16,7 +21,7 @@ const CustomAlert = ({ visible, title, message, buttons = [], onClose }) => {
       animationType="fade"
       onRequestClose={onClose}
     >
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
+      <Pressable style={styles.modalOverlay} onPress={handleBackdropPress}>
         <Pressable
           style={[
             styles.alertContent,
@@ -36,20 +41,26 @@ const CustomAlert = ({ visible, title, message, buttons = [], onClose }) => {
                         key={index} 
                         style={[
                             styles.button,
-                            isSingleButton ? styles.buttonSingle : styles.buttonMulti,
+                            isSingleButton ? styles.buttonSingle : (isThreeButtons ? styles.buttonTri : styles.buttonMulti),
                             btn.style === 'cancel' ? styles.cancelButton : null,
                             btn.style === 'destructive' ? styles.destructiveButton : styles.confirmButton
                         ]}
                         onPress={() => {
                             playButtonSound();
-                            if (btn.onPress) btn.onPress();
                             if (!btn.manualClose && onClose) onClose();
+                            if (btn.onPress) {
+                              setTimeout(() => {
+                                try {
+                                  btn.onPress();
+                                } catch {}
+                              }, 0);
+                            }
                         }}
                     >
                         <Text
                           style={[
                             styles.buttonText,
-                            btn.style === 'cancel' || btn.style === 'destructive' ? styles.buttonTextOnDark : null,
+                            btn.style === 'cancel' || btn.style === 'destructive' ? null : styles.buttonTextActive,
                             btn?.textStyle
                           ]}
                         >
@@ -91,21 +102,22 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap'
   },
   button: {
-    ...modalTheme.buttonBase,
-    minHeight: getResponsiveSize(44),
-    paddingVertical: getResponsiveSize(12)
+    ...modalTheme.button,
   },
   buttonSingle: {
     width: '100%',
     maxWidth: '100%'
   },
   buttonMulti: {
-    flexGrow: 1,
-    flexBasis: '45%',
+    flex: 1,
     maxWidth: '48%'
   },
+  buttonTri: {
+    flex: 1,
+    maxWidth: '31%',
+  },
   confirmButton: {
-    ...modalTheme.buttonPrimary
+    ...modalTheme.buttonActive
   },
   cancelButton: {
     ...modalTheme.buttonCancel
@@ -114,11 +126,10 @@ const styles = StyleSheet.create({
     ...modalTheme.buttonDestructive
   },
   buttonText: {
-    ...modalTheme.buttonTextBase,
-    ...modalTheme.buttonTextPrimary,
-    flexShrink: 1
+    ...modalTheme.buttonText,
+    flexShrink: 1,
   },
-  buttonTextOnDark: modalTheme.buttonTextOnDark
+  buttonTextActive: modalTheme.buttonTextActive,
 });
 
 export default CustomAlert;

@@ -5,6 +5,7 @@ import { useSelector } from 'react-redux';
 import { useCoinsContext } from '../context/CoinsContext';
 import { getResponsiveSize } from '../utils/responsive';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { appAlert } from '../services/appAlert';
 
 let mobileAds;
 let AdEventType;
@@ -30,11 +31,11 @@ try {
 }
 
 const AdProvider = {
-  appId: 'ca-app-pub-3636440603787547~4892803097',
+  appId: 'ca-app-pub-5628913012317818~7677374721',
   units: {
-    banner: { id: 'ca-app-pub-3636440603787547/4038886421', type: 'banner', size: '320x50' },
-    interstitial: { id: 'ca-app-pub-3636440603787547/6373910304', type: 'interstitial', cooldown: 120 },
-    rewarded: { id: 'ca-app-pub-3636440603787547/7878059080', type: 'rewarded', reward: { type: 'coins', amount: 10 } }
+    banner: { id: 'ca-app-pub-5628913012317818/5675925124', type: 'banner', size: '320x50' },
+    interstitial: { id: 'ca-app-pub-5628913012317818/6228028852', type: 'interstitial', cooldown: 120 },
+    rewarded: { id: 'ca-app-pub-5628913012317818/2671927229', type: 'rewarded', reward: { type: 'coins', amount: 10 } }
   },
   targeting: {
     childDirected: false,
@@ -241,7 +242,7 @@ export default function AdSystem({ children }) {
   const rewardedRef = useRef(null);
   const pendingShowInterstitialRef = useRef(false);
   const pendingShowRewardedRef = useRef(false);
-  const rewardedRewardRef = useRef({ amount: null, reason: null, metadata: null });
+  const rewardedRewardRef = useRef({ amount: null, reason: null, metadata: null, onEarned: null });
   const rewardedUnitIdRef = useRef(null);
   const rewardedUnsubsRef = useRef([]);
   const rewardedPendingTimeoutRef = useRef(null);
@@ -330,7 +331,7 @@ export default function AdSystem({ children }) {
 
     setRewardedLoaded(false);
     pendingShowRewardedRef.current = false;
-    rewardedRewardRef.current = { amount: null, reason: null, metadata: null };
+    rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
 
     rewardedUnitIdRef.current = rewardedAdUnitId;
     rewardedRef.current = RewardedAd.createForAdRequest(rewardedAdUnitId, { requestNonPersonalizedAdsOnly });
@@ -349,10 +350,17 @@ export default function AdSystem({ children }) {
     const unsubEarned = rewarded.addAdEventListener(RewardedAdEventType.EARNED_REWARD, async () => {
       const pending = rewardedRewardRef.current;
       const defaultReward = AdProvider.units.rewarded.reward;
+      const onEarned = typeof pending?.onEarned === 'function' ? pending.onEarned : null;
       const amount = typeof pending?.amount === 'number' && pending.amount > 0 ? pending.amount : defaultReward.amount;
       const reason = typeof pending?.reason === 'string' && pending.reason ? pending.reason : 'Récompense publicité';
       const metadata = (pending?.metadata && typeof pending.metadata === 'object') ? pending.metadata : { source: 'rewarded_ad' };
-      rewardedRewardRef.current = { amount: null, reason: null, metadata: null };
+      rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
+      if (onEarned) {
+        try {
+          await onEarned({ amount, reason, metadata });
+        } catch {}
+        return;
+      }
       if (defaultReward.type !== 'coins') return;
       if (typeof amount !== 'number' || amount <= 0) return;
       try {
@@ -362,7 +370,7 @@ export default function AdSystem({ children }) {
 
     const unsubClosed = rewarded.addAdEventListener(AdEventType.CLOSED, () => {
       setRewardedLoaded(false);
-      rewardedRewardRef.current = { amount: null, reason: null, metadata: null };
+      rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
       try {
         rewarded.load();
       } catch {}
@@ -371,7 +379,7 @@ export default function AdSystem({ children }) {
     const unsubError = rewarded.addAdEventListener(AdEventType.ERROR, (err) => {
       setRewardedLoaded(false);
       pendingShowRewardedRef.current = false;
-      rewardedRewardRef.current = { amount: null, reason: null, metadata: null };
+      rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
       if (adDebugEnabled) console.warn('[ADS] rewarded error', err);
     });
 
@@ -394,7 +402,7 @@ export default function AdSystem({ children }) {
       rewardedRef.current = null;
       setRewardedLoaded(false);
       pendingShowRewardedRef.current = false;
-      rewardedRewardRef.current = { amount: null, reason: null, metadata: null };
+      rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
       return;
     }
     setupRewarded();
@@ -473,18 +481,32 @@ export default function AdSystem({ children }) {
   }, [showAds, rewardedLoaded, setupRewarded]);
 
   const showRewarded = useCallback((options = {}) => {
-    if (!showAds) return;
-    if (!RewardedAd) return;
+    if (!showAds) {
+      appAlert('Pub indisponible', "Les publicités ne sont pas disponibles pour ce compte/appareil.");
+      return;
+    }
+    if (Platform.OS === 'ios' && !attReady) {
+      appAlert('Pub indisponible', "Autorisation iOS en attente. Relance l'app ou accepte la demande de suivi.");
+      return;
+    }
+    if (!RewardedAd) {
+      appAlert('Pub indisponible', 'Module de publicité non disponible sur ce build.');
+      return;
+    }
     const rewarded = setupRewarded();
-    if (!rewarded) return;
+    if (!rewarded) {
+      appAlert('Pub indisponible', 'Impossible de préparer la pub. Réessayez dans quelques instants.');
+      return;
+    }
     if (options && typeof options === 'object') {
       rewardedRewardRef.current = {
         amount: typeof options.amount === 'number' ? options.amount : null,
         reason: typeof options.reason === 'string' ? options.reason : null,
-        metadata: options.metadata && typeof options.metadata === 'object' ? options.metadata : null
+        metadata: options.metadata && typeof options.metadata === 'object' ? options.metadata : null,
+        onEarned: typeof options.onEarned === 'function' ? options.onEarned : null
       };
     } else {
-      rewardedRewardRef.current = { amount: null, reason: null, metadata: null };
+      rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
     }
     if (rewardedLoaded) {
       let didShow = true;
@@ -516,10 +538,11 @@ export default function AdSystem({ children }) {
     rewardedPendingTimeoutRef.current = setTimeout(() => {
       if (!pendingShowRewardedRef.current) return;
       pendingShowRewardedRef.current = false;
-      rewardedRewardRef.current = { amount: null, reason: null, metadata: null };
+      rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
+      appAlert('Pub indisponible', 'Impossible de charger la publicité. Réessayez dans quelques instants.');
       if (adDebugEnabled) console.warn('[ADS] rewarded timeout (no ad loaded to show)');
-    }, 8000);
-  }, [showAds, rewardedLoaded, setupRewarded]);
+    }, 12000);
+  }, [showAds, rewardedLoaded, setupRewarded, attReady]);
 
   const value = useMemo(
     () => ({

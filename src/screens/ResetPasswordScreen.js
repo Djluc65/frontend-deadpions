@@ -6,6 +6,7 @@ import { API_URL } from '../config';
 import { validatePassword } from '../utils/validation';
 import { getResponsiveSize } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
+import { T } from '../utils/theme';
 
 const ResetPasswordScreen = ({ route, navigation }) => {
   const { email, devToken } = route.params || {};
@@ -72,11 +73,12 @@ const ResetPasswordScreen = ({ route, navigation }) => {
   };
 
   return (
-    <ImageBackground 
-      source={require('../../assets/images/Background2-4.png')} 
+    <ImageBackground
+      source={require('../../assets/images/Background2-4.png')}
       style={styles.background}
       resizeMode="cover"
     >
+      <View style={styles.bgOverlay} pointerEvents="none" />
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.container}>
           <Text style={styles.title}>Réinitialisation</Text>
@@ -116,29 +118,37 @@ const ResetPasswordScreen = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  bgOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(5,9,15,0.55)',
+  },
   background: {
     flex: 1,
     width: '100%',
     height: '100%',
+    backgroundColor: T.bg0,
   },
   container: {
     flex: 1,
     justifyContent: 'center',
     padding: getResponsiveSize(20),
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: T.overlayLight,
   },
   title: {
-    fontSize: getResponsiveSize(28),
-    color: '#fff',
-    fontWeight: 'bold',
+    fontSize: getResponsiveSize(30),
+    color: T.text,
+    fontWeight: '900',
     marginBottom: getResponsiveSize(10),
     textAlign: 'center',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   subtitle: {
-    fontSize: getResponsiveSize(16),
-    color: '#ccc',
-    marginBottom: getResponsiveSize(30),
+    fontSize: getResponsiveSize(14),
+    color: T.textDim,
+    marginBottom: getResponsiveSize(28),
     textAlign: 'center',
+    lineHeight: getResponsiveSize(20),
   },
 });
 

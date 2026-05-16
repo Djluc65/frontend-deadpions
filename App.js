@@ -3,6 +3,7 @@ import React from 'react';
 import * as Linking from 'expo-linking';
 import { NavigationContainer } from '@react-navigation/native';
 import { Alert } from 'react-native';
+import { useKeepAwake } from 'expo-keep-awake';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from './src/redux/store';
@@ -34,6 +35,8 @@ const linking = {
 };
 
 export default function App() {
+  useKeepAwake();
+
   React.useEffect(() => {
     Alert.alert = appAlert;
   }, []);

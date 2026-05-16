@@ -3,6 +3,7 @@ import { Modal, Pressable, ScrollView, View, Text, TouchableOpacity, StyleSheet 
 import { Ionicons } from '@expo/vector-icons';
 import { playButtonSound } from '../../utils/soundManager';
 import { getResponsiveSize } from '../../utils/responsive';
+import { modalTheme } from '../../utils/modalTheme';
 
 const AIDifficultyModal = memo(({
   visible,
@@ -28,7 +29,7 @@ const AIDifficultyModal = memo(({
         onRequestClose={onClose}
     >
         <Pressable style={styles.modalOverlay} onPress={() => { playButtonSound(); onClose(); }}>
-            <Pressable style={[styles.friendsModalContent, { maxHeight: '90%', backgroundColor: '#041c55', borderColor: '#f1c40f', borderWidth: getResponsiveSize(1) }]} onPress={() => {}}>
+            <Pressable style={[styles.friendsModalContent, { maxHeight: '90%' }]} onPress={() => {}}>
                 <ScrollView contentContainerStyle={{ alignItems: 'center', width: '100%' }} style={{ width: '100%' }}>
                     <Text style={[styles.friendsModalTitle, { color: '#f1c40f', textShadowColor: 'rgba(241, 196, 15, 0.5)', textShadowRadius: getResponsiveSize(10), marginBottom: getResponsiveSize(30) }]}>Options de jeu</Text>
 
@@ -131,34 +132,15 @@ const AIDifficultyModal = memo(({
 });
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  modalOverlay: modalTheme.overlay,
   friendsModalContent: {
-    width: '80%',
-    backgroundColor: '#041c55',
-    borderRadius: getResponsiveSize(20),
-    padding: getResponsiveSize(20),
+    ...modalTheme.card,
+    width: '86%',
     alignItems: 'center',
-    shadowColor: '#f1c40f',
-    shadowOffset: {
-      width: 0,
-      height: 0,
-    },
-    shadowOpacity: 3,
-    shadowRadius: getResponsiveSize(3),
-    elevation: 5,
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f',
   },
   friendsModalTitle: {
+    ...modalTheme.title,
     fontSize: getResponsiveSize(24),
-    fontWeight: 'bold',
-    marginBottom: getResponsiveSize(20),
-    color: '#fff',
   },
   friendsLabel: {
     fontSize: getResponsiveSize(16),

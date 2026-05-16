@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, View, Text, StyleSheet, ImageBackground, ScrollView, ActivityIndicator, Platform, useWindowDimensions } from 'react-native';
+import { T } from '../utils/theme';
 import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -708,11 +709,12 @@ const ShopScreen = () => {
   };
 
   return (
-    <ImageBackground 
-      source={require('../../assets/images/Background2-4.png')} 
+    <ImageBackground
+      source={require('../../assets/images/Background2-4.png')}
       style={styles.background}
       resizeMode="cover"
     >
+      <View style={styles.bgOverlay} pointerEvents="none" />
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
           
@@ -739,17 +741,17 @@ const ShopScreen = () => {
             
             {user?.isEarlyAccess && (
               <View style={{
-                backgroundColor: 'rgba(46, 204, 113, 0.2)',
-                padding: getResponsiveSize(15),
-                borderRadius: getResponsiveSize(10),
-                marginBottom: getResponsiveSize(15),
-                borderWidth: getResponsiveSize(1),
-                borderColor: '#2ecc71'
+                backgroundColor: 'rgba(46,194,126,0.1)',
+                padding: getResponsiveSize(14),
+                borderRadius: getResponsiveSize(T.radiusMd),
+                marginBottom: getResponsiveSize(14),
+                borderWidth: 1,
+                borderColor: T.green,
               }}>
-                <Text style={{ color: '#2ecc71', fontWeight: 'bold', textAlign: 'center', marginBottom: getResponsiveSize(5), fontSize: getResponsiveSize(14) }}>
+                <Text style={{ color: T.green, fontWeight: '800', textAlign: 'center', marginBottom: getResponsiveSize(4), fontSize: getResponsiveSize(13), textTransform: 'uppercase', letterSpacing: 0.3 }}>
                   ✅ PREMIUM ACTIVÉ (OFFRE DE LANCEMENT)
                 </Text>
-                <Text style={{ color: 'white', textAlign: 'center', fontSize: getResponsiveSize(12) }}>
+                <Text style={{ color: T.textDim, textAlign: 'center', fontSize: getResponsiveSize(12) }}>
                   Profitez de tous les avantages gratuitement jusqu'au {new Date(user.earlyAccessEndDate).toLocaleDateString()}.
                 </Text>
               </View>
@@ -794,40 +796,42 @@ const ShopScreen = () => {
             <Text style={styles.sectionTitle}>🏆 Collection Pions Premium</Text>
             <Text style={styles.sectionSubtitle}>Débloquez des pions uniques en 3D stylisés.</Text>
             
-            <TouchableOpacity 
+            <TouchableOpacity
               style={{
-                backgroundColor: '#CC0000',
-                padding: getResponsiveSize(15),
-                borderRadius: getResponsiveSize(10),
+                backgroundColor: T.red,
+                padding: getResponsiveSize(14),
+                borderRadius: getResponsiveSize(T.radiusMd),
                 alignItems: 'center',
                 borderWidth: 1,
-                borderColor: '#FF3333',
-                marginBottom: getResponsiveSize(10)
+                borderColor: 'rgba(230,57,70,0.5)',
+                marginBottom: getResponsiveSize(10),
+                ...T.shadowBtn,
               }}
               onPress={() => navigation.navigate('PremiumPions')}
             >
-              <Text style={{ color: 'white', fontWeight: 'bold', fontSize: getResponsiveSize(16), textTransform: 'uppercase' }}>
+              <Text style={{ color: '#fff', fontWeight: '800', fontSize: getResponsiveSize(14), textTransform: 'uppercase', letterSpacing: 0.3 }}>
                 VOIR LA COLLECTION
               </Text>
             </TouchableOpacity>
 
             {!user?.isPremium && !user?.isEarlyAccess && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={{
-                  backgroundColor: '#FFD700',
-                  padding: getResponsiveSize(15),
-                  borderRadius: getResponsiveSize(10),
+                  backgroundColor: T.gold,
+                  padding: getResponsiveSize(14),
+                  borderRadius: getResponsiveSize(T.radiusMd),
                   alignItems: 'center',
                   borderWidth: 1,
-                  borderColor: '#FFAA00'
+                  borderColor: T.goldDeep,
+                  ...T.shadowBtn,
                 }}
                 onPress={handleBuyPremium}
                 disabled={loading}
               >
                 {loading ? (
-                    <ActivityIndicator color="black" />
+                    <ActivityIndicator color="#1B1305" />
                 ) : (
-                    <Text style={{ color: 'black', fontWeight: 'bold', fontSize: getResponsiveSize(16), textTransform: 'uppercase' }}>
+                    <Text style={{ color: '#1B1305', fontWeight: '800', fontSize: getResponsiveSize(14), textTransform: 'uppercase', letterSpacing: 0.3 }}>
                       DÉBLOQUER TOUT — 4,99 €
                     </Text>
                 )}
@@ -898,6 +902,10 @@ const ShopScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  bgOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(5,9,15,0.55)',
+  },
   background: {
     flex: 1,
     width: '100%',
@@ -912,51 +920,54 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: getResponsiveSize(isTablet ? 28 : 32),
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: '900',
+    color: T.text,
     textAlign: 'center',
     marginBottom: getResponsiveSize(10),
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: getResponsiveSize(-1), height: getResponsiveSize(1) },
-    textShadowRadius: getResponsiveSize(10),
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   restoreButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: T.bg2,
     width: '80%',
     paddingHorizontal: getResponsiveSize(20),
     paddingVertical: getResponsiveSize(14),
-    borderRadius: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(T.radiusMd),
     alignSelf: 'center',
     marginBottom: getResponsiveSize(20),
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: T.borderSoft,
+    alignItems: 'center',
   },
   restoreButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
+    color: T.textDim,
+    fontWeight: '700',
     fontSize: getResponsiveSize(14),
   },
   sectionContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: T.bg2,
     maxWidth: isTablet ? 700 : '100%',
     width: '100%',
     alignSelf: 'center',
-    borderRadius: getResponsiveSize(15),
-    padding: getResponsiveSize(15),
+    borderRadius: getResponsiveSize(T.radiusMd),
+    padding: getResponsiveSize(16),
     marginBottom: getResponsiveSize(20),
-    borderWidth: getResponsiveSize(1),
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: T.borderSoft,
+    ...T.shadowCard,
   },
   sectionTitle: {
-    fontSize: getResponsiveSize(22),
-    fontWeight: 'bold',
-    color: '#FFD700', // Gold
-    marginBottom: getResponsiveSize(5),
+    fontSize: getResponsiveSize(20),
+    fontWeight: '800',
+    color: T.gold,
+    marginBottom: getResponsiveSize(4),
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   sectionSubtitle: {
-    fontSize: getResponsiveSize(14),
-    color: '#ddd',
-    marginBottom: getResponsiveSize(15),
+    fontSize: getResponsiveSize(13),
+    color: T.textDim,
+    marginBottom: getResponsiveSize(14),
   },
   subscriptionContainer: {
     flexDirection: 'row',
@@ -965,64 +976,70 @@ const styles = StyleSheet.create({
   },
   subCard: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: getResponsiveSize(10),
-    padding: getResponsiveSize(15),
+    backgroundColor: T.bg3,
+    borderRadius: getResponsiveSize(T.radiusMd),
+    padding: getResponsiveSize(14),
     alignItems: 'flex-start',
     justifyContent: 'flex-start',
-    borderWidth: getResponsiveSize(1),
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 1.5,
+    borderColor: T.gold,
+    shadowColor: T.gold,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 14,
   },
   bestValueCard: {
-    backgroundColor: 'rgba(255, 215, 0, 0.15)', // Gold tint
-    borderColor: '#FFD700',
+    backgroundColor: 'rgba(244,180,26,0.08)',
+    borderColor: T.gold,
     transform: [{ scale: 1.05 }],
   },
   bestValueBadge: {
     position: 'absolute',
     top: getResponsiveSize(-12),
-    backgroundColor: '#FFD700',
+    backgroundColor: T.gold,
     paddingHorizontal: getResponsiveSize(10),
     paddingVertical: getResponsiveSize(4),
-    borderRadius: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(T.radiusSm),
   },
   bestValueText: {
-    color: 'black',
-    fontWeight: 'bold',
+    color: '#1B1305',
+    fontWeight: '800',
     fontSize: getResponsiveSize(10),
+    letterSpacing: 0.3,
   },
   subPrice: {
     fontSize: getResponsiveSize(20),
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: '800',
+    color: T.text,
   },
   subName: {
     fontSize: getResponsiveSize(14),
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: '700',
+    color: T.text,
     marginBottom: getResponsiveSize(6),
   },
   subPeriod: {
-    fontSize: getResponsiveSize(14),
-    color: '#ccc',
+    fontSize: getResponsiveSize(13),
+    color: T.textDim,
     marginBottom: getResponsiveSize(5),
   },
   subPerk: {
-    fontSize: getResponsiveSize(12),
-    color: '#ddd',
+    fontSize: getResponsiveSize(11),
+    color: T.textDim,
     marginTop: getResponsiveSize(6),
   },
   subDetail: {
-    fontSize: getResponsiveSize(12),
-    color: '#aaa',
+    fontSize: getResponsiveSize(11),
+    color: T.textMuted,
     marginTop: getResponsiveSize(8),
   },
   highlightText: {
-    color: '#FFD700',
+    color: T.gold,
   },
   saveText: {
-    color: '#4CAF50',
-    fontWeight: 'bold',
+    color: T.green,
+    fontWeight: '700',
     marginTop: getResponsiveSize(5),
     fontSize: getResponsiveSize(12),
   },
@@ -1032,79 +1049,86 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   coinCard: {
-    width: isTablet ? '31%' : '48%', // 3 columns on tablet, 2 on phone
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: getResponsiveSize(10),
-    padding: getResponsiveSize(15),
-    marginBottom: getResponsiveSize(15),
+    width: isTablet ? '31%' : '48%',
+    backgroundColor: T.bg3,
+    borderRadius: getResponsiveSize(T.radiusMd),
+    padding: getResponsiveSize(14),
+    marginBottom: getResponsiveSize(14),
     alignItems: 'center',
-    borderWidth: getResponsiveSize(1),
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1.5,
+    borderColor: T.gold,
+    shadowColor: T.gold,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 14,
   },
   highlightCard: {
-    borderColor: '#FFD700',
-    backgroundColor: 'rgba(255, 215, 0, 0.05)',
+    borderColor: T.gold,
+    backgroundColor: 'rgba(244,180,26,0.06)',
   },
   bonusBadge: {
     position: 'absolute',
-    top: getResponsiveSize(5),
-    right: getResponsiveSize(5),
-    backgroundColor: '#FF4500',
+    top: getResponsiveSize(6),
+    right: getResponsiveSize(6),
+    backgroundColor: T.red,
     paddingHorizontal: getResponsiveSize(6),
     paddingVertical: getResponsiveSize(2),
-    borderRadius: getResponsiveSize(5),
+    borderRadius: getResponsiveSize(T.radiusSm),
   },
   bonusText: {
-    color: 'white',
+    color: T.text,
     fontSize: getResponsiveSize(10),
-    fontWeight: 'bold',
+    fontWeight: '800',
   },
   coinAmount: {
     fontSize: getResponsiveSize(18),
-    fontWeight: 'bold',
-    color: '#FFD700',
+    fontWeight: '800',
+    color: T.gold,
     marginTop: getResponsiveSize(5),
   },
   coinLabel: {
     fontSize: getResponsiveSize(12),
-    color: '#ccc',
+    color: T.textMuted,
     marginBottom: getResponsiveSize(10),
   },
   priceButton: {
-    backgroundColor: '#2196F3',
-    paddingHorizontal: getResponsiveSize(15),
+    backgroundColor: T.blue,
+    paddingHorizontal: getResponsiveSize(14),
     paddingVertical: getResponsiveSize(8),
-    borderRadius: getResponsiveSize(20),
+    borderRadius: getResponsiveSize(T.radiusPill),
     width: '100%',
     alignItems: 'center',
+    ...T.shadowBtn,
   },
   priceText: {
-    color: 'white',
-    fontWeight: 'bold',
+    color: '#fff',
+    fontWeight: '800',
     fontSize: getResponsiveSize(14),
   },
   priceSubText: {
-    color: 'white',
+    color: 'rgba(255,255,255,0.8)',
     fontSize: getResponsiveSize(11),
-    opacity: 0.85,
     marginTop: getResponsiveSize(2),
   },
   rewardedButton: {
-    backgroundColor: '#f59e0b',
-    padding: getResponsiveSize(15),
-    borderRadius: getResponsiveSize(10),
+    backgroundColor: T.gold,
+    padding: getResponsiveSize(14),
+    borderRadius: getResponsiveSize(T.radiusMd),
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#fbbf24'
+    borderColor: T.goldDeep,
+    ...T.shadowBtn,
   },
   rewardedButtonText: {
-    color: '#111827',
-    fontWeight: 'bold',
-    fontSize: getResponsiveSize(15),
-    textTransform: 'uppercase'
+    color: '#1B1305',
+    fontWeight: '800',
+    fontSize: getResponsiveSize(14),
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   disclaimer: {
-    color: '#888',
+    color: T.textMuted,
     fontSize: getResponsiveSize(12),
     textAlign: 'center',
     marginTop: getResponsiveSize(20),

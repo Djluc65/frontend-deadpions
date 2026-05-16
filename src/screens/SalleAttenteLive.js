@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground, Image, Modal, FlatList, ActivityIndicator, Share, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground, Image, Modal, FlatList, ActivityIndicator, Share, Platform, useWindowDimensions } from 'react-native';
+import { T } from '../utils/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
 import { socket } from '../utils/socket';
@@ -18,9 +19,25 @@ const SalleAttenteLive = ({ route, navigation }) => {
   // Récupération de la configuration de la salle passée via la navigation
   const params = route.params || {};
   const [configSalle, setConfigSalle] = useState(params.configSalle || null);
+  const configSalleRef = useRef(params.configSalle || null);
+  const creatorIdRef = useRef(
+    (params.configSalle?.createur?._id || params.configSalle?.createur?.id || null)
+  );
   const roomId = params.roomId || (configSalle ? configSalle.id : null);
+  
+  // Update ref when state changes
+  useEffect(() => {
+    configSalleRef.current = configSalle;
+    const nextCreatorId = configSalle?.createur?._id || configSalle?.createur?.id || null;
+    if (nextCreatorId) creatorIdRef.current = nextCreatorId;
+  }, [configSalle]);
+
   const isLeavingRef = useRef(false);
   const detachRef = useRef(null);
+  const didNavigateToGameRef = useRef(false);
+
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 1024;
 
   const user = useSelector(state => state.auth.user);
   const token = useSelector(state => state.auth.token);
@@ -38,6 +55,8 @@ const SalleAttenteLive = ({ route, navigation }) => {
   const [friends, setFriends] = useState([]);
   const [loadingFriends, setLoadingFriends] = useState(false);
   const [autoInviteDone, setAutoInviteDone] = useState(false);
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+  const lastOpponentLeftAlertAtRef = useRef(0);
 
   const getAvatarSource = (avatar) => {
     return getBaseAvatarSource(avatar);
@@ -45,11 +64,10 @@ const SalleAttenteLive = ({ route, navigation }) => {
 
   // Vérification des droits du créateur au chargement
   useEffect(() => {
-    if (user && configSalle && configSalle.createur) {
-        const creatorId = configSalle.createur._id || configSalle.createur.id;
-        const userId = user._id || user.id;
-        setIsCreator(creatorId.toString() === userId.toString());
-    }
+    const userId = user?._id || user?.id;
+    const creatorId = creatorIdRef.current || configSalle?.createur?._id || configSalle?.createur?.id;
+    if (!userId || !creatorId) return;
+    setIsCreator(creatorId.toString() === userId.toString());
   }, [user, configSalle]);
 
   // Auto-ouvrir la fenêtre d'invitation si demandé et si l'utilisateur est créateur
@@ -74,18 +92,23 @@ const SalleAttenteLive = ({ route, navigation }) => {
 
           const handleGameStart = (data) => {
               if (isLeavingRef.current) return;
+              if (didNavigateToGameRef.current) return;
               setIsStartingGame(false);
               console.log('Game start received in waiting room:', data);
               if (!configSalle && !data.roomConfig) return; 
 
+              didNavigateToGameRef.current = true;
+              try { detachRef.current?.(); } catch (_) {}
+
               navigation.replace('Game', {
                   mode: 'live',
                   gameId: roomId,
-                  roomConfig: configSalle || data.roomConfig,
+                  roomConfig: configSalleRef.current || data.roomConfig,
                   players: data.players,
-                  timeControl: (configSalle || data.roomConfig).parametres.tempsParCoup,
+                  timeControl: (configSalleRef.current || data.roomConfig).parametres.tempsParCoup,
                   currentTurn: data.currentTurn,
-                  tournamentSettings: data.tournamentSettings
+                  tournamentSettings: data.tournamentSettings,
+                  liveStartedAt: data.liveStartedAt
               });
           };
 
@@ -99,7 +122,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
               if (isLeavingRef.current) return;
               console.log('Player joined:', data);
               // Si le joueur qui rejoint n'est pas le créateur, c'est l'adversaire
-              const creatorId = (configSalle?.createur?._id || configSalle?.createur?.id) || (user?._id || user?.id);
+              const creatorId = (configSalleRef.current?.createur?._id || configSalleRef.current?.createur?.id) || (user?._id || user?.id);
               const joinedId = data.player._id || data.player.id;
               
               if (creatorId && joinedId !== creatorId) {
@@ -111,11 +134,15 @@ const SalleAttenteLive = ({ route, navigation }) => {
               if (isLeavingRef.current) return;
               console.log('Live room joined data:', data);
               
-              let currentConfig = configSalle;
+              let currentConfig = configSalleRef.current;
               if (!currentConfig && data.config) {
                   setConfigSalle(data.config);
                   setLoading(false);
                   currentConfig = data.config;
+              } else if (data.config) {
+                  // Merge code and other potential updates
+                  setConfigSalle(prev => ({ ...prev, ...data.config }));
+                  currentConfig = { ...currentConfig, ...data.config };
               }
 
               if (data.spectators) {
@@ -152,22 +179,55 @@ const SalleAttenteLive = ({ route, navigation }) => {
           const handleLiveRoomClosed = () => {
               if (isLeavingRef.current) return;
               appAlert('Live terminé', 'Le créateur a fermé la salle.', [
-                  { text: 'OK', onPress: () => navigation.navigate('Home') }
+                  { text: 'OK', onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Home' }] }) }
               ]);
           };
 
           const handleOpponentLeftLive = () => {
               if (isLeavingRef.current) return;
+              const now = Date.now();
+              if (now - lastOpponentLeftAlertAtRef.current < 1500) return;
+              lastOpponentLeftAlertAtRef.current = now;
+
+              const creatorId = configSalleRef.current?.createur?._id || configSalleRef.current?.createur?.id;
+              const userId = user?._id || user?.id;
+              const isCreatorEffective = Boolean(creatorId && userId && creatorId.toString() === userId.toString());
+              didNavigateToGameRef.current = false;
+              setIsStartingGame(false);
               setOpponent(null);
-              // Optionnel : Toast ou petit message
+              setInviteModalVisible(false);
+              setLoadingFriends(false);
+              setFriends([]);
+              if (isCreatorEffective) setIsCreator(true);
+              if (isCreatorEffective) {
+                  appAlert(
+                      'Invité parti',
+                      "Votre invité a quitté la salle. Vous pouvez inviter un autre joueur.",
+                      [
+                          { text: 'OK' },
+                          // { text: 'Inviter', onPress: () => { handleOpenInviteModal(); } }
+                      ]
+                  );
+              }
           };
 
           const handleError = (message) => {
               if (isLeavingRef.current) return;
+              setIsGeneratingCode(false);
               setIsStartingGame(false);
               appAlert('Erreur', message, [
-                  { text: 'OK', onPress: () => navigation.goBack() }
+                  { text: 'OK', onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Home' }] }) }
               ]);
+          };
+
+          const handleRoomCodeGenerated = (data) => {
+              if (isLeavingRef.current) return;
+              console.log('Room code generated:', data);
+              setIsGeneratingCode(false);
+              setConfigSalle(prev => ({ 
+                  ...(prev || configSalleRef.current || {}), 
+                  roomCode: data.roomCode
+              }));
           };
 
           socket.on('game_start', handleGameStart);
@@ -176,6 +236,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
           socket.on('live_room_joined', handleLiveRoomJoined);
           socket.on('live_room_closed', handleLiveRoomClosed);
           socket.on('opponent_left_live', handleOpponentLeftLive);
+          socket.on('room_code_generated', handleRoomCodeGenerated);
           socket.on('error', handleError);
 
           const detach = () => {
@@ -185,6 +246,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
               socket.off('live_room_joined', handleLiveRoomJoined);
               socket.off('live_room_closed', handleLiveRoomClosed);
               socket.off('opponent_left_live', handleOpponentLeftLive);
+              socket.off('room_code_generated', handleRoomCodeGenerated);
               socket.off('error', handleError);
           };
           detachRef.current = detach;
@@ -193,10 +255,10 @@ const SalleAttenteLive = ({ route, navigation }) => {
               detach();
           };
       }
-  }, [roomId, navigation, configSalle]);
+  }, [roomId, navigation]); // Retiré configSalle pour éviter la boucle infinie
 
   const handleStopLive = () => {
-      Alert.alert(
+      appAlert(
           "Arrêter le Live ?",
           "Cela fermera la salle pour tous les participants.",
           [
@@ -205,11 +267,14 @@ const SalleAttenteLive = ({ route, navigation }) => {
                   text: "Arrêter",
                   style: "destructive",
                   onPress: () => {
+                      const effectiveRoomId = roomId || configSalleRef.current?.id || route?.params?.roomId || route?.params?.configSalle?.id;
+                      const userId = user?._id || user?.id;
                       isLeavingRef.current = true;
+                      setInviteModalVisible(false);
                       try { detachRef.current?.(); } catch (_) {}
-                      try { socket.emit('stop_live_room', { gameId: roomId, userId: user?._id || user?.id }); } catch (_) {}
-                      try { socket.emit('leave_live_room', { gameId: roomId }); } catch (_) {}
-                      navigation.navigate('Home');
+                      try { socket.emit('stop_live_room', { gameId: effectiveRoomId, userId }); } catch (_) {}
+                      try { socket.emit('leave_live_room', { gameId: effectiveRoomId, userId }); } catch (_) {}
+                      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
                   }
               }
           ]
@@ -217,7 +282,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
   };
 
   const handleLeaveLive = () => {
-      Alert.alert(
+      appAlert(
           "Quitter le Live ?",
           "Voulez-vous vraiment quitter la salle ?",
           [
@@ -226,10 +291,13 @@ const SalleAttenteLive = ({ route, navigation }) => {
                   text: "Quitter",
                   style: "destructive",
                   onPress: () => {
+                      const effectiveRoomId = roomId || configSalleRef.current?.id || route?.params?.roomId || route?.params?.configSalle?.id;
+                      const userId = user?._id || user?.id;
                       isLeavingRef.current = true;
+                      setInviteModalVisible(false);
                       try { detachRef.current?.(); } catch (_) {}
-                      try { socket.emit('leave_live_room', { gameId: roomId }); } catch (_) {}
-                      navigation.navigate('Home');
+                      try { socket.emit('leave_live_room', { gameId: effectiveRoomId, userId }); } catch (_) {}
+                      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
                   }
               }
           ]
@@ -237,7 +305,10 @@ const SalleAttenteLive = ({ route, navigation }) => {
   };
 
   const handleBackPress = () => {
-      if (isCreator) {
+      const userId = user?._id || user?.id;
+      const creatorId = creatorIdRef.current || configSalleRef.current?.createur?._id || configSalleRef.current?.createur?.id;
+      const isCreatorEffective = Boolean(userId && creatorId && userId.toString() === creatorId.toString());
+      if (isCreatorEffective) {
           handleStopLive();
       } else {
           handleLeaveLive();
@@ -333,10 +404,11 @@ const SalleAttenteLive = ({ route, navigation }) => {
 
   if (loading || !configSalle) {
       return (
-          <ImageBackground 
-            source={require('../../assets/images/Background2-4.png')} 
+          <ImageBackground
+            source={require('../../assets/images/Background2-4.png')}
             style={[styles.background, { justifyContent: 'center', alignItems: 'center' }]}
           >
+              <View style={styles.bgOverlay} pointerEvents="none" />
               <ActivityIndicator size="large" color="#f1c40f" />
               <Text style={{ color: '#fff', marginTop: getResponsiveSize(20) }}>Chargement de la salle...</Text>
           </ImageBackground>
@@ -344,10 +416,11 @@ const SalleAttenteLive = ({ route, navigation }) => {
   }
 
   return (
-    <ImageBackground 
-      source={require('../../assets/images/Background2-4.png')} 
+    <ImageBackground
+      source={require('../../assets/images/Background2-4.png')}
       style={styles.background}
     >
+      <View style={styles.bgOverlay} pointerEvents="none" />
       <View style={styles.header}>
         <TouchableOpacity 
           onPress={() => { playButtonSound(); handleBackPress(); }} 
@@ -367,7 +440,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView style={styles.content} contentContainerStyle={isDesktop && styles.contentDesktop}>
         {/* Info Salle */}
         <View style={styles.card}>
             <View style={styles.playersContainer}>
@@ -437,21 +510,60 @@ const SalleAttenteLive = ({ route, navigation }) => {
             
             <View style={styles.divider} />
 
-            {false && isCreator && configSalle?.roomCode && (
+            {isCreator && (
               <View style={styles.inviteSection}>
-                <Text style={styles.inviteSectionTitle}>Inviter via code ou QR</Text>
-                <View style={styles.qrContainer}>
-                  <QRCode
-                    value={`deadpions://invite/${configSalle.roomCode}`}
-                    size={getResponsiveSize(160)}
-                    backgroundColor="white"
-                    color="#041c55"
-                  />
+                <Text style={styles.inviteSectionTitle}>INVITER VIA CODE OU QR</Text>
+                
+                <View style={styles.qrWrapper}>
+                    <View style={styles.qrContainer}>
+                        {configSalle?.roomCode ? (
+                            <QRCode
+                                value={`deadpions://invite/${configSalle.roomCode}`}
+                                size={getResponsiveSize(150)}
+                                backgroundColor="white"
+                                color="#0B1322"
+                            />
+                        ) : (
+                            <View style={{ width: getResponsiveSize(150), height: getResponsiveSize(150), backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: getResponsiveSize(14) }} />
+                        )}
+                    </View>
+                    
+                    <View style={styles.codeContainer}>
+                        <Text style={styles.codeLabel}>CODE D'ACCÈS :</Text>
+                        <View style={styles.codeRow}>
+                            <Text style={styles.codeText}>{configSalle?.roomCode || '------'}</Text>
+                            <TouchableOpacity 
+                                onPress={() => {
+                                    playButtonSound();
+                                    setIsGeneratingCode(true);
+                                    setConfigSalle(prev => (prev ? { ...prev, roomCode: null } : prev));
+                                    socket.emit('generate_room_code', { gameId: roomId });
+                                }}
+                                style={styles.refreshButton}
+                                disabled={!roomId || isGeneratingCode}
+                            >
+                                <Ionicons name="refresh" size={getResponsiveSize(20)} color={T.gold} />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
                 </View>
-                <View style={styles.codeRow}>
-                  <Text style={styles.codeText}>{configSalle.roomCode}</Text>
-                </View>
-                <Text style={styles.inviteHint}>Partage ce code à ton adversaire</Text>
+                
+                <Text style={styles.inviteHint}>
+                    L'adversaire peut scanner ce QR code ou entrer le code manuel pour rejoindre.
+                </Text>
+
+                <TouchableOpacity 
+                    style={styles.shareButton} 
+                    onPress={() => {
+                        playButtonSound();
+                        handleShare();
+                    }}
+                >
+                    <Ionicons name="share-social-outline" size={getResponsiveSize(20)} color="#1B1305" />
+                    <Text style={styles.shareButtonText}>PARTAGER L'INVITATION</Text>
+                </TouchableOpacity>
+
+                <View style={styles.divider} />
               </View>
             )}
 
@@ -489,7 +601,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
                 <Text style={styles.emptyStateText}>En attente de spectateurs...</Text>
             </View>
         ) : (
-            spectateurs.map((spec, index) => (
+            spectateurs.map((_, index) => (
                 <View key={index} style={styles.spectatorRow}>
                     <Text style={styles.specAvatar}>👤</Text>
                     <Text style={styles.specName}>Spectateur {index + 1}</Text>
@@ -560,8 +672,21 @@ const SalleAttenteLive = ({ route, navigation }) => {
                     <FlatList
                         data={friends}
                         keyExtractor={item => item.id}
+                        contentContainerStyle={
+                            Array.isArray(friends) && friends.length > 0
+                                ? styles.friendsListContent
+                                : styles.friendsListEmptyContent
+                        }
                         ListEmptyComponent={
-                            <Text style={styles.emptyText}>Aucun ami trouvé</Text>
+                            <View style={styles.emptyFriendsState}>
+                                <View style={styles.emptyFriendsIcon}>
+                                    <Ionicons name="people-outline" size={getResponsiveSize(28)} color={T.textMuted} />
+                                </View>
+                                <Text style={styles.emptyFriendsTitle}>Aucun ami en ligne</Text>
+                                <Text style={styles.emptyFriendsSubtitle}>
+                                    Utilisez le code ou le QR de la salle pour inviter quelqu'un.
+                                </Text>
+                            </View>
                         }
                         renderItem={({ item }) => (
                             <View style={styles.friendItem}>
@@ -596,6 +721,10 @@ const SalleAttenteLive = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  bgOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(5,9,15,0.55)',
+  },
   background: {
     flex: 1,
     width: '100%',
@@ -607,83 +736,101 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: getResponsiveSize(50),
     paddingHorizontal: getResponsiveSize(20),
-    paddingBottom: getResponsiveSize(20),
-    backgroundColor: 'rgba(4, 28, 85, 0.9)',
+    paddingBottom: getResponsiveSize(18),
+    backgroundColor: T.bg1,
+    borderBottomWidth: 1,
+    borderBottomColor: T.borderSoft,
   },
   headerTitleContainer: {
     alignItems: 'center',
   },
   headerTitle: {
-    color: '#fff',
-    fontSize: getResponsiveSize(20),
-    fontWeight: 'bold',
+    color: T.text,
+    fontSize: getResponsiveSize(18),
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    backgroundColor: 'rgba(230,57,70,0.15)',
     paddingHorizontal: getResponsiveSize(8),
     paddingVertical: getResponsiveSize(2),
-    borderRadius: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(T.radiusSm),
     marginTop: getResponsiveSize(4),
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#ef4444',
+    borderWidth: 1,
+    borderColor: T.red,
   },
   liveIndicator: {
     width: getResponsiveSize(6),
     height: getResponsiveSize(6),
     borderRadius: getResponsiveSize(3),
-    backgroundColor: '#ef4444',
+    backgroundColor: T.red,
     marginRight: getResponsiveSize(6),
   },
   liveText: {
-    color: '#ef4444',
+    color: T.red,
     fontSize: getResponsiveSize(10),
-    fontWeight: 'bold',
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   backButton: {
     padding: getResponsiveSize(8),
+    backgroundColor: T.bg2,
+    borderRadius: getResponsiveSize(T.radiusMd),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   shareButton: {
     padding: getResponsiveSize(8),
+    backgroundColor: T.bg2,
+    borderRadius: getResponsiveSize(T.radiusMd),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   content: {
     flex: 1,
-    padding: getResponsiveSize(20),
+    padding: getResponsiveSize(16),
+  },
+  contentDesktop: {
+    maxWidth: 800,
+    width: '100%',
+    alignSelf: 'center',
   },
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: getResponsiveSize(20),
-    padding: getResponsiveSize(20),
-    marginBottom: getResponsiveSize(20),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: getResponsiveSize(4) },
-    shadowOpacity: 0.3,
-    shadowRadius: getResponsiveSize(5),
-    elevation: getResponsiveSize(5),
+    backgroundColor: T.bg2,
+    borderRadius: getResponsiveSize(T.radiusMd),
+    padding: getResponsiveSize(18),
+    marginBottom: getResponsiveSize(16),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
+    ...T.shadowCard,
   },
   playersContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: getResponsiveSize(15),
+    marginBottom: getResponsiveSize(14),
   },
   playerSide: {
     flex: 1,
     alignItems: 'center',
   },
   roleLabel: {
-    fontSize: getResponsiveSize(12),
-    color: '#6b7280',
+    fontSize: getResponsiveSize(11),
+    color: T.textMuted,
     marginBottom: getResponsiveSize(8),
-    fontWeight: '600',
+    fontWeight: '700',
     textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   vsContainer: {
-    width: getResponsiveSize(40),
-    height: getResponsiveSize(40),
-    borderRadius: getResponsiveSize(20),
-    backgroundColor: '#ef4444',
+    width: getResponsiveSize(38),
+    height: getResponsiveSize(38),
+    borderRadius: getResponsiveSize(19),
+    backgroundColor: T.red,
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: getResponsiveSize(10),
@@ -691,7 +838,7 @@ const styles = StyleSheet.create({
   },
   vsText: {
     color: '#fff',
-    fontSize: getResponsiveSize(14),
+    fontSize: getResponsiveSize(13),
     fontWeight: '900',
     fontStyle: 'italic',
   },
@@ -700,21 +847,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarPlaceholder: {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: T.bg3,
     alignItems: 'center',
     justifyContent: 'center',
     borderStyle: 'dashed',
-    borderColor: '#9ca3af',
+    borderColor: T.borderSoft,
   },
   waitingTextSmall: {
     fontSize: getResponsiveSize(12),
-    color: '#9ca3af',
+    color: T.textMuted,
     marginTop: getResponsiveSize(5),
     fontStyle: 'italic',
   },
   label: {
     fontSize: getResponsiveSize(12),
-    color: '#6b7280',
+    color: T.textMuted,
     marginBottom: getResponsiveSize(5),
     fontWeight: '600',
   },
@@ -730,15 +877,15 @@ const styles = StyleSheet.create({
     width: getResponsiveSize(60),
     height: getResponsiveSize(60),
     borderRadius: getResponsiveSize(30),
-    borderWidth: getResponsiveSize(2),
-    borderColor: '#e5e7eb',
+    borderWidth: 2,
+    borderColor: T.border,
   },
   flag: {
     position: 'absolute',
     bottom: getResponsiveSize(-2),
     right: getResponsiveSize(-2),
-    fontSize: getResponsiveSize(20),
-    backgroundColor: '#fff',
+    fontSize: getResponsiveSize(18),
+    backgroundColor: T.bg3,
     borderRadius: getResponsiveSize(10),
     overflow: 'hidden',
     padding: getResponsiveSize(2),
@@ -747,263 +894,363 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   pseudo: {
-    fontSize: getResponsiveSize(14),
-    fontWeight: 'bold',
-    color: '#111827',
+    fontSize: getResponsiveSize(13),
+    fontWeight: '700',
+    color: T.text,
     marginBottom: getResponsiveSize(4),
     textAlign: 'center',
   },
   level: {
     fontSize: getResponsiveSize(10),
-    color: '#fff',
-    backgroundColor: '#f59e0b',
+    color: '#1B1305',
+    backgroundColor: T.gold,
     paddingHorizontal: getResponsiveSize(8),
     paddingVertical: getResponsiveSize(2),
-    borderRadius: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(T.radiusSm),
     overflow: 'hidden',
+    fontWeight: '700',
   },
   divider: {
-    height: getResponsiveSize(1),
-    backgroundColor: '#e5e7eb',
-    marginVertical: getResponsiveSize(15),
+    height: 1,
+    backgroundColor: T.borderSoft,
+    marginVertical: getResponsiveSize(14),
   },
   paramsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: getResponsiveSize(15),
+    marginBottom: getResponsiveSize(14),
   },
   paramItem: {
     alignItems: 'center',
     gap: getResponsiveSize(5),
   },
   paramText: {
-    fontSize: getResponsiveSize(14),
+    fontSize: getResponsiveSize(13),
     fontWeight: '600',
-    color: '#374151',
+    color: T.textDim,
   },
   description: {
-    fontSize: getResponsiveSize(14),
-    color: '#4b5563',
+    fontSize: getResponsiveSize(13),
+    color: T.textMuted,
     fontStyle: 'italic',
     textAlign: 'center',
-    marginTop: getResponsiveSize(10),
+    marginTop: getResponsiveSize(8),
   },
   sectionHeader: {
-    marginBottom: getResponsiveSize(15),
+    marginBottom: getResponsiveSize(12),
   },
   sectionTitle: {
-    color: '#fff',
-    fontSize: getResponsiveSize(18),
-    fontWeight: 'bold',
+    color: T.text,
+    fontSize: getResponsiveSize(16),
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: getResponsiveSize(40),
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: getResponsiveSize(20),
-    borderWidth: getResponsiveSize(1),
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    borderStyle: 'dashed',
+    padding: getResponsiveSize(36),
+    backgroundColor: T.bg2,
+    borderRadius: getResponsiveSize(T.radiusMd),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   emptyStateText: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: T.textMuted,
     marginTop: getResponsiveSize(10),
+    fontSize: getResponsiveSize(14),
   },
   spectatorRow: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: getResponsiveSize(10),
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: getResponsiveSize(8),
+    backgroundColor: T.bg2,
+    borderRadius: getResponsiveSize(T.radiusSm),
     marginBottom: getResponsiveSize(8),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   specAvatar: {
-    fontSize: getResponsiveSize(20),
+    fontSize: getResponsiveSize(18),
     marginRight: getResponsiveSize(10),
   },
   specName: {
-    color: '#fff',
-    fontSize: getResponsiveSize(16),
+    color: T.textDim,
+    fontSize: getResponsiveSize(14),
   },
   footer: {
-    padding: getResponsiveSize(20),
-    backgroundColor: 'rgba(4, 28, 85, 0.95)',
-    borderTopWidth: getResponsiveSize(1),
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    padding: getResponsiveSize(16),
+    backgroundColor: T.bg1,
+    borderTopWidth: 1,
+    borderTopColor: T.borderSoft,
   },
   mainButton: {
-    backgroundColor: '#ef4444',
+    backgroundColor: T.red,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: getResponsiveSize(16),
-    borderRadius: getResponsiveSize(16),
-    shadowColor: '#ef4444',
-    shadowOffset: { width: 0, height: getResponsiveSize(4) },
-    shadowOpacity: 0.4,
-    shadowRadius: getResponsiveSize(8),
+    paddingVertical: getResponsiveSize(14),
+    borderRadius: getResponsiveSize(T.radiusMd),
+    shadowColor: T.red,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
     elevation: 6,
   },
   mainButtonText: {
     color: '#fff',
-    fontSize: getResponsiveSize(18),
-    fontWeight: 'bold',
-    letterSpacing: getResponsiveSize(1),
+    fontSize: getResponsiveSize(15),
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   inviteButton: {
-      alignItems: 'center',
-      justifyContent: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   invitePlaceholder: {
-      backgroundColor: '#f0fdf4',
+    backgroundColor: T.bg3,
   },
   modalOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      justifyContent: 'center',
-      alignItems: 'center',
+    flex: 1,
+    backgroundColor: T.overlay,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalContent: {
-      backgroundColor: '#fff',
-      width: isTablet ? '50%' : '90%',
-      maxHeight: '80%',
-      borderRadius: getResponsiveSize(20),
-      padding: getResponsiveSize(20),
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: getResponsiveSize(4) },
-      shadowOpacity: 0.3,
-      shadowRadius: getResponsiveSize(5),
-    elevation: getResponsiveSize(5),
+    backgroundColor: T.bg2,
+    width: isTablet ? '50%' : '90%',
+    maxHeight: '80%',
+    borderRadius: getResponsiveSize(T.radiusMd),
+    padding: getResponsiveSize(20),
+    borderWidth: 1,
+    borderColor: T.gold,
+    ...T.shadowCard,
   },
   modalHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: getResponsiveSize(20),
-      borderBottomWidth: getResponsiveSize(1),
-      borderBottomColor: '#f3f4f6',
-      paddingBottom: getResponsiveSize(15),
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: getResponsiveSize(18),
+    borderBottomWidth: 1,
+    borderBottomColor: T.borderSoft,
+    paddingBottom: getResponsiveSize(14),
   },
   modalTitle: {
-      fontSize: getResponsiveSize(20),
-      fontWeight: 'bold',
-      color: '#111827',
+    fontSize: getResponsiveSize(18),
+    fontWeight: '800',
+    color: T.text,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   closeButton: {
-      padding: getResponsiveSize(5),
+    padding: getResponsiveSize(5),
+    backgroundColor: T.bg3,
+    borderRadius: getResponsiveSize(T.radiusSm),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   friendItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingVertical: getResponsiveSize(12),
-      borderBottomWidth: getResponsiveSize(1),
-      borderBottomColor: '#f3f4f6',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: getResponsiveSize(12),
+    borderBottomWidth: 1,
+    borderBottomColor: T.borderSoft,
   },
   friendInfo: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   friendAvatar: {
-      width: getResponsiveSize(50),
-      height: getResponsiveSize(50),
-      borderRadius: getResponsiveSize(25),
-      marginRight: getResponsiveSize(15),
-      backgroundColor: '#f3f4f6',
+    width: getResponsiveSize(46),
+    height: getResponsiveSize(46),
+    borderRadius: getResponsiveSize(23),
+    marginRight: getResponsiveSize(12),
+    backgroundColor: T.bg3,
+    borderWidth: 2,
+    borderColor: T.border,
   },
   friendPseudo: {
-      fontSize: getResponsiveSize(16),
-      fontWeight: 'bold',
-      color: '#1f2937',
-      marginBottom: getResponsiveSize(2),
+    fontSize: getResponsiveSize(14),
+    fontWeight: '700',
+    color: T.text,
+    marginBottom: getResponsiveSize(2),
   },
   friendStatus: {
-      fontSize: getResponsiveSize(12),
+    fontSize: getResponsiveSize(12),
   },
   inviteAction: {
-      backgroundColor: '#10b981',
-      paddingHorizontal: getResponsiveSize(15),
-      paddingVertical: getResponsiveSize(8),
-      borderRadius: getResponsiveSize(20),
+    backgroundColor: T.green,
+    paddingHorizontal: getResponsiveSize(14),
+    paddingVertical: getResponsiveSize(8),
+    borderRadius: getResponsiveSize(T.radiusPill),
   },
   inviteActionText: {
-      color: '#fff',
-      fontSize: getResponsiveSize(14),
-      fontWeight: 'bold',
+    color: '#fff',
+    fontSize: getResponsiveSize(12),
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
-  emptyText: {
-      textAlign: 'center',
-      color: '#6b7280',
-      marginTop: getResponsiveSize(20),
-      fontSize: getResponsiveSize(16),
+  friendsListContent: {
+    paddingBottom: getResponsiveSize(10),
+  },
+  friendsListEmptyContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingVertical: getResponsiveSize(24),
+  },
+  emptyFriendsState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: getResponsiveSize(18),
+    paddingHorizontal: getResponsiveSize(12),
+    borderWidth: 1,
+    borderColor: T.gold,
+    borderRadius: getResponsiveSize(T.radiusMd),
+    backgroundColor: 'rgba(244,180,26,0.06)',
+  },
+  emptyFriendsIcon: {
+    width: getResponsiveSize(52),
+    height: getResponsiveSize(52),
+    borderRadius: getResponsiveSize(26),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: T.bg3,
+    borderWidth: 1,
+    borderColor: T.borderSoft,
+    marginBottom: getResponsiveSize(12),
+  },
+  emptyFriendsTitle: {
+    color: T.text,
+    fontSize: getResponsiveSize(14),
+    fontWeight: '800',
+    marginBottom: getResponsiveSize(6),
+    textTransform: 'uppercase',
+    letterSpacing: 0.2,
+  },
+  emptyFriendsSubtitle: {
+    color: T.textMuted,
+    fontSize: getResponsiveSize(13),
+    textAlign: 'center',
+    lineHeight: getResponsiveSize(18),
+    maxWidth: getResponsiveSize(260),
+  },
+  // Invite Section
+  inviteSection: {
+    marginTop: getResponsiveSize(10),
+    alignItems: 'center',
+    width: '100%',
+  },
+  inviteSectionTitle: {
+    fontSize: getResponsiveSize(14),
+    fontWeight: '800',
+    color: T.gold,
+    marginBottom: getResponsiveSize(16),
+    letterSpacing: 0.5,
+  },
+  qrWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: getResponsiveSize(20),
+    width: '100%',
+    paddingHorizontal: getResponsiveSize(20),
+  },
+  qrContainer: {
+    padding: getResponsiveSize(10),
+    backgroundColor: '#fff',
+    borderRadius: getResponsiveSize(T.radiusMd),
+    ...T.shadowCard,
+  },
+  codeContainer: {
+    flex: 1,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  codeLabel: {
+    fontSize: getResponsiveSize(11),
+    color: T.textMuted,
+    fontWeight: '700',
+    marginBottom: getResponsiveSize(4),
+  },
+  codeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: getResponsiveSize(10),
+  },
+  codeText: {
+    fontSize: getResponsiveSize(24),
+    fontWeight: '900',
+    color: T.text,
+    letterSpacing: 2,
+  },
+  refreshButton: {
+    padding: getResponsiveSize(6),
+    backgroundColor: 'rgba(244,180,26,0.1)',
+    borderRadius: getResponsiveSize(T.radiusSm),
+  },
+  inviteHint: {
+    fontSize: getResponsiveSize(11),
+    color: T.textMuted,
+    textAlign: 'center',
+    marginTop: getResponsiveSize(16),
+    marginBottom: getResponsiveSize(10),
+    lineHeight: getResponsiveSize(16),
+    paddingHorizontal: getResponsiveSize(30),
+  },
+  shareButton: {
+    backgroundColor: T.gold,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: getResponsiveSize(12),
+    paddingHorizontal: getResponsiveSize(24),
+    borderRadius: getResponsiveSize(T.radiusMd),
+    marginTop: getResponsiveSize(10),
+    gap: getResponsiveSize(10),
+    ...T.shadowBtn,
+  },
+  shareButtonText: {
+    color: '#1B1305',
+    fontSize: getResponsiveSize(13),
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  stopButton: {
+    textAlign: 'center',
+    color: T.textMuted,
+    marginTop: getResponsiveSize(20),
+    fontSize: getResponsiveSize(14),
   },
   waitingText: {
-      color: 'white',
-      fontSize: getResponsiveSize(16),
-      bottom: getResponsiveSize(3),
-      left: getResponsiveSize(120)
+    color: T.textDim,
+    fontSize: getResponsiveSize(15),
+    bottom: getResponsiveSize(3),
+    left: getResponsiveSize(120)
   },
   footerActions: {
-    marginTop: getResponsiveSize(20),
+    marginTop: getResponsiveSize(16),
     alignItems: 'center',
-    marginBottom: getResponsiveSize(20),
+    marginBottom: getResponsiveSize(16),
   },
   stopButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: getResponsiveSize(20),
     paddingVertical: getResponsiveSize(10),
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderRadius: getResponsiveSize(20),
-    borderWidth: getResponsiveSize(1),
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    backgroundColor: 'rgba(230,57,70,0.1)',
+    borderRadius: getResponsiveSize(T.radiusPill),
+    borderWidth: 1,
+    borderColor: 'rgba(230,57,70,0.3)',
   },
   stopButtonText: {
-    color: '#ef4444',
+    color: T.red,
     marginLeft: getResponsiveSize(8),
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
-  inviteSection: {
-    alignItems: 'center',
-    marginVertical: getResponsiveSize(16),
-    padding: getResponsiveSize(16),
-    backgroundColor: 'rgba(4, 28, 85, 0.9)',
-    borderRadius: getResponsiveSize(16),
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f',
-    width: '100%',
-  },
-  inviteSectionTitle: {
-    color: '#f1c40f',
-    fontWeight: 'bold',
-    fontSize: getResponsiveSize(16),
-    marginBottom: getResponsiveSize(12),
-  },
-  qrContainer: {
-    padding: getResponsiveSize(12),
-    backgroundColor: 'white',
-    borderRadius: getResponsiveSize(12),
-    marginBottom: getResponsiveSize(12),
-  },
-  codeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: getResponsiveSize(8),
-    marginBottom: getResponsiveSize(4),
-  },
-  codeText: {
-    color: '#fff',
-    fontSize: getResponsiveSize(28),
-    fontWeight: 'bold',
-    letterSpacing: getResponsiveSize(6),
-  },
-  inviteHint: {
-    color: '#9ca3af',
-    fontSize: getResponsiveSize(12),
-    marginTop: getResponsiveSize(4),
-  }
+
 });
 
 export default SalleAttenteLive;

@@ -5,6 +5,7 @@ import { getResponsiveSize } from '../../utils/responsive';
 import { playButtonSound } from '../../utils/soundManager';
 import { ONLINE_TIME_OPTIONS } from '../../utils/constants';
 import { modalTheme } from '../../utils/modalTheme';
+import { T } from '../../utils/theme';
 
 const LocalGameSetup = memo(({ visible, onClose, navigation }) => {
   const [step, setStep] = useState(1);
@@ -135,13 +136,13 @@ const LocalGameSetup = memo(({ visible, onClose, navigation }) => {
                         </>
                     ) : (
                         <>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: getResponsiveSize(30), justifyContent: 'center', position: 'relative' }}>
-                                <TouchableOpacity 
+                            <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: getResponsiveSize(18), justifyContent: 'center', position: 'relative' }}>
+                                <TouchableOpacity
                                     onPress={() => { playButtonSound(); setStep(1); }}
                                     style={{ position: 'absolute', left: 0, padding: getResponsiveSize(10), zIndex: 10 }}
                                     hitSlop={{ top: getResponsiveSize(15), bottom: getResponsiveSize(15), left: getResponsiveSize(15), right: getResponsiveSize(15) }}
                                 >
-                                    <Ionicons name="arrow-back" size={getResponsiveSize(28)} color="#f1c40f" />
+                                    <Ionicons name="arrow-back" size={getResponsiveSize(24)} color={T.gold} />
                                 </TouchableOpacity>
                                 <Text style={[styles.friendsModalTitle, { marginBottom: 0 }]}>Configuration Locale</Text>
                             </View>
@@ -151,23 +152,23 @@ const LocalGameSetup = memo(({ visible, onClose, navigation }) => {
                                 <Text style={styles.sectionTitle}>Qui commence ?</Text>
                                 <View style={{ flexDirection: 'row', gap: getResponsiveSize(10), width: '100%' }}>
                                     {['joueur1', 'joueur2', 'aleatoire'].map(opt => (
-                                        <TouchableOpacity 
-                                            key={opt} 
-                                            style={{ 
-                                                flex: 1, 
+                                        <TouchableOpacity
+                                            key={opt}
+                                            style={{
+                                                flex: 1,
                                                 paddingVertical: getResponsiveSize(12),
-                                                backgroundColor: localPremierJoueur === opt ? '#f1c40f' : 'rgba(255,255,255,0.05)',
-                                                borderRadius: getResponsiveSize(12),
+                                                backgroundColor: localPremierJoueur === opt ? T.gold : T.bg3,
+                                                borderRadius: getResponsiveSize(T.radiusSm),
                                                 alignItems: 'center',
-                                                borderWidth: getResponsiveSize(1),
-                                                borderColor: localPremierJoueur === opt ? '#f1c40f' : 'rgba(255,255,255,0.1)'
-                                            }} 
+                                                borderWidth: 1,
+                                                borderColor: localPremierJoueur === opt ? T.gold : T.borderSoft
+                                            }}
                                             onPress={() => { playButtonSound(); setLocalPremierJoueur(opt); }}
                                         >
-                                            <Text style={{ 
-                                                fontSize: getResponsiveSize(14), 
+                                            <Text style={{
+                                                fontSize: getResponsiveSize(14),
                                                 fontWeight: 'bold',
-                                                color: localPremierJoueur === opt ? '#000' : 'rgba(255,255,255,0.6)' 
+                                                color: localPremierJoueur === opt ? '#1B1305' : T.textDim
                                             }}>
                                                 {opt === 'joueur1' ? 'Joueur 1' : opt === 'joueur2' ? 'Joueur 2' : 'Aléatoire'}
                                             </Text>
@@ -185,24 +186,24 @@ const LocalGameSetup = memo(({ visible, onClose, navigation }) => {
                                         { id: 'blanc', icon: '✖', label: 'Bleu' },
                                         { id: 'aleatoire', icon: '🎲', label: 'Aléa.' }
                                       ].map(opt => (
-                                        <TouchableOpacity 
-                                            key={opt.id} 
-                                            style={{ 
-                                                flex: 1, 
+                                        <TouchableOpacity
+                                            key={opt.id}
+                                            style={{
+                                                flex: 1,
                                                 paddingVertical: getResponsiveSize(12),
-                                                backgroundColor: localCouleurJoueur1 === opt.id ? '#f1c40f' : 'rgba(255,255,255,0.05)',
-                                                borderRadius: getResponsiveSize(12),
+                                                backgroundColor: localCouleurJoueur1 === opt.id ? T.gold : T.bg3,
+                                                borderRadius: getResponsiveSize(T.radiusSm),
                                                 alignItems: 'center',
-                                                borderWidth: getResponsiveSize(1),
-                                                borderColor: localCouleurJoueur1 === opt.id ? '#f1c40f' : 'rgba(255,255,255,0.1)'
-                                            }} 
+                                                borderWidth: 1,
+                                                borderColor: localCouleurJoueur1 === opt.id ? T.gold : T.borderSoft
+                                            }}
                                             onPress={() => { playButtonSound(); setLocalCouleurJoueur1(opt.id); }}
                                         >
-                                            <Text style={{ fontSize: getResponsiveSize(20), marginBottom: getResponsiveSize(5) }}>{opt.icon}</Text>
-                                            <Text style={{ 
-                                                fontSize: getResponsiveSize(14), 
+                                            <Text style={{ fontSize: getResponsiveSize(18), marginBottom: getResponsiveSize(4) }}>{opt.icon}</Text>
+                                            <Text style={{
+                                                fontSize: getResponsiveSize(14),
                                                 fontWeight: 'bold',
-                                                color: localCouleurJoueur1 === opt.id ? '#000' : 'rgba(255,255,255,0.6)'
+                                                color: localCouleurJoueur1 === opt.id ? '#1B1305' : T.textDim
                                             }}>
                                                 {opt.label}
                                             </Text>
@@ -232,58 +233,59 @@ const styles = StyleSheet.create({
   modalOverlay: modalTheme.overlay,
   friendsModalContent: {
     ...modalTheme.card,
-    width: '90%',
-    maxHeight: '90%',
+    width: '86%',
+    maxHeight: '72%',
     position: 'relative',
     overflow: 'hidden',
   },
   friendsModalTitle: {
     ...modalTheme.title,
-    fontSize: getResponsiveSize(28),
+    fontSize: getResponsiveSize(22),
     textTransform: 'uppercase'
   },
   friendsLabel: {
-    fontSize: getResponsiveSize(18),
-    color: '#fff',
-    marginBottom: getResponsiveSize(10),
-    marginTop: getResponsiveSize(10),
-    fontWeight: 'bold',
+    fontSize: getResponsiveSize(14),
+    color: T.textDim,
+    marginBottom: getResponsiveSize(8),
+    marginTop: getResponsiveSize(8),
+    fontWeight: '700',
   },
   optionsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    marginBottom: getResponsiveSize(10),
-    gap: getResponsiveSize(10),
+    marginBottom: getResponsiveSize(8),
+    gap: getResponsiveSize(8),
   },
   friendsOptionButton: {
-    paddingHorizontal: getResponsiveSize(15),
-    paddingVertical: getResponsiveSize(8),
-    borderRadius: getResponsiveSize(20),
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f',
-    margin: getResponsiveSize(5),
-    backgroundColor: 'transparent',
+    paddingHorizontal: getResponsiveSize(12),
+    paddingVertical: getResponsiveSize(6),
+    borderRadius: getResponsiveSize(T.radiusPill),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
+    margin: getResponsiveSize(4),
+    backgroundColor: T.bg3,
     minWidth: '10%',
     alignItems: 'center',
   },
   friendsOptionButtonActive: {
-    backgroundColor: '#f1c40f',
+    backgroundColor: T.gold,
+    borderColor: T.gold,
   },
   friendsOptionText: {
-    color: '#f1c40f',
-    fontSize: getResponsiveSize(14),
+    color: T.textDim,
+    fontSize: getResponsiveSize(12),
     fontWeight: 'bold',
   },
   friendsOptionTextActive: {
-    color: '#0f2350',
+    color: '#1B1305',
   },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    marginTop: getResponsiveSize(20),
-    gap: getResponsiveSize(10),
+    marginTop: getResponsiveSize(14),
+    gap: getResponsiveSize(8),
   },
   modalButtonCancel: {
     flex: 1,
@@ -301,17 +303,17 @@ const styles = StyleSheet.create({
   modalButtonTextActive: modalTheme.buttonTextActive,
   sectionContainer: {
     width: '100%',
-    backgroundColor: '#041c55',
-    borderRadius: getResponsiveSize(20),
-    padding: getResponsiveSize(15),
-    marginBottom: getResponsiveSize(20),
-    borderWidth: getResponsiveSize(1),
-    borderColor: 'rgba(255,255,255,0.1)'
+    backgroundColor: T.bg2,
+    borderRadius: getResponsiveSize(T.radiusMd),
+    padding: getResponsiveSize(12),
+    marginBottom: getResponsiveSize(14),
+    borderWidth: 1,
+    borderColor: T.borderSoft
   },
   sectionTitle: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: getResponsiveSize(16),
-    marginBottom: getResponsiveSize(15),
+    color: T.textDim,
+    fontSize: getResponsiveSize(14),
+    marginBottom: getResponsiveSize(10),
     textAlign: 'center'
   },
 });

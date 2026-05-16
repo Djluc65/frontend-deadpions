@@ -7,6 +7,7 @@ import settingsReducer from './slices/settingsSlice';
 import socialReducer from './slices/socialSlice';
 import gameReducer from './slices/gameSlice';
 import uiReducer from './slices/uiSlice';
+import rewardsReducer from './slices/rewardsSlice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
@@ -14,12 +15,13 @@ const rootReducer = combineReducers({
   social: socialReducer,
   game: gameReducer,
   ui: uiReducer,
+  rewards: rewardsReducer,
 });
 
 const persistConfig = {
   key: 'root',
   storage: AsyncStorage,
-  whitelist: ['auth', 'settings'], // Persist auth and settings state
+  whitelist: ['auth', 'settings', 'rewards'],
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

@@ -17,22 +17,25 @@ export const getAvatarSource = (avatarString) => {
   if (!avatarString) {
       return null; 
   }
+  const raw = typeof avatarString === 'string' ? avatarString : `${avatarString}`;
+  const normalized = raw.trim().replace(/`/g, '');
+  if (!normalized) return null;
 
   // Check if it's a premium avatar ID
-  const premiumAvatar = PREMIUM_AVATARS.find(a => a.id === avatarString);
+  const premiumAvatar = PREMIUM_AVATARS.find(a => a.id === normalized);
   if (premiumAvatar) {
     return premiumAvatar.source;
   }
 
   // Handle URL or relative path
-  if (avatarString.startsWith('http')) {
-    return { uri: avatarString };
+  if (normalized.startsWith('http')) {
+    return { uri: normalized };
   }
   
-  if (avatarString.startsWith('/uploads')) {
-    return { uri: `${API_URL.replace('/api', '')}${avatarString}` };
+  if (normalized.startsWith('/uploads')) {
+    return { uri: `${API_URL.replace('/api', '')}${normalized}` };
   }
 
   // Fallback (might be a direct URI string or legacy)
-  return { uri: avatarString };
+  return { uri: normalized };
 };

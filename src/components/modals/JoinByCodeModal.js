@@ -10,20 +10,42 @@ import {
   ActivityIndicator,
   Keyboard,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
 import { playButtonSound } from '../../utils/soundManager';
 import { getResponsiveSize } from '../../utils/responsive';
 import { modalTheme } from '../../utils/modalTheme';
+import { T } from '../../utils/theme';
+
+// Safe import for expo-camera to prevent crash if native module is missing
+let CameraView, useCameraPermissions;
+try {
+  const CameraModule = require('expo-camera');
+  CameraView = CameraModule.CameraView;
+  useCameraPermissions = CameraModule.useCameraPermissions;
+} catch (e) {
+  // Silent catch
+}
 
 const CODE_LENGTH = 6;
 
-const JoinByCodeModal = memo(({ visible, onClose, socket, navigation, appAlert, t }) => {
+const JoinByCodeModal = memo(({ visible, onClose, socket, t, appAlert }) => {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
+  const navigation = useNavigation();
   const user = useSelector(state => state.auth.user);
+  
+  // Safe hook call
+  const [permission, requestPermission] = useCameraPermissions ? useCameraPermissions() : [null, null];
+  
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
+  
   const inputRef = useRef(null);
   const cleanupRef = useRef(null);
 
@@ -32,11 +54,47 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, navigation, appAlert, 
       setCode('');
       setError('');
       setLoading(false);
+      setShowScanner(false);
       setTimeout(() => inputRef.current?.focus(), 300);
     } else {
       cleanupRef.current?.();
     }
   }, [visible]);
+
+  const handleBarCodeScanned = ({ data }) => {
+    if (!showScanner) return;
+    
+    // Extract code from deadpions://invite/XXXXXX or just XXXXXX
+    let scannedCode = data;
+    if (data.includes('invite/')) {
+        scannedCode = data.split('invite/')[1]?.split('?')[0];
+    }
+    
+    if (scannedCode && scannedCode.length === CODE_LENGTH) {
+        setShowScanner(false);
+        setCode(scannedCode.toUpperCase());
+        playButtonSound();
+        handleJoinWithCode(scannedCode.toUpperCase());
+    }
+  };
+
+  const startScan = async () => {
+    if (!CameraView || !requestPermission) {
+        appAlert('Non disponible', "Le scanner nécessite une mise à jour de l'application native.");
+        return;
+    }
+    if (!permission?.granted) {
+        const res = await requestPermission();
+        if (!res.granted) {
+            appAlert('Permission requise', "L'accès à la caméra est nécessaire pour scanner un QR Code.");
+            return;
+        }
+    }
+    setShowScanner(true);
+    playButtonSound();
+  };
+
+  const canScan = Platform.OS !== 'web' && !!CameraView;
 
   const registerListeners = useCallback(() => {
     if (!socket) return () => {};
@@ -105,14 +163,10 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, navigation, appAlert, 
     if (error) setError('');
   };
 
-  const [showScanner, setShowScanner] = useState(false);
-
-  // Fallback pour le web si la caméra n'est pas dispo
-  const canScan = Platform.OS !== 'web'; 
-
   const handleJoin = useCallback(() => {
     Keyboard.dismiss();
-    if (code.trim().length !== CODE_LENGTH) {
+    const finalCode = code.trim().toUpperCase();
+    if (finalCode.length !== CODE_LENGTH) {
       setError(`Le code doit contenir exactement ${CODE_LENGTH} caractères.`);
       return;
     }
@@ -129,7 +183,7 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, navigation, appAlert, 
     setLoading(true);
     setError('');
     cleanupRef.current = registerListeners();
-    socket.emit('join_by_code', { code: code.trim().toUpperCase(), userId });
+    socket.emit('join_by_code', { code: finalCode, userId });
     const timeout = setTimeout(() => {
       cleanupRef.current?.();
       setLoading(false);
@@ -195,19 +249,31 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, navigation, appAlert, 
           {canScan && (
             <TouchableOpacity 
               style={styles.scanButton} 
-              onPress={() => appAlert('Info', 'La fonctionnalité de scan QR Code sera disponible prochainement.')}
+              onPress={startScan}
             >
               <Ionicons name="qr-code-outline" size={20} color="#041c55" />
               <Text style={styles.scanButtonText}>Scanner un QR Code</Text>
             </TouchableOpacity>
           )}
 
-          {!canScan && (
-            <View style={styles.webFallbackContainer}>
-              <Ionicons name="information-circle-outline" size={16} color="#aaa" />
-              <Text style={styles.webFallbackText}>
-                Le scan n'est pas disponible sur navigateur. Veuillez saisir le code manuellement.
-              </Text>
+          {showScanner && CameraView && (
+            <View style={styles.scannerOverlay}>
+              <CameraView
+                style={styles.scanner}
+                onBarcodeScanned={handleBarCodeScanned}
+                barcodeScannerSettings={{
+                  barcodeTypes: ['qr'],
+                }}
+              >
+                <View style={styles.scannerHeader}>
+                    <TouchableOpacity onPress={() => setShowScanner(false)} style={styles.closeScanner}>
+                        <Ionicons name="close" size={24} color="#fff" />
+                    </TouchableOpacity>
+                    <Text style={styles.scannerTitle}>Scanner le QR Code</Text>
+                </View>
+                <View style={styles.scanFrame} />
+                <Text style={styles.scannerHint}>Placez le QR Code dans le cadre</Text>
+              </CameraView>
             </View>
           )}
 
@@ -282,8 +348,8 @@ const styles = StyleSheet.create({
   card: {
     ...modalTheme.card,
     alignItems: 'center',
-    paddingHorizontal: getResponsiveSize(24),
-    paddingVertical: getResponsiveSize(28),
+    paddingHorizontal: getResponsiveSize(18),
+    paddingVertical: getResponsiveSize(20),
   },
   header: {
     flexDirection: 'row',
@@ -296,72 +362,107 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   subtitle: {
-    color: 'rgba(255,255,255,0.65)',
-    fontSize: getResponsiveSize(13),
+    ...modalTheme.subtitle,
     textAlign: 'center',
-    marginBottom: getResponsiveSize(24),
-    lineHeight: getResponsiveSize(19),
+    marginBottom: getResponsiveSize(20),
+  },
+  scanButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f1c40f',
+    paddingHorizontal: getResponsiveSize(16),
+    paddingVertical: getResponsiveSize(10),
+    borderRadius: getResponsiveSize(T.radiusMd),
+    marginBottom: getResponsiveSize(20),
+    gap: getResponsiveSize(8),
+    ...T.shadowBtn,
+  },
+  scanButtonText: {
+    color: '#1B1305',
+    fontWeight: '800',
+    fontSize: getResponsiveSize(13),
+  },
+  scannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#000',
+    zIndex: 100,
+    borderRadius: getResponsiveSize(T.radiusMd),
+    overflow: 'hidden',
+  },
+  scanner: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scannerHeader: {
+    position: 'absolute',
+    top: 20,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  closeScanner: {
+    padding: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 20,
+  },
+  scannerTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginLeft: 15,
+  },
+  scanFrame: {
+    width: 200,
+    height: 200,
+    borderWidth: 2,
+    borderColor: '#f1c40f',
+    borderRadius: 20,
+    backgroundColor: 'transparent',
+  },
+  scannerHint: {
+    color: '#fff',
+    marginTop: 20,
+    fontSize: 14,
+    fontWeight: '600',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
   codeInputWrapper: {
     width: '100%',
     alignItems: 'center',
     marginBottom: getResponsiveSize(20),
   },
-  scanButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f1c40f',
-    paddingVertical: getResponsiveSize(10),
-    borderRadius: getResponsiveSize(10),
-    marginBottom: getResponsiveSize(20),
-    gap: 8,
-  },
-  scanButtonText: {
-    color: '#041c55',
-    fontWeight: 'bold',
-    fontSize: getResponsiveSize(14),
-  },
-  webFallbackContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    padding: getResponsiveSize(10),
-    borderRadius: getResponsiveSize(8),
-    marginBottom: getResponsiveSize(20),
-    gap: 6,
-  },
-  webFallbackText: {
-    color: '#aaa',
-    fontSize: getResponsiveSize(12),
-    flex: 1,
-  },
   codeBoxesRow: {
     flexDirection: 'row',
     gap: getResponsiveSize(8),
   },
   codeBox: {
-    width: getResponsiveSize(42),
-    height: getResponsiveSize(52),
-    borderRadius: getResponsiveSize(8),
+    width: getResponsiveSize(38),
+    height: getResponsiveSize(46),
+    borderRadius: getResponsiveSize(T.radiusSm),
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.2)',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: T.borderSoft,
+    backgroundColor: T.bg3,
     alignItems: 'center',
     justifyContent: 'center',
   },
   codeBoxFilled: {
-    borderColor: '#f1c40f',
-    backgroundColor: 'rgba(241,196,15,0.12)',
+    borderColor: T.gold,
+    backgroundColor: 'rgba(244,180,26,0.12)',
   },
   codeBoxFocused: {
-    borderColor: '#ffffff',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderColor: T.text,
+    backgroundColor: T.bg3,
   },
   codeBoxText: {
-    color: '#ffffff',
-    fontSize: getResponsiveSize(22),
-    fontWeight: 'bold',
+    color: T.text,
+    fontSize: getResponsiveSize(18),
+    fontWeight: '900',
     letterSpacing: 0,
   },
   hiddenInput: {
@@ -375,33 +476,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: getResponsiveSize(6),
     marginBottom: getResponsiveSize(14),
-    backgroundColor: 'rgba(231,76,60,0.12)',
-    borderRadius: getResponsiveSize(8),
+    backgroundColor: 'rgba(230,57,70,0.1)',
+    borderRadius: getResponsiveSize(T.radiusSm),
+    borderWidth: 1,
+    borderColor: 'rgba(230,57,70,0.3)',
     paddingHorizontal: getResponsiveSize(12),
     paddingVertical: getResponsiveSize(8),
     width: '100%',
   },
   errorText: {
-    color: '#e74c3c',
+    color: T.red,
     fontSize: getResponsiveSize(13),
     flexShrink: 1,
   },
   joinButton: {
     ...modalTheme.button,
-    backgroundColor: '#f1c40f',
+    backgroundColor: T.gold,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
     marginBottom: getResponsiveSize(12),
+    ...T.shadowBtn,
   },
   joinButtonDisabled: {
     opacity: 0.45,
   },
   joinButtonText: {
-    color: '#041c55',
-    fontWeight: 'bold',
-    fontSize: getResponsiveSize(15),
+    color: '#1B1305',
+    fontWeight: '800',
+    fontSize: getResponsiveSize(14),
   },
   closeButton: {
     ...modalTheme.buttonBase,

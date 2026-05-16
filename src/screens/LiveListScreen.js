@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, ImageBackground, Image, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, ImageBackground, Image, useWindowDimensions, Platform } from 'react-native';
 import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
@@ -9,6 +9,8 @@ import { API_URL } from '../config';
 import { getAvatarSource as getBaseAvatarSource } from '../utils/avatarUtils';
 
 import { getResponsiveSize } from '../utils/responsive';
+import { T } from '../utils/theme';
+import AnimatedSearchBar from '../components/ui/AnimatedSearchBar';
 
 // Helper pour les avatars
 const getAvatarSource = (avatar) => {
@@ -28,6 +30,7 @@ const LiveListScreen = () => {
   const user = useSelector(state => state.auth.user);
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
+  const isDesktop = Platform.OS === 'web' && width >= 1024;
   const [searchQuery, setSearchQuery] = useState('');
   const [lives, setLives] = useState([]); // Liste des lives
   const [filter, setFilter] = useState('all'); // 'all', 'bet', 'friendly'
@@ -156,20 +159,18 @@ const LiveListScreen = () => {
   };
 
   return (
-    <ImageBackground 
-      source={require('../../assets/images/Background2-4.png')} 
+    <ImageBackground
+      source={require('../../assets/images/Background2-4.png')}
       style={styles.container}
     >
-      <View style={[styles.header, isTablet && styles.headerTablet]}>
+      <View style={styles.bgOverlay} pointerEvents="none" />
+      <View style={[styles.header, isTablet && styles.headerTablet, isDesktop && styles.headerDesktop]}>
         <Text style={styles.title}>Salles Live</Text>
-        <View style={styles.searchContainer}>
-            <Ionicons name="search" size={getResponsiveSize(20)} color="#9ca3af" style={styles.searchIcon} />
-            <TextInput
-                style={styles.searchInput}
-                placeholder="Rechercher un joueur..."
-                placeholderTextColor="#9ca3af"
+        <View style={{ paddingHorizontal: getResponsiveSize(20), marginBottom: getResponsiveSize(15) }}>
+            <AnimatedSearchBar
                 value={searchQuery}
                 onChangeText={setSearchQuery}
+                placeholder="Rechercher une salle..."
             />
         </View>
         
@@ -199,10 +200,10 @@ const LiveListScreen = () => {
         data={filteredLives}
         renderItem={renderLiveItem}
         keyExtractor={item => item.id}
-        numColumns={isTablet ? 2 : 1}
-        key={isTablet ? 'lives-2col' : 'lives-1col'}
-        columnWrapperStyle={isTablet ? styles.columnWrapper : undefined}
-        contentContainerStyle={[styles.listContent, isTablet && styles.listContentTablet]}
+        numColumns={isDesktop ? 3 : isTablet ? 2 : 1}
+        key={isDesktop ? 'lives-3col' : isTablet ? 'lives-2col' : 'lives-1col'}
+        columnWrapperStyle={(isTablet || isDesktop) ? styles.columnWrapper : undefined}
+        contentContainerStyle={[styles.listContent, isTablet && styles.listContentTablet, isDesktop && styles.listContentDesktop]}
         ListEmptyComponent={
             <View style={styles.emptyState}>
                 <Ionicons name="videocam-off-outline" size={getResponsiveSize(48)} color="rgba(255,255,255,0.3)" />
@@ -215,71 +216,85 @@ const LiveListScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  bgOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(5,9,15,0.55)',
+  },
   container: {
     flex: 1,
     paddingTop: getResponsiveSize(50),
+    backgroundColor: T.bg0,
   },
   header: {
-    paddingHorizontal: getResponsiveSize(20),
-    marginBottom: getResponsiveSize(20),
+    paddingHorizontal: getResponsiveSize(16),
+    marginBottom: getResponsiveSize(16),
   },
   headerTablet: {
     maxWidth: 700,
     width: '100%',
     alignSelf: 'center',
   },
+  headerDesktop: {
+    maxWidth: 1100,
+    width: '100%',
+    alignSelf: 'center',
+  },
   title: {
-    fontSize: getResponsiveSize(28),
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: getResponsiveSize(15),
+    fontSize: getResponsiveSize(26),
+    fontWeight: '900',
+    color: T.text,
+    marginBottom: getResponsiveSize(14),
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: getResponsiveSize(12),
-    paddingHorizontal: getResponsiveSize(15),
-    height: getResponsiveSize(50),
-    marginBottom: getResponsiveSize(15),
-    borderWidth: getResponsiveSize(1),
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: T.bg2,
+    borderRadius: getResponsiveSize(T.radiusMd),
+    paddingHorizontal: getResponsiveSize(14),
+    height: getResponsiveSize(46),
+    marginBottom: getResponsiveSize(12),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   searchIcon: {
     marginRight: getResponsiveSize(10),
   },
   searchInput: {
     flex: 1,
-    color: '#fff',
-    fontSize: getResponsiveSize(16),
+    color: T.text,
+    fontSize: getResponsiveSize(15),
   },
   filters: {
     flexDirection: 'row',
-    gap: getResponsiveSize(10),
+    gap: getResponsiveSize(8),
   },
   filterChip: {
     paddingVertical: getResponsiveSize(6),
-    paddingHorizontal: getResponsiveSize(16),
-    borderRadius: getResponsiveSize(20),
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: getResponsiveSize(1),
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: getResponsiveSize(14),
+    borderRadius: getResponsiveSize(T.radiusPill),
+    backgroundColor: T.bg2,
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   filterChipActive: {
-    backgroundColor: '#ef4444',
-    borderColor: '#ef4444',
+    backgroundColor: T.red,
+    borderColor: T.red,
   },
   filterText: {
-    color: '#d1d5db',
-    fontSize: getResponsiveSize(14),
-    fontWeight: '500',
+    color: T.textDim,
+    fontSize: getResponsiveSize(13),
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.2,
   },
   filterTextActive: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '800',
   },
   listContent: {
-    paddingHorizontal: getResponsiveSize(20),
+    paddingHorizontal: getResponsiveSize(16),
     paddingBottom: getResponsiveSize(100),
   },
   listContentTablet: {
@@ -288,133 +303,147 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     paddingHorizontal: getResponsiveSize(20),
   },
+  listContentDesktop: {
+    maxWidth: 1100,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: getResponsiveSize(24),
+  },
   columnWrapper: {
     justifyContent: 'space-between',
-    gap: getResponsiveSize(16),
+    gap: getResponsiveSize(14),
   },
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: getResponsiveSize(16),
-    padding: getResponsiveSize(16),
-    marginBottom: getResponsiveSize(16),
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: getResponsiveSize(2) },
-    shadowOpacity: 0.1,
-    shadowRadius: getResponsiveSize(4),
-    elevation: getResponsiveSize(3),
+    backgroundColor: T.bg2,
+    borderRadius: getResponsiveSize(T.radiusMd),
+    padding: getResponsiveSize(14),
+    marginBottom: getResponsiveSize(14),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
+    ...T.shadowCard,
     flex: 1,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: getResponsiveSize(15),
+    marginBottom: getResponsiveSize(14),
   },
   badgeContainer: {
     flexDirection: 'row',
-    gap: getResponsiveSize(8),
+    gap: getResponsiveSize(6),
   },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: getResponsiveSize(8),
     paddingVertical: getResponsiveSize(4),
-    borderRadius: getResponsiveSize(8),
+    borderRadius: getResponsiveSize(T.radiusSm),
   },
   badgeWaiting: {
-    backgroundColor: 'rgba(245, 158, 11, 0.2)',
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f59e0b',
+    backgroundColor: 'rgba(244,180,26,0.15)',
+    borderWidth: 1,
+    borderColor: T.gold,
   },
   badgeLive: {
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#ef4444',
+    backgroundColor: 'rgba(230,57,70,0.15)',
+    borderWidth: 1,
+    borderColor: T.red,
   },
   indicator: {
     width: getResponsiveSize(6),
     height: getResponsiveSize(6),
     borderRadius: getResponsiveSize(3),
-    backgroundColor: '#ef4444',
-    marginRight: getResponsiveSize(6),
+    backgroundColor: T.red,
+    marginRight: getResponsiveSize(5),
   },
   badgeText: {
     fontSize: getResponsiveSize(10),
-    fontWeight: 'bold',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    color: T.textDim,
   },
   spectators: {
-    fontSize: getResponsiveSize(12),
-    color: '#6b7280',
+    fontSize: getResponsiveSize(11),
+    color: T.textMuted,
     fontWeight: '600',
   },
   playersContainer: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: getResponsiveSize(15),
-      paddingHorizontal: getResponsiveSize(10),
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: getResponsiveSize(14),
+    paddingHorizontal: getResponsiveSize(8),
   },
   playerInfo: {
-      alignItems: 'center',
-      width: '40%',
+    alignItems: 'center',
+    width: '40%',
   },
   avatarSmall: {
-      width: getResponsiveSize(50),
-      height: getResponsiveSize(50),
-      borderRadius: getResponsiveSize(25),
-      marginBottom: getResponsiveSize(8),
-      borderWidth: getResponsiveSize(2),
-      borderColor: '#e5e7eb',
+    width: getResponsiveSize(50),
+    height: getResponsiveSize(50),
+    borderRadius: getResponsiveSize(25),
+    marginBottom: getResponsiveSize(8),
+    borderWidth: 2,
+    borderColor: T.border,
   },
   playerName: {
-      fontSize: getResponsiveSize(14),
-      fontWeight: 'bold',
-      color: '#1f2937',
-      textAlign: 'center',
+    fontSize: getResponsiveSize(13),
+    fontWeight: '700',
+    color: T.text,
+    textAlign: 'center',
   },
   playerCountry: {
-      fontSize: getResponsiveSize(12),
-      marginTop: getResponsiveSize(2),
+    fontSize: getResponsiveSize(11),
+    marginTop: getResponsiveSize(2),
+    color: T.textMuted,
   },
   vsContainer: {
-      justifyContent: 'center',
-      alignItems: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   vsText: {
-      fontSize: getResponsiveSize(20),
-      fontWeight: '900',
-      color: '#ef4444',
-      fontStyle: 'italic',
+    fontSize: getResponsiveSize(20),
+    fontWeight: '900',
+    color: T.red,
+    letterSpacing: 0.5,
   },
   divider: {
-    height: getResponsiveSize(1),
-    backgroundColor: '#f3f4f6',
+    height: 1,
+    backgroundColor: T.borderSoft,
     marginBottom: getResponsiveSize(12),
   },
   joinButton: {
-    backgroundColor: '#041c55',
+    backgroundColor: T.bg3,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: getResponsiveSize(10),
-    borderRadius: getResponsiveSize(8),
+    borderRadius: getResponsiveSize(T.radiusMd),
     gap: getResponsiveSize(8),
+    borderWidth: 1,
+    borderColor: T.borderSoft,
   },
   joinButtonActive: {
-    backgroundColor: '#2563eb', // Bleu plus vif pour rejoindre
-    shadowColor: '#2563eb',
-    shadowOffset: { width: 0, height: getResponsiveSize(2) },
+    backgroundColor: T.blue,
+    borderColor: T.blue,
+    shadowColor: T.blue,
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
-    shadowRadius: getResponsiveSize(4),
-    elevation: getResponsiveSize(3),
+    shadowRadius: 6,
+    elevation: 4,
   },
   joinButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: T.text,
+    fontWeight: '700',
     fontSize: getResponsiveSize(12),
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   joinButtonTextActive: {
     fontSize: getResponsiveSize(13),
+    color: '#fff',
   },
   emptyState: {
     alignItems: 'center',
@@ -422,9 +451,9 @@ const styles = StyleSheet.create({
     paddingTop: getResponsiveSize(50),
   },
   emptyText: {
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: T.textMuted,
     marginTop: getResponsiveSize(10),
-    fontSize: getResponsiveSize(16),
+    fontSize: getResponsiveSize(15),
   },
 });
 

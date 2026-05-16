@@ -1,7 +1,7 @@
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, useEffect, memo, useRef } from 'react';
 import { View, Text, Modal, Pressable, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet, TextInput, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { socket } from '../../utils/socket';
 import { playButtonSound } from '../../utils/soundManager';
 import { BET_OPTIONS, ONLINE_TIME_OPTIONS } from '../../utils/constants';
@@ -9,9 +9,15 @@ import { logout } from '../../redux/slices/authSlice';
 import { getResponsiveSize } from '../../utils/responsive';
 import { appAlert } from '../../services/appAlert';
 import { modalTheme } from '../../utils/modalTheme';
+import { T } from '../../utils/theme';
+import { useAdManager } from '../../ads/AdSystem';
+import { consumeLiveRoom, ensureDailyReset, incrementLiveBonus, selectLiveRemaining } from '../../redux/slices/rewardsSlice';
 
 const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
     const dispatch = useDispatch();
+    const liveRemaining = useSelector((state) => selectLiveRemaining(state));
+    const { showAds, prepareRewarded, showRewarded } = useAdManager();
+    const isCreatingRef = useRef(false);
 
     // --- États pour les paramètres de la salle ---
     const [nomSalle, setNomSalle] = useState('');
@@ -41,8 +47,14 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
     useEffect(() => {
         if (visible) {
             setStep(1);
+            dispatch(ensureDailyReset({ nowTs: Date.now() }));
+            prepareRewarded();
         }
-    }, [visible]);
+    }, [visible, dispatch, prepareRewarded]);
+
+    useEffect(() => {
+        isCreatingRef.current = isCreating;
+    }, [isCreating]);
 
     // Ensure bet is valid w.r.t user coins
     useEffect(() => {
@@ -69,12 +81,15 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
 
         const handleRoomCreated = (createdConfig) => {
             setIsCreating(false);
+            isCreatingRef.current = false;
+            dispatch(consumeLiveRoom({ nowTs: Date.now() }));
             onClose();
-            navigation.navigate('SalleAttenteLive', { configSalle: createdConfig });
+            navigation.replace('SalleAttenteLive', { configSalle: createdConfig, roomId: createdConfig?.id });
         };
 
         const handleError = (message) => {
             setIsCreating(false);
+            isCreatingRef.current = false;
             if (message === 'User not found') {
                 appAlert(
                     'Session Expirée', 
@@ -119,28 +134,26 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
         return true;
     };
 
-    const handleNext = () => {
-        playButtonSound();
-        if (step === 1 && !validateStep1()) return;
-        setStep(prev => Math.min(prev + 1, TOTAL_STEPS));
+    const grantLiveBonusOnServer = async (userId) => {
+        if (!userId) return { ok: false, message: 'Utilisateur requis' };
+        if (!socket.connected) socket.connect();
+        socket.emit('join_user_room', userId);
+
+        return await new Promise((resolve) => {
+            try {
+                socket.emit('grant_live_room_bonus', { amount: 1 }, (res) => {
+                    resolve(res || { ok: false, message: 'Réponse invalide' });
+                });
+            } catch {
+                resolve({ ok: false, message: 'Erreur réseau.' });
+            }
+        });
     };
 
-    const handleBack = () => {
-        playButtonSound();
-        setStep(prev => Math.max(prev - 1, 1));
-    };
-
-    const handleCreateRoom = () => {
-        playButtonSound();
-        
-        // Final validation check (though steps should have caught it)
-        if (!validateStep1()) return;
-
-        const userId = user?._id || user?.id;
-        if (!userId) {
-            appAlert('Erreur', 'Vous devez être connecté.');
-            return;
-        }
+    const createRoomNow = (userId) => {
+        if (!userId) return;
+        if (isCreatingRef.current) return;
+        isCreatingRef.current = true;
         if (!socket.connected) socket.connect();
         socket.emit('join_user_room', userId);
 
@@ -179,6 +192,69 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
         socket.emit('create_live_room', { config: configSalle });
     };
 
+    const handleNext = () => {
+        playButtonSound();
+        if (step === 1 && !validateStep1()) return;
+        setStep(prev => Math.min(prev + 1, TOTAL_STEPS));
+    };
+
+    const handleBack = () => {
+        playButtonSound();
+        setStep(prev => Math.max(prev - 1, 1));
+    };
+
+    const handleCreateRoom = () => {
+        playButtonSound();
+        
+        // Final validation check (though steps should have caught it)
+        if (!validateStep1()) return;
+
+        const userId = user?._id || user?.id;
+        if (!userId) {
+            appAlert('Erreur', 'Vous devez être connecté.');
+            return;
+        }
+
+        dispatch(ensureDailyReset({ nowTs: Date.now() }));
+        if (liveRemaining <= 0) {
+            if (!showAds) {
+                appAlert('Limite atteinte', "Vous avez atteint la limite de salles live pour aujourd'hui.");
+                return;
+            }
+            appAlert(
+                'Limite atteinte',
+                "Vous avez atteint la limite de 5 salles live aujourd'hui. Regarder une pub pour +1 salle ?",
+                [
+                    { text: 'Non merci', style: 'cancel' },
+                    {
+                        text: 'Regarder',
+                        onPress: () => {
+                            prepareRewarded();
+                            setTimeout(() => {
+                                showRewarded({
+                                    amount: 0,
+                                    reason: 'Salle live supplémentaire',
+                                    metadata: { reward: 'live_extra' },
+                                    onEarned: async () => {
+                                        dispatch(incrementLiveBonus({ nowTs: Date.now() }));
+                                        const res = await grantLiveBonusOnServer(userId);
+                                        if (res?.ok) {
+                                            createRoomNow(userId);
+                                        } else {
+                                            appAlert('Erreur', res?.message || "Impossible d'activer l'accès Live.");
+                                        }
+                                    }
+                                });
+                            }, 250);
+                        }
+                    }
+                ]
+            );
+            return;
+        }
+        createRoomNow(userId);
+    };
+
     const renderBetSelector = () => {
         const availableBets = BET_OPTIONS.filter(b => b <= (user?.coins || 0));
         const effectiveBets = availableBets.length > 0 ? availableBets : [100];
@@ -188,18 +264,18 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
         const canGoNext = currentIndex < effectiveBets.length - 1;
 
         return (
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: getResponsiveSize(10) }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: getResponsiveSize(8) }}>
                 <TouchableOpacity 
                     onPress={() => {
                         playButtonSound();
                         if (canGoPrev) setBetAmount(effectiveBets[currentIndex - 1]);
                     }}
                     disabled={!canGoPrev}
-                    style={{ padding: getResponsiveSize(10), opacity: !canGoPrev ? 0.3 : 1 }}
+                    style={{ padding: getResponsiveSize(8), opacity: !canGoPrev ? 0.3 : 1 }}
                 >
-                    <Ionicons name="remove-circle-outline" size={getResponsiveSize(40)} color="#fff" />
+                    <Ionicons name="remove-circle-outline" size={getResponsiveSize(32)} color={T.textDim} />
                 </TouchableOpacity>
-                
+
                 <View style={styles.betDisplay}>
                     <Text style={styles.betSmallText}>
                         {currentIndex > 0 ? effectiveBets[currentIndex - 1].toLocaleString() : ''}
@@ -214,15 +290,15 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                     </Text>
                 </View>
 
-                <TouchableOpacity 
+                <TouchableOpacity
                     onPress={() => {
                         playButtonSound();
                         if (canGoNext) setBetAmount(effectiveBets[currentIndex + 1]);
                     }}
                     disabled={!canGoNext}
-                    style={{ padding: getResponsiveSize(10), opacity: !canGoNext ? 0.3 : 1 }}
+                    style={{ padding: getResponsiveSize(8), opacity: !canGoNext ? 0.3 : 1 }}
                 >
-                    <Ionicons name="add-circle-outline" size={getResponsiveSize(40)} color="#fff" />
+                    <Ionicons name="add-circle-outline" size={getResponsiveSize(32)} color={T.textDim} />
                 </TouchableOpacity>
             </View>
         );
@@ -237,7 +313,7 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                         <TextInput
                             style={styles.input}
                             placeholder="Ex: Tournoi des champions"
-                            placeholderTextColor="rgba(255,255,255,0.5)"
+                            placeholderTextColor={T.textMuted}
                             value={nomSalle}
                             onChangeText={setNomSalle}
                             maxLength={30}
@@ -246,8 +322,8 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                         <View style={styles.switchContainer}>
                             <Text style={styles.switchLabel}>Salle Privée</Text>
                             <Switch
-                                trackColor={{ false: "#767577", true: "#f1c40f" }}
-                                thumbColor={sallePrivee ? "#fff" : "#f4f3f4"}
+                                trackColor={{ false: T.bg3, true: T.blue }}
+                                thumbColor={sallePrivee ? T.gold : T.textMuted}
                                 onValueChange={setSallePrivee}
                                 value={sallePrivee}
                             />
@@ -257,7 +333,7 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                             <TextInput
                                 style={[styles.input, { marginTop: getResponsiveSize(10) }]}
                                 placeholder="Mot de passe"
-                                placeholderTextColor="rgba(255,255,255,0.5)"
+                                placeholderTextColor={T.textMuted}
                                 value={motDePasse}
                                 onChangeText={setMotDePasse}
                                 secureTextEntry
@@ -364,8 +440,8 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                         <View style={styles.switchContainer}>
                             <Text style={styles.switchLabel}>Chat Actif</Text>
                             <Switch
-                                trackColor={{ false: "#767577", true: "#f1c40f" }}
-                                thumbColor={chatActif ? "#fff" : "#f4f3f4"}
+                                trackColor={{ false: T.bg3, true: T.blue }}
+                                thumbColor={chatActif ? T.gold : T.textMuted}
                                 onValueChange={setChatActif}
                                 value={chatActif}
                             />
@@ -374,8 +450,8 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                         <View style={styles.switchContainer}>
                             <Text style={styles.switchLabel}>Audio Lobby</Text>
                             <Switch
-                                trackColor={{ false: "#767577", true: "#f1c40f" }}
-                                thumbColor={audioLobbyActif ? "#fff" : "#f4f3f4"}
+                                trackColor={{ false: T.bg3, true: T.blue }}
+                                thumbColor={audioLobbyActif ? T.gold : T.textMuted}
                                 onValueChange={setAudioLobbyActif}
                                 value={audioLobbyActif}
                             />
@@ -393,6 +469,13 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                                 </TouchableOpacity>
                             ))}
                         </View>
+
+                        <Text style={[styles.friendsLabel, { marginTop: getResponsiveSize(14) }]}>
+                            Salles live restantes aujourd'hui:
+                        </Text>
+                        <Text style={{ color: T.gold, fontWeight: '900', fontSize: getResponsiveSize(18), marginBottom: getResponsiveSize(6) }}>
+                            {liveRemaining}
+                        </Text>
                     </View>
                 );
             default:
@@ -417,41 +500,39 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                     {isCreating ? (
                         <View style={{ alignItems: 'center', width: '100%' }}>
                             <Text style={styles.friendsModalTitle}>Création de la salle...</Text>
-                            <ActivityIndicator size="large" color="#f1c40f" style={{ marginVertical: getResponsiveSize(20) }} />
+                            <ActivityIndicator size="large" color={T.gold} style={{ marginVertical: getResponsiveSize(20) }} />
                             <Text style={styles.betInfo}>Veuillez patienter</Text>
                         </View>
                     ) : (
-                        <>
-                          <ScrollView 
-                            contentContainerStyle={{ alignItems: 'center', width: '100%', paddingBottom: getResponsiveSize(120) }} 
-                            style={{ width: '100%' }}
-                          >
-                              <Text style={styles.friendsModalTitle}>Créer une Salle Live</Text>
-                              <Text style={styles.stepIndicator}>Étape {step}/{TOTAL_STEPS}</Text>
+                        <ScrollView 
+                          contentContainerStyle={{ alignItems: 'center', width: '100%', paddingBottom: getResponsiveSize(24) }} 
+                          style={{ width: '100%' }}
+                        >
+                            <Text style={styles.friendsModalTitle}>Créer une Salle Live</Text>
+                            <Text style={styles.stepIndicator}>Étape {step}/{TOTAL_STEPS}</Text>
 
-                              {renderStepContent()}
-                          </ScrollView>
+                            {renderStepContent()}
 
-                          <View style={styles.modalButtonsFixed}>
-                              <TouchableOpacity 
-                                  style={styles.modalButtonCancel} 
-                                  onPress={step === 1 ? onClose : handleBack}
-                              >
-                                  <Text style={styles.modalButtonText}>
-                                      {step === 1 ? 'Annuler' : 'Retour'}
-                                  </Text>
-                              </TouchableOpacity>
-                              
-                              <TouchableOpacity 
-                                  style={styles.modalButtonConfirm} 
-                                  onPress={step === TOTAL_STEPS ? handleCreateRoom : handleNext}
-                              >
-                                  <Text style={[styles.modalButtonText, styles.modalButtonTextActive]}>
-                                      {step === TOTAL_STEPS ? 'CRÉER' : 'SUIVANT'}
-                                  </Text>
-                              </TouchableOpacity>
-                          </View>
-                        </>
+                            <View style={styles.modalButtons}>
+                                <TouchableOpacity 
+                                    style={styles.modalButtonCancel} 
+                                    onPress={step === 1 ? onClose : handleBack}
+                                >
+                                    <Text style={styles.modalButtonText}>
+                                        {step === 1 ? 'Annuler' : 'Retour'}
+                                    </Text>
+                                </TouchableOpacity>
+                                
+                                <TouchableOpacity 
+                                    style={styles.modalButtonConfirm} 
+                                    onPress={step === TOTAL_STEPS ? handleCreateRoom : handleNext}
+                                >
+                                    <Text style={[styles.modalButtonText, styles.modalButtonTextActive]}>
+                                        {step === TOTAL_STEPS ? 'CRÉER' : 'SUIVANT'}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </ScrollView>
                     )}
                 </Pressable>
             </Pressable>
@@ -463,10 +544,10 @@ const styles = StyleSheet.create({
     modalOverlay: modalTheme.overlay,
     friendsModalContent: {
         ...modalTheme.card,
-        width: '90%',
+        width: '86%',
         position: 'relative',
         overflow: 'hidden',
-        maxHeight: '85%',
+        maxHeight: '82%',
     },
     friendsModalTitle: {
         ...modalTheme.title,
@@ -475,8 +556,8 @@ const styles = StyleSheet.create({
     },
     stepIndicator: {
         color: 'rgba(255, 255, 255, 0.6)',
-        fontSize: getResponsiveSize(14),
-        marginBottom: getResponsiveSize(15),
+        fontSize: getResponsiveSize(12),
+        marginBottom: getResponsiveSize(10),
         fontWeight: '600',
     },
     stepContainer: {
@@ -484,10 +565,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     friendsLabel: {
-        fontSize: getResponsiveSize(16),
+        fontSize: getResponsiveSize(14),
         color: '#fff',
         marginBottom: getResponsiveSize(8),
-        marginTop: getResponsiveSize(12),
+        marginTop: getResponsiveSize(8),
         fontWeight: 'bold',
         alignSelf: 'flex-start',
         marginLeft: getResponsiveSize(10)
@@ -550,35 +631,35 @@ const styles = StyleSheet.create({
     modalButtonTextActive: modalTheme.buttonTextActive,
     betInfo: {
         color: '#fff',
-        fontSize: getResponsiveSize(16),
-        marginBottom: getResponsiveSize(20),
+        fontSize: getResponsiveSize(14),
+        marginBottom: getResponsiveSize(14),
         fontWeight: 'bold'
     },
     betDisplay: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        width: getResponsiveSize(140),
-        height: getResponsiveSize(50),
+        width: getResponsiveSize(124),
+        height: getResponsiveSize(44),
         overflow: 'hidden',
         backgroundColor: 'rgba(0,0,0,0.3)',
-        borderRadius: getResponsiveSize(25),
-        marginHorizontal: getResponsiveSize(10),
+        borderRadius: getResponsiveSize(22),
+        marginHorizontal: getResponsiveSize(8),
         borderWidth: 1,
         borderColor: 'rgba(241, 196, 15, 0.3)'
     },
     betSmallText: {
         color: '#f1c40f',
-        fontSize: getResponsiveSize(14),
+        fontSize: getResponsiveSize(12),
         opacity: 0.5,
-        width: getResponsiveSize(70),
+        width: getResponsiveSize(60),
         textAlign: 'center'
     },
     betMainText: {
         color: '#f1c40f',
-        fontSize: getResponsiveSize(22),
+        fontSize: getResponsiveSize(18),
         fontWeight: 'bold',
-        width: getResponsiveSize(120),
+        width: getResponsiveSize(100),
         textAlign: 'center',
         textShadowColor: 'rgba(0, 0, 0, 0.75)',
         textShadowOffset: {width: -1, height: 1},
@@ -590,9 +671,9 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#f1c40f',
         borderRadius: getResponsiveSize(15),
-        padding: getResponsiveSize(12),
+        padding: getResponsiveSize(10),
         color: '#fff',
-        fontSize: getResponsiveSize(16),
+        fontSize: getResponsiveSize(14),
         marginBottom: getResponsiveSize(5),
     },
     switchContainer: {
@@ -602,12 +683,12 @@ const styles = StyleSheet.create({
         width: '90%',
         marginVertical: getResponsiveSize(5),
         backgroundColor: 'rgba(0,0,0,0.2)',
-        padding: getResponsiveSize(10),
+        padding: getResponsiveSize(8),
         borderRadius: getResponsiveSize(15),
     },
     switchLabel: {
         color: '#fff',
-        fontSize: getResponsiveSize(16),
+        fontSize: getResponsiveSize(14),
         fontWeight: 'bold',
     }
 });

@@ -215,11 +215,12 @@ const WaitingScreen = ({ navigation }) => {
 
   return (
     <View style={styles.background}>
-      <Image 
-        source={require('../../assets/images/Background2-4.png')} 
+      <Image
+        source={require('../../assets/images/Background2-4.png')}
         style={StyleSheet.absoluteFill}
         contentFit="cover"
       />
+      <View style={styles.bgOverlay} pointerEvents="none" />
       <View style={styles.container}>
         <Image 
           source={require('../../assets/images/LogoDeadPions2.png')} 
@@ -255,6 +256,10 @@ const WaitingScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
+  bgOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(5,9,15,0.55)',
+  },
   background: {
     flex: 1,
     width: '100%',

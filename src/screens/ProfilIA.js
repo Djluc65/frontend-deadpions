@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { T } from '../utils/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { getResponsiveSize } from '../utils/responsive';
 
@@ -63,8 +64,8 @@ const ProfilIA = ({ difficulte, enReflexion = false, message = '', containerStyl
         facile: {
             nom: 'IA Novice',
             avatar: '🤖',
-            couleur: '#10b981', // Emerald 500
-            bg: '#d1fae5', // Emerald 100
+            couleur: T.green,
+            bg: 'rgba(46,194,126,0.15)',
             badge: '1',
             description: 'Débutant',
             icon: 'happy-outline'
@@ -72,8 +73,8 @@ const ProfilIA = ({ difficulte, enReflexion = false, message = '', containerStyl
         moyen: {
             nom: 'IA Stratège',
             avatar: '🧠',
-            couleur: '#f59e0b', // Amber 500
-            bg: '#fef3c7', // Amber 100
+            couleur: T.gold,
+            bg: 'rgba(244,180,26,0.15)',
             badge: '2',
             description: 'Intermédiaire',
             icon: 'bulb-outline'
@@ -81,8 +82,8 @@ const ProfilIA = ({ difficulte, enReflexion = false, message = '', containerStyl
         difficile: {
             nom: 'IA MasterMind',
             avatar: '👾',
-            couleur: '#ef4444', // Red 500
-            bg: '#fee2e2', // Red 100
+            couleur: T.red,
+            bg: 'rgba(230,57,70,0.15)',
             badge: '3',
             description: 'Expert',
             icon: 'flame-outline'
@@ -125,7 +126,7 @@ const ProfilIA = ({ difficulte, enReflexion = false, message = '', containerStyl
 
                 {/* Info Section */}
                 <View style={styles.infoContainer}>
-                    <Text style={[styles.nom, { color: '#1f2937' }]}>
+                    <Text style={[styles.nom, { color: T.text }]}>
                         {config.nom}
                     </Text>
                     
@@ -156,17 +157,13 @@ const ProfilIA = ({ difficulte, enReflexion = false, message = '', containerStyl
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: '#ffffff',
-        borderRadius: getResponsiveSize(12),
+        backgroundColor: T.bg2,
+        borderRadius: getResponsiveSize(T.radiusMd),
         padding: getResponsiveSize(8),
         paddingHorizontal: getResponsiveSize(12),
-        borderWidth: getResponsiveSize(1),
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: getResponsiveSize(2) },
-        shadowOpacity: 0.1,
-        shadowRadius: getResponsiveSize(3),
-        elevation: 3,
-        minWidth: getResponsiveSize(160)
+        borderWidth: 1,
+        ...T.shadowCard,
+        minWidth: getResponsiveSize(160),
     },
     headerRow: {
         flexDirection: 'row',
@@ -182,17 +179,17 @@ const styles = StyleSheet.create({
         borderRadius: getResponsiveSize(22),
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: getResponsiveSize(1),
+        borderWidth: 1,
     },
     avatarEmoji: {
-        fontSize: getResponsiveSize(24)
+        fontSize: getResponsiveSize(24),
     },
     loadingRing: {
         position: 'absolute',
         width: getResponsiveSize(48),
         height: getResponsiveSize(48),
         borderRadius: getResponsiveSize(24),
-        borderWidth: getResponsiveSize(2),
+        borderWidth: 2,
         borderTopColor: 'transparent',
         borderRightColor: 'transparent',
     },
@@ -205,36 +202,36 @@ const styles = StyleSheet.create({
         borderRadius: getResponsiveSize(8),
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: getResponsiveSize(1),
-        borderColor: '#fff'
+        borderWidth: 1,
+        borderColor: T.bg2,
     },
     badgeText: {
         color: '#fff',
         fontSize: getResponsiveSize(10),
-        fontWeight: 'bold'
+        fontWeight: '800',
     },
     infoContainer: {
         flex: 1,
-        justifyContent: 'center'
+        justifyContent: 'center',
     },
     nom: {
-        fontSize: getResponsiveSize(14),
-        fontWeight: 'bold',
-        marginBottom: getResponsiveSize(2)
+        fontSize: getResponsiveSize(13),
+        fontWeight: '700',
+        marginBottom: getResponsiveSize(2),
     },
     statusRow: {
         flexDirection: 'row',
-        alignItems: 'center'
+        alignItems: 'center',
     },
     statusText: {
         fontSize: getResponsiveSize(12),
         fontWeight: '600',
-        fontStyle: 'italic'
+        fontStyle: 'italic',
     },
     description: {
         fontSize: getResponsiveSize(12),
-        color: '#6b7280'
-    }
+        color: T.textMuted,
+    },
 });
 
 export default ProfilIA;

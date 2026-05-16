@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Image, Animated } from 'react-native';
 import { getAvatarSource } from '../utils/avatarUtils';
 import { getResponsiveSize, SCREEN_WIDTH, SCREEN_HEIGHT } from '../utils/responsive';
+import { playGameStartSound } from '../utils/soundManager';
 
 const width = SCREEN_WIDTH;
 const height = SCREEN_HEIGHT;
@@ -12,15 +13,22 @@ const VersusAnimation = ({ player1, player2, onFinish, visible }) => {
     const opacity = useRef(new Animated.Value(0)).current;
     const scaleVS = useRef(new Animated.Value(0)).current;
     const rotateVS = useRef(new Animated.Value(0)).current;
+    const didPlaySoundRef = useRef(false);
 
     useEffect(() => {
         if (visible) {
+            didPlaySoundRef.current = false;
             // Reset values
             slideLeft.setValue(-width);
             slideRight.setValue(width);
             opacity.setValue(0);
             scaleVS.setValue(0);
             rotateVS.setValue(0);
+
+            if (!didPlaySoundRef.current) {
+                didPlaySoundRef.current = true;
+                playGameStartSound();
+            }
 
             // Start Animation
             Animated.parallel([
@@ -122,7 +130,7 @@ const styles = StyleSheet.create({
         left: 0,
         width: '100%',
         height: '100%',
-        backgroundColor: 'rgba(4, 28, 85, 0.95)', // Bleu nuit DeadPions
+        // backgroundColor: 'rgba(4, 28, 85, 0.95)', // Bleu nuit DeadPions
     },
     content: {
         flexDirection: 'row',

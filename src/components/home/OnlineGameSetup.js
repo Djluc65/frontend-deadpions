@@ -9,6 +9,7 @@ import { BET_OPTIONS, ONLINE_TIME_OPTIONS } from '../../utils/constants';
 import { logout } from '../../redux/slices/authSlice';
 import { appAlert } from '../../services/appAlert';
 import { modalTheme } from '../../utils/modalTheme';
+import { T } from '../../utils/theme';
 
 const OnlineGameSetup = memo(({ visible, onClose, navigation, user }) => {
     const dispatch = useDispatch();
@@ -148,11 +149,11 @@ const OnlineGameSetup = memo(({ visible, onClose, navigation, user }) => {
                         if (canGoPrev) setBet(effectiveBets[currentIndex - 1]);
                     }}
                     disabled={!canGoPrev}
-                    style={{ padding: getResponsiveSize(10), opacity: !canGoPrev ? 0.3 : 1 }}
+                    style={{ padding: getResponsiveSize(8), opacity: !canGoPrev ? 0.3 : 1 }}
                 >
-                    <Ionicons name="remove-circle-outline" size={getResponsiveSize(40)} color="#fff" />
+                    <Ionicons name="remove-circle-outline" size={getResponsiveSize(32)} color={T.textDim} />
                 </TouchableOpacity>
-                
+
                 <View style={styles.betDisplay}>
                     <Text style={styles.betSmallText}>
                         {currentIndex > 0 ? effectiveBets[currentIndex - 1].toLocaleString() : ''}
@@ -167,15 +168,15 @@ const OnlineGameSetup = memo(({ visible, onClose, navigation, user }) => {
                     </Text>
                 </View>
 
-                <TouchableOpacity 
+                <TouchableOpacity
                     onPress={() => {
                         playButtonSound();
                         if (canGoNext) setBet(effectiveBets[currentIndex + 1]);
                     }}
                     disabled={!canGoNext}
-                    style={{ padding: getResponsiveSize(10), opacity: !canGoNext ? 0.3 : 1 }}
+                    style={{ padding: getResponsiveSize(8), opacity: !canGoNext ? 0.3 : 1 }}
                 >
-                    <Ionicons name="add-circle-outline" size={getResponsiveSize(40)} color="#fff" />
+                    <Ionicons name="add-circle-outline" size={getResponsiveSize(32)} color={T.textDim} />
                 </TouchableOpacity>
             </View>
         );
@@ -195,7 +196,7 @@ const OnlineGameSetup = memo(({ visible, onClose, navigation, user }) => {
                     {isSearching ? (
                         <View style={{ alignItems: 'center', width: '100%' }}>
                             <Text style={styles.friendsModalTitle}>Recherche...</Text>
-                            <ActivityIndicator size="large" color="#f1c40f" style={{ marginVertical: getResponsiveSize(20) }} />
+                            <ActivityIndicator size="large" color={T.gold} style={{ marginVertical: getResponsiveSize(20) }} />
                             <Text style={styles.timerText}>{searchTimer}s</Text>
                             <Text style={styles.betInfo}>Mise : {bet.toLocaleString()} 💰</Text>
                             
@@ -281,22 +282,22 @@ const styles = StyleSheet.create({
     modalOverlay: modalTheme.overlay,
     friendsModalContent: {
         ...modalTheme.card,
-        width: '90%',
+        width: '86%',
         position: 'relative',
         overflow: 'hidden',
-        maxHeight: '80%',
+        maxHeight: '72%',
     },
     friendsModalTitle: {
         ...modalTheme.title,
-        fontSize: getResponsiveSize(28),
+        fontSize: getResponsiveSize(22),
         textTransform: 'uppercase'
     },
     friendsLabel: {
-        fontSize: getResponsiveSize(18),
-        color: '#fff',
-        marginBottom: getResponsiveSize(10),
-        marginTop: getResponsiveSize(10),
-        fontWeight: 'bold',
+        fontSize: getResponsiveSize(14),
+        color: T.textDim,
+        marginBottom: getResponsiveSize(8),
+        marginTop: getResponsiveSize(8),
+        fontWeight: '700',
     },
     optionsRow: {
         flexDirection: 'row',
@@ -305,31 +306,32 @@ const styles = StyleSheet.create({
         marginBottom: getResponsiveSize(10),
     },
     friendsOptionButton: {
-        paddingHorizontal: getResponsiveSize(15),
-        paddingVertical: getResponsiveSize(8),
-        borderRadius: getResponsiveSize(20),
-        borderWidth: getResponsiveSize(1),
-        borderColor: '#f1c40f',
-        margin: getResponsiveSize(5),
-        backgroundColor: 'transparent',
+        paddingHorizontal: getResponsiveSize(12),
+        paddingVertical: getResponsiveSize(6),
+        borderRadius: getResponsiveSize(T.radiusPill),
+        borderWidth: 1,
+        borderColor: T.borderSoft,
+        margin: getResponsiveSize(4),
+        backgroundColor: T.bg3,
     },
     friendsOptionButtonActive: {
-        backgroundColor: '#f1c40f',
+        backgroundColor: T.gold,
+        borderColor: T.gold,
     },
     friendsOptionText: {
-        color: '#f1c40f',
-        fontSize: getResponsiveSize(14),
+        color: T.textDim,
+        fontSize: getResponsiveSize(12),
         fontWeight: 'bold',
     },
     friendsOptionTextActive: {
-        color: '#0f2350',
+        color: '#1B1305',
     },
     modalButtons: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         width: '100%',
-        marginTop: getResponsiveSize(20),
-        gap: getResponsiveSize(10),
+        marginTop: getResponsiveSize(14),
+        gap: getResponsiveSize(8),
     },
     modalButtonCancel: {
         flex: 1,
@@ -346,15 +348,15 @@ const styles = StyleSheet.create({
     },
     modalButtonTextActive: modalTheme.buttonTextActive,
     timerText: {
-        color: '#f1c40f',
-        fontSize: getResponsiveSize(32),
+        color: T.gold,
+        fontSize: getResponsiveSize(26),
         fontWeight: 'bold',
-        marginBottom: getResponsiveSize(10)
+        marginBottom: getResponsiveSize(8)
     },
     betInfo: {
-        color: '#fff',
-        fontSize: getResponsiveSize(16),
-        marginBottom: getResponsiveSize(20),
+        color: T.textDim,
+        fontSize: getResponsiveSize(14),
+        marginBottom: getResponsiveSize(14),
         fontWeight: 'bold'
     },
     cancelButton: {
@@ -372,31 +374,28 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        width: getResponsiveSize(140),
-        height: getResponsiveSize(50),
+        width: getResponsiveSize(124),
+        height: getResponsiveSize(44),
         overflow: 'hidden',
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        borderRadius: getResponsiveSize(25),
-        marginHorizontal: getResponsiveSize(10),
-        borderWidth: getResponsiveSize(1),
-        borderColor: 'rgba(241, 196, 15, 0.3)'
+        backgroundColor: T.bg3,
+        borderRadius: getResponsiveSize(T.radiusPill),
+        marginHorizontal: getResponsiveSize(8),
+        borderWidth: 1,
+        borderColor: T.border
     },
     betSmallText: {
-        color: '#f1c40f',
-        fontSize: getResponsiveSize(14),
+        color: T.gold,
+        fontSize: getResponsiveSize(12),
         opacity: 0.5,
-        width: getResponsiveSize(70),
+        width: getResponsiveSize(60),
         textAlign: 'center'
     },
     betMainText: {
-        color: '#f1c40f',
-        fontSize: getResponsiveSize(22),
+        color: T.gold,
+        fontSize: getResponsiveSize(18),
         fontWeight: 'bold',
-        width: getResponsiveSize(120),
+        width: getResponsiveSize(100),
         textAlign: 'center',
-        textShadowColor: 'rgba(0, 0, 0, 0.75)',
-        textShadowOffset: {width: getResponsiveSize(-1), height: getResponsiveSize(1)},
-        textShadowRadius: getResponsiveSize(10)
     }
 });
 

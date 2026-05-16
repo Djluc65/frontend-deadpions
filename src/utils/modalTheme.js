@@ -1,94 +1,108 @@
 import { getResponsiveSize } from './responsive';
+import { T } from './theme';
 
 export const modalTheme = {
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: T.overlay,
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
   },
   card: {
-    width: '80%',
-    backgroundColor: '#041c55',
-    borderRadius: getResponsiveSize(20),
+    width: '85%',
+    backgroundColor: T.bg2,
+    borderRadius: getResponsiveSize(T.radiusLg),
     padding: getResponsiveSize(20),
     alignItems: 'center',
-    shadowColor: '#f1c40f',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 3,
-    shadowRadius: getResponsiveSize(3),
-    elevation: 5,
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f'
+    borderWidth: 1.5,
+    borderColor: T.gold,
+    // Ombre dorée premium (HomeHeader style)
+    shadowColor: T.gold,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 14,
   },
   title: {
-    fontSize: getResponsiveSize(24),
-    fontWeight: 'bold',
-    marginBottom: getResponsiveSize(20),
-    color: '#fff',
-    textAlign: 'center'
+    fontSize: getResponsiveSize(22),
+    fontWeight: '800',
+    marginBottom: getResponsiveSize(16),
+    color: T.text,
+    textAlign: 'center',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   },
   message: {
-    fontSize: getResponsiveSize(16),
-    color: '#fff',
+    fontSize: getResponsiveSize(15),
+    color: T.textDim,
     marginBottom: getResponsiveSize(20),
-    textAlign: 'center'
+    textAlign: 'center',
+    lineHeight: getResponsiveSize(22),
   },
   text: {
-    fontSize: getResponsiveSize(18),
-    color: '#fff'
+    fontSize: getResponsiveSize(15),
+    color: T.text,
   },
   button: {
     padding: getResponsiveSize(10),
-    borderRadius: getResponsiveSize(10),
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: getResponsiveSize(T.radiusMd),
+    borderWidth: 1.5,
+    borderColor: T.gold,
+    backgroundColor: T.bg3,
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
   },
   buttonActive: {
-    backgroundColor: '#f1c40f',
-    borderColor: '#f1c40f'
+    backgroundColor: T.gold,
+    borderColor: T.gold,
   },
   buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: getResponsiveSize(16),
-    textAlign: 'center'
+    color: T.text,
+    fontWeight: '700',
+    fontSize: getResponsiveSize(13),
+    textAlign: 'center',
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
   },
   buttonTextActive: {
-    color: '#041c55'
+    color: '#1B1305',
   },
   buttonBase: {
-    borderRadius: getResponsiveSize(20),
-    padding: getResponsiveSize(10),
-    paddingHorizontal: getResponsiveSize(30),
+    borderRadius: getResponsiveSize(T.radiusMd),
+    padding: getResponsiveSize(13),
+    paddingHorizontal: getResponsiveSize(28),
     minWidth: getResponsiveSize(120),
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
   },
   buttonPrimary: {
-    backgroundColor: '#f1c40f'
+    backgroundColor: T.gold,
+    borderWidth: 1.5,
+    borderColor: T.gold,
+    ...T.shadowBtn,
   },
   buttonCancel: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderWidth: getResponsiveSize(1),
-    borderColor: '#f1c40f'
+    backgroundColor: T.bg3,
+    borderWidth: 1.5,
+    borderColor: T.gold,
   },
   buttonDestructive: {
-    backgroundColor: '#eb4141ff'
+    backgroundColor: T.danger,
+    borderWidth: 1.5,
+    borderColor: T.danger,
   },
   buttonTextBase: {
-    fontWeight: 'bold',
-    textAlign: 'center'
+    fontWeight: '800',
+    textAlign: 'center',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
   buttonTextPrimary: {
-    color: '#041c55',
-    fontSize: getResponsiveSize(16)
+    color: '#1B1305',
+    fontSize: getResponsiveSize(15),
   },
   buttonTextOnDark: {
-    color: '#fff',
-    fontSize: getResponsiveSize(16)
-  }
+    color: T.text,
+    fontSize: getResponsiveSize(15),
+  },
 };
