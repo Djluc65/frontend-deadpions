@@ -1,5 +1,6 @@
-import React, { memo } from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import React, { memo, useEffect, useMemo, useRef } from 'react';
+import { Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
+import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import { T, TY } from '../utils/theme';
 import { getResponsiveSize } from '../utils/responsive';
 import { getAvatarSource } from '../utils/avatarUtils';
@@ -13,6 +14,24 @@ const PAWN_COLORS = {
 };
 
 const MAX_TIMEOUTS = 5;
+
+const TurnArrow = memo(({ size }) => (
+  <Svg width={size} height={size} viewBox="0 0 100 100">
+    <Defs>
+      <LinearGradient id="turnArrowGrad" x1="0" y1="0" x2="0" y2="1">
+        <Stop offset="0" stopColor={T.gold} stopOpacity="1" />
+        <Stop offset="1" stopColor={T.goldDeep} stopOpacity="1" />
+      </LinearGradient>
+    </Defs>
+    <Path
+      d="M35,0 L65,0 L65,55 L90,55 L50,100 L10,55 L35,55 Z"
+      fill="url(#turnArrowGrad)"
+      stroke={T.text}
+      strokeWidth="3"
+      strokeLinejoin="round"
+    />
+  </Svg>
+));
 
 const PlayerHUD = memo(({
   name = '',
@@ -35,6 +54,50 @@ const PlayerHUD = memo(({
   const showTimer = typeof time === 'number';
   const pawn = pawnColor ? PAWN_COLORS[pawnColor] : null;
   const avatarSrc = avatar ? getAvatarSource(avatar) : null;
+  const turnAnim = useRef(new Animated.Value(0)).current;
+  const turnLoopRef = useRef(null);
+
+  const arrowSize = useMemo(() => rs(small ? 24 : 28), [small]);
+  const arrowTranslateY = useMemo(
+    () => turnAnim.interpolate({ inputRange: [0, 1], outputRange: [0, rs(6)] }),
+    [turnAnim]
+  );
+  const arrowOpacity = useMemo(
+    () => turnAnim.interpolate({ inputRange: [0, 1], outputRange: [0.75, 1] }),
+    [turnAnim]
+  );
+
+  useEffect(() => {
+    if (!isTurn) {
+      turnLoopRef.current?.stop?.();
+      turnAnim.stopAnimation();
+      turnAnim.setValue(0);
+      return;
+    }
+
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(turnAnim, {
+          toValue: 1,
+          duration: 550,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(turnAnim, {
+          toValue: 0,
+          duration: 550,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    turnLoopRef.current = loop;
+    loop.start();
+    return () => {
+      loop.stop();
+    };
+  }, [isTurn, turnAnim]);
 
   return (
     <View style={[
@@ -47,6 +110,19 @@ const PlayerHUD = memo(({
 
         {/* ── Avatar (image ou initiale) ── */}
         <View style={[styles.avatarWrap, isTurn && styles.avatarWrapActive, small && styles.avatarWrapSmall]}>
+          {isTurn && (
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                styles.turnArrowWrap,
+                { transform: [{ translateY: arrowTranslateY }], opacity: arrowOpacity },
+              ]}
+            >
+              <View style={rotated ? { transform: [{ rotate: '180deg' }] } : null}>
+                <TurnArrow size={arrowSize} />
+              </View>
+            </Animated.View>
+          )}
           {avatarSrc ? (
             <Image source={avatarSrc} style={styles.avatarImg} resizeMode="cover" />
           ) : (
@@ -196,6 +272,19 @@ const styles = StyleSheet.create({
     height: rs(11),
     borderRadius: rs(6),
     borderWidth: 1.5,
+  },
+  turnArrowWrap: {
+    position: 'absolute',
+    top: rs(-28),
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 10,
+    elevation: 10,
+    shadowColor: T.gold,
+    shadowOpacity: 0.9,
+    shadowRadius: rs(10),
+    shadowOffset: { width: 0, height: 0 },
   },
 
   // Info
