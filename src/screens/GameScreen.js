@@ -735,6 +735,15 @@ const GameScreen = ({ navigation, route }) => {
   const [showResultModal, setShowResultModal] = useState(false);
   const [resultData, setResultData] = useState(null);
   const [statsIA, setStatsIA] = useState(null);
+
+  // Joue le son correspondant au résultat dès que la fenêtre de résultat s'affiche.
+  useEffect(() => {
+    if (!showResultModal || !resultData) return;
+    const { victoire, reason, isTournament, tournamentOver, tournamentScore: ts, type } = resultData;
+    const isDraw = reason === 'draw' || reason === 'cancel_by_agreement' ||
+      ((type === 'local' || type === 'ia' || type === 'ai') && isTournament && tournamentOver && ts?.black === ts?.white);
+    AudioController.playResultSound(victoire, isDraw, isSoundEnabled);
+  }, [showResultModal, resultData]);
   
   // Nouveaux états pour l'IA
   const [iaEnReflexion, setIaEnReflexion] = useState(false);
@@ -917,12 +926,12 @@ const GameScreen = ({ navigation, route }) => {
 
     const handleMoveMade = (data) => {
       const { row, col, player, nextTurn, newAutoPlayCount } = data;
-      
+
       setBoard(prev => {
         if (prev.some(m => m.row === row && m.col === col)) return prev;
         return [...prev, { row, col, player }];
       });
-      
+
       setCurrentPlayer(nextTurn);
       if (nextTurn === null) {
           setWaitingForNextRound(true); // Lock board immediately while waiting for game/round over event
@@ -934,7 +943,14 @@ const GameScreen = ({ navigation, route }) => {
           setTimeouts(prev => ({ ...prev, [player]: newAutoPlayCount }));
       }
 
-      playSound(player);
+      // Ne jouer le son que pour le coup de l'adversaire — le joueur local
+      // a déjà entendu son son à la confirmation du clic (handlePress).
+      const myId = (userRef.current?._id || userRef.current?.id || '').toString();
+      const blackId = getPlayerId(playersDataRef.current?.black)?.toString();
+      const myColor = blackId && myId && blackId === myId ? 'black' : 'white';
+      if (player !== myColor) {
+        playSound(player);
+      }
     };
 
     const handleGameOver = (data) => {
@@ -1047,9 +1063,7 @@ const GameScreen = ({ navigation, route }) => {
 
       }
 
-      if (data.reason !== 'timeout' && data.reason !== 'resign' && data.reason !== 'draw_timeout' && data.reason !== 'cancel_by_agreement' && data.reason !== 'draw') {
-        AudioController.playVictorySound(isSoundEnabled);
-      }
+      // Le son de résultat est joué par le useEffect sur showResultModal.
 
       const isWinner = data.winnerId?.toString() === (user?._id || user?.id).toString();
       
@@ -1329,9 +1343,7 @@ const GameScreen = ({ navigation, route }) => {
             }
         }
 
-        if (data.reason !== 'timeout' && data.reason !== 'resign' && data.reason !== 'draw_timeout') {
-             AudioController.playVictorySound(isSoundEnabled);
-        }
+        // Le son de résultat est joué par le useEffect sur showResultModal.
 
         const isWinner = data.winnerId?.toString() === (user?._id || user?.id).toString();
         const hasWinner = !!data.winnerId;
@@ -3085,7 +3097,6 @@ const GameScreen = ({ navigation, route }) => {
             const winLine = checkWinner(coup.row, coup.col, currentPlayer);
             if (winLine) {
                 setWinningLine(winLine);
-                AudioController.playVictorySound(isSoundEnabled);
                 setWinner(currentPlayer);
                 setGameOver(true);
                 setTimeout(() => {
@@ -3410,10 +3421,9 @@ const GameScreen = ({ navigation, route }) => {
     const winLine = checkWinner(row, col, currentPlayer);
     if (winLine) {
       setWinningLine(winLine);
-      AudioController.playVictorySound(isSoundEnabled);
       setWinner(currentPlayer);
       setGameOver(true);
-      
+
       if (mode === 'ai') {
          setTimeout(() => {
             updateStatsIA(configIA.difficulte, true);
@@ -3771,7 +3781,6 @@ const GameScreen = ({ navigation, route }) => {
     const winLine = checkWinner(row, col, player);
     if (winLine) {
       setWinningLine(winLine);
-      AudioController.playVictorySound(isSoundEnabled);
       setWinner(player);
       setGameOver(true);
       return;

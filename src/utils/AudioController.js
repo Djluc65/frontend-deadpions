@@ -9,7 +9,9 @@ let isRematchMode = false;
 
 const HOME_MUSIC_SOURCE = require('../../assets/song/AmbianceSonoreBackgroundHome2.mp3');
 const GAME_MUSIC_SOURCE = require('../../assets/song/SonsDeGameplay.mp3');
-const VICTORY_SOUND_SOURCE = require('../../assets/song/game-over-deep-male-voice-clip-352695.mp3');
+const VICTORY_SOUND_SOURCE = require('../../assets/song/gaming-victory-464016.mp3');
+const DEFEAT_SOUND_SOURCE = require('../../assets/song/game-over-deep-male-voice-clip-352695.mp3');
+const DRAW_SOUND_SOURCE = require('../../assets/song/MatchNul.mp3');
 
 export const AudioController = {
   get isRematchMode() {
@@ -157,26 +159,35 @@ export const AudioController = {
     }
   },
 
+  async _playOneShot(source) {
+    const { sound } = await Audio.Sound.createAsync(source);
+    await sound.playAsync();
+    sound.setOnPlaybackStatusUpdate(async (status) => {
+      if (status.didJustFinish) {
+        try { await sound.unloadAsync(); } catch (_) {}
+      }
+    });
+  },
+
   async playVictorySound(isSoundEnabled) {
     if (!isSoundEnabled) return;
-    try {
-      const { sound } = await Audio.Sound.createAsync(
-        VICTORY_SOUND_SOURCE
-      );
-      await sound.playAsync();
-      
-      sound.setOnPlaybackStatusUpdate(async (status) => {
-        if (status.didJustFinish) {
-          try {
-            await sound.unloadAsync();
-          } catch (e) {
-             // ignore
-          }
-        }
-      });
-    } catch (error) {
-      console.log('Error playing victory sound', error);
-    }
+    try { await this._playOneShot(VICTORY_SOUND_SOURCE); } catch (e) { console.log('Error playing victory sound', e); }
+  },
+
+  async playDefeatSound(isSoundEnabled) {
+    if (!isSoundEnabled) return;
+    try { await this._playOneShot(DEFEAT_SOUND_SOURCE); } catch (e) { console.log('Error playing defeat sound', e); }
+  },
+
+  async playDrawSound(isSoundEnabled) {
+    if (!isSoundEnabled) return;
+    try { await this._playOneShot(DRAW_SOUND_SOURCE); } catch (e) { console.log('Error playing draw sound', e); }
+  },
+
+  async playResultSound(victoire, isDraw, isSoundEnabled) {
+    if (isDraw) return this.playDrawSound(isSoundEnabled);
+    if (victoire) return this.playVictorySound(isSoundEnabled);
+    return this.playDefeatSound(isSoundEnabled);
   },
 
   notifyChatEnter() {

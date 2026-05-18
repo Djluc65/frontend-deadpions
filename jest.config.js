@@ -7,5 +7,6 @@ module.exports = {
   moduleNameMapper: {
     '^expo-localization$': '<rootDir>/__mocks__/expo-localization.js',
     '^expo-keep-awake$': '<rootDir>/__mocks__/expo-keep-awake.js',
+    '\\.(mp3|wav|ogg|flac|aac|m4a|png|jpg|jpeg|gif|svg|webp)$': '<rootDir>/__mocks__/fileMock.js',
   },
 };
