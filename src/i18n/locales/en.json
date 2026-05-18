@@ -90,6 +90,7 @@
       "fill_all_fields": "Please fill in all fields",
       "google_login_failed": "Google sign-in failed",
       "google_not_configured_android": "Google Sign-In is not configured for Android.",
+      "google_unavailable_dev": "Google Sign-In is not available in development mode (Expo Go). Use email/password or test via TestFlight.",
       "google_oauth_misconfigured": "Google OAuth is misconfigured (package/SHA-1/redirect).",
       "apple_login_failed": "Unable to sign in with Apple",
       "apple_service_unavailable": "Apple sign-in is not yet available on the server.",

@@ -7,7 +7,7 @@ import { AntDesign } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { loginStart, loginSuccess, loginFailure } from '../redux/slices/authSlice';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
@@ -51,11 +51,15 @@ const LoginScreen = ({ navigation }) => {
 
   // Configuration Google Auth
   // IMPORTANT: Remplacez ces IDs par vos propres Client IDs depuis Google Cloud Console
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    clientId: googleWebClientId,
-    iosClientId: googleIosClientId,
-    androidClientId: googleAndroidClientId,
-  }, googleRedirectNative ? { native: googleRedirectNative } : {});
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest(
+    {
+      clientId: googleWebClientId,
+      iosClientId: googleIosClientId,
+      androidClientId: googleAndroidClientId,
+    },
+    // Force le bon redirect URI natif iOS (expo-auth-session v6 génère sinon com.deadpions.app:/oauthredirect)
+    googleRedirectNative ? { native: googleRedirectNative } : {}
+  );
 
   const showAppleAuth = Platform.OS === 'ios';
   const showGoogleAuth = Platform.OS === 'android' || Platform.OS === 'ios' || Platform.OS === 'web';
@@ -280,9 +284,15 @@ const LoginScreen = ({ navigation }) => {
                         appAlert(t('common.configuration'), t('auth.google_not_configured_android'));
                         return;
                       }
+                      // Expo Go: redirect URI incompatible avec Google OAuth
+                      const isExpoGo = Constants.appOwnership === 'expo' ||
+                        Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+                      if (isExpoGo) {
+                        appAlert(t('common.info'), t('auth.google_unavailable_dev'));
+                        return;
+                      }
                       try {
-                        const useProxy = Constants.appOwnership === 'expo';
-                        await promptAsync({ useProxy });
+                        await promptAsync({});
                       } catch (e) {
                         if (isUserCancelledAuth(e)) return;
                         console.error(e);

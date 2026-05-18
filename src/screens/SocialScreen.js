@@ -71,29 +71,6 @@ const SocialScreen = ({ navigation }) => {
   const { user, token } = useSelector(state => state.auth);
   const coins = user?.coins || 0;
 
-  if (!user || !token) {
-    return (
-      <ImageBackground
-        source={require('../../assets/images/Background2-4.png')}
-        style={styles.background}
-        resizeMode="cover"
-      >
-        <View style={styles.bgOverlay} pointerEvents="none" />
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.loginGate}>
-            <Text style={styles.loginGateTitle}>{t('social.login_required')}</Text>
-            <Text style={styles.loginGateText}>
-              {t('social.login_required_desc')}
-            </Text>
-            <TouchableOpacity style={[styles.loginGateBtn, isTablet && styles.loginGateBtnTablet]} onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.loginGateBtnText}>{t('auth.login')}</Text>
-            </TouchableOpacity>
-          </View>
-        </SafeAreaView>
-      </ImageBackground>
-    );
-  }
-
   // --- HELPER ---
   const getAvatarUri = (avatarPath) => {
     const source = getAvatarSource(avatarPath);
@@ -953,6 +930,19 @@ const SocialScreen = ({ navigation }) => {
       resizeMode="cover"
     >
       <View style={styles.bgOverlay} pointerEvents="none" />
+      {(!user || !token) ? (
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.loginGate}>
+            <Text style={styles.loginGateTitle}>{t('social.login_required')}</Text>
+            <Text style={styles.loginGateText}>
+              {t('social.login_required_desc')}
+            </Text>
+            <TouchableOpacity style={[styles.loginGateBtn, isTablet && styles.loginGateBtnTablet]} onPress={() => navigation.navigate('Login')}>
+              <Text style={styles.loginGateBtnText}>{t('auth.login')}</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      ) : (
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <SafeAreaView style={styles.safeArea}>
           {renderHeader()}
@@ -1175,6 +1165,7 @@ const SocialScreen = ({ navigation }) => {
  
          </SafeAreaView>
       </TouchableWithoutFeedback>
+      )}
     </ImageBackground>
   );
 };

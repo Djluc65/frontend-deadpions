@@ -15,6 +15,14 @@ const nativeModulesToBlockOnWeb = [
 ];
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+  // Metro résout 'punycode' via le champ 'module' (punycode.es6.js, ESM).
+  // Quand whatwg-url fait require('punycode'), l'interop CJS→ESM supprime punycode.ucs2,
+  // ce qui cause "Cannot read property 'decode' of undefined".
+  // Forcer la version CJS (punycode.js) pour préserver punycode.ucs2.
+  if (moduleName === 'punycode') {
+    return { type: 'sourceFile', filePath: require.resolve('punycode/punycode.js') };
+  }
+
   if (platform === 'web') {
     // Bloquer les modules natifs connus pour poser problème sur le web
     if (nativeModulesToBlockOnWeb.some(m => moduleName === m || moduleName.startsWith(m + '/'))) {
