@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground, Image, Modal, FlatList, ActivityIndicator, Share, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground, Image, Modal, FlatList, ActivityIndicator, Share, Platform, Alert, useWindowDimensions } from 'react-native';
 import { T } from '../utils/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
@@ -310,11 +310,53 @@ const SalleAttenteLive = ({ route, navigation }) => {
       const userId = user?._id || user?.id;
       const creatorId = creatorIdRef.current || configSalleRef.current?.createur?._id || configSalleRef.current?.createur?.id;
       const isCreatorEffective = Boolean(userId && creatorId && userId.toString() === creatorId.toString());
-      if (isCreatorEffective) {
-          handleStopLive();
-      } else {
-          handleLeaveLive();
-      }
+
+      // Fermer le modal d'invitation immédiatement pour éviter les conflits d'animation iOS
+      setInviteModalVisible(false);
+
+      // Attendre 400ms que l'animation de fermeture du modal se termine avant d'afficher Alert
+      setTimeout(() => {
+          if (isCreatorEffective) {
+              Alert.alert(
+                  t('live_room.stop_live_title'),
+                  t('live_room.stop_live_desc'),
+                  [
+                      { text: t('common.cancel'), style: 'cancel' },
+                      {
+                          text: t('live_room.stop_live_btn'),
+                          style: 'destructive',
+                          onPress: () => {
+                              const effectiveRoomId = roomId || configSalleRef.current?.id || route?.params?.roomId || route?.params?.configSalle?.id;
+                              isLeavingRef.current = true;
+                              try { detachRef.current?.(); } catch (_) {}
+                              try { socket.emit('stop_live_room', { gameId: effectiveRoomId, userId }); } catch (_) {}
+                              try { socket.emit('leave_live_room', { gameId: effectiveRoomId, userId }); } catch (_) {}
+                              navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+                          }
+                      }
+                  ]
+              );
+          } else {
+              Alert.alert(
+                  t('live_room.leave_live_title'),
+                  t('live_room.leave_live_desc'),
+                  [
+                      { text: t('common.cancel'), style: 'cancel' },
+                      {
+                          text: t('live_room.leave_live_btn'),
+                          style: 'destructive',
+                          onPress: () => {
+                              const effectiveRoomId = roomId || configSalleRef.current?.id || route?.params?.roomId || route?.params?.configSalle?.id;
+                              isLeavingRef.current = true;
+                              try { detachRef.current?.(); } catch (_) {}
+                              try { socket.emit('leave_live_room', { gameId: effectiveRoomId, userId }); } catch (_) {}
+                              navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+                          }
+                      }
+                  ]
+              );
+          }
+      }, 400);
   };
 
 

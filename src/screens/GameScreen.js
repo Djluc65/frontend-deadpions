@@ -2203,29 +2203,28 @@ const GameScreen = ({ navigation, route }) => {
     if (mode === 'spectator') return;
     if (gameOver) return;
 
-    try {
-      setShowGameMenu(false);
-      setActiveModal(null);
-      setCustomAlert(prev => ({ ...prev, visible: false }));
-    } catch (_) {}
+    // Fermer le menu de jeu immédiatement (s'il était ouvert).
+    // Ne PAS appeler setCustomAlert ici — la modale de confirmation est déjà
+    // en train de se fermer via onClose() dans CustomAlert, et rappeler
+    // visible=false pendant l'animation iOS provoque un crash natif UIKit.
+    setShowGameMenu(false);
+    setActiveModal(null);
 
+    // Délai de 400ms : laisse l'animation de fermeture de la modale iOS (~250ms)
+    // se terminer avant tout nouvel appel réseau et tout nouvel affichage de modale.
     setTimeout(() => {
       try {
         socket.emit('request_action', { gameId, type }, (res) => {
           if (!res?.ok) {
             showAlert(t('common.error'), res?.message || t('game.request_send_failed'), [{ text: t('common.ok'), style: 'cancel' }]);
-            return;
           }
-          showAlert(
-            t('game.request_sent_title'),
-            type === 'cancel' ? t('game.cancel_request_sent') : t('game.abandon_request_sent'),
-            [{ text: t('common.ok'), style: 'cancel' }]
-          );
+          // Si ok : pas de nouveau Modal — handleActionResolved notifiera le résultat
+          // quand l'adversaire accepte ou refuse.
         });
       } catch (e) {
         showAlert(t('common.error'), t('game.request_send_failed'), [{ text: t('common.ok'), style: 'cancel' }]);
       }
-    }, 50);
+    }, 400);
   };
 
   const handleRequestCancel = () => {
@@ -2239,7 +2238,7 @@ const GameScreen = ({ navigation, route }) => {
         : t('game.cancel_game_desc'),
       [
         { text: t('common.cancel'), style: 'cancel' },
-        { text: t('common.send'), onPress: () => { playButtonSound(); sendActionRequest('cancel'); } }
+        { text: t('common.send'), onPress: () => { sendActionRequest('cancel'); } }
       ]
     );
   };
@@ -2251,7 +2250,7 @@ const GameScreen = ({ navigation, route }) => {
       t('game.abandon_desc'),
       [
         { text: t('common.cancel'), style: 'cancel' },
-        { text: t('common.send'), style: 'destructive', onPress: () => { playButtonSound(); sendActionRequest('abandon'); } }
+        { text: t('common.send'), style: 'destructive', onPress: () => { sendActionRequest('abandon'); } }
       ]
     );
   };
