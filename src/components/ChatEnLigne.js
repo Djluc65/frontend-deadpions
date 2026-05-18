@@ -3,15 +3,19 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Keyboa
 import EmojiAnimation from './EmojiAnimation';
 import { emojisDisponibles, getEmojiSource } from '../utils/emojis';
 import { getResponsiveSize } from '../utils/responsive';
+import { useTranslation } from 'react-i18next';
 
 const ChatEnLigne = ({ 
   matchId, 
-  monPseudo = 'Vous', 
-  adversairePseudo = 'Adversaire',
+  monPseudo, 
+  adversairePseudo,
   onEnvoyerMessage,
   messages = [],
   displayMode = 'full'
 }) => {
+  const { t } = useTranslation();
+  const myPseudo = monPseudo ?? t('game.you');
+  const oppPseudo = adversairePseudo ?? t('game.opponent');
   const [messageInput, setMessageInput] = useState('');
   const [emojisPresses, setEmojisPresses] = useState([]);
   const [lastMessageTime, setLastMessageTime] = useState(0);
@@ -35,7 +39,7 @@ const ChatEnLigne = ({
     const nouveauMessage = {
       id: Date.now(),
       type: 'texte',
-      auteur: monPseudo,
+      auteur: myPseudo,
       estMoi: true,
       contenu: messageInput,
       timestamp: new Date()
@@ -63,7 +67,7 @@ const ChatEnLigne = ({
     const nouveauMessage = {
       id: Date.now(),
       type: 'emoji',
-      auteur: monPseudo,
+      auteur: myPseudo,
       estMoi: true,
       contenu: emojiData.name,
       timestamp: new Date()
@@ -86,7 +90,7 @@ const ChatEnLigne = ({
   };
   
   const formatHeure = (date) => {
-    return new Date(date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return new Date(date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
   };
   
   return (
@@ -95,7 +99,7 @@ const ChatEnLigne = ({
       {(displayMode === 'full' || displayMode === 'text') && (
       <View style={[styles.chatTexte, displayMode === 'text' && { borderRightWidth: 0 }]}>
         <View style={styles.chatHeader}>
-          <Text style={styles.chatTitre}>💬 Chat</Text>
+          <Text style={styles.chatTitre}>💬 {t('game.chat_title')}</Text>
         </View>
         
         {/* Zone de messages */}
@@ -106,8 +110,8 @@ const ChatEnLigne = ({
         >
           {messages.filter(m => m.type === 'texte').length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyTexte}>Aucun message</Text>
-              <Text style={styles.emptySubTexte}>Commencez la conversation !</Text>
+              <Text style={styles.emptyTexte}>{t('chat.empty_title')}</Text>
+              <Text style={styles.emptySubTexte}>{t('chat.empty_subtitle')}</Text>
             </View>
           ) : (
             messages.filter(m => m.type === 'texte').map(msg => (
@@ -146,7 +150,7 @@ const ChatEnLigne = ({
             style={styles.input}
             value={messageInput}
             onChangeText={setMessageInput}
-            placeholder="Écrivez un message..."
+            placeholder={t('chat.message_placeholder')}
             placeholderTextColor="#9ca3af"
             multiline
             maxLength={200}

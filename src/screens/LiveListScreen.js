@@ -11,6 +11,7 @@ import { getAvatarSource as getBaseAvatarSource } from '../utils/avatarUtils';
 import { getResponsiveSize } from '../utils/responsive';
 import { T } from '../utils/theme';
 import AnimatedSearchBar from '../components/ui/AnimatedSearchBar';
+import { useTranslation } from 'react-i18next';
 
 // Helper pour les avatars
 const getAvatarSource = (avatar) => {
@@ -25,6 +26,7 @@ const getAvatarSource = (avatar) => {
  * Permet de voir et rejoindre une salle en tant que spectateur.
  */
 const LiveListScreen = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const isFocused = useIsFocused();
   const user = useSelector(state => state.auth.user);
@@ -60,8 +62,8 @@ const LiveListScreen = () => {
   }, []);
 
   const filteredLives = lives.filter(live => {
-    const p1Name = live.players.black?.pseudo || 'Inconnu';
-    const p2Name = live.players.white?.pseudo || 'Inconnu';
+    const p1Name = live.players.black?.pseudo || t('common.unknown');
+    const p2Name = live.players.white?.pseudo || t('common.unknown');
     const matchName = `${p1Name} vs ${p2Name}`;
 
     const matchesSearch = matchName.toLowerCase().includes(searchQuery.toLowerCase());
@@ -102,12 +104,12 @@ const LiveListScreen = () => {
               <View style={[styles.badge, item.status === 'waiting' ? styles.badgeWaiting : styles.badgeLive]}>
                   <View style={[styles.indicator, item.status === 'waiting' ? styles.indicatorWaiting : null]} />
                   <Text style={[styles.badgeText, item.status === 'waiting' ? styles.textWaiting : null]}>
-                      {item.status === 'waiting' ? 'EN ATTENTE' : 'EN DIRECT'}
+                      {item.status === 'waiting' ? t('live_list.status_waiting') : t('live_list.status_live')}
                   </Text>
               </View>
               <View style={[styles.badge, { backgroundColor: item.betAmount > 0 ? 'rgba(241, 196, 15, 0.1)' : 'rgba(59, 130, 246, 0.1)', borderColor: item.betAmount > 0 ? '#f1c40f' : '#3b82f6', borderWidth: getResponsiveSize(1) }]}>
                   <Text style={[styles.badgeText, { color: item.betAmount > 0 ? '#f1c40f' : '#3b82f6' }]}>
-                      {item.betAmount > 0 ? `${item.betAmount} 💰` : 'Amical'}
+                      {item.betAmount > 0 ? `${item.betAmount} 💰` : t('live_list.friendly')}
                   </Text>
               </View>
           </View>
@@ -119,25 +121,25 @@ const LiveListScreen = () => {
         <View style={styles.playersContainer}>
              <View style={styles.playerInfo}>
                  <Image source={getAvatarSource(p1?.avatar)} style={styles.avatarSmall} />
-                 <Text style={styles.playerName} numberOfLines={1}>{p1?.pseudo || 'Joueur 1'}</Text>
+                 <Text style={styles.playerName} numberOfLines={1}>{p1?.pseudo || t('game.player1')}</Text>
                  <Text style={styles.playerCountry}>{p1?.country || '🏳️'}</Text>
              </View>
 
              <View style={styles.vsContainer}>
-                <Text style={styles.vsText}>VS</Text>
+                <Text style={styles.vsText}>{t('common.vs')}</Text>
              </View>
 
              <View style={styles.playerInfo}>
                  {p2 ? (
                     <>
                         <Image source={getAvatarSource(p2?.avatar)} style={styles.avatarSmall} />
-                        <Text style={styles.playerName} numberOfLines={1}>{p2?.pseudo || 'Joueur 2'}</Text>
+                        <Text style={styles.playerName} numberOfLines={1}>{p2?.pseudo || t('game.player2')}</Text>
                         <Text style={styles.playerCountry}>{p2?.country || '🏳️'}</Text>
                     </>
                  ) : (
                     <View style={styles.waitingSlot}>
                         <Ionicons name="help-outline" size={getResponsiveSize(24)} color="#6b7280" />
-                        <Text style={styles.waitingText}>En attente...</Text>
+                        <Text style={styles.waitingText}>{t('game.waiting_short')}</Text>
                     </View>
                  )}
              </View>
@@ -150,7 +152,7 @@ const LiveListScreen = () => {
             onPress={handlePress}
         >
             <Text style={[styles.joinButtonText, canJoin && styles.joinButtonTextActive]}>
-                {isParticipant ? 'RETOURNER À LA PARTIE' : canJoin ? 'REJOINDRE (JOUEUR)' : 'REGARDER LE MATCH'}
+                {isParticipant ? t('live_list.return_to_game') : canJoin ? t('live_list.join_as_player') : t('live_list.watch_match')}
             </Text>
             <Ionicons name={canJoin ? "game-controller" : "eye"} size={getResponsiveSize(16)} color={canJoin ? "#fff" : "#fff"} />
         </TouchableOpacity>
@@ -165,12 +167,12 @@ const LiveListScreen = () => {
     >
       <View style={styles.bgOverlay} pointerEvents="none" />
       <View style={[styles.header, isTablet && styles.headerTablet, isDesktop && styles.headerDesktop]}>
-        <Text style={styles.title}>Salles Live</Text>
+        <Text style={styles.title}>{t('live_list.title')}</Text>
         <View style={{ paddingHorizontal: getResponsiveSize(20), marginBottom: getResponsiveSize(15) }}>
             <AnimatedSearchBar
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                placeholder="Rechercher une salle..."
+                placeholder={t('live_list.search_placeholder')}
             />
         </View>
         
@@ -179,19 +181,19 @@ const LiveListScreen = () => {
                 style={[styles.filterChip, filter === 'all' && styles.filterChipActive]}
                 onPress={() => setFilter('all')}
             >
-                <Text style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>Tous</Text>
+                <Text style={[styles.filterText, filter === 'all' && styles.filterTextActive]}>{t('live_list.filter_all')}</Text>
             </TouchableOpacity>
             <TouchableOpacity 
                 style={[styles.filterChip, filter === 'bet' && styles.filterChipActive]}
                 onPress={() => setFilter('bet')}
             >
-                <Text style={[styles.filterText, filter === 'bet' && styles.filterTextActive]}>Mise 💰</Text>
+                <Text style={[styles.filterText, filter === 'bet' && styles.filterTextActive]}>{t('live_list.filter_bet')}</Text>
             </TouchableOpacity>
             <TouchableOpacity 
                 style={[styles.filterChip, filter === 'friendly' && styles.filterChipActive]}
                 onPress={() => setFilter('friendly')}
             >
-                <Text style={[styles.filterText, filter === 'friendly' && styles.filterTextActive]}>Amical 🤝</Text>
+                <Text style={[styles.filterText, filter === 'friendly' && styles.filterTextActive]}>{t('live_list.filter_friendly')}</Text>
             </TouchableOpacity>
         </View>
       </View>
@@ -207,7 +209,7 @@ const LiveListScreen = () => {
         ListEmptyComponent={
             <View style={styles.emptyState}>
                 <Ionicons name="videocam-off-outline" size={getResponsiveSize(48)} color="rgba(255,255,255,0.3)" />
-                <Text style={styles.emptyText}>Aucun live en cours</Text>
+                <Text style={styles.emptyText}>{t('live_list.empty')}</Text>
             </View>
         }
       />

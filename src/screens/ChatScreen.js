@@ -24,11 +24,13 @@ import { AudioController } from '../utils/AudioController';
 import { getResponsiveSize, isTablet, SCREEN_WIDTH, SCREEN_HEIGHT } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
 import { T } from '../utils/theme';
+import { useTranslation } from 'react-i18next';
 
 const width = SCREEN_WIDTH;
 const height = SCREEN_HEIGHT;
 
 const ChatScreen = ({ route, navigation }) => {
+  const { t } = useTranslation();
   const { friendId, friendName, friendAvatar } = route.params;
   const { user, token } = useSelector(state => state.auth);
   const settings = useSelector(state => state.settings || { isMusicEnabled: true });
@@ -117,11 +119,11 @@ const ChatScreen = ({ route, navigation }) => {
 
   const getStatusInfo = (isOnline, lastSeen) => {
     if (isOnline) {
-      return { color: '#2ecc71', text: 'En ligne' }; // Green
+      return { color: '#2ecc71', text: t('chat.status_online') };
     }
     
     if (!lastSeen) {
-       return { color: '#95a5a6', text: 'Hors ligne' }; // Grey
+       return { color: '#95a5a6', text: t('chat.status_offline') };
     }
 
     const now = new Date();
@@ -136,7 +138,7 @@ const ChatScreen = ({ route, navigation }) => {
     if (seconds < 60) {
       return { 
         color: '#f1c40f', // Yellow
-        text: `Depuis ${Math.max(0, seconds)} sec` 
+        text: t('chat.last_seen_seconds', { count: Math.max(0, seconds) })
       };
     }
 
@@ -144,14 +146,16 @@ const ChatScreen = ({ route, navigation }) => {
     if (minutes < 60) {
       return { 
         color: '#95a5a6', // Grey
-        text: `Depuis ${minutes} min` 
+        text: t('chat.last_seen_minutes', { count: minutes })
       };
     }
 
     // 1-23 hours: Grey
     if (hours < 24) {
       const restMin = minutes % 60;
-      const text = restMin > 0 ? `Depuis ${hours}h ${restMin}min` : `Depuis ${hours}h`;
+      const text = restMin > 0
+        ? t('chat.last_seen_hours_minutes', { hours, minutes: restMin })
+        : t('chat.last_seen_hours', { count: hours });
       return { color: '#95a5a6', text };
     }
 
@@ -159,7 +163,7 @@ const ChatScreen = ({ route, navigation }) => {
     if (days < 7) {
       return { 
         color: '#95a5a6', 
-        text: `Depuis ${days} jour${days > 1 ? 's' : ''}` 
+        text: t('chat.last_seen_days', { count: days })
       };
     }
 
@@ -168,14 +172,14 @@ const ChatScreen = ({ route, navigation }) => {
       const weeks = Math.floor(days / 7);
       return { 
         color: '#95a5a6', 
-        text: `Depuis ${weeks} semaine${weeks > 1 ? 's' : ''}` 
+        text: t('chat.last_seen_weeks', { count: weeks })
       };
     }
 
     const months = Math.floor(days / 30);
     return { 
       color: '#95a5a6', 
-      text: `Depuis ${months} mois` 
+      text: t('chat.last_seen_months', { count: months })
     };
   };
 
@@ -311,7 +315,7 @@ const ChatScreen = ({ route, navigation }) => {
       const logMsg = {
         _id: Date.now().toString(),
         sender: friendId,
-        content: `Appel terminé`,
+        content: t('chat.call_ended'),
         type: 'info',
         createdAt: new Date().toISOString()
       };
@@ -359,7 +363,7 @@ const ChatScreen = ({ route, navigation }) => {
             msg._id === tempMsg._id ? data : msg
         ));
       } else {
-        appAlert("Erreur", "Message non envoyé");
+        appAlert(t('common.error'), t('chat.message_not_sent'));
         // Remove temp message on failure
         setMessages(prev => prev.filter(msg => msg._id !== tempMsg._id));
       }
@@ -430,7 +434,7 @@ const ChatScreen = ({ route, navigation }) => {
       
     } catch (err) {
       console.error('Failed to start recording', err);
-      appAlert("Erreur", "Impossible de démarrer l'enregistrement");
+      appAlert(t('common.error'), t('chat.recording_start_failed'));
     }
   };
 
@@ -480,7 +484,7 @@ const ChatScreen = ({ route, navigation }) => {
       if (uploadRes.ok) {
         const messageData = {
           recipientId: friendId,
-          content: "Message vocal",
+          content: t('chat.voice_message'),
           type: 'audio',
           audioUri: uploadData.url,
           duration: recordingDuration
@@ -500,14 +504,14 @@ const ChatScreen = ({ route, navigation }) => {
         if (sendRes.ok) {
             setMessages(prev => [...prev, sentMessage]);
         } else {
-             appAlert("Erreur", "Impossible d'envoyer le message vocal");
+             appAlert(t('common.error'), t('chat.voice_message_send_failed'));
         }
       } else {
-        appAlert("Erreur", "Échec de l'envoi du vocal.");
+        appAlert(t('common.error'), t('chat.voice_message_upload_failed'));
       }
     } catch (error) {
       console.error("Error sending voice message:", error);
-      appAlert("Erreur", "Erreur réseau.");
+      appAlert(t('common.error'), t('errors.network'));
     }
   };
 
@@ -532,9 +536,9 @@ const ChatScreen = ({ route, navigation }) => {
   }; // ✅ CORRIGÉ
 
   const playSound = async (uri, messageId) => { // ✅ CORRIGÉ
-    if (!uri || uri === 'Message vocal' || !uri.startsWith('http')) { // ✅ CORRIGÉ
+    if (!uri || uri === 'Message vocal' || uri === t('chat.voice_message') || !uri.startsWith('http')) { // ✅ CORRIGÉ
       console.error('❌ Invalid audio URI:', uri); // ✅ CORRIGÉ
-      appAlert('Erreur', 'Impossible de lire ce message vocal (URL invalide)'); // ✅ CORRIGÉ
+      appAlert(t('common.error'), t('chat.audio_invalid_url')); // ✅ CORRIGÉ
       return; // ✅ CORRIGÉ
     } // ✅ CORRIGÉ
 
@@ -578,13 +582,13 @@ const ChatScreen = ({ route, navigation }) => {
         } // ✅ CORRIGÉ
         if (status.error) { // ✅ CORRIGÉ
           console.error('❌ Playback error:', status.error); // ✅ CORRIGÉ
-          appAlert('Erreur', 'Impossible de lire ce message vocal'); // ✅ CORRIGÉ
+          appAlert(t('common.error'), t('chat.audio_playback_failed')); // ✅ CORRIGÉ
           setIsPlaying(null); // ✅ CORRIGÉ
         } // ✅ CORRIGÉ
       }); // ✅ CORRIGÉ
     } catch (error) { // ✅ CORRIGÉ
       console.error('❌ playSound error:', error); // ✅ CORRIGÉ
-      appAlert('Erreur', 'Impossible de lire ce message vocal'); // ✅ CORRIGÉ
+      appAlert(t('common.error'), t('chat.audio_playback_failed')); // ✅ CORRIGÉ
       setIsPlaying(null); // ✅ CORRIGÉ
     } // ✅ CORRIGÉ
   }; // ✅ CORRIGÉ
@@ -689,21 +693,24 @@ const ChatScreen = ({ route, navigation }) => {
         userToCall: friendId,
         signalData: offer,
         from: user._id,
-        name: user.pseudo || "User",
+        name: user.pseudo || t('common.user'),
         avatar: user.avatar,
         type: type
       });
 
     } catch (err) {
       console.error("Error initiating call:", err);
-      appAlert("Erreur", "Impossible de démarrer l'appel");
+      appAlert(t('common.error'), t('chat.call_start_failed'));
       endCallCleanup();
     }
   };
 
   const acceptCall = async () => {
     if (!isWebRTCAvailable) {
-      appAlert('Info', `Les appels ${callType === 'video' ? 'vidéo' : 'audio'} ne sont pas disponibles sur cet appareil.`);
+      appAlert(
+        t('common.info'),
+        t('chat.calls_not_available', { type: callType === 'video' ? t('chat.call_type_video') : t('chat.call_type_audio') })
+      );
       return;
     }
 
@@ -748,7 +755,10 @@ const ChatScreen = ({ route, navigation }) => {
     const logMsg = {
       _id: Date.now().toString(),
       sender: user._id,
-      content: `Appel ${callType === 'video' ? 'vidéo' : 'audio'} terminé - ${formatDuration(callDuration)}`,
+      content: t('chat.call_ended_with_duration', {
+        type: callType === 'video' ? t('chat.call_type_video') : t('chat.call_type_audio'),
+        duration: formatDuration(callDuration)
+      }),
       type: 'info',
       createdAt: new Date().toISOString()
     };
@@ -835,7 +845,7 @@ const ChatScreen = ({ route, navigation }) => {
               onPress={() => {
                 const audioUrl = resolveAudioUrl(item);
                 if (!audioUrl) {
-                  appAlert('Erreur', 'Fichier audio introuvable');
+                  appAlert(t('common.error'), t('chat.audio_file_not_found'));
                   return;
                 }
                 playSound(audioUrl, item._id);
@@ -919,7 +929,7 @@ const ChatScreen = ({ route, navigation }) => {
         <View style={styles.recordingContent}>
             {/* Instruction */}
             <Text style={styles.recordingInstruction}>
-                Relâchez pour envoyer • Appuyez sur X pour annuler
+                {t('chat.recording_instruction')}
             </Text>
 
             {/* Timer */}
@@ -996,7 +1006,7 @@ const ChatScreen = ({ route, navigation }) => {
                  ) : (
                    <View style={styles.waitingRemote}>
                      <Text style={{color: 'white', textAlign: 'center'}}>
-                        {isWebRTCAvailable ? "En attente de la vidéo..." : "Vidéo non disponible sur cet appareil."}
+                        {isWebRTCAvailable ? t('chat.waiting_for_video') : t('chat.video_unavailable_device')}
                      </Text>
                    </View>
                  )}
@@ -1029,8 +1039,8 @@ const ChatScreen = ({ route, navigation }) => {
             <View style={styles.callHeader}>
               <Text style={styles.callName}>{friendName}</Text>
               <Text style={styles.callStatus}>
-                {callStatus === 'calling' ? 'Appel en cours...' : 
-                 callStatus === 'incoming' ? 'Appel entrant...' : 
+                {callStatus === 'calling' ? t('chat.call_in_progress') : 
+                 callStatus === 'incoming' ? t('chat.call_incoming') : 
                  formatDuration(callDuration)}
               </Text>
             </View>
@@ -1084,7 +1094,7 @@ const ChatScreen = ({ route, navigation }) => {
                {getStatusInfo(friendStatus.isOnline, friendStatus.lastSeen).text}
              </Text>
           ) : (
-             <Text style={styles.headerStatus}>Chargement...</Text>
+             <Text style={styles.headerStatus}>{t('common.loading')}</Text>
           )}
         </View>
         <View style={styles.headerIcons}>
@@ -1151,7 +1161,7 @@ const ChatScreen = ({ route, navigation }) => {
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.input}
-                placeholder="Message..."
+                placeholder={t('chat.message_placeholder')}
                 placeholderTextColor="#999"
                 value={inputText}
                 onChangeText={setInputText}

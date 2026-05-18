@@ -3,11 +3,13 @@ import { View, Text, StyleSheet, Image, Animated } from 'react-native';
 import { getAvatarSource } from '../utils/avatarUtils';
 import { getResponsiveSize, SCREEN_WIDTH, SCREEN_HEIGHT } from '../utils/responsive';
 import { playGameStartSound } from '../utils/soundManager';
+import { useTranslation } from 'react-i18next';
 
 const width = SCREEN_WIDTH;
 const height = SCREEN_HEIGHT;
 
 const VersusAnimation = ({ player1, player2, onFinish, visible }) => {
+    const { t } = useTranslation();
     const slideLeft = useRef(new Animated.Value(-width)).current;
     const slideRight = useRef(new Animated.Value(width)).current;
     const opacity = useRef(new Animated.Value(0)).current;
@@ -93,12 +95,12 @@ const VersusAnimation = ({ player1, player2, onFinish, visible }) => {
                     <View style={[styles.avatarContainer, { borderColor: '#3b82f6' }]}>
                          <Image source={p1Source} style={styles.avatar} />
                     </View>
-                    <Text style={styles.pseudo} numberOfLines={1}>{player1?.pseudo || 'Joueur 1'}</Text>
+                    <Text style={styles.pseudo} numberOfLines={1}>{player1?.pseudo || t('game.player1')}</Text>
                 </Animated.View>
 
                 {/* VS */}
                 <Animated.View style={[styles.vsContainer, { transform: [{ scale: scaleVS }, { rotate: rotateStr }] }]}>
-                    <Text style={styles.vsText}>VS</Text>
+                    <Text style={styles.vsText}>{t('common.vs')}</Text>
                 </Animated.View>
 
                 {/* Player 2 (Right) */}
@@ -106,7 +108,7 @@ const VersusAnimation = ({ player1, player2, onFinish, visible }) => {
                     <View style={[styles.avatarContainer, { borderColor: '#ef4444' }]}>
                         <Image source={p2Source} style={styles.avatar} />
                     </View>
-                    <Text style={styles.pseudo} numberOfLines={1}>{player2?.pseudo || 'Joueur 2'}</Text>
+                    <Text style={styles.pseudo} numberOfLines={1}>{player2?.pseudo || t('game.player2')}</Text>
                 </Animated.View>
             </View>
         </View>

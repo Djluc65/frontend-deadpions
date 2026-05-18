@@ -39,6 +39,12 @@
           <string>exp+deadpions</string>
         </array>
       </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>com.googleusercontent.apps.982071763340-pte2blufa0q5q2q7imspvo6jnp9jjtrn</string>
+        </array>
+      </dict>
     </array>
     <key>CFBundleVersion</key>
     <string>$(CURRENT_PROJECT_VERSION)</string>

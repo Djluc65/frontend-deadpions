@@ -2,6 +2,7 @@ import React, { useState, useEffect, memo } from 'react';
 import { View, Text, Modal, Pressable, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { getResponsiveSize } from '../../utils/responsive';
 import { socket } from '../../utils/socket';
 import { playButtonSound } from '../../utils/soundManager';
@@ -13,6 +14,7 @@ import { T } from '../../utils/theme';
 
 const OnlineGameSetup = memo(({ visible, onClose, navigation, user }) => {
     const dispatch = useDispatch();
+    const { t } = useTranslation();
     const [bet, setBet] = useState(500);
     const [time, setTime] = useState(30);
     const [mode, setMode] = useState('simple');
@@ -43,10 +45,10 @@ const OnlineGameSetup = memo(({ visible, onClose, navigation, user }) => {
             }, 1000);
         } else if (searchTimer === 0 && isSearching) {
             handleCancelSearch();
-            appAlert('Timeout', 'Aucun adversaire trouvé. Vos coins ont été remboursés.');
+            appAlert(t('matchmaking.timeout_title'), t('matchmaking.timeout_desc'));
         }
         return () => clearInterval(interval);
-    }, [isSearching, searchTimer]);
+    }, [isSearching, searchTimer, t]);
 
     useEffect(() => {
         if (!user || !user._id) return;
@@ -78,11 +80,11 @@ const OnlineGameSetup = memo(({ visible, onClose, navigation, user }) => {
                  setIsSearching(false);
                  if (msg === 'User not found') {
                      appAlert(
-                         'Session Expirée', 
-                         'Votre compte est introuvable. Veuillez vous reconnecter.',
+                         t('auth.session_expired_title'),
+                         t('auth.session_expired_desc'),
                          [
                              { 
-                                 text: 'OK', 
+                                 text: t('common.ok'),
                                  onPress: () => {
                                      dispatch(logout());
                                      navigation.replace('Login');
@@ -91,7 +93,7 @@ const OnlineGameSetup = memo(({ visible, onClose, navigation, user }) => {
                          ]
                      );
                  } else {
-                     appAlert('Erreur', msg);
+                     appAlert(t('common.error'), msg);
                  }
              }
         };
@@ -195,41 +197,43 @@ const OnlineGameSetup = memo(({ visible, onClose, navigation, user }) => {
                 <Pressable style={styles.friendsModalContent} onPress={() => {}}>
                     {isSearching ? (
                         <View style={{ alignItems: 'center', width: '100%' }}>
-                            <Text style={styles.friendsModalTitle}>Recherche...</Text>
+                            <Text style={styles.friendsModalTitle}>{t('matchmaking.searching_short')}</Text>
                             <ActivityIndicator size="large" color={T.gold} style={{ marginVertical: getResponsiveSize(20) }} />
                             <Text style={styles.timerText}>{searchTimer}s</Text>
-                            <Text style={styles.betInfo}>Mise : {bet.toLocaleString()} 💰</Text>
+                            <Text style={styles.betInfo}>
+                                {t('game.bet_amount', { amount: bet.toLocaleString() })}
+                            </Text>
                             
                             <TouchableOpacity 
                                 style={styles.cancelButton} 
                                 onPress={handleCancelSearch}
                             >
-                                <Text style={styles.cancelButtonText}>Annuler</Text>
+                                <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
                             </TouchableOpacity>
                         </View>
                     ) : (
                         <ScrollView contentContainerStyle={{ alignItems: 'center', width: '100%' }} style={{ width: '100%' }}>
-                            <Text style={styles.friendsModalTitle}>Jeu en ligne</Text>
+                            <Text style={styles.friendsModalTitle}>{t('matchmaking.online_game_title')}</Text>
 
-                            <Text style={styles.friendsLabel}>Mode de jeu:</Text>
+                            <Text style={styles.friendsLabel}>{t('setup.game_mode_label')}</Text>
                             <View style={styles.optionsRow}>
                                 <TouchableOpacity 
                                     style={[styles.friendsOptionButton, mode === 'simple' && styles.friendsOptionButtonActive]}
                                     onPress={() => setMode('simple')}
                                 >
-                                    <Text style={[styles.friendsOptionText, mode === 'simple' && styles.friendsOptionTextActive]}>Simple</Text>
+                                    <Text style={[styles.friendsOptionText, mode === 'simple' && styles.friendsOptionTextActive]}>{t('setup.simple')}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity 
                                     style={[styles.friendsOptionButton, mode === 'tournament' && styles.friendsOptionButtonActive]}
                                     onPress={() => setMode('tournament')}
                                 >
-                                    <Text style={[styles.friendsOptionText, mode === 'tournament' && styles.friendsOptionTextActive]}>Tournoi</Text>
+                                    <Text style={[styles.friendsOptionText, mode === 'tournament' && styles.friendsOptionTextActive]}>{t('setup.tournament')}</Text>
                                 </TouchableOpacity>
                             </View>
 
                             {mode === 'tournament' && (
                                 <>
-                                    <Text style={styles.friendsLabel}>Nombre de parties:</Text>
+                                    <Text style={styles.friendsLabel}>{t('setup.series_length_label')}</Text>
                                     <View style={styles.optionsRow}>
                                         {[2, 4, 6, 8, 10].map(num => (
                                             <TouchableOpacity 
@@ -244,19 +248,19 @@ const OnlineGameSetup = memo(({ visible, onClose, navigation, user }) => {
                                 </>
                             )}
 
-                            <Text style={styles.friendsLabel}>Mise (coins):</Text>
+                            <Text style={styles.friendsLabel}>{t('setup.bet_label')}</Text>
                             {renderBetSelector()}
 
-                            <Text style={styles.friendsLabel}>Temps par tour:</Text>
+                            <Text style={styles.friendsLabel}>{t('setup.time_per_turn_label')}</Text>
                             <View style={styles.optionsRow}>
                                 {ONLINE_TIME_OPTIONS.map(opt => (
                                     <TouchableOpacity 
-                                        key={opt.label} 
+                                        key={opt.labelKey} 
                                         style={[styles.friendsOptionButton, time === opt.value && styles.friendsOptionButtonActive]}
                                         onPress={() => setTime(opt.value)}
                                     >
                                         <Text style={[styles.friendsOptionText, time === opt.value && styles.friendsOptionTextActive]}>
-                                            {opt.label}
+                                            {t(opt.labelKey)}
                                         </Text>
                                     </TouchableOpacity>
                                 ))}
@@ -264,10 +268,10 @@ const OnlineGameSetup = memo(({ visible, onClose, navigation, user }) => {
 
                             <View style={styles.modalButtons}>
                                 <TouchableOpacity style={styles.modalButtonCancel} onPress={onClose}>
-                                    <Text style={styles.modalButtonText}>Annuler</Text>
+                                    <Text style={styles.modalButtonText}>{t('common.cancel')}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity style={styles.modalButtonConfirm} onPress={handleStartSearch}>
-                                    <Text style={[styles.modalButtonText, styles.modalButtonTextActive]}>JOUER</Text>
+                                    <Text style={[styles.modalButtonText, styles.modalButtonTextActive]}>{t('matchmaking.play_btn')}</Text>
                                 </TouchableOpacity>
                             </View>
                         </ScrollView>

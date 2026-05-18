@@ -10,8 +10,10 @@ import {
     isAvailable as isWebRTCAvailable
 } from '../services/webrtc';
 import { appAlert } from '../services/appAlert';
+import { useTranslation } from 'react-i18next';
 
 const VoiceChat = ({ gameId, userId, socket, isSpectator = false }) => {
+    const { t } = useTranslation();
     const [isMuted, setIsMuted] = useState(true);
     const [connectedPeers, setConnectedPeers] = useState(0);
     const peerConnections = useRef({}); // { [userId]: RTCPeerConnection }
@@ -35,7 +37,7 @@ const VoiceChat = ({ gameId, userId, socket, isSpectator = false }) => {
                 socket.emit('voice_join', { gameId, senderId: userId });
             } catch (err) {
                 console.error("Error initializing voice:", err);
-                appAlert("Erreur", "Impossible d'accéder au microphone.");
+                appAlert(t('common.error'), t('voice.microphone_unavailable'));
             }
         };
 

@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Switch
 import { T } from '../utils/theme';
 import { useDispatch, useSelector } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { socket } from '../utils/socket';
 import { playButtonSound } from '../utils/soundManager';
 import { getResponsiveSize } from '../utils/responsive';
@@ -17,6 +18,7 @@ import { consumeLiveRoom, ensureDailyReset, incrementLiveBonus, selectLiveRemain
 const ConfigurationSalleLive = ({ navigation }) => {
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 1024;
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const user = useSelector(state => state.auth.user);
   const liveRemaining = useSelector((state) => selectLiveRemaining(state));
@@ -49,7 +51,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
     { valeur: 180, label: '3min' },
     { valeur: 240, label: '4min' },
     { valeur: 300, label: '5min' },
-    { valeur: null, label: 'Illimité' }
+    { valeur: null, label: t('live_room.unlimited') }
   ];
 
   const betOptions = [
@@ -83,30 +85,30 @@ const ConfigurationSalleLive = ({ navigation }) => {
     dispatch(ensureDailyReset({ nowTs: Date.now() }));
     if (liveRemaining <= 0) {
       if (!showAds) {
-        appAlert('Limite atteinte', "Vous avez atteint la limite de salles live pour aujourd'hui.");
+        appAlert(t('live_room.limit_reached'), t('live_room.limit_reached_desc'));
         return;
       }
       appAlert(
-        'Limite atteinte',
-        "Vous avez atteint la limite de 5 salles live aujourd'hui. Regarder une pub pour +1 salle ?",
+        t('live_room.limit_reached'),
+        t('live_room.limit_reached_watch_ad'),
         [
-          { text: 'Non merci', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Regarder',
+            text: t('live_room.watch_ad'),
             onPress: () => {
               prepareRewarded();
               showRewarded({
                 amount: 0,
-                reason: 'Salle live supplémentaire',
+                reason: t('live_room.extra_live_room'),
                 metadata: { reward: 'live_extra' },
                 onEarned: async () => {
                   dispatch(incrementLiveBonus({ nowTs: Date.now() }));
                   const userId = user?._id || user?.id;
                   const res = await grantLiveBonusOnServer(userId);
                   if (res?.ok) {
-                    appAlert('OK', '+1 salle live ajoutée. Vous pouvez créer votre salle.');
+                    appAlert(t('common.ok'), t('live_room.extra_room_granted'));
                   } else {
-                    appAlert('Erreur', res?.message || "Impossible d'activer l'accès Live.");
+                    appAlert(t('common.error'), res?.message || t('live_room.error_activate_live'));
                   }
                 }
               });
@@ -118,17 +120,17 @@ const ConfigurationSalleLive = ({ navigation }) => {
     }
     // --- Validation des champs obligatoires ---
     if (!nomSalle.trim()) {
-      appAlert('❌ Erreur', 'Veuillez donner un nom à votre salle');
+      appAlert(t('common.error'), t('live_room.error_room_name_required'));
       return;
     }
-    
+
     if (sallePrivee && !motDePasse.trim()) {
-      appAlert('❌ Erreur', 'Veuillez définir un mot de passe pour la salle privée');
+      appAlert(t('common.error'), t('live_room.error_password_required'));
       return;
     }
-    
+
     if (nomSalle.length < 3) {
-      appAlert('❌ Erreur', 'Le nom doit contenir au moins 3 caractères');
+      appAlert(t('common.error'), t('live_room.error_name_too_short'));
       return;
     }
     
@@ -136,7 +138,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
     const configSalle = {
       id: 'live_' + Date.now(),
       nom: nomSalle,
-      description: description || 'Partie en direct',
+      description: description || t('live_room.default_description'),
       type: 'live',
       createur: {
         id: user._id || user.id,
@@ -179,7 +181,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
 
     const handleError = (message) => {
         cleanup();
-        appAlert('Erreur', message);
+        appAlert(t('common.error'), message);
     };
 
     const cleanup = () => {
@@ -207,63 +209,63 @@ const ConfigurationSalleLive = ({ navigation }) => {
             <View style={styles.headerContent}>
             <View style={styles.liveBadgeLarge}>
                 <View style={styles.liveIndicator} />
-                <Text style={styles.liveBadgeLargeTexte}>LIVE</Text>
+                <Text style={styles.liveBadgeLargeTexte}>{t('live_room.live_badge')}</Text>
             </View>
-            <Text style={styles.titre}>Créer une Salle Live</Text>
+            <Text style={styles.titre}>{t('live_room.create_title')}</Text>
             <Text style={styles.sousTitre}>
-                Créez une partie publique que tout le monde peut regarder
+                {t('live_room.create_subtitle')}
             </Text>
             </View>
         </View>
         
         {/* INFORMATIONS DE BASE */}
         <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitre}>📝 Informations</Text>
-            
+            <Text style={styles.sectionTitre}>📝 {t('live_room.section_info')}</Text>
+
             {/* Nom de la salle */}
             <View style={styles.inputGroup}>
-            <Text style={styles.label}>Nom de la salle *</Text>
+            <Text style={styles.label}>{t('live_room.room_name_label')}</Text>
             <TextInput
                 style={styles.input}
                 value={nomSalle}
                 onChangeText={setNomSalle}
-                placeholder="Ex: Tournoi du Champion"
+                placeholder={t('live_room.room_name_placeholder')}
                 placeholderTextColor="rgba(255, 255, 255, 0.5)"
                 maxLength={40}
             />
             <Text style={styles.helperText}>
-                {nomSalle.length}/40 caractères
+                {t('live_room.char_count', { count: nomSalle.length, max: 40 })}
             </Text>
             </View>
-            
+
             {/* Description */}
             <View style={styles.inputGroup}>
-            <Text style={styles.label}>Description (optionnel)</Text>
+            <Text style={styles.label}>{t('live_room.description_label')}</Text>
             <TextInput
                 style={[styles.input, styles.textArea]}
                 value={description}
                 onChangeText={setDescription}
-                placeholder="Décrivez votre salle..."
+                placeholder={t('live_room.description_placeholder')}
                 placeholderTextColor="rgba(255, 255, 255, 0.5)"
                 multiline
                 numberOfLines={3}
                 maxLength={150}
             />
             <Text style={styles.helperText}>
-                {description.length}/150 caractères
+                {t('live_room.char_count', { count: description.length, max: 150 })}
             </Text>
             </View>
         </View>
         
         {/* PARAMÈTRES DE VISIBILITÉ */}
         <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitre}>🔒 Visibilité</Text>
-            
+            <Text style={styles.sectionTitre}>🔒 {t('live_room.section_visibility')}</Text>
+
             <View style={styles.switchRow}>
             <View style={styles.switchInfo}>
-                <Text style={styles.switchLabel}>Salle privée</Text>
+                <Text style={styles.switchLabel}>{t('live_room.private_room')}</Text>
                 <Text style={styles.switchDescription}>
-                Nécessite un mot de passe pour rejoindre
+                {t('live_room.private_room_desc')}
                 </Text>
             </View>
             <Switch
@@ -276,12 +278,12 @@ const ConfigurationSalleLive = ({ navigation }) => {
             
             {sallePrivee && (
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Mot de passe *</Text>
+                <Text style={styles.label}>{t('live_room.password_label')}</Text>
                 <TextInput
                 style={styles.input}
                 value={motDePasse}
                 onChangeText={setMotDePasse}
-                placeholder="Définir un mot de passe"
+                placeholder={t('live_room.password_placeholder')}
                 placeholderTextColor="rgba(255, 255, 255, 0.5)"
                 secureTextEntry
                 maxLength={20}
@@ -292,11 +294,11 @@ const ConfigurationSalleLive = ({ navigation }) => {
         
         {/* PARAMÈTRES DES SPECTATEURS */}
         <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitre}>👁️ Spectateurs</Text>
-            
+            <Text style={styles.sectionTitre}>👁️ {t('live_room.section_spectators')}</Text>
+
             {/* Limite de spectateurs */}
             <View style={styles.inputGroup}>
-            <Text style={styles.label}>Limite de spectateurs</Text>
+            <Text style={styles.label}>{t('live_room.spectator_limit')}</Text>
             <View style={styles.optionsGrid}>
                 {limitsSpectateurs.map(limit => (
                 <TouchableOpacity
@@ -320,7 +322,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
             
             {/* Mode spectateur */}
             <View style={styles.inputGroup}>
-            <Text style={styles.label}>Mode spectateur</Text>
+            <Text style={styles.label}>{t('live_room.spectator_mode')}</Text>
             <View style={styles.modeContainer}>
                 <TouchableOpacity
                 style={[
@@ -333,13 +335,13 @@ const ConfigurationSalleLive = ({ navigation }) => {
                     styles.modeButtonTexte,
                     modeSpectateur === 'libre' && styles.modeButtonTexteActive
                 ]}>
-                    🌐 Libre
+                    🌐 {t('live_room.mode_open')}
                 </Text>
                 <Text style={styles.modeDescription}>
-                    Tout le monde peut rejoindre
+                    {t('live_room.mode_open_desc')}
                 </Text>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity
                 style={[
                     styles.modeButton,
@@ -351,10 +353,10 @@ const ConfigurationSalleLive = ({ navigation }) => {
                     styles.modeButtonTexte,
                     modeSpectateur === 'modere' && styles.modeButtonTexteActive
                 ]}>
-                    👮 Modéré
+                    👮 {t('live_room.mode_moderated')}
                 </Text>
                 <Text style={styles.modeDescription}>
-                    Vous approuvez les spectateurs
+                    {t('live_room.mode_moderated_desc')}
                 </Text>
                 </TouchableOpacity>
             </View>
@@ -363,14 +365,14 @@ const ConfigurationSalleLive = ({ navigation }) => {
         
         {/* FONCTIONNALITÉS INTERACTIVES */}
         <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitre}>💬 Interactions</Text>
-            
+            <Text style={styles.sectionTitre}>💬 {t('live_room.section_interactions')}</Text>
+
             {/* Chat en direct */}
             <View style={styles.switchRow}>
             <View style={styles.switchInfo}>
-                <Text style={styles.switchLabel}>💬 Chat en direct</Text>
+                <Text style={styles.switchLabel}>💬 {t('live_room.chat_label')}</Text>
                 <Text style={styles.switchDescription}>
-                Les spectateurs peuvent discuter pendant la partie
+                {t('live_room.chat_desc')}
                 </Text>
             </View>
             <Switch
@@ -380,13 +382,13 @@ const ConfigurationSalleLive = ({ navigation }) => {
                 thumbColor={chatActif ? '#fff' : '#f4f3f4'}
             />
             </View>
-            
+
             {/* Audio Lobby */}
             <View style={styles.switchRow}>
             <View style={styles.switchInfo}>
-                <Text style={styles.switchLabel}>🎤 Audio Lobby</Text>
+                <Text style={styles.switchLabel}>🎤 {t('live_room.audio_lobby_label')}</Text>
                 <Text style={styles.switchDescription}>
-                Les spectateurs peuvent activer leur micro
+                {t('live_room.audio_lobby_desc')}
                 </Text>
             </View>
             <Switch
@@ -396,13 +398,13 @@ const ConfigurationSalleLive = ({ navigation }) => {
                 thumbColor={audioLobbyActif ? '#fff' : '#f4f3f4'}
             />
             </View>
-            
+
             {/* Réactions */}
             <View style={styles.switchRow}>
             <View style={styles.switchInfo}>
-                <Text style={styles.switchLabel}>😀 Réactions live</Text>
+                <Text style={styles.switchLabel}>😀 {t('live_room.reactions_label')}</Text>
                 <Text style={styles.switchDescription}>
-                Emojis et réactions en temps réel
+                {t('live_room.reactions_desc')}
                 </Text>
             </View>
             <Switch
@@ -416,13 +418,13 @@ const ConfigurationSalleLive = ({ navigation }) => {
         
         {/* PARAMÈTRES DE JEU */}
         <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitre}>⏱️ Règles du jeu</Text>
-            
+            <Text style={styles.sectionTitre}>⏱️ {t('live_room.section_game_rules')}</Text>
+
             <View style={styles.switchRow}>
             <View style={styles.switchInfo}>
-                <Text style={styles.switchLabel}>🏆 Mode Tournoi</Text>
+                <Text style={styles.switchLabel}>🏆 {t('live_room.tournament_mode')}</Text>
                 <Text style={styles.switchDescription}>
-                Jouer un match en plusieurs manches
+                {t('live_room.tournament_mode_desc')}
                 </Text>
             </View>
             <Switch
@@ -435,7 +437,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
             
             {isTournament && (
             <View style={styles.inputGroup}>
-                <Text style={styles.label}>Nombre de parties</Text>
+                <Text style={styles.label}>{t('live_room.number_of_games')}</Text>
                 <View style={styles.optionsGrid}>
                 {[2, 4, 6, 8, 10].map(nb => (
                     <TouchableOpacity
@@ -456,13 +458,13 @@ const ConfigurationSalleLive = ({ navigation }) => {
                 ))}
                 </View>
                 <Text style={styles.helperText}>
-                Le premier à {Math.floor(tournamentGames / 2) + 1} victoires gagne
+                {t('live_room.first_to_wins', { count: Math.floor(tournamentGames / 2) + 1 })}
                 </Text>
             </View>
             )}
 
             <View style={styles.inputGroup}>
-            <Text style={styles.label}>Mise (coins)</Text>
+            <Text style={styles.label}>{t('live_room.bet_coins')}</Text>
             <View style={styles.betContainer}>
                 {(() => {
                     // Logic similar to HomeScreen for consistency
@@ -530,7 +532,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
             </View>
             
             <View style={styles.inputGroup}>
-            <Text style={styles.label}>Temps par coup</Text>
+            <Text style={styles.label}>{t('live_room.time_per_move')}</Text>
             <View style={styles.optionsGrid}>
                 {tempsOptions.map(option => (
                 <TouchableOpacity
@@ -559,7 +561,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
             style={styles.boutonCreer}
             onPress={() => { playButtonSound(); creerSalleLive(); }}
             >
-            <Text style={styles.boutonCreerTexte}>CRÉER LA SALLE LIVE</Text>
+            <Text style={styles.boutonCreerTexte}>{t('live_room.create_live_room_btn')}</Text>
             <View style={styles.liveBadgeSmall}>
                 <View style={styles.liveIndicatorSmall} />
             </View>

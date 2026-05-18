@@ -6,19 +6,19 @@ describe('validatePassword — cas invalides', () => {
   it('retourne invalide si le mot de passe est null', () => {
     const result = validatePassword(null);
     expect(result.isValid).toBe(false);
-    expect(result.message).toBeTruthy();
+    expect(result.messageKey).toBeTruthy();
   });
 
   it('retourne invalide si le mot de passe est une chaîne vide', () => {
     const result = validatePassword('');
     expect(result.isValid).toBe(false);
-    expect(result.message).toMatch(/requis/i);
+    expect(result.messageKey).toMatch(/required|requis/i);
   });
 
   it('retourne invalide si moins de 12 caractères (8 caractères)', () => {
     const result = validatePassword('Court1!A');
     expect(result.isValid).toBe(false);
-    expect(result.message).toContain('12');
+    expect(result.messageKey).toContain('min_length');
   });
 
   it('retourne invalide si exactement 11 caractères', () => {
@@ -52,7 +52,7 @@ describe('validatePassword — cas valides', () => {
   it('valide un mot de passe respectant tous les critères', () => {
     const result = validatePassword('Valide1234!ok');
     expect(result.isValid).toBe(true);
-    expect(result.message).toBe('');
+    expect(result.messageKey).toBe('');
   });
 
   it('accepte chacun des caractères spéciaux autorisés (@$!%*?&#)', () => {
@@ -80,7 +80,7 @@ describe('validateEmail — cas invalides', () => {
   it('retourne invalide si l\'email est null', () => {
     const result = validateEmail(null);
     expect(result.isValid).toBe(false);
-    expect(result.message).toBeTruthy();
+    expect(result.messageKey).toBeTruthy();
   });
 
   it('retourne invalide si l\'email est vide', () => {
@@ -118,7 +118,7 @@ describe('validateEmail — cas valides', () => {
   it('valide un email standard', () => {
     const result = validateEmail('alice@exemple.com');
     expect(result.isValid).toBe(true);
-    expect(result.message).toBe('');
+    expect(result.messageKey).toBe('');
   });
 
   it('valide un email avec sous-domaine', () => {

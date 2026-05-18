@@ -3,14 +3,15 @@ export const validatePassword = (password) => {
   if (!password) {
     return {
       isValid: false,
-      message: 'Le mot de passe est requis.'
+      messageKey: 'validation.password_required'
     };
   }
 
   if (password.length < 12) {
     return {
       isValid: false,
-      message: 'Le mot de passe doit contenir au moins 12 caractères.'
+      messageKey: 'validation.password_min_length',
+      messageParams: { min: 12 }
     };
   }
 
@@ -22,13 +23,14 @@ export const validatePassword = (password) => {
   if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
     return {
       isValid: false,
-      message: 'Le mot de passe doit contenir : majuscule, minuscule, chiffre et caractère spécial (@$!%*?&#).'
+      messageKey: 'validation.password_complexity'
     };
   }
 
   return {
     isValid: true,
-    message: ''
+    messageKey: '',
+    messageParams: {}
   };
 };
 
@@ -37,11 +39,12 @@ export const validateEmail = (email) => {
   if (!email || !emailRegex.test(email)) {
     return {
       isValid: false,
-      message: 'Email invalide.'
+      messageKey: 'validation.email_invalid'
     };
   }
   return {
     isValid: true,
-    message: ''
+    messageKey: '',
+    messageParams: {}
   };
 };

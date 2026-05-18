@@ -2,6 +2,7 @@ import React, { memo, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, Text, TouchableOpacity, View, Share, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { useAdManager } from '../../ads/AdSystem';
 import { useCoinsContext } from '../../context/CoinsContext';
 import {
@@ -30,18 +31,19 @@ const formatDateTime = (ts) => {
   }
 };
 
-const formatRemaining = (untilTs) => {
+const formatRemaining = (untilTs, t) => {
   const ms = Math.max(0, untilTs - Date.now());
   const totalMin = Math.floor(ms / 60000);
   const h = Math.floor(totalMin / 60);
   const m = totalMin % 60;
-  if (h <= 0) return `${m} min`;
-  return `${h} h ${m} min`;
+  if (h <= 0) return t('rewards.remaining_minutes', { minutes: m });
+  return t('rewards.remaining_hours_minutes', { hours: h, minutes: m });
 };
 
 const RewardsModal = memo(({ visible, onClose }) => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
+  const { t } = useTranslation();
   const { showAds, prepareRewarded, showRewarded } = useAdManager();
   const { credit } = useCoinsContext();
 
@@ -59,17 +61,17 @@ const RewardsModal = memo(({ visible, onClose }) => {
   const canUseShare = Boolean(Share && typeof Share.share === 'function');
 
   const grantLiveBonusOnServer = async (userId) => {
-    if (!userId) return { ok: false, message: 'Utilisateur requis' };
+    if (!userId) return { ok: false, message: t('rewards.user_required') };
     if (!socket.connected) socket.connect();
     socket.emit('join_user_room', userId);
 
     return await new Promise((resolve) => {
       try {
         socket.emit('grant_live_room_bonus', { amount: 1 }, (res) => {
-          resolve(res || { ok: false, message: 'Réponse invalide' });
+          resolve(res || { ok: false, message: t('rewards.invalid_response') });
         });
       } catch {
-        resolve({ ok: false, message: 'Erreur réseau.' });
+        resolve({ ok: false, message: t('errors.network') });
       }
     });
   };
@@ -81,23 +83,23 @@ const RewardsModal = memo(({ visible, onClose }) => {
   }, [visible, dispatch, prepareRewarded]);
 
   const shareMessage = useMemo(() => {
-    const base = "Viens jouer à DeadPions !";
-    const url = "https://play.deadpions.eu";
+    const base = t('rewards.share_message_base');
+    const url = 'https://play.deadpions.eu';
     return `${base}\n${url}`;
   }, []);
 
   const handleShare = async () => {
     if (!user) {
-      appAlert('Connexion requise', 'Connectez-vous pour recevoir des récompenses.');
+      appAlert(t('auth.login_required'), t('rewards.login_required_desc'));
       return;
     }
     dispatch(ensureDailyReset({ nowTs: Date.now() }));
     if (shareClaimed) {
-      appAlert('Déjà reçu', "Récompense de partage déjà obtenue aujourd'hui.");
+      appAlert(t('rewards.already_received_title'), t('rewards.share_already_claimed'));
       return;
     }
     if (!canUseShare) {
-      appAlert('Indisponible', 'Partage indisponible sur cette plateforme.');
+      appAlert(t('rewards.unavailable_title'), t('rewards.share_unavailable'));
       return;
     }
 
@@ -111,8 +113,8 @@ const RewardsModal = memo(({ visible, onClose }) => {
       const didShare = result?.action === Share.sharedAction;
       if (!didShare) return;
       dispatch(claimShare({ channel: 'generic', nowTs: Date.now() }));
-      await credit(50, 'Partage social', { source: 'share', channel: 'generic' });
-      appAlert('Récompense', '+50 coins ajoutés !');
+      await credit(50, t('rewards.share_credit_reason'), { source: 'share', channel: 'generic' });
+      appAlert(t('rewards.reward_title'), t('rewards.coins_added', { amount: 50 }));
     } catch {
     } finally {
       setBusyKey(null);
@@ -121,16 +123,16 @@ const RewardsModal = memo(({ visible, onClose }) => {
 
   const handleRewardedPremium = async () => {
     if (!user) {
-      appAlert('Connexion requise', 'Connectez-vous pour recevoir des récompenses.');
+      appAlert(t('auth.login_required'), t('rewards.login_required_desc'));
       return;
     }
     dispatch(ensureDailyReset({ nowTs: Date.now() }));
     if (!canUseRewarded) {
-      appAlert('Indisponible', 'Publicités récompensées indisponibles sur ce build.');
+      appAlert(t('rewards.unavailable_title'), t('rewards.rewarded_unavailable'));
       return;
     }
     if (hasTempPremium) {
-      appAlert('Déjà actif', `Accès premium actif jusqu'au ${formatDateTime(premium.premiumUntil)}.`);
+      appAlert(t('rewards.already_active_title'), t('rewards.premium_active_until', { date: formatDateTime(premium.premiumUntil) }));
       return;
     }
     const next = (premium.watched || 0) + 1;
@@ -140,11 +142,16 @@ const RewardsModal = memo(({ visible, onClose }) => {
     try {
       showRewarded({
         amount: 0,
-        reason: 'Récompense engagement',
+        reason: t('rewards.reward_reason'),
         metadata: { reward: 'premium_pions' },
         onEarned: async () => {
           dispatch(incrementPremiumRewarded({ nowTs: Date.now() }));
-          appAlert('Validé', willUnlock ? 'Accès pions premium activé pendant 1 mois.' : `Progression: ${next}/${premium.required}`);
+          appAlert(
+            t('rewards.validated_title'),
+            willUnlock
+              ? t('rewards.premium_unlocked')
+              : t('rewards.progress', { current: next, total: premium.required })
+          );
         }
       });
     } finally {
@@ -154,16 +161,16 @@ const RewardsModal = memo(({ visible, onClose }) => {
 
   const handleRewardedHardAi = async () => {
     if (!user) {
-      appAlert('Connexion requise', 'Connectez-vous pour recevoir des récompenses.');
+      appAlert(t('auth.login_required'), t('rewards.login_required_desc'));
       return;
     }
     dispatch(ensureDailyReset({ nowTs: Date.now() }));
     if (!canUseRewarded) {
-      appAlert('Indisponible', 'Publicités récompensées indisponibles sur ce build.');
+      appAlert(t('rewards.unavailable_title'), t('rewards.rewarded_unavailable'));
       return;
     }
     if (hardAiActive) {
-      appAlert('Déjà actif', `Mode difficile actif encore ${formatRemaining(hardAiUntil)}.`);
+      appAlert(t('rewards.already_active_title'), t('rewards.hard_ai_active_remaining', { remaining: formatRemaining(hardAiUntil, t) }));
       return;
     }
 
@@ -171,11 +178,11 @@ const RewardsModal = memo(({ visible, onClose }) => {
     try {
       showRewarded({
         amount: 0,
-        reason: 'Récompense engagement',
+        reason: t('rewards.reward_reason'),
         metadata: { reward: 'ai_hard' },
         onEarned: async () => {
           dispatch(unlockHardAi({ nowTs: Date.now() }));
-          appAlert('Débloqué', 'Mode difficile débloqué pendant 1 heure.');
+          appAlert(t('rewards.unlocked_title'), t('rewards.hard_ai_unlocked'));
         }
       });
     } finally {
@@ -185,12 +192,12 @@ const RewardsModal = memo(({ visible, onClose }) => {
 
   const handleRewardedLive = async () => {
     if (!user) {
-      appAlert('Connexion requise', 'Connectez-vous pour recevoir des récompenses.');
+      appAlert(t('auth.login_required'), t('rewards.login_required_desc'));
       return;
     }
     dispatch(ensureDailyReset({ nowTs: Date.now() }));
     if (!canUseRewarded) {
-      appAlert('Indisponible', 'Publicités récompensées indisponibles sur ce build.');
+      appAlert(t('rewards.unavailable_title'), t('rewards.rewarded_unavailable'));
       return;
     }
 
@@ -205,9 +212,9 @@ const RewardsModal = memo(({ visible, onClose }) => {
           const userId = user?._id || user?.id;
           const res = await grantLiveBonusOnServer(userId);
           if (res?.ok) {
-            appAlert('Récompense', '+1 salle live ajoutée pour aujourd’hui.');
+            appAlert(t('rewards.reward_title'), t('rewards.live_reward_granted'));
           } else {
-            appAlert('Erreur', res?.message || "Impossible d'activer l'accès Live.");
+            appAlert(t('common.error'), res?.message || t('rewards.live_enable_failed'));
           }
         }
       });
@@ -221,7 +228,7 @@ const RewardsModal = memo(({ visible, onClose }) => {
       <Pressable style={modalTheme.overlay} onPress={onClose}>
         <Pressable style={[modalTheme.card, { width: '90%', maxWidth: 520 }]} onPress={() => {}}>
           <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={[modalTheme.title, { marginBottom: 0 }]}>Récompenses</Text>
+            <Text style={[modalTheme.title, { marginBottom: 0 }]}>{t('rewards.title')}</Text>
             <TouchableOpacity onPress={onClose} style={{ padding: getResponsiveSize(8) }}>
               <Ionicons name="close" size={getResponsiveSize(22)} color={T.text} />
             </TouchableOpacity>
@@ -229,9 +236,9 @@ const RewardsModal = memo(({ visible, onClose }) => {
 
           <ScrollView style={{ width: '100%' }} contentContainerStyle={{ paddingTop: getResponsiveSize(14), gap: getResponsiveSize(12) }}>
             <View style={{ width: '100%', backgroundColor: T.bg3, borderRadius: getResponsiveSize(T.radiusMd), padding: getResponsiveSize(14), borderWidth: 1, borderColor: T.borderSoft }}>
-              <Text style={{ color: T.text, fontWeight: '900', marginBottom: getResponsiveSize(6) }}>1) Partage social</Text>
+              <Text style={{ color: T.text, fontWeight: '900', marginBottom: getResponsiveSize(6) }}>{t('rewards.share_title')}</Text>
               <Text style={{ color: T.textDim, marginBottom: getResponsiveSize(10) }}>
-                Partage l'app et reçois +50 coins (1 fois par jour).
+                {t('rewards.share_desc', { amount: 50 })}
               </Text>
               <TouchableOpacity
                 onPress={handleShare}
@@ -246,25 +253,25 @@ const RewardsModal = memo(({ visible, onClose }) => {
                   <ActivityIndicator color={shareClaimed ? T.text : '#1B1305'} />
                 ) : (
                   <Text style={[modalTheme.buttonText, !shareClaimed ? modalTheme.buttonTextActive : null]}>
-                    {shareClaimed ? "Déjà reçu aujourd'hui" : 'Partager (+50)'}
+                    {shareClaimed ? t('rewards.share_claimed') : t('rewards.share_button', { amount: 50 })}
                   </Text>
                 )}
               </TouchableOpacity>
             </View>
 
             <View style={{ width: '100%', backgroundColor: T.bg3, borderRadius: getResponsiveSize(T.radiusMd), padding: getResponsiveSize(14), borderWidth: 1, borderColor: T.borderSoft }}>
-              <Text style={{ color: T.text, fontWeight: '900', marginBottom: getResponsiveSize(6) }}>2) Pions premium (1 mois)</Text>
+              <Text style={{ color: T.text, fontWeight: '900', marginBottom: getResponsiveSize(6) }}>{t('rewards.premium_title')}</Text>
               <Text style={{ color: T.textDim, marginBottom: getResponsiveSize(10) }}>
-                Regarde 3 vidéos récompensées pour débloquer les pions premium pendant 1 mois.
+                {t('rewards.premium_desc', { required: premium.required || 3 })}
               </Text>
               {typeof premium.premiumUntil === 'number' && premium.premiumUntil > Date.now() && (
                 <Text style={{ color: T.gold, fontWeight: '800', marginBottom: getResponsiveSize(10) }}>
-                  Actif jusqu’au {formatDateTime(premium.premiumUntil)}
+                  {t('rewards.active_until', { date: formatDateTime(premium.premiumUntil) })}
                 </Text>
               )}
               {!hasTempPremium && (
                 <Text style={{ color: T.textMuted, marginBottom: getResponsiveSize(10) }}>
-                  Progression: {premium.watched}/{premium.required}
+                  {t('rewards.progress', { current: premium.watched, total: premium.required })}
                 </Text>
               )}
               <TouchableOpacity
@@ -280,20 +287,20 @@ const RewardsModal = memo(({ visible, onClose }) => {
                   <ActivityIndicator color={hasTempPremium ? T.text : '#1B1305'} />
                 ) : (
                   <Text style={[modalTheme.buttonText, !hasTempPremium ? modalTheme.buttonTextActive : null]}>
-                    {hasTempPremium ? 'Déjà actif' : 'Regarder une vidéo'}
+                    {hasTempPremium ? t('rewards.already_active') : t('rewards.watch_video')}
                   </Text>
                 )}
               </TouchableOpacity>
             </View>
 
             <View style={{ width: '100%', backgroundColor: T.bg3, borderRadius: getResponsiveSize(T.radiusMd), padding: getResponsiveSize(14), borderWidth: 1, borderColor: T.borderSoft }}>
-              <Text style={{ color: T.text, fontWeight: '900', marginBottom: getResponsiveSize(6) }}>3) Mode difficile (Ordinateur)</Text>
+              <Text style={{ color: T.text, fontWeight: '900', marginBottom: getResponsiveSize(6) }}>{t('rewards.hard_ai_title')}</Text>
               <Text style={{ color: T.textDim, marginBottom: getResponsiveSize(10) }}>
-                1 vidéo récompensée = déblocage temporaire du mode difficile (1h).
+                {t('rewards.hard_ai_desc')}
               </Text>
               {hardAiActive && (
                 <Text style={{ color: T.gold, fontWeight: '800', marginBottom: getResponsiveSize(10) }}>
-                  Actif encore {formatRemaining(hardAiUntil)}
+                  {t('rewards.active_remaining', { remaining: formatRemaining(hardAiUntil, t) })}
                 </Text>
               )}
               <TouchableOpacity
@@ -309,19 +316,19 @@ const RewardsModal = memo(({ visible, onClose }) => {
                   <ActivityIndicator color={hardAiActive ? T.text : '#1B1305'} />
                 ) : (
                   <Text style={[modalTheme.buttonText, !hardAiActive ? modalTheme.buttonTextActive : null]}>
-                    {hardAiActive ? 'Déjà actif' : 'Regarder une vidéo'}
+                    {hardAiActive ? t('rewards.already_active') : t('rewards.watch_video')}
                   </Text>
                 )}
               </TouchableOpacity>
             </View>
 
             <View style={{ width: '100%', backgroundColor: T.bg3, borderRadius: getResponsiveSize(T.radiusMd), padding: getResponsiveSize(14), borderWidth: 1, borderColor: T.borderSoft }}>
-              <Text style={{ color: T.text, fontWeight: '900', marginBottom: getResponsiveSize(6) }}>4) Salles live</Text>
+              <Text style={{ color: T.text, fontWeight: '900', marginBottom: getResponsiveSize(6) }}>{t('rewards.live_title')}</Text>
               <Text style={{ color: T.textDim, marginBottom: getResponsiveSize(10) }}>
-                5 salles/jour. Chaque vidéo ajoute +1 salle pour aujourd’hui.
+                {t('rewards.live_desc')}
               </Text>
               <Text style={{ color: T.gold, fontWeight: '800', marginBottom: getResponsiveSize(10) }}>
-                Restant aujourd’hui: {liveRemaining}
+                {t('rewards.live_remaining_today', { count: liveRemaining })}
               </Text>
               <TouchableOpacity
                 onPress={handleRewardedLive}
@@ -331,14 +338,14 @@ const RewardsModal = memo(({ visible, onClose }) => {
                 {busyKey === 'live' ? (
                   <ActivityIndicator color="#1B1305" />
                 ) : (
-                  <Text style={[modalTheme.buttonText, modalTheme.buttonTextActive]}>Regarder une vidéo (+1)</Text>
+                  <Text style={[modalTheme.buttonText, modalTheme.buttonTextActive]}>{t('rewards.watch_video_plus_one')}</Text>
                 )}
               </TouchableOpacity>
             </View>
 
             {!showAds && (
               <Text style={{ color: T.textMuted, textAlign: 'center', marginTop: getResponsiveSize(8) }}>
-                Les publicités récompensées ne sont pas disponibles sur ce build.
+                {t('rewards.rewarded_unavailable')}
               </Text>
             )}
           </ScrollView>

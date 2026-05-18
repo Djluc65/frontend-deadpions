@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
 import TransactionService from '../services/TransactionService';
 import { getResponsiveSize } from '../utils/responsive';
+import { useTranslation } from 'react-i18next';
 
 const TransactionHistory = () => {
+    const { t } = useTranslation();
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -44,9 +46,9 @@ const TransactionHistory = () => {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Historique des Transactions</Text>
+            <Text style={styles.title}>{t('transactions.title')}</Text>
             {transactions.length === 0 ? (
-                <Text style={styles.empty}>Aucune transaction récente</Text>
+                <Text style={styles.empty}>{t('transactions.empty')}</Text>
             ) : (
                 <FlatList
                     data={transactions}

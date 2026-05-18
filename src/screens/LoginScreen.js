@@ -15,6 +15,7 @@ import { API_URL } from '../config';
 import { getResponsiveSize, DESKTOP_BREAKPOINT } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
 import { T } from '../utils/theme';
+import { useTranslation } from 'react-i18next';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -31,6 +32,7 @@ const isUserCancelledAuth = (error) => {
 };
 
 const LoginScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
   const isDesktop = Platform.OS === 'web' && width >= DESKTOP_BREAKPOINT;
@@ -42,6 +44,10 @@ const LoginScreen = ({ navigation }) => {
   const googleWebClientId = cleanEnv(process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
   const googleIosClientId = cleanEnv(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID);
   const googleAndroidClientId = cleanEnv(process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID);
+  const googleIosGuid = googleIosClientId?.split('.apps.googleusercontent.com')?.[0];
+  const googleRedirectNative = Platform.OS === 'ios' && googleIosGuid
+    ? `com.googleusercontent.apps.${googleIosGuid}:/oauthredirect`
+    : undefined;
 
   // Configuration Google Auth
   // IMPORTANT: Remplacez ces IDs par vos propres Client IDs depuis Google Cloud Console
@@ -49,7 +55,7 @@ const LoginScreen = ({ navigation }) => {
     clientId: googleWebClientId,
     iosClientId: googleIosClientId,
     androidClientId: googleAndroidClientId,
-  });
+  }, googleRedirectNative ? { native: googleRedirectNative } : {});
 
   const showAppleAuth = Platform.OS === 'ios';
   const showGoogleAuth = Platform.OS === 'android' || Platform.OS === 'ios' || Platform.OS === 'web';
@@ -64,7 +70,7 @@ const LoginScreen = ({ navigation }) => {
       const { id_token } = response.params;
       handleGoogleLogin(id_token);
     } else if (response?.type === 'error') {
-      appAlert('Erreur', 'La connexion Google a échoué');
+      appAlert(t('common.error'), t('auth.google_login_failed'));
     }
   }, [response]);
 
@@ -83,7 +89,7 @@ const LoginScreen = ({ navigation }) => {
       if (!contentType || !contentType.includes("application/json")) {
         const text = await res.text();
         console.error("Non-JSON response from google login:", text);
-        throw new Error("Erreur serveur: Réponse invalide (HTML reçue)");
+        throw new Error(t('errors.invalid_server_response_html'));
       }
 
       const data = await res.json();
@@ -110,12 +116,12 @@ const LoginScreen = ({ navigation }) => {
         navigation.replace('Home');
       } else {
         dispatch(loginFailure(data.message));
-        appAlert('Erreur', data.message || "Erreur lors de la connexion Google");
+        appAlert(t('common.error'), data.message || t('auth.google_login_failed'));
       }
     } catch (error) {
       console.error(error);
       dispatch(loginFailure(error.message));
-      appAlert('Erreur', 'Impossible de se connecter au serveur');
+      appAlert(t('common.error'), t('errors.server_unavailable'));
     }
   };
 
@@ -147,7 +153,7 @@ const LoginScreen = ({ navigation }) => {
       const contentType = res.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
         // Fallback si le backend n'est pas encore prêt : on simule une erreur ou on gère gracieusement
-        throw new Error("Le service de connexion Apple n'est pas encore disponible sur le serveur.");
+        throw new Error(t('auth.apple_service_unavailable'));
       }
 
       const data = await res.json();
@@ -174,21 +180,21 @@ const LoginScreen = ({ navigation }) => {
         navigation.replace('Home');
       } else {
         dispatch(loginFailure(data.message));
-        appAlert('Erreur', data.message || "Erreur lors de la connexion Apple");
+        appAlert(t('common.error'), data.message || t('auth.apple_login_failed'));
       }
 
     } catch (e) {
       if (isUserCancelledAuth(e)) return;
       console.error(e);
       dispatch(loginFailure(e.message));
-      appAlert('Erreur', e.message || "Impossible de se connecter avec Apple");
+      appAlert(t('common.error'), e.message || t('auth.apple_login_failed'));
     }
   };
 
   const handleLogin = async () => {
     Keyboard.dismiss();
     if (!email || !password) {
-      appAlert('Erreur', 'Veuillez remplir tous les champs');
+      appAlert(t('common.error'), t('auth.fill_all_fields'));
       return;
     }
 
@@ -207,7 +213,7 @@ const LoginScreen = ({ navigation }) => {
       if (!contentType || !contentType.includes("application/json")) {
         const text = await response.text();
         console.error("Non-JSON response from login:", text);
-        throw new Error("Erreur serveur: Réponse invalide (HTML reçue)");
+        throw new Error(t('errors.invalid_server_response_html'));
       }
 
       const data = await response.json();
@@ -234,12 +240,12 @@ const LoginScreen = ({ navigation }) => {
         navigation.replace('Home');
       } else {
         dispatch(loginFailure(data.message));
-        appAlert('Erreur', data.message || "Erreur lors de la connexion");
+        appAlert(t('common.error'), data.message || t('errors.generic'));
       }
     } catch (error) {
       console.error(error);
       dispatch(loginFailure(error.message));
-      appAlert('Erreur', 'Impossible de se connecter au serveur');
+      appAlert(t('common.error'), t('errors.server_unavailable'));
     }
   };
 
@@ -263,15 +269,15 @@ const LoginScreen = ({ navigation }) => {
             showsVerticalScrollIndicator={false}
           >
             <View style={[styles.formContainer, isTablet && styles.formContainerTablet, isDesktop && styles.formContainerDesktop]}>
-              <Text style={[styles.title, isTablet && styles.titleTablet]}>Connexion</Text>
+              <Text style={[styles.title, isTablet && styles.titleTablet]}>{t('auth.login')}</Text>
 
               {showGoogleAuth && (
                 <View style={{ width: '100%', marginBottom: getResponsiveSize(10) }}>
                   <Button
-                    title="Continuer avec Google"
+                    title={t('auth.login_with_google')}
                     onPress={async () => {
                       if (!googleConfigured) {
-                        appAlert('Configuration', 'Google Sign-In n’est pas configuré pour Android.');
+                        appAlert(t('common.configuration'), t('auth.google_not_configured_android'));
                         return;
                       }
                       try {
@@ -282,10 +288,10 @@ const LoginScreen = ({ navigation }) => {
                         console.error(e);
                         const message = typeof e?.message === 'string' ? e.message : '';
                         if (message.toLowerCase().includes('redirect') || message.toLowerCase().includes('mismatch')) {
-                          appAlert('Erreur', 'Google OAuth est mal configuré (package/SHA-1/redirect).');
+                          appAlert(t('common.error'), t('auth.google_oauth_misconfigured'));
                           return;
                         }
-                        appAlert('Erreur', e?.message || 'La connexion Google a échoué');
+                        appAlert(t('common.error'), e?.message || t('auth.google_login_failed'));
                       }
                     }}
                     style={!googleConfigured ? styles.googleButtonDisabled : undefined}
@@ -295,7 +301,7 @@ const LoginScreen = ({ navigation }) => {
               )}
 
             <Input 
-              placeholder="Email"
+              placeholder={t('auth.email')}
               value={email} 
               onChangeText={setEmail} 
               keyboardType="email-address"
@@ -304,7 +310,7 @@ const LoginScreen = ({ navigation }) => {
               textContentType="emailAddress"
             />
             <Input 
-              placeholder="Mot de passe" 
+              placeholder={t('auth.password')}
               value={password} 
               onChangeText={setPassword} 
               secureTextEntry 
@@ -316,23 +322,25 @@ const LoginScreen = ({ navigation }) => {
               onPress={() => navigation.navigate('ForgotPassword')}
               style={styles.forgotPasswordContainer}
             >
-              <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
+              <Text style={styles.forgotPasswordText}>{t('auth.forgot_password')}</Text>
             </TouchableOpacity>
 
-            <Button title="Se connecter" onPress={handleLogin} />
+            <Button title={t('common.login_action')} onPress={handleLogin} />
             
             {showAppleAuth && (
-              <AppleAuthentication.AppleAuthenticationButton
-                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
-                cornerRadius={getResponsiveSize(8)}
+              <TouchableOpacity
                 style={[styles.appleButton, isTablet && styles.appleButtonTablet]}
                 onPress={handleAppleLogin}
-              />
+                activeOpacity={0.85}
+              >
+                <Text style={styles.appleButtonText}>
+                  {' '}  {t('auth.login_with_apple')}
+                </Text>
+              </TouchableOpacity>
             )}
 
             <Button 
-              title="S'inscrire" 
+              title={t('auth.register')}
               onPress={() => navigation.navigate('Register')} 
               tone="ghost"
               style={{ borderWidth: getResponsiveSize(1.5), borderColor: T.gold }}
@@ -340,7 +348,7 @@ const LoginScreen = ({ navigation }) => {
             />
             {!API_URL.includes('railway') && (
               <Text style={{ color: '#00ff00', textAlign: 'center', marginTop: getResponsiveSize(20), fontWeight: 'bold' }}>
-                🔌 MODE LOCAL ({API_URL})
+                {t('common.local_mode', { url: API_URL })}
               </Text>
             )}
             </View>
@@ -416,9 +424,19 @@ const styles = StyleSheet.create({
     height: getResponsiveSize(50),
     marginTop: getResponsiveSize(10),
     marginBottom: getResponsiveSize(4),
+    backgroundColor: '#fff',
+    borderRadius: getResponsiveSize(8),
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
   },
   appleButtonTablet: {
     height: getResponsiveSize(52),
+  },
+  appleButtonText: {
+    color: '#000',
+    fontSize: getResponsiveSize(16),
+    fontWeight: '600',
   },
   googleButton: {
     flexDirection: 'row',

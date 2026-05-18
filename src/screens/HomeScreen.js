@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
 import { API_URL } from '../config';
 import { playButtonSound } from '../utils/soundManager';
-import { translations } from '../utils/translations';
+import { useTranslation } from 'react-i18next';
 import { AudioController } from '../utils/AudioController';
 import { socket } from '../utils/socket';
 import { useCoinsContext } from '../context/CoinsContext';
@@ -80,7 +80,7 @@ const HomeScreen = ({ navigation }) => {
   const [localAnim]    = useState(new Animated.Value(1));
 
   const { syncBalance, isSyncing, lastSync } = useCoinsContext();
-  const t = translations[settings.language] || translations.fr;
+  const { t } = useTranslation();
 
   // ── Sync coins on focus ──────────────────────────────────────────────────
   useFocusEffect(
@@ -95,9 +95,9 @@ const HomeScreen = ({ navigation }) => {
 
   const openOnlineConfig = useCallback(() => {
     if (!user || !token) {
-      appAlert('Connexion requise', 'Connectez-vous pour jouer en ligne.', [
-        { text: 'Plus tard', style: 'cancel' },
-        { text: 'Se connecter', onPress: () => navigation.navigate('Login') },
+      appAlert(t('auth.login_required'), t('auth.login_required_online'), [
+        { text: t('common.later'), style: 'cancel' },
+        { text: t('common.login_action'), onPress: () => navigation.navigate('Login') },
       ]);
       return;
     }
@@ -110,9 +110,9 @@ const HomeScreen = ({ navigation }) => {
 
   const openFriendsConfig = useCallback(() => {
     if (!user || !token) {
-      appAlert('Connexion requise', 'Connectez-vous pour jouer avec des amis.', [
-        { text: 'Plus tard', style: 'cancel' },
-        { text: 'Se connecter', onPress: () => navigation.navigate('Login') },
+      appAlert(t('auth.login_required'), t('auth.login_required_friends'), [
+        { text: t('common.later'), style: 'cancel' },
+        { text: t('common.login_action'), onPress: () => navigation.navigate('Login') },
       ]);
       return;
     }
@@ -188,7 +188,7 @@ const HomeScreen = ({ navigation }) => {
   useEffect(() => {
     if (user?._id) {
       socket.on('room_created', handleRoomCreated);
-      const handleError = (msg) => appAlert('Erreur', msg);
+      const handleError = (msg) => appAlert(t('common.error'), msg);
       socket.on('error', handleError);
       return () => {
         socket.off('room_created', handleRoomCreated);
@@ -264,14 +264,13 @@ const HomeScreen = ({ navigation }) => {
       {/* ── Header ── */}
       <HomeHeader
         user={user}
-        t={t}
         navigation={navigation}
         onRewards={() => setRewardsVisible(true)}
         onSearch={() => {
           if (!user || !token) {
-            appAlert('Connexion requise', 'Connectez-vous pour rechercher des joueurs.', [
-              { text: 'Plus tard', style: 'cancel' },
-              { text: 'Se connecter', onPress: () => navigation.navigate('Login') },
+            appAlert(t('auth.login_required'), t('auth.login_required_search'), [
+              { text: t('common.later'), style: 'cancel' },
+              { text: t('common.login_action'), onPress: () => navigation.navigate('Login') },
             ]);
             return;
           }
@@ -333,7 +332,7 @@ const HomeScreen = ({ navigation }) => {
                 side2="phone-portrait-outline"
                 mainAnim={onlineAnim}
                 spin={spin}
-                label={t.online}
+                label={t('home.play_online')}
                 mainSize={CARD_ICON_MAIN}
                 sideSize={CARD_ICON_SIDE}
                 useRotation
@@ -358,7 +357,7 @@ const HomeScreen = ({ navigation }) => {
                 main="hardware-chip-outline"
                 side2="desktop-outline"
                 mainAnim={computerAnim}
-                label={t.computer}
+                label={t('home.play_computer')}
                 mainSize={CARD_ICON_MAIN}
                 sideSize={CARD_ICON_SIDE}
                 isTablet={isTablet}
@@ -384,7 +383,7 @@ const HomeScreen = ({ navigation }) => {
                 main="people-outline"
                 side2="person-add-outline"
                 mainAnim={friendsAnim}
-                label={t.friends}
+                label={t('home.play_friends')}
                 mainSize={CARD_ICON_MAIN}
                 sideSize={CARD_ICON_SIDE}
                 isTablet={isTablet}
@@ -408,7 +407,7 @@ const HomeScreen = ({ navigation }) => {
                 main="game-controller-outline"
                 side2="phone-portrait-outline"
                 mainAnim={localAnim}
-                label={t.local}
+                label={t('home.play_local')}
                 mainSize={CARD_ICON_MAIN}
                 sideSize={CARD_ICON_SIDE}
                 isTablet={isTablet}

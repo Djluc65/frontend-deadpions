@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { translations } from '../../utils/translations';
+import { useTranslation } from 'react-i18next';
 import { socket } from '../../utils/socket';
 import { BET_OPTIONS } from '../../utils/constants';
 import FriendsMenuModal from './FriendsMenuModal';
@@ -9,8 +8,7 @@ import { appAlert } from '../../services/appAlert';
 import JoinByCodeModal from '../modals/JoinByCodeModal';
 
 const FriendsGameSetup = ({ visible, onClose, navigation, user, onOpenLiveConfig }) => {
-  const settings = useSelector(state => state.settings);
-  const t = translations[settings.language] || translations.fr;
+  const { t } = useTranslation();
 
   const [showMenu, setShowMenu] = useState(true);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
@@ -56,7 +54,8 @@ const FriendsGameSetup = ({ visible, onClose, navigation, user, onOpenLiveConfig
   const closeJoinByCode = useCallback(() => {
     setShowJoinByCode(false);
     setShowMenu(true);
-  }, []);
+    onClose();
+  }, [onClose]);
 
   const handleCreateRoom = useCallback(() => {
     // Emit create_room event
@@ -89,7 +88,6 @@ const FriendsGameSetup = ({ visible, onClose, navigation, user, onOpenLiveConfig
         onNavigateToLiveConfig={handleNavigateToLiveConfig}
         onOpenFriendConfig={handleOpenFriendConfig}
         onOpenJoinByCode={handleOpenJoinByCode}
-        t={t}
       />
       <CreateRoomModal
         visible={visible && showCreateRoom}
@@ -116,7 +114,6 @@ const FriendsGameSetup = ({ visible, onClose, navigation, user, onOpenLiveConfig
         socket={socket}
         navigation={navigation}
         appAlert={appAlert}
-        t={t}
       />
     </>
   );

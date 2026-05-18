@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { playButtonSound } from '../../utils/soundManager';
 import { getResponsiveSize } from '../../utils/responsive';
 import { modalTheme } from '../../utils/modalTheme';
+import { useTranslation } from 'react-i18next';
 
 const CreateRoomModal = memo(({
   visible,
@@ -24,6 +25,7 @@ const CreateRoomModal = memo(({
   userCoins,
   betOptions
 }) => {
+  const { t } = useTranslation();
   const { height: windowHeight } = useWindowDimensions();
   const modalMaxHeight = windowHeight * 0.7 + getResponsiveSize(20);
 
@@ -41,27 +43,27 @@ const CreateRoomModal = memo(({
               style={{ width: '100%' }}
               keyboardShouldPersistTaps="handled"
             >
-            <Text style={styles.friendsModalTitle}>Jouer avec un ami</Text>
+            <Text style={styles.friendsModalTitle}>{t('friends_menu.play_with_friend')}</Text>
             
-            <Text style={styles.friendsLabel}>Mode de jeu:</Text>
+            <Text style={styles.friendsLabel}>{t('setup.game_mode_label')}</Text>
             <View style={styles.optionsRow}>
                 <TouchableOpacity 
                     style={[styles.friendsOptionButton, inviteMode === 'simple' && styles.friendsOptionButtonActive]}
                     onPress={() => { playButtonSound(); setInviteMode('simple'); }}
                 >
-                    <Text style={[styles.friendsOptionText, inviteMode === 'simple' && styles.friendsOptionTextActive]}>Simple</Text>
+                    <Text style={[styles.friendsOptionText, inviteMode === 'simple' && styles.friendsOptionTextActive]}>{t('setup.simple')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                     style={[styles.friendsOptionButton, inviteMode === 'tournament' && styles.friendsOptionButtonActive]}
                     onPress={() => { playButtonSound(); setInviteMode('tournament'); }}
                 >
-                    <Text style={[styles.friendsOptionText, inviteMode === 'tournament' && styles.friendsOptionTextActive]}>Tournoi</Text>
+                    <Text style={[styles.friendsOptionText, inviteMode === 'tournament' && styles.friendsOptionTextActive]}>{t('setup.tournament')}</Text>
                 </TouchableOpacity>
             </View>
 
             {inviteMode === 'tournament' && (
                 <>
-                    <Text style={styles.friendsLabel}>Nombre de parties:</Text>
+                    <Text style={styles.friendsLabel}>{t('setup.series_length_label')}</Text>
                     <View style={styles.optionsRow}>
                         {[2, 4, 6, 8, 10].map(num => (
                             <TouchableOpacity 
@@ -76,7 +78,7 @@ const CreateRoomModal = memo(({
                 </>
             )}
 
-            <Text style={styles.friendsLabel}>Mise (coins):</Text>
+            <Text style={styles.friendsLabel}>{t('setup.bet_label')}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: getResponsiveSize(10) }}>
                 {(() => {
                     const availableBets = betOptions.filter(b => b <= (userCoins || 0));
@@ -141,7 +143,7 @@ const CreateRoomModal = memo(({
                 })()}
             </View>
 
-            <Text style={styles.friendsLabel}>Temps par tour:</Text>
+            <Text style={styles.friendsLabel}>{t('setup.time_per_turn_label')}</Text>
             <View style={styles.optionsRow}>
                 {[null, 30, 60, 90, 120].map(time => (
                     <TouchableOpacity 
@@ -150,18 +152,28 @@ const CreateRoomModal = memo(({
                         onPress={() => { playButtonSound(); setInviteTime(time); }}
                     >
                         <Text style={[styles.friendsOptionText, inviteTime === time && styles.friendsOptionTextActive]}>
-                            {time ? `${time}s` : '∞'}
+                            {time === null
+                              ? t('matchmaking.no_timer')
+                              : time === 30
+                                ? t('time.30s')
+                                : time === 60
+                                  ? t('time.1min')
+                                  : time === 90
+                                    ? t('time.1min30')
+                                    : time === 120
+                                      ? t('time.2min')
+                                      : `${time}s`}
                         </Text>
                     </TouchableOpacity>
                 ))}
             </View>
 
-            <Text style={styles.friendsLabel}>Qui commence ?</Text>
+            <Text style={styles.friendsLabel}>{t('setup.who_starts_label')}</Text>
             <View style={styles.optionsRow}>
                 {[
-                    { label: 'Moi', value: 'host' },
-                    { label: 'Adversaire', value: 'guest' },
-                    { label: 'Aléatoire', value: 'random' }
+                    { label: t('setup.me'), value: 'host' },
+                    { label: t('game.opponent'), value: 'guest' },
+                    { label: t('common.random'), value: 'random' }
                 ].map(opt => (
                     <TouchableOpacity 
                         key={opt.value} 
@@ -175,12 +187,12 @@ const CreateRoomModal = memo(({
                 ))}
             </View>
 
-            <Text style={styles.friendsLabel}>Ma couleur :</Text>
+            <Text style={styles.friendsLabel}>{t('setup.my_color_label')}</Text>
             <View style={styles.optionsRow}>
                 {[
-                    { label: 'Bleu', value: 'white' }, // Blue maps to white in logic
-                    { label: 'Rouge', value: 'black' }, // Red maps to black in logic
-                    { label: 'Aléatoire', value: 'random' }
+                    { label: t('colors.blue'), value: 'white' }, // Blue maps to white in logic
+                    { label: t('colors.red'), value: 'black' }, // Red maps to black in logic
+                    { label: t('common.random'), value: 'random' }
                 ].map(opt => (
                     <TouchableOpacity 
                         key={opt.value} 
@@ -196,10 +208,10 @@ const CreateRoomModal = memo(({
 
             <View style={styles.modalButtons}>
               <TouchableOpacity style={styles.modalButtonCancel} onPress={() => { playButtonSound(); onClose(); }}>
-                  <Text style={[styles.modalButtonText, styles.modalButtonCancelText]} numberOfLines={1}>Annuler</Text>
+                  <Text style={[styles.modalButtonText, styles.modalButtonCancelText]} numberOfLines={1}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalButtonConfirm} onPress={() => { playButtonSound(); handleCreateRoom(); }}>
-                  <Text style={styles.modalButtonText} numberOfLines={1}>Créer</Text>
+                  <Text style={styles.modalButtonText} numberOfLines={1}>{t('common.create')}</Text>
               </TouchableOpacity>
             </View>
 

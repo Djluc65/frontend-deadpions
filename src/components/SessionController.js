@@ -10,6 +10,8 @@ import { getResponsiveSize } from '../utils/responsive';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { updateUser } from '../redux/slices/authSlice';
 import { ensureDailyReset } from '../redux/slices/rewardsSlice';
+import i18n, { detectDeviceLanguage } from '../i18n/index';
+import { setLanguage } from '../redux/slices/settingsSlice';
 
 const SessionController = () => {
     const navigation = useNavigation();
@@ -17,6 +19,18 @@ const SessionController = () => {
     const { token, user } = useSelector(state => state.auth);
     const { showAds, prepareRewarded, showRewarded } = useAdManager();
     const appState = useRef(AppState.currentState);
+    const language = useSelector(state => state.settings?.language);
+
+    useEffect(() => {
+        if (!language) {
+            // Première installation : détecter la langue du device et la persister
+            const detected = detectDeviceLanguage();
+            dispatch(setLanguage(detected));
+            i18n.changeLanguage(detected);
+        } else if (language !== i18n.language) {
+            i18n.changeLanguage(language);
+        }
+    }, [language]);
     // Track the active game ID for this session to prevent rejoining ghost games after restart
     const activeGameId = useRef(null);
     const loginRewardPromptPendingRef = useRef(false);
@@ -81,7 +95,10 @@ const SessionController = () => {
                             socket.off('join_code_success', onSuccess);
                             socket.off('join_code_error', onError);
                             socket.off('balance_updated', onBalanceUpdated);
-                            appAlert('Invitation', typeof msg === 'string' ? msg : 'Code invalide ou expiré.');
+                            appAlert(
+                              i18n.t('invite.title'),
+                              typeof msg === 'string' ? msg : i18n.t('join_code.invalid_or_expired')
+                            );
                         };
                         socket.on('join_code_success', onSuccess);
                         socket.on('join_code_error', onError);
@@ -113,16 +130,16 @@ const SessionController = () => {
             setTimeout(() => {
                 prepareRewarded();
                 appAlert(
-                    'Bonus de connexion',
-                    'Regarder une pub maintenant pour gagner +20 coins ?',
+                    i18n.t('rewards.login_bonus_title'),
+                    i18n.t('rewards.login_bonus_desc', { amount: 20 }),
                     [
-                        { text: 'Non merci', style: 'cancel', textStyle: { fontSize: getResponsiveSize(14) } },
+                        { text: i18n.t('ai.no_thanks'), style: 'cancel', textStyle: { fontSize: getResponsiveSize(14) } },
                         {
-                            text: 'Regarder',
+                            text: i18n.t('ai.watch'),
                             onPress: () => {
                                 prepareRewarded();
                                 setTimeout(() => {
-                                    showRewarded({ amount: 20, reason: 'Bonus connexion', metadata: { source: 'login_reward' } });
+                                    showRewarded({ amount: 20, reason: 'login_bonus', metadata: { source: 'login_reward' } });
                                 }, 250);
                             },
                             textStyle: { fontSize: getResponsiveSize(14) }
@@ -264,9 +281,6 @@ const SessionController = () => {
                     gains: gains,
                     montantPari: status.gameData.betAmount,
                     adversaire: status.gameData.opponent,
-                    // Add other params if available or defaults
-                    raisonVictoire: isVictory ? 'Victoire' : undefined,
-                    raisonDefaite: !isVictory ? 'Défaite' : undefined,
                 });
             }
 

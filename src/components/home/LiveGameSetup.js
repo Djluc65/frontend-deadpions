@@ -2,6 +2,7 @@ import React, { useState, useEffect, memo, useRef } from 'react';
 import { View, Text, Modal, Pressable, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet, TextInput, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { socket } from '../../utils/socket';
 import { playButtonSound } from '../../utils/soundManager';
 import { BET_OPTIONS, ONLINE_TIME_OPTIONS } from '../../utils/constants';
@@ -15,6 +16,7 @@ import { consumeLiveRoom, ensureDailyReset, incrementLiveBonus, selectLiveRemain
 
 const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
     const dispatch = useDispatch();
+    const { t } = useTranslation();
     const liveRemaining = useSelector((state) => selectLiveRemaining(state));
     const { showAds, prepareRewarded, showRewarded } = useAdManager();
     const isCreatingRef = useRef(false);
@@ -92,11 +94,11 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
             isCreatingRef.current = false;
             if (message === 'User not found') {
                 appAlert(
-                    'Session Expirée', 
-                    'Votre compte est introuvable. Veuillez vous reconnecter.',
+                    t('auth.session_expired_title'),
+                    t('auth.session_expired_desc'),
                     [
                         { 
-                            text: 'OK', 
+                            text: t('common.ok'),
                             onPress: () => {
                                 dispatch(logout());
                                 navigation.replace('Login');
@@ -105,7 +107,7 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                     ]
                 );
             } else {
-                appAlert('Erreur', message);
+                appAlert(t('common.error'), message);
             }
         };
 
@@ -116,36 +118,36 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
             socket.off('live_room_created', handleRoomCreated);
             socket.off('error', handleError);
         };
-    }, [visible, user?._id, user?.id, navigation, onClose]);
+    }, [visible, user?._id, user?.id, navigation, onClose, dispatch, t]);
 
     const validateStep1 = () => {
         if (!nomSalle.trim()) {
-            appAlert('❌ Erreur', 'Veuillez donner un nom à votre salle');
+            appAlert(t('common.error'), t('live_room.error_room_name_required'));
             return false;
         }
         if (nomSalle.length < 3) {
-            appAlert('❌ Erreur', 'Le nom doit contenir au moins 3 caractères');
+            appAlert(t('common.error'), t('live_room.error_name_too_short'));
             return false;
         }
         if (sallePrivee && !motDePasse.trim()) {
-            appAlert('❌ Erreur', 'Veuillez définir un mot de passe pour la salle privée');
+            appAlert(t('common.error'), t('live_room.error_password_required'));
             return false;
         }
         return true;
     };
 
     const grantLiveBonusOnServer = async (userId) => {
-        if (!userId) return { ok: false, message: 'Utilisateur requis' };
+        if (!userId) return { ok: false, message: t('rewards.user_required') };
         if (!socket.connected) socket.connect();
         socket.emit('join_user_room', userId);
 
         return await new Promise((resolve) => {
             try {
                 socket.emit('grant_live_room_bonus', { amount: 1 }, (res) => {
-                    resolve(res || { ok: false, message: 'Réponse invalide' });
+                    resolve(res || { ok: false, message: t('rewards.invalid_response') });
                 });
             } catch {
-                resolve({ ok: false, message: 'Erreur réseau.' });
+                resolve({ ok: false, message: t('errors.network') });
             }
         });
     };
@@ -162,7 +164,7 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
         const configSalle = {
             id: 'live_' + Date.now(),
             nom: nomSalle,
-            description: description || 'Partie en direct',
+            description: description || t('live_room.default_description'),
             type: 'live',
             createur: {
                 id: userId,
@@ -211,23 +213,23 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
 
         const userId = user?._id || user?.id;
         if (!userId) {
-            appAlert('Erreur', 'Vous devez être connecté.');
+            appAlert(t('common.error'), t('auth.login_required'));
             return;
         }
 
         dispatch(ensureDailyReset({ nowTs: Date.now() }));
         if (liveRemaining <= 0) {
             if (!showAds) {
-                appAlert('Limite atteinte', "Vous avez atteint la limite de salles live pour aujourd'hui.");
+                appAlert(t('live_room.limit_reached'), t('live_room.limit_reached_desc'));
                 return;
             }
             appAlert(
-                'Limite atteinte',
-                "Vous avez atteint la limite de 5 salles live aujourd'hui. Regarder une pub pour +1 salle ?",
+                t('live_room.limit_reached'),
+                t('live_room.limit_reached_watch_ad'),
                 [
-                    { text: 'Non merci', style: 'cancel' },
+                    { text: t('common.no'), style: 'cancel' },
                     {
-                        text: 'Regarder',
+                        text: t('ai.watch'),
                         onPress: () => {
                             prepareRewarded();
                             setTimeout(() => {
@@ -241,7 +243,7 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                                         if (res?.ok) {
                                             createRoomNow(userId);
                                         } else {
-                                            appAlert('Erreur', res?.message || "Impossible d'activer l'accès Live.");
+                                            appAlert(t('common.error'), res?.message || t('live_room.error_activate_live'));
                                         }
                                     }
                                 });
@@ -309,10 +311,10 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
             case 1:
                 return (
                     <View style={styles.stepContainer}>
-                        <Text style={styles.friendsLabel}>Nom de la salle</Text>
+                        <Text style={styles.friendsLabel}>{t('live_room.room_name_label')}</Text>
                         <TextInput
                             style={styles.input}
-                            placeholder="Ex: Tournoi des champions"
+                            placeholder={t('live_room.room_name_placeholder')}
                             placeholderTextColor={T.textMuted}
                             value={nomSalle}
                             onChangeText={setNomSalle}
@@ -320,7 +322,7 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                         />
 
                         <View style={styles.switchContainer}>
-                            <Text style={styles.switchLabel}>Salle Privée</Text>
+                            <Text style={styles.switchLabel}>{t('live_room.private_room')}</Text>
                             <Switch
                                 trackColor={{ false: T.bg3, true: T.blue }}
                                 thumbColor={sallePrivee ? T.gold : T.textMuted}
@@ -332,7 +334,7 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                         {sallePrivee && (
                             <TextInput
                                 style={[styles.input, { marginTop: getResponsiveSize(10) }]}
-                                placeholder="Mot de passe"
+                                placeholder={t('live_room.password_placeholder')}
                                 placeholderTextColor={T.textMuted}
                                 value={motDePasse}
                                 onChangeText={setMotDePasse}
@@ -344,25 +346,25 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
             case 2:
                 return (
                     <View style={styles.stepContainer}>
-                        <Text style={styles.friendsLabel}>Mode de jeu:</Text>
+                        <Text style={styles.friendsLabel}>{t('setup.game_mode_label')}</Text>
                         <View style={styles.optionsRow}>
                             <TouchableOpacity 
                                 style={[styles.friendsOptionButton, !isTournament && styles.friendsOptionButtonActive]}
                                 onPress={() => setIsTournament(false)}
                             >
-                                <Text style={[styles.friendsOptionText, !isTournament && styles.friendsOptionTextActive]}>Simple</Text>
+                                <Text style={[styles.friendsOptionText, !isTournament && styles.friendsOptionTextActive]}>{t('setup.simple')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity 
                                 style={[styles.friendsOptionButton, isTournament && styles.friendsOptionButtonActive]}
                                 onPress={() => setIsTournament(true)}
                             >
-                                <Text style={[styles.friendsOptionText, isTournament && styles.friendsOptionTextActive]}>Tournoi</Text>
+                                <Text style={[styles.friendsOptionText, isTournament && styles.friendsOptionTextActive]}>{t('setup.tournament')}</Text>
                             </TouchableOpacity>
                         </View>
 
                         {isTournament && (
                             <>
-                                <Text style={styles.friendsLabel}>Nombre de manches:</Text>
+                                <Text style={styles.friendsLabel}>{t('live_room.number_of_games')}</Text>
                                 <View style={styles.optionsRow}>
                                     {[2, 4, 6, 8, 10].map(num => (
                                         <TouchableOpacity 
@@ -377,30 +379,30 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                             </>
                         )}
 
-                        <Text style={styles.friendsLabel}>Mise (coins):</Text>
+                        <Text style={styles.friendsLabel}>{t('setup.bet_label')}</Text>
                         {renderBetSelector()}
 
-                        <Text style={styles.friendsLabel}>Temps par tour:</Text>
+                        <Text style={styles.friendsLabel}>{t('live_room.time_per_move')}</Text>
                         <View style={styles.optionsRow}>
                             {ONLINE_TIME_OPTIONS.map(opt => (
                                 <TouchableOpacity 
-                                    key={opt.label} 
+                                    key={opt.labelKey} 
                                     style={[styles.friendsOptionButton, tempsParCoup === opt.value && styles.friendsOptionButtonActive]}
                                     onPress={() => setTempsParCoup(opt.value)}
                                 >
                                     <Text style={[styles.friendsOptionText, tempsParCoup === opt.value && styles.friendsOptionTextActive]}>
-                                        {opt.label}
+                                        {t(opt.labelKey)}
                                     </Text>
                                 </TouchableOpacity>
                             ))}
                         </View>
 
-                        <Text style={styles.friendsLabel}>Qui commence ?</Text>
+                        <Text style={styles.friendsLabel}>{t('setup.who_starts_label')}</Text>
                         <View style={styles.optionsRow}>
                             {[
-                                { label: 'Moi', value: 'host' },
-                                { label: 'Adversaire', value: 'guest' },
-                                { label: 'Aléatoire', value: 'random' }
+                                { label: t('setup.me'), value: 'host' },
+                                { label: t('game.opponent'), value: 'guest' },
+                                { label: t('common.random'), value: 'random' }
                             ].map(opt => (
                                 <TouchableOpacity 
                                     key={opt.value} 
@@ -414,12 +416,12 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                             ))}
                         </View>
 
-                        <Text style={styles.friendsLabel}>Ma couleur :</Text>
+                        <Text style={styles.friendsLabel}>{t('setup.my_color_label')}</Text>
                         <View style={styles.optionsRow}>
                             {[
-                                { label: 'Bleu', value: 'white' },
-                                { label: 'Rouge', value: 'black' },
-                                { label: 'Aléatoire', value: 'random' }
+                                { label: t('colors.blue'), value: 'white' },
+                                { label: t('colors.red'), value: 'black' },
+                                { label: t('common.random'), value: 'random' }
                             ].map(opt => (
                                 <TouchableOpacity 
                                     key={opt.value} 
@@ -438,7 +440,7 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                 return (
                     <View style={styles.stepContainer}>
                         <View style={styles.switchContainer}>
-                            <Text style={styles.switchLabel}>Chat Actif</Text>
+                            <Text style={styles.switchLabel}>{t('live_room.chat_label')}</Text>
                             <Switch
                                 trackColor={{ false: T.bg3, true: T.blue }}
                                 thumbColor={chatActif ? T.gold : T.textMuted}
@@ -448,7 +450,7 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                         </View>
 
                         <View style={styles.switchContainer}>
-                            <Text style={styles.switchLabel}>Audio Lobby</Text>
+                            <Text style={styles.switchLabel}>{t('live_room.audio_lobby_label')}</Text>
                             <Switch
                                 trackColor={{ false: T.bg3, true: T.blue }}
                                 thumbColor={audioLobbyActif ? T.gold : T.textMuted}
@@ -457,7 +459,7 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                             />
                         </View>
                         
-                        <Text style={styles.friendsLabel}>Limite Spectateurs:</Text>
+                        <Text style={styles.friendsLabel}>{t('live_room.spectator_limit')}</Text>
                         <View style={styles.optionsRow}>
                             {limitsSpectateurs.slice(0, 4).map(num => (
                                 <TouchableOpacity 
@@ -471,7 +473,7 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                         </View>
 
                         <Text style={[styles.friendsLabel, { marginTop: getResponsiveSize(14) }]}>
-                            Salles live restantes aujourd'hui:
+                            {t('live_room.remaining_today_label')}
                         </Text>
                         <Text style={{ color: T.gold, fontWeight: '900', fontSize: getResponsiveSize(18), marginBottom: getResponsiveSize(6) }}>
                             {liveRemaining}
@@ -499,17 +501,17 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                 <Pressable style={styles.friendsModalContent} onPress={() => {}}>
                     {isCreating ? (
                         <View style={{ alignItems: 'center', width: '100%' }}>
-                            <Text style={styles.friendsModalTitle}>Création de la salle...</Text>
+                            <Text style={styles.friendsModalTitle}>{t('live_room.creating_title')}</Text>
                             <ActivityIndicator size="large" color={T.gold} style={{ marginVertical: getResponsiveSize(20) }} />
-                            <Text style={styles.betInfo}>Veuillez patienter</Text>
+                            <Text style={styles.betInfo}>{t('common.loading')}</Text>
                         </View>
                     ) : (
                         <ScrollView 
                           contentContainerStyle={{ alignItems: 'center', width: '100%', paddingBottom: getResponsiveSize(24) }} 
                           style={{ width: '100%' }}
                         >
-                            <Text style={styles.friendsModalTitle}>Créer une Salle Live</Text>
-                            <Text style={styles.stepIndicator}>Étape {step}/{TOTAL_STEPS}</Text>
+                            <Text style={styles.friendsModalTitle}>{t('live_room.create_title')}</Text>
+                            <Text style={styles.stepIndicator}>{t('setup.step_indicator', { step, total: TOTAL_STEPS })}</Text>
 
                             {renderStepContent()}
 
@@ -519,7 +521,7 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                                     onPress={step === 1 ? onClose : handleBack}
                                 >
                                     <Text style={styles.modalButtonText}>
-                                        {step === 1 ? 'Annuler' : 'Retour'}
+                                        {step === 1 ? t('common.cancel') : t('common.back')}
                                     </Text>
                                 </TouchableOpacity>
                                 
@@ -528,7 +530,7 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                                     onPress={step === TOTAL_STEPS ? handleCreateRoom : handleNext}
                                 >
                                     <Text style={[styles.modalButtonText, styles.modalButtonTextActive]}>
-                                        {step === TOTAL_STEPS ? 'CRÉER' : 'SUIVANT'}
+                                        {step === TOTAL_STEPS ? t('live_room.create_live_room_btn') : t('common.next')}
                                     </Text>
                                 </TouchableOpacity>
                             </View>

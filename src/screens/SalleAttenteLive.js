@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground, 
 import { T } from '../utils/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { socket } from '../utils/socket';
 import { API_URL } from '../config';
 import { playButtonSound } from '../utils/soundManager';
@@ -16,6 +17,7 @@ import QRCode from 'react-native-qrcode-svg';
  * Affiche les informations de la salle, la liste des spectateurs et permet au créateur de lancer la partie.
  */
 const SalleAttenteLive = ({ route, navigation }) => {
+  const { t } = useTranslation();
   // Récupération de la configuration de la salle passée via la navigation
   const params = route.params || {};
   const [configSalle, setConfigSalle] = useState(params.configSalle || null);
@@ -178,8 +180,8 @@ const SalleAttenteLive = ({ route, navigation }) => {
 
           const handleLiveRoomClosed = () => {
               if (isLeavingRef.current) return;
-              appAlert('Live terminé', 'Le créateur a fermé la salle.', [
-                  { text: 'OK', onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Home' }] }) }
+              appAlert(t('live_room.live_ended'), t('live_room.creator_closed_room'), [
+                  { text: t('common.ok'), onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Home' }] }) }
               ]);
           };
 
@@ -201,11 +203,11 @@ const SalleAttenteLive = ({ route, navigation }) => {
               if (isCreatorEffective) setIsCreator(true);
               if (isCreatorEffective) {
                   appAlert(
-                      'Invité parti',
-                      "Votre invité a quitté la salle. Vous pouvez inviter un autre joueur.",
+                      t('live_room.guest_left'),
+                      t('live_room.guest_left_desc'),
                       [
-                          { text: 'OK' },
-                          // { text: 'Inviter', onPress: () => { handleOpenInviteModal(); } }
+                          { text: t('common.ok') },
+                          // { text: t('live_room.invite'), onPress: () => { handleOpenInviteModal(); } }
                       ]
                   );
               }
@@ -215,8 +217,8 @@ const SalleAttenteLive = ({ route, navigation }) => {
               if (isLeavingRef.current) return;
               setIsGeneratingCode(false);
               setIsStartingGame(false);
-              appAlert('Erreur', message, [
-                  { text: 'OK', onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Home' }] }) }
+              appAlert(t('common.error'), message, [
+                  { text: t('common.ok'), onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Home' }] }) }
               ]);
           };
 
@@ -259,12 +261,12 @@ const SalleAttenteLive = ({ route, navigation }) => {
 
   const handleStopLive = () => {
       appAlert(
-          "Arrêter le Live ?",
-          "Cela fermera la salle pour tous les participants.",
+          t('live_room.stop_live_title'),
+          t('live_room.stop_live_desc'),
           [
-              { text: "Annuler", style: "cancel" },
+              { text: t('common.cancel'), style: "cancel" },
               {
-                  text: "Arrêter",
+                  text: t('live_room.stop_live_btn'),
                   style: "destructive",
                   onPress: () => {
                       const effectiveRoomId = roomId || configSalleRef.current?.id || route?.params?.roomId || route?.params?.configSalle?.id;
@@ -283,12 +285,12 @@ const SalleAttenteLive = ({ route, navigation }) => {
 
   const handleLeaveLive = () => {
       appAlert(
-          "Quitter le Live ?",
-          "Voulez-vous vraiment quitter la salle ?",
+          t('live_room.leave_live_title'),
+          t('live_room.leave_live_desc'),
           [
-              { text: "Annuler", style: "cancel" },
+              { text: t('common.cancel'), style: "cancel" },
               {
-                  text: "Quitter",
+                  text: t('live_room.leave_live_btn'),
                   style: "destructive",
                   onPress: () => {
                       const effectiveRoomId = roomId || configSalleRef.current?.id || route?.params?.roomId || route?.params?.configSalle?.id;
@@ -322,7 +324,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
    */
   const handleStartGame = () => {
     if (!opponent) {
-        appAlert('Attente', 'Veuillez attendre qu\'un adversaire rejoigne la partie.');
+        appAlert(t('live_room.waiting_title'), t('live_room.waiting_for_opponent_desc'));
         return;
     }
     if (isStartingGame) return;
@@ -340,9 +342,9 @@ const SalleAttenteLive = ({ route, navigation }) => {
     try {
         const inviteUrl = configSalle?.roomCode ? `deadpions://invite/${configSalle.roomCode}` : `deadpions://live/${roomId}`;
         const result = await Share.share({
-            message: `Rejoins ma partie sur DeadPions ! 🎲\nClique ici : ${inviteUrl}`,
+            message: t('live_room.share_message', { url: inviteUrl }),
             url: inviteUrl, // iOS support
-            title: 'Invitation DeadPions'
+            title: t('live_room.share_title')
         });
         
         if (result.action === Share.sharedAction) {
@@ -355,7 +357,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
             // dismissed
         }
     } catch (error) {
-        appAlert('Erreur', error.message);
+        appAlert(t('common.error'), error.message);
     }
   };
 
@@ -379,7 +381,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
         }
     } catch (err) {
         console.error('Error fetching friends:', err);
-        appAlert('Erreur', 'Impossible de charger la liste d\'amis');
+        appAlert(t('common.error'), t('live_room.error_load_friends'));
     } finally {
         setLoadingFriends(false);
     }
@@ -398,7 +400,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
           gameId: roomId,
           mode: 'live'
       });
-      appAlert('Succès', 'Invitation envoyée !');
+      appAlert(t('common.success'), t('live_room.invite_sent'));
       setInviteModalVisible(false);
   };
 
@@ -410,7 +412,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
           >
               <View style={styles.bgOverlay} pointerEvents="none" />
               <ActivityIndicator size="large" color="#f1c40f" />
-              <Text style={{ color: '#fff', marginTop: getResponsiveSize(20) }}>Chargement de la salle...</Text>
+              <Text style={{ color: '#fff', marginTop: getResponsiveSize(20) }}>{t('live_room.loading_room')}</Text>
           </ImageBackground>
       );
   }
@@ -432,7 +434,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
             <Text style={styles.headerTitle}>{configSalle.nom}</Text>
             <View style={styles.liveBadge}>
                 <View style={styles.liveIndicator} />
-                <Text style={styles.liveText}>EN ATTENTE</Text>
+                <Text style={styles.liveText}>{t('live_room.status_waiting')}</Text>
             </View>
         </View>
         <TouchableOpacity onPress={() => { playButtonSound(); handleShare(); }} style={styles.shareButton}>
@@ -446,7 +448,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
             <View style={styles.playersContainer}>
                 {/* Creator Side */}
                 <View style={styles.playerSide}>
-                    <Text style={styles.roleLabel}>Hôte ({creatorColor === 'white' ? 'Blanc' : 'Noir'})</Text>
+                    <Text style={styles.roleLabel}>{t('live_room.host_label', { color: creatorColor === 'white' ? t('live_room.color_white') : t('live_room.color_black') })}</Text>
                     <View style={styles.avatarContainer}>
                         {configSalle.createur.avatar ? (
                             <Image source={getAvatarSource(configSalle.createur.avatar)} style={styles.avatarImage} />
@@ -458,17 +460,17 @@ const SalleAttenteLive = ({ route, navigation }) => {
                         )}
                     </View>
                     <Text style={styles.pseudo} numberOfLines={1}>{configSalle.createur.pseudo}</Text>
-                    <Text style={styles.level}>Niv. {configSalle.createur.niveau}</Text>
+                    <Text style={styles.level}>{t('live_room.level_label', { level: configSalle.createur.niveau })}</Text>
                 </View>
 
                 {/* VS Badge */}
                 <View style={styles.vsContainer}>
-                    <Text style={styles.vsText}>VS</Text>
+                    <Text style={styles.vsText}>{t('common.vs')}</Text>
                 </View>
 
                 {/* Opponent Side */}
                 <View style={styles.playerSide}>
-                    <Text style={styles.roleLabel}>Adversaire ({creatorColor === 'white' ? 'Noir' : 'Blanc'})</Text>
+                    <Text style={styles.roleLabel}>{t('live_room.opponent_label', { color: creatorColor === 'white' ? t('live_room.color_black') : t('live_room.color_white') })}</Text>
                     {opponent ? (
                         <>
                             <View style={styles.avatarContainer}>
@@ -483,7 +485,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
                             </View>
                             <Text style={styles.pseudo} numberOfLines={1}>{opponent.pseudo}</Text>
                             {opponent.niveau !== undefined && (
-                                <Text style={styles.level}>Niv. {opponent.niveau}</Text>
+                                <Text style={styles.level}>{t('live_room.level_label', { level: opponent.niveau })}</Text>
                             )}
                         </>
                     ) : (
@@ -493,14 +495,14 @@ const SalleAttenteLive = ({ route, navigation }) => {
                                     <View style={[styles.avatarImage, styles.avatarPlaceholder, { borderColor: '#10b981', borderStyle: 'solid', borderWidth: getResponsiveSize(2) }]}>
                                         <Ionicons name="add" size={getResponsiveSize(32)} color="#10b981" />
                                     </View>
-                                    <Text style={[styles.waitingTextSmall, { color: '#10b981', fontWeight: 'bold', marginTop: getResponsiveSize(4) }]}>Inviter</Text>
+                                    <Text style={[styles.waitingTextSmall, { color: '#10b981', fontWeight: 'bold', marginTop: getResponsiveSize(4) }]}>{t('live_room.invite')}</Text>
                                 </TouchableOpacity>
                             ) : (
                                 <>
                                     <View style={[styles.avatarImage, styles.avatarPlaceholder]}>
                                         <Ionicons name="help" size={getResponsiveSize(30)} color="#9ca3af" />
                                     </View>
-                                    <Text style={styles.waitingTextSmall}>En attente...</Text>
+                                    <Text style={styles.waitingTextSmall}>{t('live_room.waiting_short')}</Text>
                                 </>
                             )}
                         </View>
@@ -512,7 +514,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
 
             {isCreator && (
               <View style={styles.inviteSection}>
-                <Text style={styles.inviteSectionTitle}>INVITER VIA CODE OU QR</Text>
+                <Text style={styles.inviteSectionTitle}>{t('live_room.invite_via_code_qr')}</Text>
                 
                 <View style={styles.qrWrapper}>
                     <View style={styles.qrContainer}>
@@ -529,7 +531,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
                     </View>
                     
                     <View style={styles.codeContainer}>
-                        <Text style={styles.codeLabel}>CODE D'ACCÈS :</Text>
+                        <Text style={styles.codeLabel}>{t('live_room.access_code_label')}</Text>
                         <View style={styles.codeRow}>
                             <Text style={styles.codeText}>{configSalle?.roomCode || '------'}</Text>
                             <TouchableOpacity 
@@ -549,7 +551,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
                 </View>
                 
                 <Text style={styles.inviteHint}>
-                    L'adversaire peut scanner ce QR code ou entrer le code manuel pour rejoindre.
+                    {t('live_room.invite_hint')}
                 </Text>
 
                 <TouchableOpacity 
@@ -560,7 +562,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
                     }}
                 >
                     <Ionicons name="share-social-outline" size={getResponsiveSize(20)} color="#1B1305" />
-                    <Text style={styles.shareButtonText}>PARTAGER L'INVITATION</Text>
+                    <Text style={styles.shareButtonText}>{t('live_room.share_invite_btn')}</Text>
                 </TouchableOpacity>
 
                 <View style={styles.divider} />
@@ -571,13 +573,13 @@ const SalleAttenteLive = ({ route, navigation }) => {
                 <View style={styles.paramItem}>
                     <Ionicons name="cash-outline" size={getResponsiveSize(20)} color="#f1c40f" />
                     <Text style={[styles.paramText, { color: '#f1c40f' }]}>
-                        {configSalle.parametres.betAmount ? `${configSalle.parametres.betAmount.toLocaleString()} 🪙` : 'Gratuit'}
+                        {configSalle.parametres.betAmount ? `${configSalle.parametres.betAmount.toLocaleString()} 🪙` : t('matchmaking.bet_free')}
                     </Text>
                 </View>
                 <View style={styles.paramItem}>
                     <Ionicons name="time-outline" size={getResponsiveSize(20)} color="#9ca3af" />
                     <Text style={styles.paramText}>
-                        {configSalle.parametres.tempsParCoup === 0 ? 'Illimité' : `${configSalle.parametres.tempsParCoup}s`}
+                        {configSalle.parametres.tempsParCoup === 0 ? t('live_room.unlimited') : `${configSalle.parametres.tempsParCoup}s`}
                     </Text>
                 </View>
                 <View style={styles.paramItem}>
@@ -593,18 +595,18 @@ const SalleAttenteLive = ({ route, navigation }) => {
 
         {/* Liste Spectateurs */}
         <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Spectateurs ({spectateurs.length})</Text>
+            <Text style={styles.sectionTitle}>{t('live_room.spectators_count', { count: spectateurs.length })}</Text>
         </View>
 
         {spectateurs.length === 0 ? (
             <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>En attente de spectateurs...</Text>
+                <Text style={styles.emptyStateText}>{t('live_room.no_spectators')}</Text>
             </View>
         ) : (
             spectateurs.map((_, index) => (
                 <View key={index} style={styles.spectatorRow}>
                     <Text style={styles.specAvatar}>👤</Text>
-                    <Text style={styles.specName}>Spectateur {index + 1}</Text>
+                    <Text style={styles.specName}>{t('live_room.spectator_number', { number: index + 1 })}</Text>
                 </View>
             ))
         )}
@@ -616,7 +618,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
                     onPress={handleStopLive}
                 >
                     <Ionicons name="stop-circle-outline" size={getResponsiveSize(24)} color="#ef4444" />
-                    <Text style={styles.stopButtonText}>Arrêter le Live</Text>
+                    <Text style={styles.stopButtonText}>{t('live_room.stop_live_btn')}</Text>
                 </TouchableOpacity>
             </View>
         )}
@@ -639,14 +641,14 @@ const SalleAttenteLive = ({ route, navigation }) => {
               onPress={handleStartGame}
               disabled={!opponent}
             >
-              <Text style={styles.mainButtonText}>LANCER LA PARTIE</Text>
+              <Text style={styles.mainButtonText}>{t('live_room.start_game')}</Text>
               <Ionicons name="play" size={getResponsiveSize(24)} color="#fff" style={{ marginLeft: getResponsiveSize(10) }} />
             </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.waitingMessage}>
             <ActivityIndicator size="small" color="#fff" />
-            <Text style={styles.waitingText}>En attente de l'hôte...</Text>
+            <Text style={styles.waitingText}>{t('live_room.waiting_host')}</Text>
           </View>
         )}
       </View>
@@ -660,7 +662,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
         <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
                 <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>Inviter un ami</Text>
+                    <Text style={styles.modalTitle}>{t('live_room.invite_friend_title')}</Text>
                     <TouchableOpacity onPress={() => setInviteModalVisible(false)} style={styles.closeButton}>
                         <Ionicons name="close" size={getResponsiveSize(24)} color="#374151" />
                     </TouchableOpacity>
@@ -682,9 +684,9 @@ const SalleAttenteLive = ({ route, navigation }) => {
                                 <View style={styles.emptyFriendsIcon}>
                                     <Ionicons name="people-outline" size={getResponsiveSize(28)} color={T.textMuted} />
                                 </View>
-                                <Text style={styles.emptyFriendsTitle}>Aucun ami en ligne</Text>
+                                <Text style={styles.emptyFriendsTitle}>{t('live_room.no_friends_online')}</Text>
                                 <Text style={styles.emptyFriendsSubtitle}>
-                                    Utilisez le code ou le QR de la salle pour inviter quelqu'un.
+                                    {t('live_room.no_friends_online_desc')}
                                 </Text>
                             </View>
                         }
@@ -699,7 +701,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
                                     <View>
                                         <Text style={styles.friendPseudo}>{item.pseudo}</Text>
                                         <Text style={[styles.friendStatus, { color: item.isOnline ? '#10b981' : '#9ca3af' }]}>
-                                            {item.isOnline ? 'En ligne' : 'Hors ligne'}
+                                            {item.isOnline ? t('social.online') : t('social.offline')}
                                         </Text>
                                     </View>
                                 </View>
@@ -707,7 +709,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
                                     style={styles.inviteAction}
                                     onPress={() => { playButtonSound(); handleSendInvite(item.id); }}
                                 >
-                                    <Text style={styles.inviteActionText}>Inviter</Text>
+                                    <Text style={styles.inviteActionText}>{t('live_room.invite')}</Text>
                                 </TouchableOpacity>
                             </View>
                         )}

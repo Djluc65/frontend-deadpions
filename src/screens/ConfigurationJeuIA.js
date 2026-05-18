@@ -7,6 +7,7 @@ import { useSelector } from 'react-redux';
 import { playButtonSound } from '../utils/soundManager';
 import { getResponsiveSize, SCREEN_WIDTH } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
+import { useTranslation } from 'react-i18next';
 
 const width = SCREEN_WIDTH;
 
@@ -18,6 +19,7 @@ const BET_OPTIONS = [
 ];
 
 const ConfigurationJeuIA = ({ navigation }) => {
+  const { t } = useTranslation();
   const user = useSelector(state => state.auth.user);
   const canBet = Boolean(user?.isPremium || user?.isEarlyAccess);
   const [activeTab, setActiveTab] = useState('difficulte'); // 'difficulte' | 'options'
@@ -66,7 +68,8 @@ const ConfigurationJeuIA = ({ navigation }) => {
     // Vérification du solde
     const effectiveBet = canBet ? betAmount : 0;
     if (effectiveBet > (user?.coins || 0)) {
-        appAlert('Solde insuffisant', `Vous n'avez pas assez de coins pour parier ${betAmount.toLocaleString()} coins.`);
+        const missing = Math.max(0, effectiveBet - (user?.coins || 0));
+        appAlert(t('game.insufficient_balance'), t('game.missing_coins', { amount: missing.toLocaleString() }));
         return;
     }
 
@@ -124,27 +127,27 @@ const ConfigurationJeuIA = ({ navigation }) => {
   const niveaux = [
     {
       id: 'facile',
-      titre: 'Facile',
+      titre: t('ai.difficulty_easy'),
       emoji: '🟢',
-      description: 'Parfait pour débuter',
+      description: t('ai.difficulty_easy_desc'),
       tauxVictoire: '15%',
       couleur: '#10b981', // Keep original color for accent/emoji but card style will be unified
       stats: statistiques.facile
     },
     {
       id: 'moyen',
-      titre: 'Moyen',
+      titre: t('ai.difficulty_medium'),
       emoji: '🟡',
-      description: 'Challenge équilibré',
+      description: t('ai.difficulty_medium_desc'),
       tauxVictoire: '50%',
       couleur: '#f59e0b',
       stats: statistiques.moyen
     },
     {
       id: 'difficile',
-      titre: 'Difficile',
+      titre: t('ai.difficulty_hard'),
       emoji: '🔴',
-      description: 'Pour les experts',
+      description: t('ai.difficulty_hard_desc'),
       tauxVictoire: '95%',
       couleur: '#ef4444',
       stats: statistiques.difficile
@@ -152,21 +155,21 @@ const ConfigurationJeuIA = ({ navigation }) => {
   ];
   
   const vitesses = [
-    { id: 'instantane', label: 'Instantané', delai: 0 },
-    { id: 'rapide', label: 'Rapide (0.3s)', delai: 300 },
-    { id: 'normal', label: 'Normal (1s)', delai: 1000 },
-    { id: 'lent', label: 'Lent (2s)', delai: 2000 },
-    { id: 'reflexion', label: 'Réflexion (3s)', delai: 3000 }
+    { id: 'instantane', label: t('ai.speed_instant'), delai: 0 },
+    { id: 'rapide', label: t('ai.speed_fast'), delai: 300 },
+    { id: 'normal', label: t('ai.speed_normal'), delai: 1000 },
+    { id: 'lent', label: t('ai.speed_slow'), delai: 2000 },
+    { id: 'reflexion', label: t('ai.speed_thinking'), delai: 3000 }
   ];
 
   const handleDifficultySelect = (niveau) => {
     if (niveau.id === 'difficile' && !user?.isPremium && !user?.isEarlyAccess) {
         appAlert(
-            "Fonctionnalité Premium", 
-            "L'IA Expert est réservée aux membres DeadPions+. Abonnez-vous pour débloquer le coach stratégique !",
+            t('premium.feature_title'),
+            t('premium.ai_expert_locked_desc'),
             [
-                 { text: "Annuler", style: "cancel" },
-                 { text: "Voir l'offre", onPress: () => {
+                 { text: t('common.cancel'), style: "cancel" },
+                 { text: t('premium.see_offer'), onPress: () => {
                      // Naviguer vers le TabNavigator 'Home' puis vers l'onglet 'Magasin'
                      navigation.navigate('Home', { screen: 'Magasin' });
                  }}
@@ -194,10 +197,10 @@ const ConfigurationJeuIA = ({ navigation }) => {
             <Text style={styles.niveauTitre}>{niveau.titre}</Text>
             <Text style={styles.niveauDesc}>{niveau.description}</Text>
             {niveau.id === 'difficile' && !user?.isPremium && !user?.isEarlyAccess && (
-                 <Text style={{color: T.gold, fontSize: getResponsiveSize(12), marginTop: getResponsiveSize(4)}}>🔒 Premium Requis</Text>
+                 <Text style={{color: T.gold, fontSize: getResponsiveSize(12), marginTop: getResponsiveSize(4)}}>🔒 {t('premium.required_short')}</Text>
             )}
             <Text style={styles.niveauTaux}>
-              IA gagne à {niveau.tauxVictoire}
+              {t('ai.win_rate', { rate: niveau.tauxVictoire })}
             </Text>
             
             {niveau.stats.jouees > 0 && (
@@ -223,7 +226,7 @@ const ConfigurationJeuIA = ({ navigation }) => {
     <View style={styles.tabContent}>
       {canBet && (
           <View style={styles.option}>
-            <Text style={styles.optionLabel}>Mise (coins)</Text>
+            <Text style={styles.optionLabel}>{t('setup.bet_label')}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: getResponsiveSize(10) }}>
                 <TouchableOpacity 
                     onPress={() => {
@@ -260,7 +263,7 @@ const ConfigurationJeuIA = ({ navigation }) => {
 
       {/* Qui commence */}
       <View style={styles.option}>
-        <Text style={styles.optionLabel}>Qui commence ?</Text>
+        <Text style={styles.optionLabel}>{t('setup.who_starts_label')}</Text>
         <View style={styles.buttonGroup}>
           {['joueur', 'ia', 'aleatoire'].map(opt => (
             <TouchableOpacity
@@ -275,7 +278,7 @@ const ConfigurationJeuIA = ({ navigation }) => {
                 styles.optionButtonText,
                 premierJoueur === opt && styles.optionButtonTextActive
               ]}>
-                {opt === 'joueur' ? 'Vous' : opt === 'ia' ? 'IA' : 'Aléatoire'}
+                {opt === 'joueur' ? t('game.you') : opt === 'ia' ? t('game.ai_name') : t('common.random')}
               </Text>
             </TouchableOpacity>
           ))}
@@ -284,12 +287,12 @@ const ConfigurationJeuIA = ({ navigation }) => {
       
       {/* Couleur */}
       <View style={styles.option}>
-        <Text style={styles.optionLabel}>Votre couleur</Text>
+        <Text style={styles.optionLabel}>{t('setup.your_color_label')}</Text>
         <View style={styles.buttonGroup}>
           {[
-            { id: 'noir', icon: '🔴', label: 'Rouge' },
-            { id: 'blanc', icon: '✖', label: 'Bleu', iconColor: '#3b82f6' },
-            { id: 'aleatoire', icon: '🎲', label: 'Aléa.' }
+            { id: 'noir', icon: '🔴', label: t('colors.red') },
+            { id: 'blanc', icon: '✖', label: t('colors.blue'), iconColor: '#3b82f6' },
+            { id: 'aleatoire', icon: '🎲', label: t('common.random_short') }
           ].map(opt => (
             <TouchableOpacity
               key={opt.id}
@@ -315,7 +318,7 @@ const ConfigurationJeuIA = ({ navigation }) => {
       
       {/* Vitesse IA */}
       <View style={styles.option}>
-        <Text style={styles.optionLabel}>Vitesse de jeu de l'IA</Text>
+        <Text style={styles.optionLabel}>{t('ai.speed_label')}</Text>
         <View style={styles.pickerContainer}>
           {vitesses.map(v => (
             <TouchableOpacity
@@ -340,7 +343,7 @@ const ConfigurationJeuIA = ({ navigation }) => {
       
       {/* Switches */}
       <View style={styles.switchOption}>
-        <Text style={styles.switchLabel}>Afficher les indices</Text>
+        <Text style={styles.switchLabel}>{t('ai.hints_toggle')}</Text>
         <Switch
           value={indicesActifs}
           onValueChange={setIndicesActifs}
@@ -350,7 +353,7 @@ const ConfigurationJeuIA = ({ navigation }) => {
       </View>
       
       <View style={styles.switchOption}>
-        <Text style={styles.switchLabel}>Chronomètre</Text>
+        <Text style={styles.switchLabel}>{t('ai.timer_toggle')}</Text>
         <Switch
           value={chronometreActif}
           onValueChange={setChronometreActif}
@@ -360,7 +363,7 @@ const ConfigurationJeuIA = ({ navigation }) => {
       </View>
       
       <View style={styles.switchOption}>
-        <Text style={styles.switchLabel}>Animations</Text>
+        <Text style={styles.switchLabel}>{t('ai.animations_toggle')}</Text>
         <Switch
           value={animationsActives}
           onValueChange={setAnimationsActives}
@@ -384,8 +387,8 @@ const ConfigurationJeuIA = ({ navigation }) => {
             <Ionicons name="arrow-back" size={getResponsiveSize(30)} color="#fff" />
           </TouchableOpacity>
           <View>
-            <Text style={styles.titre}>Configuration IA</Text>
-            <Text style={styles.sousTitre}>Personnalisez votre adversaire</Text>
+            <Text style={styles.titre}>{t('ai.config_title')}</Text>
+            <Text style={styles.sousTitre}>{t('ai.customize_subtitle')}</Text>
           </View>
           <View style={styles.coinContainer}>
             <Text style={styles.coinText}>💰 {user?.coins?.toLocaleString() || 0}</Text>
@@ -399,7 +402,7 @@ const ConfigurationJeuIA = ({ navigation }) => {
             onPress={() => setActiveTab('difficulte')}
           >
             <Text style={[styles.tabText, activeTab === 'difficulte' && styles.activeTabText]}>
-              Niveau de difficulté
+              {t('ai.difficulty_tab')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity 
@@ -407,7 +410,7 @@ const ConfigurationJeuIA = ({ navigation }) => {
             onPress={() => setActiveTab('options')}
           >
             <Text style={[styles.tabText, activeTab === 'options' && styles.activeTabText]}>
-              Options de jeu
+              {t('setup.options_title')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -425,7 +428,7 @@ const ConfigurationJeuIA = ({ navigation }) => {
             style={styles.boutonLancer}
             onPress={demarrerPartie}
           >
-            <Text style={styles.boutonLancerTexte}>🎮 Lancer la partie</Text>
+            <Text style={styles.boutonLancerTexte}>🎮 {t('ai.start_game')}</Text>
           </TouchableOpacity>
         </View>
     </ImageBackground>

@@ -13,6 +13,7 @@ import { API_URL } from '../config';
 import { getResponsiveSize, DESKTOP_BREAKPOINT } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
 import { T } from '../utils/theme';
+import { useTranslation } from 'react-i18next';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -27,6 +28,7 @@ const isUserCancelledAuth = (error) => {
 };
 
 const RegisterScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
   const isDesktop = Platform.OS === 'web' && width >= DESKTOP_BREAKPOINT;
@@ -55,7 +57,7 @@ const RegisterScreen = ({ navigation }) => {
       const { id_token } = response.params;
       handleGoogleLogin(id_token);
     } else if (response?.type === 'error') {
-      appAlert('Erreur', 'La connexion Google a échoué');
+      appAlert(t('common.error'), t('auth.google_login_failed'));
     }
   }, [response]);
 
@@ -74,7 +76,7 @@ const RegisterScreen = ({ navigation }) => {
       if (!contentType || !contentType.includes("application/json")) {
         const text = await res.text();
         console.error("Non-JSON response from google login:", text);
-        throw new Error("Erreur serveur: Réponse invalide (HTML reçue)");
+        throw new Error(t('errors.invalid_server_response_html'));
       }
 
       const data = await res.json();
@@ -104,23 +106,23 @@ const RegisterScreen = ({ navigation }) => {
         });
       } else {
         dispatch(loginFailure(data.message));
-        appAlert('Erreur', data.message || "Erreur lors de la connexion Google");
+        appAlert(t('common.error'), data.message || t('auth.google_login_failed'));
       }
     } catch (error) {
       console.error(error);
       dispatch(loginFailure(error.message));
-      appAlert('Erreur', 'Impossible de se connecter au serveur');
+      appAlert(t('common.error'), t('errors.server_unavailable'));
     }
   };
 
   const handleRegister = async () => {
     Keyboard.dismiss();
     if (!pseudo || !email || !password || !confirmPassword) {
-        appAlert('Erreur', 'Veuillez remplir tous les champs');
+        appAlert(t('common.error'), t('auth.fill_all_fields'));
         return;
     }
     if (password !== confirmPassword) {
-      appAlert('Erreur', 'Les mots de passe ne correspondent pas');
+      appAlert(t('common.error'), t('auth.error_passwords_mismatch'));
       return;
     }
     
@@ -137,7 +139,7 @@ const RegisterScreen = ({ navigation }) => {
       if (!contentType || !contentType.includes("application/json")) {
         const text = await response.text();
         console.error("Non-JSON response from register:", text);
-        throw new Error("Erreur serveur: Réponse invalide (HTML reçue)");
+        throw new Error(t('errors.invalid_server_response_html'));
       }
 
       const data = await response.json();
@@ -162,17 +164,17 @@ const RegisterScreen = ({ navigation }) => {
             refreshToken: data.refreshToken
         }));
         
-        appAlert('Succès', 'Compte créé ! Bienvenue ' + data.pseudo);
+        appAlert(t('common.success'), t('auth.account_created_welcome', { pseudo: data.pseudo }));
         navigation.reset({
             index: 0,
             routes: [{ name: 'Home' }],
         });
       } else {
-        appAlert('Erreur', data.message || "Erreur lors de l'inscription");
+        appAlert(t('common.error'), data.message || t('errors.generic'));
       }
     } catch (error) {
       console.error(error);
-      appAlert('Erreur', 'Impossible de se connecter au serveur');
+      appAlert(t('common.error'), t('errors.server_unavailable'));
     }
   };
 
@@ -186,14 +188,14 @@ const RegisterScreen = ({ navigation }) => {
         <View style={styles.bgOverlay} pointerEvents="none" />
         <View style={styles.container}>
           <View style={[styles.formContainer, isTablet && styles.formContainerTablet, isDesktop && styles.formContainerDesktop]}>
-          <Text style={[styles.title, isTablet && styles.titleTablet]}>Inscription</Text>
+          <Text style={[styles.title, isTablet && styles.titleTablet]}>{t('auth.register')}</Text>
           {showGoogleAuth && (
             <View style={{ width: '100%', marginBottom: getResponsiveSize(10) }}>
               <Button
-                title="Continuer avec Google"
+                title={t('auth.login_with_google')}
                 onPress={async () => {
                   if (!googleConfigured) {
-                    appAlert('Configuration', 'Google Sign-In n’est pas configuré pour Android.');
+                    appAlert(t('common.configuration'), t('auth.google_not_configured_android'));
                     return;
                   }
                   try {
@@ -202,7 +204,7 @@ const RegisterScreen = ({ navigation }) => {
                   } catch (e) {
                     if (isUserCancelledAuth(e)) return;
                     console.error(e);
-                    appAlert('Erreur', e?.message || 'La connexion Google a échoué');
+                    appAlert(t('common.error'), e?.message || t('auth.google_login_failed'));
                   }
                 }}
                 style={!googleConfigured ? styles.googleButtonDisabled : undefined}
@@ -211,24 +213,24 @@ const RegisterScreen = ({ navigation }) => {
             </View>
           )}
           <Input 
-            placeholder="Pseudo" 
+            placeholder={t('auth.username')}
             value={pseudo} 
             onChangeText={setPseudo} 
             maxLength={7}
           />
           <Input 
-            placeholder="Email" 
+            placeholder={t('auth.email')}
             value={email} 
             onChangeText={setEmail} 
             keyboardType="email-address"
             autoCapitalize="none"
           />
-          <Input placeholder="Mot de passe" value={password} onChangeText={setPassword} secureTextEntry />
-          <Input placeholder="Confirmer mot de passe" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
+          <Input placeholder={t('auth.password')} value={password} onChangeText={setPassword} secureTextEntry />
+          <Input placeholder={t('auth.password_confirm')} value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
           
-          <Button title="S'inscrire" onPress={handleRegister} />
+          <Button title={t('auth.register')} onPress={handleRegister} />
           <Button 
-            title="Retour" 
+            title={t('common.back')} 
             onPress={() => navigation.goBack()} 
             tone="ghost"
             style={{ borderWidth: 0 }}

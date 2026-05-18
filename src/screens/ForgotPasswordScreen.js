@@ -7,8 +7,10 @@ import { API_URL } from '../config';
 import { getResponsiveSize } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
 import { T } from '../utils/theme';
+import { useTranslation } from 'react-i18next';
 
 const ForgotPasswordScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
   const [email, setEmail] = useState('');
@@ -16,7 +18,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
   const handleSendResetLink = async () => {
     if (!email) {
-      appAlert('Erreur', 'Veuillez entrer votre email');
+      appAlert(t('common.error'), t('auth.enter_email'));
       return;
     }
 
@@ -34,11 +36,11 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
       if (response.ok) {
         appAlert(
-          'Succès',
-          'Un code de réinitialisation a été envoyé à votre adresse email.',
+          t('common.success'),
+          t('auth.reset_code_sent_desc'),
           [
             { 
-              text: 'Saisir le code', 
+              text: t('auth.enter_reset_code'), 
               onPress: () => navigation.navigate('ResetPassword', { 
                 email, 
                 // En dev, on peut passer le code si le backend le renvoie pour faciliter le test
@@ -48,11 +50,11 @@ const ForgotPasswordScreen = ({ navigation }) => {
           ]
         );
       } else {
-        appAlert('Erreur', data.message || "Impossible d'envoyer l'email");
+        appAlert(t('common.error'), data.message || t('errors.generic'));
       }
     } catch (error) {
       console.error(error);
-      appAlert('Erreur', 'Erreur serveur');
+      appAlert(t('common.error'), t('errors.server'));
     } finally {
       setLoading(false);
     }
@@ -68,13 +70,13 @@ const ForgotPasswordScreen = ({ navigation }) => {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.container}>
           <View style={[styles.formContainer, isTablet && styles.formContainerTablet]}>
-            <Text style={[styles.title, isTablet && styles.titleTablet]}>Mot de passe oublié</Text>
+            <Text style={[styles.title, isTablet && styles.titleTablet]}>{t('auth.forgot_title')}</Text>
             <Text style={[styles.subtitle, isTablet && styles.subtitleTablet]}>
-              Entrez votre email pour recevoir un lien de réinitialisation.
+              {t('auth.forgot_subtitle')}
             </Text>
           
             <Input 
-              placeholder="Email"
+              placeholder={t('auth.email')}
               value={email} 
               onChangeText={setEmail} 
               keyboardType="email-address"
@@ -82,13 +84,13 @@ const ForgotPasswordScreen = ({ navigation }) => {
             />
           
             <Button 
-              title={loading ? "Envoi..." : "Envoyer"} 
+              title={loading ? t('auth.sending') : t('common.send')} 
               onPress={handleSendResetLink} 
               disabled={loading}
             />
           
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <Text style={styles.backButtonText}>Retour à la connexion</Text>
+              <Text style={styles.backButtonText}>{t('auth.back_to_login')}</Text>
             </TouchableOpacity>
           </View>
         </View>

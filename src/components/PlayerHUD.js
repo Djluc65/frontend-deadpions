@@ -1,6 +1,7 @@
 import React, { memo, useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, Image, StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
+import { useTranslation } from 'react-i18next';
 import { T, TY } from '../utils/theme';
 import { getResponsiveSize } from '../utils/responsive';
 import { getAvatarSource } from '../utils/avatarUtils';
@@ -8,9 +9,9 @@ import { getAvatarSource } from '../utils/avatarUtils';
 const rs = getResponsiveSize;
 
 // pawnColor: 'black' → pion rouge, 'white' → pion bleu (correspondance visuelle en jeu)
-const PAWN_COLORS = {
-  black: { fill: '#E63946', border: '#8B0000', label: 'Rouge' },
-  white: { fill: '#4DA3FF', border: '#1A4F8A', label: 'Bleu' },
+const PAWN_FILLS = {
+  black: { fill: '#E63946', border: '#8B0000' },
+  white: { fill: '#4DA3FF', border: '#1A4F8A' },
 };
 
 const MAX_TIMEOUTS = 5;
@@ -48,11 +49,14 @@ const PlayerHUD = memo(({
   timeouts = 0,         // nombre de timeouts utilisés
   maxTimeouts = MAX_TIMEOUTS,
 }) => {
+  const { t } = useTranslation();
   const initial = name ? name.charAt(0).toUpperCase() : '?';
   const timerRed = typeof time === 'number' && time < 10;
   const timerPct = typeof time === 'number' ? Math.max(0, Math.min(1, time / 60)) : 0;
   const showTimer = typeof time === 'number';
-  const pawn = pawnColor ? PAWN_COLORS[pawnColor] : null;
+  const pawnFill = pawnColor ? PAWN_FILLS[pawnColor] : null;
+  const pawnLabel = pawnColor === 'black' ? t('colors.red') : pawnColor === 'white' ? t('colors.blue') : null;
+  const pawn = pawnFill ? { ...pawnFill, label: pawnLabel } : null;
   const avatarSrc = avatar ? getAvatarSource(avatar) : null;
   const turnAnim = useRef(new Animated.Value(0)).current;
   const turnLoopRef = useRef(null);
@@ -118,9 +122,7 @@ const PlayerHUD = memo(({
                 { transform: [{ translateY: arrowTranslateY }], opacity: arrowOpacity },
               ]}
             >
-              <View style={rotated ? { transform: [{ rotate: '180deg' }] } : null}>
-                <TurnArrow size={arrowSize} />
-              </View>
+              <TurnArrow size={arrowSize} />
             </Animated.View>
           )}
           {avatarSrc ? (
@@ -146,7 +148,7 @@ const PlayerHUD = memo(({
           <View style={styles.metaRow}>
             {moves !== null && (
               <Text style={[styles.meta, small && styles.metaSmall]}>
-                {moves} {moves === 1 ? 'coup' : 'coups'}
+                {moves} {t('game.moves').toLowerCase()}
               </Text>
             )}
             {pawn && (

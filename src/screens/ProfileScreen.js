@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ImageBackground, Image, ScrollView, Modal, Flat
 import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import { useFocusEffect } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { updateUser, logout } from '../redux/slices/authSlice';
 import { useCoinsContext } from '../context/CoinsContext';
 import Button from '../components/common/Button';
@@ -39,6 +40,7 @@ const ProfileScreen = ({ navigation }) => {
   const hasTempPremiumPions = useSelector(selectHasTempPremiumPions);
   const dispatch = useDispatch();
   
+  const { t } = useTranslation();
   const { refreshBalance } = useCoinsContext();
   
   const [pseudo, setPseudo] = useState(user?.pseudo || '');
@@ -73,7 +75,7 @@ const ProfileScreen = ({ navigation }) => {
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      appAlert('Permission refusée', 'Désolé, nous avons besoin des permissions pour accéder à vos photos !');
+      appAlert(t('profile.permission_denied_title'), t('profile.permission_denied_photos'));
       return;
     }
 
@@ -104,7 +106,7 @@ const ProfileScreen = ({ navigation }) => {
 
   const handleSave = async () => {
     if (!pseudo.trim()) {
-      appAlert('Erreur', 'Le pseudo ne peut pas être vide');
+      appAlert(t('common.error'), t('profile.error_pseudo_empty'));
       return;
     }
 
@@ -148,26 +150,26 @@ const ProfileScreen = ({ navigation }) => {
 
       if (response.ok) {
         dispatch(updateUser(data));
-        appAlert('Succès', 'Profil mis à jour !');
+        appAlert(t('common.success'), t('profile.profile_updated'));
         setIsEditing(false);
       } else {
-        appAlert('Erreur', data.message || 'Erreur lors de la mise à jour');
+        appAlert(t('common.error'), data.message || t('profile.error_update'));
       }
     } catch (error) {
       console.error(error);
-      appAlert('Erreur', 'Impossible de se connecter au serveur');
+      appAlert(t('common.error'), t('errors.network'));
     }
   };
 
   const handleLogout = () => {
     playButtonSound();
     appAlert(
-      "Déconnexion",
-      "Voulez-vous vraiment vous déconnecter ?",
+      t('settings.logout'),
+      t('settings.logout_confirm'),
       [
-        { text: "Annuler", style: "cancel" },
-        { 
-          text: "Se déconnecter", 
+        { text: t('common.cancel'), style: "cancel" },
+        {
+          text: t('profile.logout_action'),
           style: "destructive",
           onPress: () => {
             dispatch(logout());
@@ -184,12 +186,12 @@ const ProfileScreen = ({ navigation }) => {
   const handleDeactivate = () => {
     playButtonSound();
     appAlert(
-      "Désactiver le compte",
-      "Êtes-vous sûr de vouloir désactiver votre compte ? Vous pourrez le réactiver en vous reconnectant.",
+      t('profile.deactivate_title'),
+      t('profile.deactivate_confirm'),
       [
-        { text: "Annuler", style: "cancel" },
-        { 
-          text: "Désactiver", 
+        { text: t('common.cancel'), style: "cancel" },
+        {
+          text: t('profile.deactivate_action'),
           style: "destructive",
           onPress: async () => {
             try {
@@ -202,15 +204,15 @@ const ProfileScreen = ({ navigation }) => {
               });
 
               if (response.ok) {
-                appAlert("Succès", "Votre compte a été désactivé.");
+                appAlert(t('common.success'), t('profile.account_deactivated'));
                 dispatch(logout());
                 navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
               } else {
-                appAlert("Erreur", "Impossible de désactiver le compte.");
+                appAlert(t('common.error'), t('profile.error_deactivate'));
               }
             } catch (error) {
               console.error(error);
-              appAlert("Erreur", "Erreur réseau.");
+              appAlert(t('common.error'), t('errors.network'));
             }
           }
         }
@@ -221,12 +223,12 @@ const ProfileScreen = ({ navigation }) => {
   const handleDelete = () => {
     playButtonSound();
     appAlert(
-      "Supprimer le compte",
-      "ATTENTION : Cette action est irréversible. Toutes vos données seront perdues définitivement.",
+      t('profile.delete_title'),
+      t('profile.delete_confirm'),
       [
-        { text: "Annuler", style: "cancel" },
-        { 
-          text: "Supprimer définitivement", 
+        { text: t('common.cancel'), style: "cancel" },
+        {
+          text: t('profile.delete_action'),
           style: "destructive",
           onPress: async () => {
             try {
@@ -236,15 +238,15 @@ const ProfileScreen = ({ navigation }) => {
               });
 
               if (response.ok) {
-                appAlert("Compte supprimé", "Votre compte a été supprimé avec succès.");
+                appAlert(t('profile.account_deleted_title'), t('profile.account_deleted'));
                 dispatch(logout());
                 navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
               } else {
-                appAlert("Erreur", "Impossible de supprimer le compte.");
+                appAlert(t('common.error'), t('profile.error_delete'));
               }
             } catch (error) {
               console.error(error);
-              appAlert("Erreur", "Erreur réseau.");
+              appAlert(t('common.error'), t('errors.network'));
             }
           }
         }
@@ -255,7 +257,7 @@ const ProfileScreen = ({ navigation }) => {
   const handleSelectPremiumAvatar = (avatarId) => {
     playButtonSound();
     if (!user?.isPremium && !user?.isEarlyAccess && !hasTempPremiumPions) {
-        appAlert('Premium requis', 'Ces avatars sont réservés aux membres Premium.');
+        appAlert(t('profile.premium_required_title'), t('profile.premium_required_avatars'));
         return;
     }
     setSelectedAvatar(avatarId);
@@ -271,7 +273,8 @@ const ProfileScreen = ({ navigation }) => {
       const source = getAvatarSource(selectedAvatar);
       return <Image source={source} style={styles.avatarImage} />;
     }
-    return <Ionicons name="person-circle-outline" size={getResponsiveSize(100)} color="#fff" />;
+    const fallbackSize = getResponsiveSize(isTablet ? 92 : 72);
+    return <Ionicons name="person-circle-outline" size={fallbackSize} color="#fff" />;
   };
 
   return (
@@ -286,13 +289,18 @@ const ProfileScreen = ({ navigation }) => {
             <TouchableOpacity onPress={() => { navigation.goBack(); }} style={styles.backButton}>
                 <Ionicons name="arrow-back" size={getResponsiveSize(24)} color="#fff" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Mon Profil</Text>
+            <Text style={styles.headerTitle}>{t('profile.title')}</Text>
             <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
                 <Ionicons name="log-out-outline" size={getResponsiveSize(24)} color="#ff6b6b" />
             </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={[styles.scrollContent, isTablet && styles.scrollContentWide]} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, isTablet && styles.scrollContentWide]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
 
           {isTablet ? (
             /* ── Disposition 2 colonnes (tablette & desktop) ── */
@@ -313,7 +321,7 @@ const ProfileScreen = ({ navigation }) => {
                       </TouchableOpacity>
                       {user?.isPremium && (
                         <LinearGradient colors={['#FFD700', '#FFA500']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.premiumBadge}>
-                          <Text style={styles.premiumText}>💎 {user.isEarlyAccess ? 'PREMIUM (OFFERT)' : 'PREMIUM'}</Text>
+                          <Text style={styles.premiumText}>💎 {user.isEarlyAccess ? t('profile.premium_gifted') : t('shop.premium')}</Text>
                         </LinearGradient>
                       )}
                       <Text style={styles.pseudoText}>
@@ -329,9 +337,9 @@ const ProfileScreen = ({ navigation }) => {
                         <MaterialCommunityIcons name="chess-pawn" size={getResponsiveSize(24)} color="#9b59b6" />
                       </View>
                       <View style={{flex: 1}}>
-                        <Text style={[styles.menuText, { flex: 0 }]}>Personnaliser mon Pion</Text>
+                        <Text style={[styles.menuText, { flex: 0 }]}>{t('profile.customize_pion')}</Text>
                         <Text style={{ fontSize: getResponsiveSize(12), color: '#aaa', marginTop: 2 }}>
-                          {user?.pawnSkin ? `Skin: ${user.pawnSkin.charAt(0).toUpperCase() + user.pawnSkin.slice(1)}` : 'Skin par défaut'}
+                          {user?.pawnSkin ? t('profile.skin_active', { skin: user.pawnSkin.charAt(0).toUpperCase() + user.pawnSkin.slice(1) }) : t('profile.skin_default')}
                         </Text>
                       </View>
                       <Ionicons name="chevron-forward" size={getResponsiveSize(20)} color="#ccc" />
@@ -340,29 +348,29 @@ const ProfileScreen = ({ navigation }) => {
                       <View style={[styles.iconBox, { backgroundColor: 'rgba(52, 152, 219, 0.2)' }]}>
                         <MaterialCommunityIcons name="history" size={getResponsiveSize(24)} color="#3498db" />
                       </View>
-                      <Text style={styles.menuText}>Historique des transactions</Text>
+                      <Text style={styles.menuText}>{t('profile.transaction_history')}</Text>
                       <Ionicons name="chevron-forward" size={getResponsiveSize(20)} color="#ccc" />
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.menuItem} onPress={() => { setIsEditing(!isEditing); if (isEditing) handleSave(); }}>
                       <View style={[styles.iconBox, { backgroundColor: 'rgba(46, 204, 113, 0.2)' }]}>
                         <Ionicons name={isEditing ? "save-outline" : "create-outline"} size={getResponsiveSize(24)} color="#2ecc71" />
                       </View>
-                      <Text style={styles.menuText}>{isEditing ? "Sauvegarder les modifications" : "Modifier mon profil"}</Text>
+                      <Text style={styles.menuText}>{isEditing ? t('profile.save_changes') : t('profile.edit_profile')}</Text>
                       <Ionicons name="chevron-forward" size={getResponsiveSize(20)} color="#ccc" />
                     </TouchableOpacity>
                   </View>
 
                   {isEditing && (
                     <View style={styles.editForm}>
-                      <Text style={styles.sectionHeader}>Informations personnelles</Text>
-                      <Text style={styles.inputLabel}>Pseudo</Text>
-                      <Input value={pseudo} onChangeText={setPseudo} placeholder="Votre pseudo" containerStyle={styles.inputContainer} />
-                      <Text style={styles.inputLabel}>Pays</Text>
+                      <Text style={styles.sectionHeader}>{t('profile.personal_info')}</Text>
+                      <Text style={styles.inputLabel}>{t('profile.pseudo_label')}</Text>
+                      <Input value={pseudo} onChangeText={setPseudo} placeholder={t('profile.pseudo_placeholder')} containerStyle={styles.inputContainer} />
+                      <Text style={styles.inputLabel}>{t('profile.country_label')}</Text>
                       <TouchableOpacity style={styles.countrySelectButton} onPress={() => setShowCountryModal(true)}>
-                        <Text style={styles.countrySelectText}>{selectedCountry ? `Drapeau actuel: ${selectedCountry}` : 'Choisir un pays'}</Text>
+                        <Text style={styles.countrySelectText}>{selectedCountry ? t('profile.current_flag', { flag: selectedCountry }) : t('profile.choose_country')}</Text>
                         <Ionicons name="chevron-down" size={getResponsiveSize(20)} color="#ccc" />
                       </TouchableOpacity>
-                      <Button title="Enregistrer" onPress={handleSave} style={styles.saveButton} />
+                      <Button title={t('common.save')} onPress={handleSave} style={styles.saveButton} />
                     </View>
                   )}
                 </View>
@@ -373,19 +381,19 @@ const ProfileScreen = ({ navigation }) => {
                     <View style={styles.heroRow}>
                       <View style={styles.heroStat}>
                         <Text style={styles.heroValue}>{(user?.coins || 0).toLocaleString()}</Text>
-                        <Text style={styles.heroLabel}>💰 Pièces</Text>
+                        <Text style={styles.heroLabel}>💰 {t('profile.coins_label')}</Text>
                       </View>
                       <View style={styles.heroSep} />
                       <View style={styles.heroStat}>
                         <Text style={[styles.heroValue, { color: T.blue }]}>{user?.ranking ?? '—'}</Text>
-                        <Text style={styles.heroLabel}>🏆 Classement</Text>
+                        <Text style={styles.heroLabel}>🏆 {t('profile.ranking_label')}</Text>
                       </View>
                       {(user?.niveau || user?.level) ? (
                         <>
                           <View style={styles.heroSep} />
                           <View style={styles.heroStat}>
-                            <Text style={[styles.heroValue, { color: T.purple }]}>Nv.{user?.niveau || user?.level}</Text>
-                            <Text style={styles.heroLabel}>Niveau</Text>
+                            <Text style={[styles.heroValue, { color: T.purple }]}>{t('profile.level_prefix')}{user?.niveau || user?.level}</Text>
+                            <Text style={styles.heroLabel}>{t('profile.level')}</Text>
                           </View>
                         </>
                       ) : null}
@@ -393,27 +401,27 @@ const ProfileScreen = ({ navigation }) => {
                     <View style={styles.statsGrid}>
                       <View style={styles.statCard}>
                         <Text style={[styles.statValue, { color: T.green }]}>{user?.stats?.wins || 0}</Text>
-                        <Text style={styles.statLabel}>Victoires</Text>
+                        <Text style={styles.statLabel}>{t('profile.wins')}</Text>
                       </View>
                       <View style={styles.statCard}>
                         <Text style={[styles.statValue, { color: T.red }]}>{user?.stats?.losses || 0}</Text>
-                        <Text style={styles.statLabel}>Défaites</Text>
+                        <Text style={styles.statLabel}>{t('profile.losses')}</Text>
                       </View>
                       <View style={styles.statCard}>
                         <Text style={[styles.statValue, { color: T.textDim }]}>{user?.stats?.abandons || 0}</Text>
-                        <Text style={styles.statLabel}>Abandons</Text>
+                        <Text style={styles.statLabel}>{t('profile.abandons')}</Text>
                       </View>
                       <View style={styles.statCard}>
                         <Text style={[styles.statValue, { color: T.gold }]}>
                           {(() => { const w = user?.stats?.wins || 0; const l = user?.stats?.losses || 0; return w + l > 0 ? Math.round((w / (w + l)) * 100) + '%' : '—'; })()}
                         </Text>
-                        <Text style={styles.statLabel}>Ratio V/D</Text>
+                        <Text style={styles.statLabel}>{t('profile.win_loss_ratio')}</Text>
                       </View>
                       <View style={styles.statCard}>
                         <Text style={[styles.statValue, { color: T.textDim }]}>
                           {(user?.stats?.wins || 0) + (user?.stats?.losses || 0) + (user?.stats?.abandons || 0)}
                         </Text>
-                        <Text style={styles.statLabel}>Parties</Text>
+                        <Text style={styles.statLabel}>{t('profile.games_played')}</Text>
                       </View>
                     </View>
                     {(() => {
@@ -422,7 +430,7 @@ const ProfileScreen = ({ navigation }) => {
                       const pct = w + l > 0 ? Math.round((w / (w + l)) * 100) : 0;
                       return (
                         <View style={styles.winRateContainer}>
-                          <Text style={styles.winRateLabel}>TAUX DE VICTOIRE — {pct}%</Text>
+                          <Text style={styles.winRateLabel}>{t('profile.winrate_label', { pct })}</Text>
                           <View style={styles.winRateTrack}>
                             <View style={[styles.winRateFill, { width: `${pct}%` }]} />
                           </View>
@@ -432,14 +440,14 @@ const ProfileScreen = ({ navigation }) => {
                   </View>
 
                   <View style={styles.dangerZone}>
-                    <Text style={styles.dangerTitle}>Zone de danger</Text>
+                    <Text style={styles.dangerTitle}>{t('profile.danger_zone')}</Text>
                     <TouchableOpacity style={styles.dangerButton} onPress={handleDeactivate}>
                       <Ionicons name="pause-circle-outline" size={getResponsiveSize(20)} color="#f39c12" />
-                      <Text style={[styles.dangerButtonText, { color: '#f39c12' }]}>Désactiver mon compte</Text>
+                      <Text style={[styles.dangerButtonText, { color: '#f39c12' }]}>{t('profile.deactivate_account')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.dangerButton} onPress={handleDelete}>
                       <Ionicons name="trash-outline" size={getResponsiveSize(20)} color="#e74c3c" />
-                      <Text style={[styles.dangerButtonText, { color: '#e74c3c' }]}>Supprimer mon compte</Text>
+                      <Text style={[styles.dangerButtonText, { color: '#e74c3c' }]}>{t('profile.delete_account')}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -462,7 +470,7 @@ const ProfileScreen = ({ navigation }) => {
                   </TouchableOpacity>
                   {user?.isPremium && (
                     <LinearGradient colors={['#FFD700', '#FFA500']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.premiumBadge}>
-                      <Text style={styles.premiumText}>💎 {user.isEarlyAccess ? 'PREMIUM (OFFERT)' : 'PREMIUM'}</Text>
+                      <Text style={styles.premiumText}>💎 {user.isEarlyAccess ? t('profile.premium_gifted') : t('shop.premium')}</Text>
                     </LinearGradient>
                   )}
                   <Text style={styles.pseudoText}>
@@ -474,19 +482,19 @@ const ProfileScreen = ({ navigation }) => {
                 <View style={styles.heroRow}>
                   <View style={styles.heroStat}>
                     <Text style={styles.heroValue}>{(user?.coins || 0).toLocaleString()}</Text>
-                    <Text style={styles.heroLabel}>💰 Pièces</Text>
+                    <Text style={styles.heroLabel}>💰 {t('profile.coins_label')}</Text>
                   </View>
                   <View style={styles.heroSep} />
                   <View style={styles.heroStat}>
                     <Text style={[styles.heroValue, { color: T.blue }]}>{user?.ranking ?? '—'}</Text>
-                    <Text style={styles.heroLabel}>🏆 Classement</Text>
+                    <Text style={styles.heroLabel}>🏆 {t('profile.ranking_label')}</Text>
                   </View>
                   {(user?.niveau || user?.level) ? (
                     <>
                       <View style={styles.heroSep} />
                       <View style={styles.heroStat}>
-                        <Text style={[styles.heroValue, { color: T.purple }]}>Nv.{user?.niveau || user?.level}</Text>
-                        <Text style={styles.heroLabel}>Niveau</Text>
+                        <Text style={[styles.heroValue, { color: T.purple }]}>{t('profile.level_prefix')}{user?.niveau || user?.level}</Text>
+                        <Text style={styles.heroLabel}>{t('profile.level')}</Text>
                       </View>
                     </>
                   ) : null}
@@ -495,27 +503,27 @@ const ProfileScreen = ({ navigation }) => {
                 <View style={styles.statsGrid}>
                   <View style={styles.statCard}>
                     <Text style={[styles.statValue, { color: T.green }]}>{user?.stats?.wins || 0}</Text>
-                    <Text style={styles.statLabel}>Victoires</Text>
+                    <Text style={styles.statLabel}>{t('profile.wins')}</Text>
                   </View>
                   <View style={styles.statCard}>
                     <Text style={[styles.statValue, { color: T.red }]}>{user?.stats?.losses || 0}</Text>
-                    <Text style={styles.statLabel}>Défaites</Text>
+                    <Text style={styles.statLabel}>{t('profile.losses')}</Text>
                   </View>
                   <View style={styles.statCard}>
                     <Text style={[styles.statValue, { color: T.textDim }]}>{user?.stats?.abandons || 0}</Text>
-                    <Text style={styles.statLabel}>Abandons</Text>
+                    <Text style={styles.statLabel}>{t('profile.abandons')}</Text>
                   </View>
                   <View style={styles.statCard}>
                     <Text style={[styles.statValue, { color: T.gold }]}>
                       {(() => { const w = user?.stats?.wins || 0; const l = user?.stats?.losses || 0; return w + l > 0 ? Math.round((w / (w + l)) * 100) + '%' : '—'; })()}
                     </Text>
-                    <Text style={styles.statLabel}>Ratio V/D</Text>
+                    <Text style={styles.statLabel}>{t('profile.win_loss_ratio')}</Text>
                   </View>
                   <View style={styles.statCard}>
                     <Text style={[styles.statValue, { color: T.textDim }]}>
                       {(user?.stats?.wins || 0) + (user?.stats?.losses || 0) + (user?.stats?.abandons || 0)}
                     </Text>
-                    <Text style={styles.statLabel}>Parties</Text>
+                    <Text style={styles.statLabel}>{t('profile.games_played')}</Text>
                   </View>
                 </View>
 
@@ -525,7 +533,7 @@ const ProfileScreen = ({ navigation }) => {
                   const pct = w + l > 0 ? Math.round((w / (w + l)) * 100) : 0;
                   return (
                     <View style={styles.winRateContainer}>
-                      <Text style={styles.winRateLabel}>TAUX DE VICTOIRE — {pct}%</Text>
+                      <Text style={styles.winRateLabel}>{t('profile.winrate_label', { pct })}</Text>
                       <View style={styles.winRateTrack}>
                         <View style={[styles.winRateFill, { width: `${pct}%` }]} />
                       </View>
@@ -540,9 +548,9 @@ const ProfileScreen = ({ navigation }) => {
                     <MaterialCommunityIcons name="chess-pawn" size={getResponsiveSize(24)} color="#9b59b6" />
                   </View>
                   <View style={{flex: 1}}>
-                    <Text style={[styles.menuText, { flex: 0 }]}>Personnaliser mon Pion</Text>
+                    <Text style={[styles.menuText, { flex: 0 }]}>{t('profile.customize_pion')}</Text>
                     <Text style={{ fontSize: getResponsiveSize(12), color: '#aaa', marginTop: 2 }}>
-                      {user?.pawnSkin ? `Skin: ${user.pawnSkin.charAt(0).toUpperCase() + user.pawnSkin.slice(1)}` : 'Skin par défaut'}
+                      {user?.pawnSkin ? t('profile.skin_active', { skin: user.pawnSkin.charAt(0).toUpperCase() + user.pawnSkin.slice(1) }) : t('profile.skin_default')}
                     </Text>
                   </View>
                   <Ionicons name="chevron-forward" size={getResponsiveSize(20)} color="#ccc" />
@@ -551,41 +559,41 @@ const ProfileScreen = ({ navigation }) => {
                   <View style={[styles.iconBox, { backgroundColor: 'rgba(52, 152, 219, 0.2)' }]}>
                     <MaterialCommunityIcons name="history" size={getResponsiveSize(24)} color="#3498db" />
                   </View>
-                  <Text style={styles.menuText}>Historique des transactions</Text>
+                  <Text style={styles.menuText}>{t('profile.transaction_history')}</Text>
                   <Ionicons name="chevron-forward" size={getResponsiveSize(20)} color="#ccc" />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.menuItem} onPress={() => { setIsEditing(!isEditing); if (isEditing) handleSave(); }}>
                   <View style={[styles.iconBox, { backgroundColor: 'rgba(46, 204, 113, 0.2)' }]}>
                     <Ionicons name={isEditing ? "save-outline" : "create-outline"} size={getResponsiveSize(24)} color="#2ecc71" />
                   </View>
-                  <Text style={styles.menuText}>{isEditing ? "Sauvegarder les modifications" : "Modifier mon profil"}</Text>
+                  <Text style={styles.menuText}>{isEditing ? t('profile.save_changes') : t('profile.edit_profile')}</Text>
                   <Ionicons name="chevron-forward" size={getResponsiveSize(20)} color="#ccc" />
                 </TouchableOpacity>
               </View>
 
               {isEditing && (
                 <View style={styles.editForm}>
-                  <Text style={styles.sectionHeader}>Informations personnelles</Text>
-                  <Text style={styles.inputLabel}>Pseudo</Text>
-                  <Input value={pseudo} onChangeText={setPseudo} placeholder="Votre pseudo" containerStyle={styles.inputContainer} />
-                  <Text style={styles.inputLabel}>Pays</Text>
+                  <Text style={styles.sectionHeader}>{t('profile.personal_info')}</Text>
+                  <Text style={styles.inputLabel}>{t('profile.pseudo_label')}</Text>
+                  <Input value={pseudo} onChangeText={setPseudo} placeholder={t('profile.pseudo_placeholder')} containerStyle={styles.inputContainer} />
+                  <Text style={styles.inputLabel}>{t('profile.country_label')}</Text>
                   <TouchableOpacity style={styles.countrySelectButton} onPress={() => setShowCountryModal(true)}>
-                    <Text style={styles.countrySelectText}>{selectedCountry ? `Drapeau actuel: ${selectedCountry}` : 'Choisir un pays'}</Text>
+                    <Text style={styles.countrySelectText}>{selectedCountry ? t('profile.current_flag', { flag: selectedCountry }) : t('profile.choose_country')}</Text>
                     <Ionicons name="chevron-down" size={getResponsiveSize(20)} color="#ccc" />
                   </TouchableOpacity>
-                  <Button title="Enregistrer" onPress={handleSave} style={styles.saveButton} />
+                  <Button title={t('common.save')} onPress={handleSave} style={styles.saveButton} />
                 </View>
               )}
 
               <View style={styles.dangerZone}>
-                <Text style={styles.dangerTitle}>Zone de danger</Text>
+                <Text style={styles.dangerTitle}>{t('profile.danger_zone')}</Text>
                 <TouchableOpacity style={styles.dangerButton} onPress={handleDeactivate}>
                   <Ionicons name="pause-circle-outline" size={getResponsiveSize(20)} color="#f39c12" />
-                  <Text style={[styles.dangerButtonText, { color: '#f39c12' }]}>Désactiver mon compte</Text>
+                  <Text style={[styles.dangerButtonText, { color: '#f39c12' }]}>{t('profile.deactivate_account')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.dangerButton} onPress={handleDelete}>
                   <Ionicons name="trash-outline" size={getResponsiveSize(20)} color="#e74c3c" />
-                  <Text style={[styles.dangerButtonText, { color: '#e74c3c' }]}>Supprimer mon compte</Text>
+                  <Text style={[styles.dangerButtonText, { color: '#e74c3c' }]}>{t('profile.delete_account')}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -600,7 +608,7 @@ const ProfileScreen = ({ navigation }) => {
         <View style={styles.modalOverlay}>
             <View style={[styles.modalContent, isTablet && styles.modalContentTablet]}>
                 <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>Historique</Text>
+                    <Text style={styles.modalTitle}>{t('profile.history_modal_title')}</Text>
                     <TouchableOpacity onPress={() => setShowHistoryModal(false)} style={styles.closeButton}>
                         <Ionicons name="close" size={getResponsiveSize(24)} color="#fff" />
                     </TouchableOpacity>
@@ -609,20 +617,32 @@ const ProfileScreen = ({ navigation }) => {
                 {transactions.length === 0 ? (
                     <View style={styles.emptyState}>
                         <MaterialCommunityIcons name="clipboard-text-off-outline" size={getResponsiveSize(60)} color="#555" />
-                        <Text style={styles.emptyText}>Aucune transaction récente</Text>
+                        <Text style={styles.emptyText}>{t('profile.no_transactions')}</Text>
                     </View>
                 ) : (
-                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: getResponsiveSize(20) }}>
+                    <ScrollView
+                      showsVerticalScrollIndicator={false}
+                      contentContainerStyle={{ paddingBottom: getResponsiveSize(20) }}
+                      keyboardShouldPersistTaps="handled"
+                      keyboardDismissMode="on-drag"
+                    >
                         {(() => {
                             const today = new Date().toDateString();
                             const yesterday = new Date(Date.now() - 86400000).toDateString();
-                            const groups = { "Aujourd'hui": [], "Hier": [], "Plus ancien": [] };
-                            
+                            const groups = {
+                                [t('profile.today')]: [],
+                                [t('profile.yesterday')]: [],
+                                [t('profile.older')]: []
+                            };
+                            const todayLabel = t('profile.today');
+                            const yesterdayLabel = t('profile.yesterday');
+                            const olderLabel = t('profile.older');
+
                             transactions.forEach(tx => {
                                 const d = new Date(tx.timestamp).toDateString();
-                                if (d === today) groups["Aujourd'hui"].push(tx);
-                                else if (d === yesterday) groups["Hier"].push(tx);
-                                else groups["Plus ancien"].push(tx);
+                                if (d === today) groups[todayLabel].push(tx);
+                                else if (d === yesterday) groups[yesterdayLabel].push(tx);
+                                else groups[olderLabel].push(tx);
                             });
 
                             return Object.entries(groups).map(([label, txs]) => (
@@ -640,7 +660,7 @@ const ProfileScreen = ({ navigation }) => {
                                                     </Text>
                                                 </View>
                                                 <View style={styles.txDetails}>
-                                                    <Text style={styles.txReason} numberOfLines={1}>{tx.raison || 'Transaction'}</Text>
+                                                    <Text style={styles.txReason} numberOfLines={1}>{tx.raison || t('profile.transaction_default')}</Text>
                                                     <Text style={styles.txDate}>
                                                         {new Date(tx.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </Text>
@@ -668,21 +688,25 @@ const ProfileScreen = ({ navigation }) => {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, isTablet && styles.modalContentTablet]}>
             <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Changer d'avatar</Text>
+                <Text style={styles.modalTitle}>{t('profile.change_avatar')}</Text>
                 <TouchableOpacity onPress={() => setShowAvatarModal(false)} style={styles.closeButton}>
                     <Ionicons name="close" size={getResponsiveSize(24)} color="#fff" />
                 </TouchableOpacity>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+            >
               
               <TouchableOpacity style={styles.uploadOption} onPress={pickImage}>
                 <View style={styles.uploadIconCircle}>
                     <Ionicons name="images-outline" size={getResponsiveSize(24)} color="#fff" />
                 </View>
-                <Text style={styles.uploadText}>Choisir depuis la galerie</Text>
+                <Text style={styles.uploadText}>{t('profile.choose_from_gallery')}</Text>
               </TouchableOpacity>
 
-              <Text style={styles.separator}>Avatars Classiques</Text>
+              <Text style={styles.separator}>{t('profile.classic_avatars')}</Text>
               <View style={styles.avatarGrid}>
                 {AVATARS.map((avatar, index) => (
                   <TouchableOpacity key={index} onPress={() => handleSelectAvatar(avatar)} style={styles.avatarGridItem}>
@@ -692,7 +716,7 @@ const ProfileScreen = ({ navigation }) => {
               </View>
 
               <Text style={[styles.separator, { color: T.gold, marginTop: getResponsiveSize(10) }]}>
-                ✨ Avatars Premium
+                ✨ {t('profile.premium_avatars')}
               </Text>
               <View style={styles.avatarGrid}>
                 {PREMIUM_AVATARS.map((avatar, index) => {
@@ -733,7 +757,7 @@ const ProfileScreen = ({ navigation }) => {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, isTablet && styles.modalContentTablet]}>
             <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Choisir votre pays</Text>
+                <Text style={styles.modalTitle}>{t('profile.choose_country_title')}</Text>
                 <TouchableOpacity onPress={() => setShowCountryModal(false)} style={styles.closeButton}>
                     <Ionicons name="close" size={getResponsiveSize(24)} color="#fff" />
                 </TouchableOpacity>
@@ -742,7 +766,7 @@ const ProfileScreen = ({ navigation }) => {
             <Input 
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="Rechercher un pays..."
+              placeholder={t('profile.search_country')}
               style={{ marginBottom: getResponsiveSize(15) }}
             />
 
@@ -751,6 +775,8 @@ const ProfileScreen = ({ navigation }) => {
               keyExtractor={(item) => item.name}
               numColumns={3}
               showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
               renderItem={({ item }) => (
                 <TouchableOpacity style={styles.countryItem} onPress={() => { handleSelectCountry(item); }}>
                   <Text style={styles.countryFlag}>{item.flag}</Text>

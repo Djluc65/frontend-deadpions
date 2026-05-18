@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { Modal, Pressable, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { playButtonSound } from '../../utils/soundManager';
 import { getResponsiveSize } from '../../utils/responsive';
 import { modalTheme } from '../../utils/modalTheme';
@@ -11,8 +12,9 @@ const FriendsMenuModal = memo(({
   onNavigateToLiveConfig,
   onOpenFriendConfig,
   onOpenJoinByCode,
-  t 
 }) => {
+  const { t } = useTranslation();
+
   return (
     <Modal
       animationType="none"
@@ -23,7 +25,7 @@ const FriendsMenuModal = memo(({
       <View style={styles.modalOverlay}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={styles.friendsModalContent} onStartShouldSetResponder={() => true}>
-          <Text style={styles.friendsModalTitle}>{t.friends}</Text>
+          <Text style={styles.friendsModalTitle}>{t('game.friends_tab')}</Text>
           
           {/* Bouton pour créer une Salle Live (Publique) */}
           <TouchableOpacity 
@@ -34,9 +36,9 @@ const FriendsMenuModal = memo(({
             }}
           >
             <Ionicons name="radio-outline" size={getResponsiveSize(24)} color="#f1c40f" style={{ marginRight: getResponsiveSize(10) }} />
-            <Text style={styles.menuButtonText}>Créer une Salle Live</Text>
+            <Text style={styles.menuButtonText}>{t('friends_menu.create_live_room')}</Text>
             <View style={{ backgroundColor: '#f1c40f', paddingHorizontal: getResponsiveSize(6), paddingVertical: getResponsiveSize(2), borderRadius: getResponsiveSize(4), marginLeft: getResponsiveSize(10) }}>
-                <Text style={{ color: '#041c55', fontSize: getResponsiveSize(10), fontWeight: 'bold' }}>LIVE</Text>
+                <Text style={{ color: '#041c55', fontSize: getResponsiveSize(10), fontWeight: 'bold' }}>{t('live_room.live_badge')}</Text>
             </View>
           </TouchableOpacity>
 
@@ -49,7 +51,7 @@ const FriendsMenuModal = memo(({
             }}
           >
             <Ionicons name="add-circle" size={getResponsiveSize(24)} color="#fff" style={{ marginRight: getResponsiveSize(10) }} />
-            <Text style={styles.menuButtonText}>Jouer avec un ami</Text>
+            <Text style={styles.menuButtonText}>{t('friends_menu.play_with_friend')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -60,7 +62,7 @@ const FriendsMenuModal = memo(({
             }}
           >
             <Ionicons name="key-outline" size={getResponsiveSize(24)} color="#fff" style={{ marginRight: getResponsiveSize(10) }} />
-            <Text style={styles.menuButtonText}>Rejoindre avec un code</Text>
+            <Text style={styles.menuButtonText}>{t('live_room.join_with_code')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -70,7 +72,7 @@ const FriendsMenuModal = memo(({
                 onClose();
             }}
           >
-            <Text style={styles.closeButtonText}>{t.close}</Text>
+            <Text style={styles.closeButtonText}>{t('common.close')}</Text>
           </TouchableOpacity>
         </View>
       </View>

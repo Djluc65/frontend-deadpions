@@ -7,7 +7,7 @@ import settingsReducer, {
 const initialState = {
   isMusicEnabled: true,
   isSoundEnabled: true,
-  language: 'fr',
+  language: null,
 };
 
 describe('settingsSlice — état initial', () => {

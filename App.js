@@ -1,10 +1,11 @@
 import 'react-native-gesture-handler';
+import i18n from './src/i18n/index';
 import React from 'react';
 import * as Linking from 'expo-linking';
 import { NavigationContainer } from '@react-navigation/native';
 import { Alert } from 'react-native';
 import { useKeepAwake } from 'expo-keep-awake';
-import { Provider } from 'react-redux';
+import { Provider, useSelector } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from './src/redux/store';
 import { StatusBar } from 'expo-status-bar';
@@ -34,6 +35,18 @@ const linking = {
   },
 };
 
+function LanguageSync() {
+  const language = useSelector((state) => state.settings?.language);
+
+  React.useEffect(() => {
+    if (language && i18n.language !== language) {
+      i18n.changeLanguage(language);
+    }
+  }, [language]);
+
+  return null;
+}
+
 export default function App() {
   useKeepAwake();
 
@@ -52,6 +65,7 @@ export default function App() {
             <QueryClientProvider client={queryClient}>
               <CoinsProvider>
                 <NavigationContainer linking={linking} fallback={<React.Fragment />}>
+                  <LanguageSync />
                   <AppAlertHost />
                   <AppNavigator />
                   <StatusBar style="light" />

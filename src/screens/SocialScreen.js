@@ -20,6 +20,7 @@ import { AppTouchableOpacity as TouchableOpacity } from '../components/common/Ap
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector, useDispatch } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { API_URL } from '../config';
 import socket from '../services/socket';
 import { setNotificationsCount } from '../redux/slices/socialSlice';
@@ -31,6 +32,7 @@ import AnimatedSearchBar from '../components/ui/AnimatedSearchBar';
 import GlowWrapper from '../components/ui/GlowWrapper';
 
 const SocialScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
   const isDesktop = Platform.OS === 'web' && width >= DESKTOP_BREAKPOINT;
@@ -79,12 +81,12 @@ const SocialScreen = ({ navigation }) => {
         <View style={styles.bgOverlay} pointerEvents="none" />
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.loginGate}>
-            <Text style={styles.loginGateTitle}>Connexion requise</Text>
+            <Text style={styles.loginGateTitle}>{t('social.login_required')}</Text>
             <Text style={styles.loginGateText}>
-              Connectez-vous pour accéder aux amis, discussions et invitations.
+              {t('social.login_required_desc')}
             </Text>
             <TouchableOpacity style={[styles.loginGateBtn, isTablet && styles.loginGateBtnTablet]} onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.loginGateBtnText}>Se connecter</Text>
+              <Text style={styles.loginGateBtnText}>{t('auth.login')}</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -101,11 +103,11 @@ const SocialScreen = ({ navigation }) => {
 
   const getStatusInfo = (isOnline, lastSeen) => {
     if (isOnline) {
-      return { color: '#2ecc71', text: 'En ligne' }; // Green
+      return { color: '#2ecc71', text: t('social.online') }; // Green
     }
-    
+
     if (!lastSeen) {
-       return { color: '#95a5a6', text: 'Hors ligne' }; // Grey
+       return { color: '#95a5a6', text: t('social.offline') }; // Grey
     }
 
     const now = new Date();
@@ -118,48 +120,50 @@ const SocialScreen = ({ navigation }) => {
 
     // < 1 min: Yellow with seconds
     if (seconds < 60) {
-      return { 
+      return {
         color: '#f1c40f', // Yellow
-        text: `Depuis ${Math.max(0, seconds)} sec` 
+        text: t('social.last_seen_seconds', { count: Math.max(0, seconds) })
       };
     }
 
     // 1-59 min: Grey
     if (minutes < 60) {
-      return { 
+      return {
         color: '#95a5a6', // Grey
-        text: `Depuis ${minutes} min` 
+        text: t('social.last_seen_minutes', { count: minutes })
       };
     }
 
     // 1-23 hours: Grey
     if (hours < 24) {
       const restMin = minutes % 60;
-      const text = restMin > 0 ? `Depuis ${hours}h ${restMin}min` : `Depuis ${hours}h`;
+      const text = restMin > 0
+        ? t('social.last_seen_hours_minutes', { hours, minutes: restMin })
+        : t('social.last_seen_hours', { count: hours });
       return { color: '#95a5a6', text };
     }
 
     // 1-6 days: Grey
     if (days < 7) {
-      return { 
-        color: '#95a5a6', 
-        text: `Depuis ${days} jour${days > 1 ? 's' : ''}` 
+      return {
+        color: '#95a5a6',
+        text: t('social.last_seen_days', { count: days })
       };
     }
 
     // 7+ days: Grey (Weeks or Months)
     if (days < 30) {
       const weeks = Math.floor(days / 7);
-      return { 
-        color: '#95a5a6', 
-        text: `Depuis ${weeks} semaine${weeks > 1 ? 's' : ''}` 
+      return {
+        color: '#95a5a6',
+        text: t('social.last_seen_weeks', { count: weeks })
       };
     }
 
     const months = Math.floor(days / 30);
-    return { 
-      color: '#95a5a6', 
-      text: `Depuis ${months} mois` 
+    return {
+      color: '#95a5a6',
+      text: t('social.last_seen_months', { count: months })
     };
   };
 
@@ -182,7 +186,7 @@ const SocialScreen = ({ navigation }) => {
                         date.getFullYear() === yesterday.getFullYear();
 
     if (isYesterday) {
-      return 'Hier';
+      return t('social.yesterday');
     }
     
     return date.toLocaleDateString();
@@ -263,13 +267,13 @@ const SocialScreen = ({ navigation }) => {
           lastMessage: c.lastMessage,
           timestamp: formatHeureRecente(c.timestamp),
           unread: c.unread,
-          lastRead: c.lastRead ? 'Lu' : ''
+          lastRead: c.lastRead ? t('social.read') : ''
         })));
       }
 
     } catch (error) {
       console.error("Error fetching social data:", error);
-      appAlert("Erreur", "Impossible de charger les données sociales.");
+      appAlert(t('common.error'), t('social.load_error'));
     } finally {
       setLoading(false);
     }
@@ -296,7 +300,7 @@ const SocialScreen = ({ navigation }) => {
 
       const handleFriendRequest = () => {
         fetchData();
-        appAlert("Notification", "Nouvelle demande d'ami reçue !");
+        appAlert(t('social.notification'), t('social.new_friend_request'));
       };
 
       const handleReceiveMessage = (message) => {
@@ -370,12 +374,12 @@ const SocialScreen = ({ navigation }) => {
 
       const handleInvitationError = (msg) => {
           setIsWaitingForResponse(false);
-          appAlert("Erreur", msg);
+          appAlert(t('common.error'), msg);
       };
 
       const handleInvitationDeclined = (data) => {
           setIsWaitingForResponse(false);
-          appAlert("Refusé", `${data.recipientPseudo || 'L\'adversaire'} a refusé l'invitation.`);
+          appAlert(t('social.invite_declined_title'), t('social.invite_declined_by', { name: data.recipientPseudo || t('social.opponent') }));
       };
 
       const handleGameStart = (data) => {
@@ -431,17 +435,17 @@ const SocialScreen = ({ navigation }) => {
 
   const handleBlockFriend = (friend) => {
     // Implement block logic if API supports it
-    appAlert("Info", "Fonctionnalité de blocage à venir.");
+    appAlert(t('social.info'), t('social.block_coming_soon'));
   };
 
   const handleRemoveFriend = (friend) => {
     appAlert(
-      "Supprimer l'ami",
-      `Êtes-vous sûr de vouloir supprimer ${friend.name} de vos amis ?`,
+      t('social.remove_friend'),
+      t('social.remove_friend_confirm', { name: friend.name }),
       [
-        { text: "Annuler", style: "cancel" },
-        { 
-          text: "Supprimer", 
+        { text: t('common.cancel'), style: "cancel" },
+        {
+          text: t('common.delete'),
           style: "destructive",
           onPress: async () => {
             try {
@@ -451,13 +455,13 @@ const SocialScreen = ({ navigation }) => {
               });
               if (res.ok) {
                 setFriends(prev => prev.filter(f => f.id !== friend.id));
-                appAlert("Succès", "Ami supprimé.");
+                appAlert(t('common.success'), t('social.friend_removed'));
               } else {
                 const data = await res.json();
-                appAlert("Erreur", data.message);
+                appAlert(t('common.error'), data.message);
               }
             } catch (error) {
-              appAlert("Erreur", "Erreur réseau.");
+              appAlert(t('common.error'), t('errors.network'));
             }
           }
         }
@@ -479,13 +483,13 @@ const SocialScreen = ({ navigation }) => {
       if (res.ok) {
         // Optimistic update or refetch
         fetchData();
-        appAlert("Succès", "Demande acceptée.");
+        appAlert(t('common.success'), t('social.request_accepted'));
       } else {
         const data = await res.json();
-        appAlert("Erreur", data.message);
+        appAlert(t('common.error'), data.message);
       }
     } catch (error) {
-      appAlert("Erreur", "Erreur réseau.");
+      appAlert(t('common.error'), t('errors.network'));
     }
   };
 
@@ -504,15 +508,15 @@ const SocialScreen = ({ navigation }) => {
         setRequestsReceived(prev => prev.filter(r => r.id !== id));
       } else {
         const data = await res.json();
-        appAlert("Erreur", data.message);
+        appAlert(t('common.error'), data.message);
       }
     } catch (error) {
-      appAlert("Erreur", "Erreur réseau.");
+      appAlert(t('common.error'), t('errors.network'));
     }
   };
 
   const handleCancelRequest = async (id) => {
-    appAlert("Info", "Annulation spécifique non implémentée.");
+    appAlert(t('social.info'), t('social.cancel_not_implemented'));
   };
 
   const handleCancelLatestRequest = async () => {
@@ -526,22 +530,22 @@ const SocialScreen = ({ navigation }) => {
       const data = await res.json();
       if (res.ok) {
         fetchData();
-        appAlert("Succès", data.message || "Dernière demande annulée.");
+        appAlert(t('common.success'), data.message || t('social.latest_request_cancelled'));
       } else {
-        appAlert("Erreur", data.message || "Impossible d'annuler la demande.");
+        appAlert(t('common.error'), data.message || t('social.cancel_request_error'));
       }
     } catch (error) {
-      appAlert("Erreur", "Erreur réseau.");
+      appAlert(t('common.error'), t('errors.network'));
     }
   };
 
   const sendFriendRequestToUser = useCallback(async (targetUser) => {
     if (!targetUser?._id) {
-      appAlert('Erreur', "Utilisateur invalide.");
+      appAlert(t('common.error'), t('social.invalid_user'));
       return;
     }
     if ((user?._id || user?.id) && (targetUser._id?.toString?.() === (user?._id || user?.id)?.toString?.())) {
-      appAlert('Info', "Vous ne pouvez pas vous ajouter vous-même.");
+      appAlert(t('social.info'), t('social.cannot_add_self'));
       return;
     }
     try {
@@ -556,18 +560,18 @@ const SocialScreen = ({ navigation }) => {
 
       const data = await res.json();
       if (res.ok) {
-        appAlert("Succès", `Demande envoyée à ${targetUser.pseudo}`);
+        appAlert(t('common.success'), t('social.request_sent_to', { pseudo: targetUser.pseudo }));
         setNewFriendName('');
         setFriendSearchResults([]);
         setIsAddFriendVisible(false);
         fetchData();
       } else {
-        appAlert("Erreur", data.message);
+        appAlert(t('common.error'), data.message);
       }
     } catch (error) {
-      appAlert("Erreur", "Erreur réseau.");
+      appAlert(t('common.error'), t('errors.network'));
     }
-  }, [fetchData, token, user?._id, user?.id]);
+  }, [fetchData, token, user?._id, user?.id, t]);
 
   useEffect(() => {
     if (!isAddFriendVisible) {
@@ -643,21 +647,21 @@ const SocialScreen = ({ navigation }) => {
       const responseData = await searchRes.json();
 
       if (!searchRes.ok) {
-        appAlert("Erreur", responseData.message || "Erreur lors de la recherche.");
+        appAlert(t('common.error'), responseData.message || t('social.search_error'));
         return;
       }
 
       const users = Array.isArray(responseData) ? responseData : [];
 
       if (users.length === 0) {
-        appAlert("Erreur", "Utilisateur non trouvé.");
+        appAlert(t('common.error'), t('social.user_not_found'));
         return;
       }
 
       await sendFriendRequestToUser(users[0]);
     } catch (error) {
       console.error(error);
-      appAlert("Erreur", "Erreur réseau.");
+      appAlert(t('common.error'), t('errors.network'));
     }
   };
 
@@ -725,12 +729,12 @@ const SocialScreen = ({ navigation }) => {
 
   const renderTabs = () => (
     <View style={styles.tabContainer}>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[styles.tab, activeTab === 'discussions' && styles.activeTab]}
         onPress={() => setActiveTab('discussions')}
       >
         <Text style={[styles.tabText, activeTab === 'discussions' && styles.activeTabText]}>
-          Discussions
+          {t('social.discussions')}
         </Text>
         {chats.some(c => c.unread > 0) && (
           <View style={styles.badge}>
@@ -741,21 +745,21 @@ const SocialScreen = ({ navigation }) => {
         )}
       </TouchableOpacity>
 
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[styles.tab, activeTab === 'friends' && styles.activeTab]}
         onPress={() => setActiveTab('friends')}
       >
         <Text style={[styles.tabText, activeTab === 'friends' && styles.activeTabText]}>
-          Amis ({friends.length})
+          {t('social.friends_count', { count: friends.length })}
         </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[styles.tab, activeTab === 'requests' && styles.activeTab]}
         onPress={() => setActiveTab('requests')}
       >
         <Text style={[styles.tabText, activeTab === 'requests' && styles.activeTabText]}>
-          Demandes ({requestsReceived.length + requestsSent.length})
+          {t('social.requests_count', { count: requestsReceived.length + requestsSent.length })}
         </Text>
       </TouchableOpacity>
     </View>
@@ -766,10 +770,11 @@ const SocialScreen = ({ navigation }) => {
       <AnimatedSearchBar
         value={searchQuery}
         onChangeText={setSearchQuery}
-        placeholder={`Rechercher dans ${
-          activeTab === 'discussions' ? 'les discussions' : 
-          activeTab === 'friends' ? 'les amis' : 'les demandes'
-        }...`}
+        placeholder={
+          activeTab === 'discussions' ? t('social.search_in_discussions') :
+          activeTab === 'friends' ? t('social.search_in_friends') :
+          t('social.search_in_requests')
+        }
       />
     </View>
   );
@@ -806,7 +811,7 @@ const SocialScreen = ({ navigation }) => {
           </View>
         </TouchableOpacity>
       )}
-      ListEmptyComponent={!loading && <Text style={styles.emptyText}>Aucune discussion trouvée.</Text>}
+      ListEmptyComponent={!loading && <Text style={styles.emptyText}>{t('social.no_discussions')}</Text>}
     />
   );
 
@@ -871,7 +876,7 @@ const SocialScreen = ({ navigation }) => {
           </View>
         );
       }}
-      ListEmptyComponent={!loading && <Text style={styles.emptyText}>Aucun ami trouvé.</Text>}
+      ListEmptyComponent={!loading && <Text style={styles.emptyText}>{t('social.no_friends_found')}</Text>}
     />
   );
 
@@ -887,13 +892,13 @@ const SocialScreen = ({ navigation }) => {
             {/* Received Requests */}
             {filteredReceived.length > 0 && (
               <View>
-                <Text style={styles.sectionTitle}>Reçues ({filteredReceived.length})</Text>
+                <Text style={styles.sectionTitle}>{t('social.received_count', { count: filteredReceived.length })}</Text>
                 {filteredReceived.map(item => (
                   <View key={item.id} style={styles.requestItem}>
                     <Image source={item.avatar} style={styles.avatar} />
                     <View style={styles.requestInfo}>
                       <Text style={styles.requestName}>{item.name}</Text>
-                      <Text style={styles.requestDate}>Reçu le {item.date}</Text>
+                      <Text style={styles.requestDate}>{t('social.received_on', { date: item.date })}</Text>
                     </View>
                     <View style={styles.requestActions}>
                       <TouchableOpacity style={[styles.requestButton, styles.acceptButton]} onPress={() => handleAcceptRequest(item)}>
@@ -912,9 +917,9 @@ const SocialScreen = ({ navigation }) => {
             {filteredSent.length > 0 && (
               <View style={{ marginTop: getResponsiveSize(20) }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Text style={styles.sectionTitle}>Envoyées ({filteredSent.length})</Text>
+                  <Text style={styles.sectionTitle}>{t('social.sent_count', { count: filteredSent.length })}</Text>
                   <TouchableOpacity style={styles.cancelLatestButton} onPress={handleCancelLatestRequest}>
-                    <Text style={styles.cancelLatestText}>Annuler la dernière</Text>
+                    <Text style={styles.cancelLatestText}>{t('social.cancel_latest')}</Text>
                   </TouchableOpacity>
                 </View>
                 {filteredSent.map(item => (
@@ -922,7 +927,7 @@ const SocialScreen = ({ navigation }) => {
                     <Image source={item.avatar} style={styles.avatar} />
                     <View style={styles.requestInfo}>
                       <Text style={styles.requestName}>{item.name}</Text>
-                      <Text style={styles.requestDate}>Envoyé {item.date}</Text>
+                      <Text style={styles.requestDate}>{t('social.sent_on', { date: item.date })}</Text>
                     </View>
                     <TouchableOpacity style={styles.cancelButton} onPress={() => handleCancelRequest(item.id)}>
                       <Ionicons name="close-circle-outline" size={getResponsiveSize(24)} color="#e74c3c" />
@@ -933,7 +938,7 @@ const SocialScreen = ({ navigation }) => {
             )}
 
             {!loading && filteredReceived.length === 0 && filteredSent.length === 0 && (
-               <Text style={styles.emptyText}>Aucune demande d'ami.</Text>
+               <Text style={styles.emptyText}>{t('social.no_requests')}</Text>
             )}
           </>
         }
@@ -970,11 +975,11 @@ const SocialScreen = ({ navigation }) => {
           >
             <View style={styles.modalOverlay}>
               <View style={[styles.modalContent, isTablet && styles.modalContentTablet, isDesktop && styles.modalContentDesktop]}>
-                <Text style={styles.modalTitle}>Ajouter un ami</Text>
+                <Text style={styles.modalTitle}>{t('social.add_friend')}</Text>
                 <AnimatedSearchBar
                   value={newFriendName}
                   onChangeText={setNewFriendName}
-                  placeholder="Entrez le pseudo..."
+                  placeholder={t('social.enter_pseudo')}
                   showLeftIcon={true}
                   leftIconName="person-add-outline"
                   leftIconColor={T.textMuted}
@@ -987,7 +992,7 @@ const SocialScreen = ({ navigation }) => {
                     {friendSearchLoading ? (
                       <View style={styles.addFriendLoadingRow}>
                         <ActivityIndicator size="small" color={T.gold} />
-                        <Text style={styles.addFriendLoadingText}>Recherche…</Text>
+                        <Text style={styles.addFriendLoadingText}>{t('social.searching')}</Text>
                       </View>
                     ) : friendSearchResults.length > 0 ? (
                       <FlatList
@@ -1001,10 +1006,10 @@ const SocialScreen = ({ navigation }) => {
                           >
                             <Image source={getAvatarUri(item?.avatar)} style={styles.addFriendResultAvatar} />
                             <View style={styles.addFriendResultInfo}>
-                              <Text style={styles.addFriendResultPseudo} numberOfLines={1}>{item?.pseudo || 'Inconnu'}</Text>
+                              <Text style={styles.addFriendResultPseudo} numberOfLines={1}>{item?.pseudo || t('social.unknown')}</Text>
                               {typeof item?.isOnline === 'boolean' && (
                                 <Text style={[styles.addFriendResultStatus, { color: item.isOnline ? '#10b981' : T.textMuted }]}>
-                                  {item.isOnline ? 'En ligne' : 'Hors ligne'}
+                                  {item.isOnline ? t('social.online') : t('social.offline')}
                                 </Text>
                               )}
                             </View>
@@ -1013,16 +1018,16 @@ const SocialScreen = ({ navigation }) => {
                         )}
                       />
                     ) : (
-                      <Text style={styles.addFriendEmptyText}>Aucun résultat</Text>
+                      <Text style={styles.addFriendEmptyText}>{t('social.no_results')}</Text>
                     )}
                   </View>
                 )}
                 <View style={styles.modalButtons}>
                   <TouchableOpacity style={styles.modalButtonCancel} onPress={() => setIsAddFriendVisible(false)}>
-                    <Text style={styles.modalButtonText}>Annuler</Text>
+                    <Text style={styles.modalButtonText}>{t('common.cancel')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.modalButtonConfirm} onPress={handleSendRequest}>
-                    <Text style={styles.modalButtonText}>Rechercher & Ajouter</Text>
+                    <Text style={styles.modalButtonText}>{t('social.search_and_add')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1039,27 +1044,27 @@ const SocialScreen = ({ navigation }) => {
             <View style={styles.modalOverlay}>
               <View style={[styles.modalContent, isTablet && styles.modalContentTablet, { maxHeight: '80%' }]}>
                 <ScrollView contentContainerStyle={{ alignItems: 'center', width: '100%' }} style={{ width: '100%' }}>
-                <Text style={styles.modalTitle}>Inviter {selectedFriend?.name}</Text>
-                
-                <Text style={styles.label}>Mode de jeu:</Text>
+                <Text style={styles.modalTitle}>{t('social.invite_friend', { name: selectedFriend?.name })}</Text>
+
+                <Text style={styles.label}>{t('social.game_mode')}:</Text>
                 <View style={styles.optionsRow}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={[styles.optionButton, inviteMode === 'simple' && styles.optionButtonActive]}
                         onPress={() => setInviteMode('simple')}
                     >
-                        <Text style={[styles.optionText, inviteMode === 'simple' && styles.optionTextActive]}>Simple</Text>
+                        <Text style={[styles.optionText, inviteMode === 'simple' && styles.optionTextActive]}>{t('social.mode_simple')}</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={[styles.optionButton, inviteMode === 'tournament' && styles.optionButtonActive]}
                         onPress={() => setInviteMode('tournament')}
                     >
-                        <Text style={[styles.optionText, inviteMode === 'tournament' && styles.optionTextActive]}>Tournoi</Text>
+                        <Text style={[styles.optionText, inviteMode === 'tournament' && styles.optionTextActive]}>{t('social.mode_tournament')}</Text>
                     </TouchableOpacity>
                 </View>
 
                 {inviteMode === 'tournament' && (
                     <>
-                        <Text style={styles.label}>Nombre de parties:</Text>
+                        <Text style={styles.label}>{t('social.number_of_games')}:</Text>
                         <View style={styles.optionsRow}>
                             {[2, 4, 6, 8, 10].map(num => (
                                 <TouchableOpacity 
@@ -1074,7 +1079,7 @@ const SocialScreen = ({ navigation }) => {
                     </>
                 )}
 
-                <Text style={styles.label}>Mise (coins):</Text>
+                <Text style={styles.label}>{t('social.bet_coins')}:</Text>
                 <View style={styles.optionsRow}>
                     {[100, 500, 1000, 5000].map(amount => (
                         <TouchableOpacity 
@@ -1087,7 +1092,7 @@ const SocialScreen = ({ navigation }) => {
                     ))}
                 </View>
 
-                <Text style={styles.label}>Temps par tour:</Text>
+                <Text style={styles.label}>{t('social.time_per_turn')}:</Text>
                 <View style={styles.optionsRow}>
                     {[null, 30, 60, 120].map(time => (
                         <TouchableOpacity 
@@ -1104,10 +1109,10 @@ const SocialScreen = ({ navigation }) => {
 
                 <View style={styles.modalButtons}>
                   <TouchableOpacity style={styles.modalButtonCancel} onPress={() => setInviteConfigVisible(false)}>
-                    <Text style={styles.modalButtonText}>Annuler</Text>
+                    <Text style={styles.modalButtonText}>{t('common.cancel')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.modalButtonConfirm} onPress={handleSendInvite}>
-                    <Text style={styles.modalButtonText}>Envoyer</Text>
+                    <Text style={styles.modalButtonText}>{t('common.send')}</Text>
                   </TouchableOpacity>
                 </View>
                 </ScrollView>
@@ -1125,16 +1130,16 @@ const SocialScreen = ({ navigation }) => {
             <View style={styles.modalOverlay}>
               <View style={[styles.modalContent, isTablet && styles.modalContentTablet, isDesktop && styles.modalContentDesktop]}>
                 <ActivityIndicator size="large" color="#041c55" style={{ marginBottom: getResponsiveSize(20) }} />
-                <Text style={styles.modalTitle}>En attente de l'adversaire...</Text>
+                <Text style={styles.modalTitle}>{t('social.waiting_for_opponent')}</Text>
                 <Text style={{ textAlign: 'center', marginBottom: getResponsiveSize(20), color: '#666' }}>
-                  La partie commencera dès que {selectedFriend?.name || 'l\'ami'} acceptera l'invitation.
+                  {t('social.game_starts_when_accepted', { name: selectedFriend?.name || t('social.friend') })}
                 </Text>
-                
-                <TouchableOpacity 
-                    style={styles.modalButtonCancel} 
+
+                <TouchableOpacity
+                    style={styles.modalButtonCancel}
                     onPress={() => setIsWaitingForResponse(false)}
                 >
-                  <Text style={styles.modalButtonText}>Annuler</Text>
+                  <Text style={styles.modalButtonText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1149,19 +1154,19 @@ const SocialScreen = ({ navigation }) => {
           >
             <View style={styles.modalOverlay}>
               <View style={[styles.modalContent, isTablet && styles.modalContentTablet, isDesktop && styles.modalContentDesktop]}>
-                <Text style={styles.modalTitle}>Invitation de {incomingInvite?.senderPseudo}</Text>
+                <Text style={styles.modalTitle}>{t('social.invitation_from', { pseudo: incomingInvite?.senderPseudo })}</Text>
                 <Text style={styles.inviteDetails}>
-                    Mode: {incomingInvite?.mode === 'tournament' ? `Tournoi (${incomingInvite?.seriesLength} parties)` : 'Simple'}{'\n'}
-                    Mise: {incomingInvite?.betAmount} coins{'\n'}
-                    Temps: {incomingInvite?.timeControl ? `${incomingInvite.timeControl}s` : 'Illimité'}
+                    {t('social.invite_mode_label')}: {incomingInvite?.mode === 'tournament' ? t('social.invite_mode_tournament', { count: incomingInvite?.seriesLength }) : t('social.mode_simple')}{'\n'}
+                    {t('social.invite_bet_label')}: {incomingInvite?.betAmount} {t('shop.coins')}{'\n'}
+                    {t('social.invite_time_label')}: {incomingInvite?.timeControl ? `${incomingInvite.timeControl}s` : t('social.unlimited')}
                 </Text>
-                
+
                 <View style={styles.modalButtons}>
                   <TouchableOpacity style={styles.modalButtonCancel} onPress={handleDeclineInvite}>
-                    <Text style={styles.modalButtonText}>Refuser</Text>
+                    <Text style={styles.modalButtonText}>{t('social.decline')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.modalButtonConfirm} onPress={handleAcceptInvite}>
-                    <Text style={styles.modalButtonText}>Accepter</Text>
+                    <Text style={styles.modalButtonText}>{t('social.accept')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>

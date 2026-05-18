@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import { playButtonSound } from '../../utils/soundManager';
@@ -32,7 +33,8 @@ try {
 
 const CODE_LENGTH = 6;
 
-const JoinByCodeModal = memo(({ visible, onClose, socket, t, appAlert }) => {
+const JoinByCodeModal = memo(({ visible, onClose, socket, appAlert }) => {
+  const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
   const navigation = useNavigation();
@@ -74,19 +76,19 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, t, appAlert }) => {
         setShowScanner(false);
         setCode(scannedCode.toUpperCase());
         playButtonSound();
-        handleJoinWithCode(scannedCode.toUpperCase());
+        handleJoin(scannedCode.toUpperCase());
     }
   };
 
   const startScan = async () => {
     if (!CameraView || !requestPermission) {
-        appAlert('Non disponible', "Le scanner nécessite une mise à jour de l'application native.");
+        appAlert(t('join_code.unavailable_title'), t('join_code.unavailable_desc'));
         return;
     }
     if (!permission?.granted) {
         const res = await requestPermission();
         if (!res.granted) {
-            appAlert('Permission requise', "L'accès à la caméra est nécessaire pour scanner un QR Code.");
+            appAlert(t('join_code.permission_title'), t('join_code.permission_desc'));
             return;
         }
     }
@@ -138,7 +140,7 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, t, appAlert }) => {
     const handleError = (message) => {
       cleanupRef.current?.();
       setLoading(false);
-      setError(typeof message === 'string' ? message : 'Code invalide ou partie introuvable.');
+      setError(typeof message === 'string' ? message : t('join_code.invalid_code'));
     };
 
     socket.on('join_code_success', handleSuccess);
@@ -146,7 +148,7 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, t, appAlert }) => {
 
     const handleGenericError = (msg) => {
       setLoading(false);
-      setError(typeof msg === 'string' ? msg : 'Une erreur est survenue.');
+      setError(typeof msg === 'string' ? msg : t('errors.generic'));
     };
     socket.on('error', handleGenericError);
 
@@ -163,20 +165,20 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, t, appAlert }) => {
     if (error) setError('');
   };
 
-  const handleJoin = useCallback(() => {
+  const handleJoin = useCallback((overrideCode) => {
     Keyboard.dismiss();
-    const finalCode = code.trim().toUpperCase();
+    const finalCode = String(overrideCode ?? code).trim().toUpperCase();
     if (finalCode.length !== CODE_LENGTH) {
-      setError(`Le code doit contenir exactement ${CODE_LENGTH} caractères.`);
+      setError(t('join_code.error_length', { length: CODE_LENGTH }));
       return;
     }
     if (!socket) {
-      setError('Connexion au serveur indisponible. Réessayez.');
+      setError(t('errors.server_unavailable'));
       return;
     }
     const userId = user?._id || user?.id;
     if (!userId) {
-      setError('Vous devez être connecté.');
+      setError(t('auth.login_required'));
       return;
     }
     playButtonSound();
@@ -187,14 +189,14 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, t, appAlert }) => {
     const timeout = setTimeout(() => {
       cleanupRef.current?.();
       setLoading(false);
-      setError('Le serveur ne répond pas. Vérifiez votre connexion.');
+      setError(t('errors.timeout'));
     }, 15000);
     const originalCleanup = cleanupRef.current;
     cleanupRef.current = () => {
       clearTimeout(timeout);
       originalCleanup?.();
     };
-  }, [code, socket, registerListeners, user?._id, user?.id]);
+  }, [code, socket, registerListeners, user?._id, user?.id, t]);
 
   const handleClose = useCallback(() => {
     if (loading) return;
@@ -240,10 +242,10 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, t, appAlert }) => {
               size={getResponsiveSize(26)}
               color="#f1c40f"
             />
-            <Text style={styles.title}>Rejoindre avec un code</Text>
+            <Text style={styles.title}>{t('live_room.join_with_code')}</Text>
           </View>
           <Text style={styles.subtitle}>
-            {t?.enter_code_description || `Entrez le code à ${CODE_LENGTH} caractères reçu de votre ami.`}
+            {t('join_code.subtitle', { length: CODE_LENGTH })}
           </Text>
 
           {canScan && (
@@ -252,7 +254,7 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, t, appAlert }) => {
               onPress={startScan}
             >
               <Ionicons name="qr-code-outline" size={20} color="#041c55" />
-              <Text style={styles.scanButtonText}>Scanner un QR Code</Text>
+              <Text style={styles.scanButtonText}>{t('join_code.scan_qr')}</Text>
             </TouchableOpacity>
           )}
 
@@ -269,10 +271,10 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, t, appAlert }) => {
                     <TouchableOpacity onPress={() => setShowScanner(false)} style={styles.closeScanner}>
                         <Ionicons name="close" size={24} color="#fff" />
                     </TouchableOpacity>
-                    <Text style={styles.scannerTitle}>Scanner le QR Code</Text>
+                    <Text style={styles.scannerTitle}>{t('join_code.scan_title')}</Text>
                 </View>
                 <View style={styles.scanFrame} />
-                <Text style={styles.scannerHint}>Placez le QR Code dans le cadre</Text>
+                <Text style={styles.scannerHint}>{t('join_code.scan_hint')}</Text>
               </CameraView>
             </View>
           )}
@@ -322,7 +324,7 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, t, appAlert }) => {
                   color="#041c55"
                   style={{ marginRight: getResponsiveSize(8) }}
                 />
-                <Text style={styles.joinButtonText}>Rejoindre la partie</Text>
+                <Text style={styles.joinButtonText}>{t('join_code.join_button')}</Text>
               </>
             )}
           </TouchableOpacity>
@@ -331,9 +333,7 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, t, appAlert }) => {
             onPress={handleClose}
             disabled={loading}
           >
-            <Text style={styles.closeButtonText}>
-              {t?.close ?? 'Fermer'}
-            </Text>
+            <Text style={styles.closeButtonText}>{t('common.close')}</Text>
           </TouchableOpacity>
         </Pressable>
       </Pressable>

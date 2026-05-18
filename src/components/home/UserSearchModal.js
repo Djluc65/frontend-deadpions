@@ -21,11 +21,13 @@ import axios from 'axios';
 import { modalTheme } from '../../utils/modalTheme';
 import { T } from '../../utils/theme';
 import AnimatedSearchBar from '../ui/AnimatedSearchBar';
+import { useTranslation } from 'react-i18next';
 
 const width = SCREEN_WIDTH;
 const height = SCREEN_HEIGHT;
 
 const UserSearchModal = ({ visible, onClose, navigation }) => {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -113,7 +115,7 @@ const UserSearchModal = ({ visible, onClose, navigation }) => {
         >
           <View style={styles.content}>
             <View style={styles.header}>
-              <Text style={styles.title}>Rechercher un joueur</Text>
+              <Text style={styles.title}>{t('social.search_player_title')}</Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                 <Ionicons name="close" size={24} color="#f1c40f" />
               </TouchableOpacity>
@@ -123,7 +125,7 @@ const UserSearchModal = ({ visible, onClose, navigation }) => {
               <AnimatedSearchBar
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                placeholder="Rechercher un joueur..."
+                placeholder={t('social.search_player')}
                 autoFocus={true}
               />
             </View>
@@ -141,11 +143,11 @@ const UserSearchModal = ({ visible, onClose, navigation }) => {
                 ListEmptyComponent={
                   searchQuery.length > 1 ? (
                     <View style={styles.centerContainer}>
-                      <Text style={styles.emptyText}>Aucun joueur trouvé</Text>
+                      <Text style={styles.emptyText}>{t('social.no_player_found')}</Text>
                     </View>
                   ) : (
                     <View style={styles.centerContainer}>
-                      <Text style={styles.emptyText}>Entrez un pseudo pour rechercher</Text>
+                      <Text style={styles.emptyText}>{t('social.enter_username_to_search')}</Text>
                     </View>
                   )
                 }

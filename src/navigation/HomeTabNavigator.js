@@ -10,59 +10,62 @@ import { API_URL } from '../config';
 import socket from '../services/socket';
 import { setNotificationsCount, incrementNotificationsCount } from '../redux/slices/socialSlice';
 import { playButtonSound } from '../utils/soundManager';
+import { useTranslation } from 'react-i18next';
 
 import HomeScreen from '../screens/HomeScreen';
 import SocialScreen from '../screens/SocialScreen';
 import ShopScreen from '../screens/ShopScreen';
 import LiveListScreen from '../screens/LiveListScreen';
-import { translations } from '../utils/translations';
 import { getResponsiveSize, DESKTOP_BREAKPOINT } from '../utils/responsive';
 
 const Tab = createBottomTabNavigator();
 
 // ─── Définition des onglets ────────────────────────────────────────────────────
 const TAB_DEFS = {
-  MaisonTab: { icon: 'home',   label: (t) => t.home_tab  },
-  Social:    { icon: 'people', label: (t) => t.social_tab },
-  Salle:     { icon: 'easel',  label: (t) => t.room_tab  },
-  Magasin:   { icon: 'cart',   label: (t) => t.shop_tab  },
+  MaisonTab: { icon: 'home',   labelKey: 'tabs.home'   },
+  Social:    { icon: 'people', labelKey: 'tabs.social' },
+  Salle:     { icon: 'easel',  labelKey: 'tabs.room'   },
+  Magasin:   { icon: 'cart',   labelKey: 'tabs.shop'   },
 };
 
 const SIDEBAR_WIDTH = 200;
 
 // ─── Barre de navigation desktop web (verticale, à gauche) ───────────────────
-const DesktopSidebar = ({ state, navigation, t, notificationsCount, width }) => (
-  <View style={[sidebarStyles.bar, { width: SIDEBAR_WIDTH }]}>
-    <View style={sidebarStyles.header}>
-      <Text style={sidebarStyles.brand}>⬡ DeadPions</Text>
+const DesktopSidebar = ({ state, navigation, notificationsCount, width }) => {
+  const { t } = useTranslation();
+  return (
+    <View style={[sidebarStyles.bar, { width: SIDEBAR_WIDTH }]}>
+      <View style={sidebarStyles.header}>
+        <Text style={sidebarStyles.brand}>⬡ DeadPions</Text>
+      </View>
+      <View style={sidebarStyles.links}>
+        {state.routes.map((route, index) => {
+          const isFocused = state.index === index;
+          const def = TAB_DEFS[route.name];
+          if (!def) return null;
+          const badge = route.name === 'Social' && notificationsCount > 0 ? notificationsCount : null;
+          return (
+            <TouchableOpacity
+              key={route.key}
+              onPress={() => { playButtonSound(); navigation.navigate(route.name); }}
+              style={[sidebarStyles.link, isFocused && sidebarStyles.linkActive]}
+            >
+              <Ionicons name={def.icon} size={20} color={isFocused ? '#f1c40f' : '#ccc'} />
+              <Text style={[sidebarStyles.linkText, isFocused && sidebarStyles.linkTextActive]}>
+                {t(def.labelKey)}
+              </Text>
+              {badge !== null && (
+                <View style={sidebarStyles.badge}>
+                  <Text style={sidebarStyles.badgeText}>{badge}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
-    <View style={sidebarStyles.links}>
-      {state.routes.map((route, index) => {
-        const isFocused = state.index === index;
-        const def = TAB_DEFS[route.name];
-        if (!def) return null;
-        const badge = route.name === 'Social' && notificationsCount > 0 ? notificationsCount : null;
-        return (
-          <TouchableOpacity
-            key={route.key}
-            onPress={() => { playButtonSound(); navigation.navigate(route.name); }}
-            style={[sidebarStyles.link, isFocused && sidebarStyles.linkActive]}
-          >
-            <Ionicons name={def.icon} size={20} color={isFocused ? '#f1c40f' : '#ccc'} />
-            <Text style={[sidebarStyles.linkText, isFocused && sidebarStyles.linkTextActive]}>
-              {def.label(t)}
-            </Text>
-            {badge !== null && (
-              <View style={sidebarStyles.badge}>
-                <Text style={sidebarStyles.badgeText}>{badge}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        );
-      })}
-    </View>
-  </View>
-);
+  );
+};
 
 const sidebarStyles = StyleSheet.create({
   bar: {
@@ -170,7 +173,8 @@ const CustomTabIcon = ({ focused, iconName, label }) => {
 };
 
 // ─── Barre mobile / tablette (bas) ────────────────────────────────────────────
-const MobileBottomNav = ({ state, navigation, t, notificationsCount, insets, width, height }) => {
+const MobileBottomNav = ({ state, navigation, notificationsCount, insets, width, height }) => {
+  const { t } = useTranslation();
   const isTablet = width >= 768;
   const minDim = Math.min(width, height);
   const maxDim = Math.max(width, height);
@@ -228,7 +232,7 @@ const MobileBottomNav = ({ state, navigation, t, notificationsCount, insets, wid
               <CustomTabIcon
                 focused={isFocused}
                 iconName={def?.icon}
-                label={def?.label(t)}
+                label={def?.labelKey ? t(def.labelKey) : ''}
               />
             </View>
           </TouchableOpacity>
@@ -240,8 +244,6 @@ const MobileBottomNav = ({ state, navigation, t, notificationsCount, insets, wid
 
 // ─── Navigateur principal ──────────────────────────────────────────────────────
 const HomeTabNavigator = () => {
-  const settings = useSelector(state => state.settings || { language: 'fr' });
-  const t = translations[settings.language] || translations.fr;
   const dispatch = useDispatch();
   const { token, user } = useSelector(state => state.auth);
   const notificationsCount = useSelector(state => state.social.notificationsCount);
@@ -295,7 +297,6 @@ const HomeTabNavigator = () => {
       return (
         <DesktopSidebar
           {...props}
-          t={t}
           notificationsCount={notificationsCount}
           width={width}
         />
@@ -304,7 +305,6 @@ const HomeTabNavigator = () => {
     return (
       <MobileBottomNav
         {...props}
-        t={t}
         notificationsCount={notificationsCount}
         insets={insets}
         width={width}

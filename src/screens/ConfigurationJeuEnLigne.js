@@ -3,8 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet, ImageBackground, ScrollView, 
 import { T } from '../utils/theme';
 import { useSelector, useDispatch } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { socket } from '../utils/socket';
-import { translations } from '../utils/translations';
 import { playButtonSound } from '../utils/soundManager';
 import { getResponsiveSize } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
@@ -12,10 +12,9 @@ import { appAlert } from '../services/appAlert';
 import { updateUser } from '../redux/slices/authSlice';
 
 const ConfigurationJeuEnLigne = ({ navigation }) => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const user = useSelector(state => state.auth.user);
-  const settings = useSelector(state => state.settings);
-  const t = translations[settings.language] || translations.fr;
 
   const [soldeCoins, setSoldeCoins] = useState(user?.coins || 0);
   const [montantPari, setMontantPari] = useState(500);
@@ -39,7 +38,7 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
   ];
 
   const timeOptions = [
-    { label: 'Sans chrono', value: null },
+    { label: t('matchmaking.no_timer'), value: null },
     { label: '30 s', value: 30 },
     { label: '1 min', value: 60 },
     { label: '1 min 30s', value: 90 },
@@ -73,7 +72,7 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
   });
 
     socket.on('error', (msg) => {
-      appAlert('Erreur', msg);
+      appAlert(t('common.error'), msg);
       setEnAttenteMatch(false);
     });
 
@@ -98,14 +97,14 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
     } else if (tempsRestant === 0 && enAttenteMatch) {
       // Timeout
       annulerRecherche();
-      appAlert('Timeout', 'Aucun adversaire trouvé. Vos coins ont été remboursés.');
+      appAlert(t('matchmaking.timeout_title'), t('matchmaking.timeout_desc'));
     }
     return () => clearInterval(interval);
   }, [enAttenteMatch, tempsRestant]);
 
   const demarrerRecherche = () => {
     if (soldeCoins < montantPari) {
-      appAlert('Solde insuffisant', `Il vous faut ${montantPari} coins.`);
+      appAlert(t('matchmaking.insufficient_coins_title'), t('matchmaking.insufficient_coins_amount', { amount: montantPari }));
       return;
     }
 
@@ -138,7 +137,7 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
         <TouchableOpacity onPress={() => { playButtonSound(); navigation.goBack(); }} style={styles.backButton}>
           <Ionicons name="arrow-back" size={getResponsiveSize(30)} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.title}>Jeu en Ligne</Text>
+        <Text style={styles.title}>{t('matchmaking.online_game_title')}</Text>
         <View style={styles.coinContainer}>
           <Text style={styles.coinText}>💰 {soldeCoins.toLocaleString()}</Text>
         </View>
@@ -147,7 +146,7 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
       <View style={styles.content}>
         {!enAttenteMatch ? (
           <View style={styles.containerTimes}>
-              <Text style={styles.subtitle}>Choisissez votre mise :</Text>
+              <Text style={styles.subtitle}>{t('matchmaking.bet_select')} :</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: getResponsiveSize(20) }}>
                     {(() => {
                         const availableBets = montantsDisponibles.filter(b => b <= (user?.coins || 0));
@@ -242,7 +241,7 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
                     })()}
                 </View>
 
-                <Text style={[styles.subtitle, { marginTop: getResponsiveSize(10) }]}>Temps par coup :</Text>
+                <Text style={[styles.subtitle, { marginTop: getResponsiveSize(10) }]}>{t('live_room.time_per_move')} :</Text>
                 <View style={styles.grid}>
                   {timeOptions.map((option) => (
                     <TouchableOpacity
@@ -264,18 +263,18 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
                 </View>
                 
                 <TouchableOpacity style={styles.playButton} onPress={() => { playButtonSound(); demarrerRecherche(); }}>
-                    <Text style={styles.playButtonText}>JOUER</Text>
+                    <Text style={styles.playButtonText}>{t('matchmaking.play_btn')}</Text>
                 </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.waitingContainer}>
             <ActivityIndicator size="large" color="#f1c40f" />
-            <Text style={styles.waitingText}>Recherche d'adversaire...</Text>
+            <Text style={styles.waitingText}>{t('matchmaking.searching')}</Text>
             <Text style={styles.timerText}>{tempsRestant}s</Text>
-            <Text style={styles.infoText}>Mise : {montantPari.toLocaleString()} 💰</Text>
-            
+            <Text style={styles.infoText}>{t('game.bet_amount', { amount: montantPari.toLocaleString() })}</Text>
+
             <TouchableOpacity style={styles.cancelButton} onPress={() => { playButtonSound(); annulerRecherche(); }}>
-              <Text style={styles.cancelButtonText}>Annuler</Text>
+              <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         )}

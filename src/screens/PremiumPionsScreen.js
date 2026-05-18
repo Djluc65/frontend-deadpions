@@ -22,17 +22,18 @@ import { selectHasTempPremiumPions } from '../redux/slices/rewardsSlice';
 import { API_URL } from '../config';
 import PionSVG, { PION_COLORS } from '../components/PionSVG';
 import { appAlert } from '../services/appAlert';
+import { useTranslation } from 'react-i18next';
 
 // ─── Types & Configuration ────────────────────────────────────────────────────────────
 
 const PION_TYPES = [
-  { id: 'skull',      label: 'Skull',       labelFR: 'Tête de Mort', emoji: '💀', isPremium: false },
-  { id: 'neon_skull', label: 'Neon Skull',  labelFR: 'Crâne Néon',   emoji: '☠️', isPremium: true },
-  { id: 'bull',       label: 'Bull',        labelFR: 'Tête de Taureau', emoji: '🐂', isPremium: true },
-  { id: 'lion',    label: 'Lion',    labelFR: 'Tête de Lion', emoji: '🦁', isPremium: true },
-  { id: 'dragon',  label: 'Dragon',  labelFR: 'Tête de Dragon', emoji: '🐲', isPremium: true },
-  { id: 'wolf',    label: 'Wolf',    labelFR: 'Tête de Loup', emoji: '🐺', isPremium: true },
-  { id: 'serpent', label: 'Serpent', labelFR: 'Tête de Serpent', emoji: '🐍', isPremium: true },
+  { id: 'skull',      labelKey: 'pions.skins.skull',      emoji: '💀', isPremium: false },
+  { id: 'neon_skull', labelKey: 'pions.skins.neon_skull', emoji: '☠️', isPremium: true },
+  { id: 'bull',       labelKey: 'pions.skins.bull',       emoji: '🐂', isPremium: true },
+  { id: 'lion',       labelKey: 'pions.skins.lion',       emoji: '🦁', isPremium: true },
+  { id: 'dragon',     labelKey: 'pions.skins.dragon',     emoji: '🐲', isPremium: true },
+  { id: 'wolf',       labelKey: 'pions.skins.wolf',       emoji: '🐺', isPremium: true },
+  { id: 'serpent',    labelKey: 'pions.skins.serpent',    emoji: '🐍', isPremium: true },
 ];
 
 // ─── Color Palettes ────────────────────────────────────────────────────────────
@@ -51,6 +52,7 @@ function PionCard({
   equipped,
   cardWidth,
 }) {
+  const { t } = useTranslation();
   const scale = useRef(new Animated.Value(1)).current;
   const glow = useRef(new Animated.Value(0)).current;
 
@@ -95,7 +97,7 @@ function PionCard({
       >
         {config.isPremium && (
           <View style={styles.premiumBadge}>
-            <Text style={styles.premiumText}>PRO</Text>
+            <Text style={styles.premiumText}>{t('premium_pions.pro_badge')}</Text>
           </View>
         )}
 
@@ -118,7 +120,7 @@ function PionCard({
         <PionSVG type={type} color={color} size={72} />
 
         <Text style={[styles.pionLabel, { color: selected ? c.light : '#AAA' }]}>
-          {config.labelFR}
+          {t(config.labelKey)}
         </Text>
 
         {locked && (
@@ -134,6 +136,7 @@ function PionCard({
 // ─── Main Screen ───────────────────────────────────────────────────────────────
 
 export default function PremiumPionsScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const dispatch = useDispatch();
   const { user, token } = useSelector(state => state.auth);
@@ -156,11 +159,11 @@ export default function PremiumPionsScreen() {
 
   const handleEquip = async () => {
     if (!user) {
-      appAlert('Connexion requise', 'Veuillez vous connecter pour équiper un pion.');
+      appAlert(t('auth.login_required'), t('premium_pions.login_required_desc'));
       return;
     }
     if (selectedConfig.isPremium && !canAccessPremium) {
-      appAlert('Récompense requise', 'Débloquez les pions premium via le centre de récompenses (ou Premium).');
+      appAlert(t('premium_pions.unlock_required_title'), t('premium_pions.unlock_required_desc'));
       return;
     }
 
@@ -179,14 +182,14 @@ export default function PremiumPionsScreen() {
       
       if (response.ok) {
         dispatch(updateUser({ pawnSkin: selectedType }));
-        appAlert('Succès', 'Pion équipé avec succès !');
+        appAlert(t('common.success'), t('premium_pions.equip_success'));
         setDetailVisible(false);
       } else {
-        appAlert('Erreur', data.message || 'Impossible de mettre à jour le profil');
+        appAlert(t('common.error'), data.message || t('premium_pions.update_profile_failed'));
       }
     } catch (error) {
       console.error(error);
-      appAlert('Erreur', 'Erreur de connexion au serveur');
+      appAlert(t('common.error'), t('errors.server_unavailable'));
     } finally {
       setLoading(false);
     }
@@ -206,7 +209,7 @@ export default function PremiumPionsScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>DEAD<Text style={styles.titleBlue}>PIONS</Text></Text>
-          <Text style={styles.subtitle}>Collection Premium</Text>
+          <Text style={styles.subtitle}>{t('premium_pions.subtitle')}</Text>
         </View>
 
         {/* Color Toggle */}
@@ -215,13 +218,13 @@ export default function PremiumPionsScreen() {
             style={[styles.colorBtn, selectedColor === 'red' && styles.colorBtnActiveRed]}
             onPress={() => setSelectedColor('red')}
           >
-            <Text style={styles.colorBtnText}>🔴 ROUGE</Text>
+            <Text style={styles.colorBtnText}>🔴 {t('colors.red').toUpperCase()}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.colorBtn, selectedColor === 'blue' && styles.colorBtnActiveBlue]}
             onPress={() => setSelectedColor('blue')}
           >
-            <Text style={styles.colorBtnText}>🔵 BLEU</Text>
+            <Text style={styles.colorBtnText}>🔵 {t('colors.blue').toUpperCase()}</Text>
           </TouchableOpacity>
         </View>
 
@@ -230,13 +233,13 @@ export default function PremiumPionsScreen() {
           <View style={styles.previewContainer}>
             <View style={[styles.previewGlow, { backgroundColor: COLORS[selectedColor].primary }]} />
             <PionSVG type={selectedType} color={selectedColor} size={140} />
-            <Text style={styles.previewLabel}>{selectedConfig.labelFR.toUpperCase()}</Text>
-            <Text style={styles.previewHint}>Appuyer pour voir en détail</Text>
+            <Text style={styles.previewLabel}>{t(selectedConfig.labelKey).toUpperCase()}</Text>
+            <Text style={styles.previewHint}>{t('premium_pions.tap_for_details')}</Text>
           </View>
         </TouchableOpacity>
 
         {/* Grid */}
-        <Text style={styles.sectionTitle}>Choisir un Pion</Text>
+        <Text style={styles.sectionTitle}>{t('premium_pions.choose_pawn')}</Text>
         <View style={styles.grid}>
           {PION_TYPES.map(config => (
             <PionCard
@@ -246,7 +249,7 @@ export default function PremiumPionsScreen() {
               config={config}
               onPress={() => setSelectedType(config.id)}
               locked={Boolean(config.isPremium && !canAccessPremium)}
-              onLockedPress={() => appAlert('Verrouillé', 'Débloquez les pions premium via le centre de récompenses.')}
+              onLockedPress={() => appAlert(t('ai.locked_title'), t('premium_pions.locked_desc'))}
               selected={selectedType === config.id}
               equipped={user?.pawnSkin === config.id}
               cardWidth={pionCardWidth}
@@ -266,19 +269,21 @@ export default function PremiumPionsScreen() {
           <View style={styles.modalCard}>
             <View style={[styles.modalGlow, { backgroundColor: COLORS[selectedColor].primary }]} />
             <PionSVG type={selectedType} color={selectedColor} size={200} />
-            <Text style={styles.modalTitle}>{selectedConfig.labelFR.toUpperCase()}</Text>
+            <Text style={styles.modalTitle}>{t(selectedConfig.labelKey).toUpperCase()}</Text>
             <Text style={[styles.modalColorTag, { color: COLORS[selectedColor].light }]}>
-              {selectedColor === 'red' ? '🔴 Équipe Rouge' : '🔵 Équipe Bleue'}
+              {selectedColor === 'red'
+                ? t('premium_pions.team_red')
+                : t('premium_pions.team_blue')}
             </Text>
             {selectedConfig.isPremium && (
               <View style={styles.proBadgeLarge}>
-                <Text style={styles.proBadgeText}>✨ VERSION PRO</Text>
+                <Text style={styles.proBadgeText}>✨ {t('premium_pions.pro_version')}</Text>
               </View>
             )}
 
             {isEquipped ? (
               <View style={[styles.equipButton, { backgroundColor: '#444' }]}>
-                 <Text style={styles.equipButtonText}>ACTUELLEMENT ÉQUIPÉ</Text>
+                 <Text style={styles.equipButtonText}>{t('premium_pions.currently_equipped')}</Text>
               </View>
             ) : (
               <TouchableOpacity 
@@ -289,13 +294,13 @@ export default function PremiumPionsScreen() {
                 {loading ? (
                    <ActivityIndicator color="#FFF" />
                 ) : (
-                   <Text style={styles.equipButtonText}>ÉQUIPER CE PION</Text>
+                   <Text style={styles.equipButtonText}>{t('premium_pions.equip_button')}</Text>
                 )}
               </TouchableOpacity>
             )}
 
             <TouchableOpacity onPress={() => setDetailVisible(false)} style={{ marginTop: 10 }}>
-               <Text style={styles.modalClose}>Fermer</Text>
+               <Text style={styles.modalClose}>{t('common.close')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

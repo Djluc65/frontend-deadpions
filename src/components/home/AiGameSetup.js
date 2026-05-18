@@ -2,6 +2,7 @@ import React, { useState, memo, useEffect } from 'react';
 import { View, Text, Modal, Pressable, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { playButtonSound } from '../../utils/soundManager';
 import { BET_OPTIONS, ONLINE_TIME_OPTIONS } from '../../utils/constants';
 import { getResponsiveSize } from '../../utils/responsive';
@@ -13,6 +14,7 @@ import { ensureDailyReset, selectHardAiUnlockUntil, unlockHardAi } from '../../r
 
 const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   const hardAiUntil = useSelector(selectHardAiUnlockUntil);
   const hardAiActive = typeof hardAiUntil === 'number' && hardAiUntil > Date.now();
   const { showAds, prepareRewarded, showRewarded } = useAdManager();
@@ -65,7 +67,8 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
   const handleStartGame = () => {
     const effectiveBet = canBet ? aiBet : 0;
     if (effectiveBet > (user?.coins || 0)) {
-        appAlert('Solde insuffisant', `Vous n'avez pas assez de coins pour parier ${aiBet.toLocaleString()} coins.`);
+        const missing = Math.max(0, effectiveBet - (user?.coins || 0));
+        appAlert(t('game.insufficient_balance'), t('game.missing_coins', { amount: missing.toLocaleString() }));
         return;
     }
 
@@ -113,24 +116,24 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
   };
 
   const niveaux = [
-    { id: 'facile', titre: 'Facile', emoji: '🟢', description: 'Parfait pour débuter' },
-    { id: 'moyen', titre: 'Moyen', emoji: '🟡', description: 'Challenge équilibré' },
-    { id: 'difficile', titre: 'Difficile', emoji: '🔴', description: 'Pour les experts', locked: !user?.isPremium && !user?.isEarlyAccess && !hardAiActive }
+    { id: 'facile', titre: t('ai.difficulty_easy'), emoji: '🟢', description: t('ai.difficulty_easy_desc') },
+    { id: 'moyen', titre: t('ai.difficulty_medium'), emoji: '🟡', description: t('ai.difficulty_medium_desc') },
+    { id: 'difficile', titre: t('ai.difficulty_hard'), emoji: '🔴', description: t('ai.difficulty_hard_desc'), locked: !user?.isPremium && !user?.isEarlyAccess && !hardAiActive }
   ];
 
   const handleLevelSelect = (level) => {
     if (level.locked) {
       if (!showAds) {
-        appAlert('Verrouillé', "Le mode difficile se débloque via une pub récompensée (indisponible sur ce build).");
+        appAlert(t('ai.locked_title'), t('ai.locked_desc'));
         return;
       }
       appAlert(
-        'Mode difficile',
-        'Regarder 1 vidéo pour débloquer le mode difficile pendant 1 heure ?',
+        t('ai.hard_mode_title'),
+        t('ai.hard_unlock_prompt'),
         [
-          { text: 'Non merci', style: 'cancel' },
+          { text: t('ai.no_thanks'), style: 'cancel' },
           {
-            text: 'Regarder',
+            text: t('ai.watch'),
             onPress: () => {
               dispatch(ensureDailyReset({ nowTs: Date.now() }));
               prepareRewarded();
@@ -141,7 +144,7 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
                 onEarned: async () => {
                   dispatch(unlockHardAi({ nowTs: Date.now() }));
                   setAiDifficulte('difficile');
-                  appAlert('Débloqué', 'Mode difficile débloqué pendant 1 heure.');
+                  appAlert(t('rewards.unlocked_title'), t('rewards.hard_ai_unlocked'));
                 }
               });
             }
@@ -167,28 +170,28 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
                 <ScrollView contentContainerStyle={{ alignItems: 'center', width: '100%' }} style={{ width: '100%' }}>
                     {step === 1 ? (
                         <>
-                            <Text style={[styles.friendsModalTitle, { marginBottom: getResponsiveSize(18) }]}>Options de jeu</Text>
+                            <Text style={[styles.friendsModalTitle, { marginBottom: getResponsiveSize(18) }]}>{t('setup.options_title')}</Text>
 
                             {/* MODE DE JEU */}
-                            <Text style={styles.friendsLabel}>Mode de jeu:</Text>
+                            <Text style={styles.friendsLabel}>{t('setup.game_mode_label')}</Text>
                             <View style={styles.optionsRow}>
                                 <TouchableOpacity 
                                     style={[styles.friendsOptionButton, aiMode === 'simple' && styles.friendsOptionButtonActive]}
                                     onPress={() => { playButtonSound(); setAiMode('simple'); }}
                                 >
-                                    <Text style={[styles.friendsOptionText, aiMode === 'simple' && styles.friendsOptionTextActive]}>Simple</Text>
+                                    <Text style={[styles.friendsOptionText, aiMode === 'simple' && styles.friendsOptionTextActive]}>{t('setup.simple')}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity 
                                     style={[styles.friendsOptionButton, aiMode === 'tournament' && styles.friendsOptionButtonActive]}
                                     onPress={() => { playButtonSound(); setAiMode('tournament'); }}
                                 >
-                                    <Text style={[styles.friendsOptionText, aiMode === 'tournament' && styles.friendsOptionTextActive]}>Tournoi</Text>
+                                    <Text style={[styles.friendsOptionText, aiMode === 'tournament' && styles.friendsOptionTextActive]}>{t('setup.tournament')}</Text>
                                 </TouchableOpacity>
                             </View>
 
                             {aiMode === 'tournament' && (
                                 <>
-                                    <Text style={styles.friendsLabel}>Nombre de parties:</Text>
+                                    <Text style={styles.friendsLabel}>{t('setup.series_length_label')}</Text>
                                     <View style={styles.optionsRow}>
                                         {[2, 4, 6, 8, 10].map(num => (
                                             <TouchableOpacity 
@@ -205,7 +208,7 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
 
                             {canBet && (
                                 <View style={{ width: '100%', backgroundColor: T.bg2, borderRadius: getResponsiveSize(T.radiusMd), padding: getResponsiveSize(4), marginBottom: getResponsiveSize(14), borderWidth: 1, borderColor: T.borderSoft }}>
-                                    <Text style={{ color: T.textDim, fontSize: getResponsiveSize(14), textAlign: 'center' }}>Mise (coins)</Text>
+                                    <Text style={{ color: T.textDim, fontSize: getResponsiveSize(14), textAlign: 'center' }}>{t('setup.bet_label')}</Text>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
                                         {(() => {
                                             const availableBets = BET_OPTIONS.filter(b => b <= (user?.coins || 0));
@@ -242,16 +245,16 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
                             )}
 
                             {/* TEMPS PAR TOUR */}
-                            <Text style={styles.friendsLabel}>Temps par tour:</Text>
+                            <Text style={styles.friendsLabel}>{t('setup.time_per_turn_label')}</Text>
                             <View style={styles.optionsRow}>
                                 {ONLINE_TIME_OPTIONS.map(opt => (
                                     <TouchableOpacity 
-                                        key={opt.label} 
+                                        key={opt.labelKey} 
                                         style={[styles.friendsOptionButton, aiTimeControl === opt.value && styles.friendsOptionButtonActive]}
                                         onPress={() => { playButtonSound(); setAiTimeControl(opt.value); }}
                                     >
                                         <Text style={[styles.friendsOptionText, aiTimeControl === opt.value && styles.friendsOptionTextActive]}>
-                                            {opt.label}
+                                            {t(opt.labelKey)}
                                         </Text>
                                     </TouchableOpacity>
                                 ))}
@@ -259,20 +262,20 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
 
                             <View style={styles.modalButtons}>
                                 <TouchableOpacity style={styles.modalButtonCancel} onPress={() => { playButtonSound(); onClose(); }}>
-                                    <Text style={styles.modalButtonText}>Annuler</Text>
+                                    <Text style={styles.modalButtonText}>{t('common.cancel')}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity style={styles.modalButtonConfirm} onPress={() => { playButtonSound(); setStep(2); }}>
-                                    <Text style={styles.modalButtonText}>Suivant</Text>
+                                    <Text style={styles.modalButtonText}>{t('common.next')}</Text>
                                 </TouchableOpacity>
                             </View>
                         </>
                     ) : step === 2 ? (
                         <>
                             <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: getResponsiveSize(18), justifyContent: 'center', position: 'relative' }}>
-                                <Text style={[styles.friendsModalTitle, { marginBottom: 0 }]}>Configuration IA</Text>
+                                <Text style={[styles.friendsModalTitle, { marginBottom: 0 }]}>{t('ai.config_title')}</Text>
                             </View>
 
-                            <Text style={styles.friendsLabel}>Difficulté:</Text>
+                            <Text style={styles.friendsLabel}>{t('ai.difficulty_label')}</Text>
                             <View style={{ width: '100%', gap: getResponsiveSize(10), marginBottom: getResponsiveSize(20) }}>
                                 {niveaux.map((niveau) => (
                                     <TouchableOpacity
@@ -314,21 +317,21 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
 
                             <View style={styles.modalButtons}>
                                 <TouchableOpacity style={styles.modalButtonCancel} onPress={() => { playButtonSound(); setStep(1); }}>
-                                    <Text style={styles.modalButtonText}>Retour</Text>
+                                    <Text style={styles.modalButtonText}>{t('common.back')}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity style={styles.modalButtonConfirm} onPress={() => { playButtonSound(); setStep(3); }}>
-                                    <Text style={styles.modalButtonText}>Suivant</Text>
+                                    <Text style={styles.modalButtonText}>{t('common.next')}</Text>
                                 </TouchableOpacity>
                             </View>
                         </>
                     ) : (
                         <>
                             <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: getResponsiveSize(18), justifyContent: 'center', position: 'relative' }}>
-                                <Text style={[styles.friendsModalTitle, { marginBottom: 0 }]}>Configuration IA</Text>
+                                <Text style={[styles.friendsModalTitle, { marginBottom: 0 }]}>{t('ai.config_title')}</Text>
                             </View>
 
                             <View style={{ width: '100%', backgroundColor: T.bg2, borderRadius: getResponsiveSize(T.radiusMd), padding: getResponsiveSize(10), marginBottom: getResponsiveSize(20), borderWidth: 1, borderColor: T.borderSoft }}>
-                                <Text style={{ color: T.textDim, fontSize: getResponsiveSize(16), marginBottom: getResponsiveSize(15), textAlign: 'center' }}>Qui commence ?</Text>
+                                <Text style={{ color: T.textDim, fontSize: getResponsiveSize(16), marginBottom: getResponsiveSize(15), textAlign: 'center' }}>{t('setup.who_starts_label')}</Text>
                                 <View style={{ flexDirection: 'row', gap: getResponsiveSize(10), width: '100%' }}>
                                     {['joueur', 'ia', 'aleatoire'].map(opt => (
                                         <TouchableOpacity
@@ -349,7 +352,7 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
                                                 fontWeight: 'bold',
                                                 color: aiPremierJoueur === opt ? '#1B1305' : T.textDim
                                             }}>
-                                                {opt === 'joueur' ? 'Vous' : opt === 'ia' ? 'IA' : 'Aléatoire'}
+                                                {opt === 'joueur' ? t('game.you') : opt === 'ia' ? t('game.ai_name') : t('common.random')}
                                             </Text>
                                         </TouchableOpacity>
                                     ))}
@@ -357,12 +360,12 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
                             </View>
 
                             <View style={{ width: '100%', backgroundColor: T.bg2, borderRadius: getResponsiveSize(T.radiusMd), padding: getResponsiveSize(8), marginBottom: getResponsiveSize(22), borderWidth: 1, borderColor: T.borderSoft }}>
-                                <Text style={{ color: T.textDim, fontSize: getResponsiveSize(16), marginBottom: getResponsiveSize(15), textAlign: 'center' }}>Votre couleur</Text>
+                                <Text style={{ color: T.textDim, fontSize: getResponsiveSize(16), marginBottom: getResponsiveSize(15), textAlign: 'center' }}>{t('setup.your_color_label')}</Text>
                                 <View style={{ flexDirection: 'row', gap: getResponsiveSize(10), width: '100%' }}>
                                      {[
-                                        { id: 'noir', icon: '🔴', label: 'Rouge' },
-                                        { id: 'blanc', icon: '✖', label: 'Bleu' },
-                                        { id: 'aleatoire', icon: '🎲', label: 'Aléa.' }
+                                        { id: 'noir', icon: '🔴', label: t('colors.red') },
+                                        { id: 'blanc', icon: '✖', label: t('colors.blue') },
+                                        { id: 'aleatoire', icon: '🎲', label: t('common.random_short') }
                                       ].map(opt => (
                                         <TouchableOpacity
                                             key={opt.id}
@@ -392,10 +395,10 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
 
                             <View style={styles.modalButtons}>
                                 <TouchableOpacity style={styles.modalButtonCancel} onPress={() => { playButtonSound(); setStep(2); }}>
-                                    <Text style={styles.modalButtonText}>Retour</Text>
+                                    <Text style={styles.modalButtonText}>{t('common.back')}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity style={styles.modalButtonConfirm} onPress={() => { playButtonSound(); handleStartGame(); }}>
-                                    <Text style={styles.modalButtonText}>JOUER</Text>
+                                    <Text style={styles.modalButtonText}>{t('matchmaking.play_btn')}</Text>
                                 </TouchableOpacity>
                             </View>
                         </>

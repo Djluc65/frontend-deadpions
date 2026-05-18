@@ -6,11 +6,11 @@ export const BET_OPTIONS = [
 ];
 
 export const ONLINE_TIME_OPTIONS = [
-  { label: 'Sans chrono', value: null },
-  { label: '30 s', value: 30 },
-  { label: '1 min', value: 60 },
-  { label: '1 min 30s', value: 90 },
-  { label: '2 min', value: 120 }
+  { labelKey: 'matchmaking.no_timer', value: null },
+  { labelKey: 'time.30s', value: 30 },
+  { labelKey: 'time.1min', value: 60 },
+  { labelKey: 'time.1min30', value: 90 },
+  { labelKey: 'time.2min', value: 120 }
 ];
 
 export const ONLINE_TOURNAMENT_MODES = ['online', 'online_custom', 'live'];

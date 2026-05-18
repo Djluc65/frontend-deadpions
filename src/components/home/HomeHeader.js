@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import { View, Text, Pressable, Image, StyleSheet, Platform, useWindowDimensions } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { API_URL } from '../../config';
@@ -58,7 +59,8 @@ const HeaderTouchable = ({ onPress, onPlaySound, children, style, hitSlop }) => 
   );
 };
 
-const HomeHeader = memo(({ user, t, navigation, onSearch, onSettings, onRewards, onPlaySound }) => {
+const HomeHeader = memo(({ user, navigation, onSearch, onSettings, onRewards, onPlaySound }) => {
+  const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const isIPad = Platform.OS === 'ios' && Platform.isPad;
   const isTabletLayout = !isIPad && width >= 768;
@@ -112,7 +114,7 @@ const HomeHeader = memo(({ user, t, navigation, onSearch, onSettings, onRewards,
                   numberOfLines={1}
                   ellipsizeMode="tail"
                 >
-                  {user?.pseudo || t.welcome}
+                  {user?.pseudo || t('home.welcome')}
                 </Text>
               </HeaderTouchable>
               <Text
@@ -130,7 +132,7 @@ const HomeHeader = memo(({ user, t, navigation, onSearch, onSettings, onRewards,
               <HeaderTouchable
                 onPress={onRewards}
                 onPlaySound={onPlaySound}
-                hitSlop={{ top: rs(30), bottom: rs(30), left: rs(30), right: rs(30) }}
+                hitSlop={{ top: rs(20), bottom: rs(20), left: rs(20), right: rs(4) }}
                 style={styles.iconButton}
               >
                 <Ionicons name="gift-outline" size={rs(isTabletLayout ? 26 : 28)} color="#fff" />
@@ -138,20 +140,20 @@ const HomeHeader = memo(({ user, t, navigation, onSearch, onSettings, onRewards,
             </GlowWrapper>
 
             <GlowWrapper style={styles.glowIconWrapper} intensity={0.4}>
-              <HeaderTouchable 
+              <HeaderTouchable
                 onPress={onSearch}
                 onPlaySound={onPlaySound}
-                hitSlop={{ top: rs(30), bottom: rs(30), left: rs(30), right: rs(30) }}
+                hitSlop={{ top: rs(20), bottom: rs(20), left: rs(4), right: rs(4) }}
                 style={styles.iconButton}
               >
                 <Ionicons name="search-outline" size={rs(isTabletLayout ? 26 : 28)} color="#fff" />
               </HeaderTouchable>
             </GlowWrapper>
-            
-            <HeaderTouchable 
+
+            <HeaderTouchable
               onPress={onSettings}
               onPlaySound={onPlaySound}
-              hitSlop={{ top: rs(30), bottom: rs(30), left: rs(30), right: rs(30) }}
+              hitSlop={{ top: rs(20), bottom: rs(20), left: rs(4), right: rs(20) }}
               style={styles.iconButton}
             >
               <Ionicons name="settings-outline" size={rs(isTabletLayout ? 26 : 28)} color="#fff" />

@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { Modal, Pressable, ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { playButtonSound } from '../../utils/soundManager';
 import { getResponsiveSize } from '../../utils/responsive';
 import { modalTheme } from '../../utils/modalTheme';
@@ -17,10 +18,12 @@ const AIOptionsModal = memo(({
   onBack,
   onStart
 }) => {
+  const { t } = useTranslation();
+
   const niveaux = [
-    { id: 'facile', titre: 'Facile', emoji: '🟢', description: 'Parfait pour débuter' },
-    { id: 'moyen', titre: 'Moyen', emoji: '🟡', description: 'Challenge équilibré' },
-    { id: 'difficile', titre: 'Difficile', emoji: '🔴', description: 'Pour les experts' }
+    { id: 'facile', titre: t('ai.difficulty_easy'), emoji: '🟢', description: t('ai.difficulty_easy_desc') },
+    { id: 'moyen', titre: t('ai.difficulty_medium'), emoji: '🟡', description: t('ai.difficulty_medium_desc') },
+    { id: 'difficile', titre: t('ai.difficulty_hard'), emoji: '🔴', description: t('ai.difficulty_hard_desc') }
   ];
 
   return (
@@ -41,11 +44,11 @@ const AIOptionsModal = memo(({
                         >
                             <Ionicons name="arrow-back" size={getResponsiveSize(28)} color="#f1c40f" />
                         </TouchableOpacity>
-                        <Text style={[styles.friendsModalTitle, { marginBottom: 0 }]}>Configuration IA</Text>
+                        <Text style={[styles.friendsModalTitle, { marginBottom: 0 }]}>{t('ai.config_title')}</Text>
                     </View>
                     
                     {/* DIFFICULTÉ */}
-                    <Text style={styles.friendsLabel}>Difficulté:</Text>
+                    <Text style={styles.friendsLabel}>{t('ai.difficulty_label')}</Text>
                     <View style={{ width: '100%', gap: getResponsiveSize(10), marginBottom: getResponsiveSize(20) }}>
                         {niveaux.map((niveau) => (
                             <TouchableOpacity
@@ -83,7 +86,7 @@ const AIOptionsModal = memo(({
 
                     {/* QUI COMMENCE */}
                     <View style={styles.sectionContainer}>
-                        <Text style={styles.sectionTitle}>Qui commence ?</Text>
+                        <Text style={styles.sectionTitle}>{t('setup.who_starts_label')}</Text>
                         <View style={{ flexDirection: 'row', gap: getResponsiveSize(10), width: '100%' }}>
                             {['joueur', 'ia', 'aleatoire'].map(opt => (
                                 <TouchableOpacity 
@@ -104,7 +107,7 @@ const AIOptionsModal = memo(({
                                         fontWeight: 'bold',
                                         color: aiPremierJoueur === opt ? '#000' : 'rgba(255,255,255,0.6)' 
                                     }}>
-                                        {opt === 'joueur' ? 'Vous' : opt === 'ia' ? 'IA' : 'Aléatoire'}
+                                        {opt === 'joueur' ? t('game.you') : opt === 'ia' ? t('game.ai_name') : t('common.random')}
                                     </Text>
                                 </TouchableOpacity>
                             ))}
@@ -113,12 +116,12 @@ const AIOptionsModal = memo(({
 
                     {/* COULEUR */}
                     <View style={styles.sectionContainer}>
-                        <Text style={styles.sectionTitle}>Votre couleur</Text>
+                        <Text style={styles.sectionTitle}>{t('setup.your_color_label')}</Text>
                         <View style={{ flexDirection: 'row', gap: getResponsiveSize(10), width: '100%' }}>
                                 {[
-                                { id: 'noir', icon: '🔴', label: 'Rouge' },
-                                { id: 'blanc', icon: '✖', label: 'Bleu' },
-                                { id: 'aleatoire', icon: '🎲', label: 'Aléa.' }
+                                { id: 'noir', icon: '🔴', label: t('colors.red') },
+                                { id: 'blanc', icon: '✖', label: t('colors.blue') },
+                                { id: 'aleatoire', icon: '🎲', label: t('common.random_short') }
                                 ].map(opt => (
                                 <TouchableOpacity 
                                     key={opt.id} 
@@ -150,14 +153,14 @@ const AIOptionsModal = memo(({
                         style={[modalTheme.button, modalTheme.buttonActive, { width: '100%', borderRadius: getResponsiveSize(15), paddingVertical: getResponsiveSize(10) }]}
                         onPress={() => { playButtonSound(); onStart(); }}
                     >
-                        <Text style={[modalTheme.buttonText, modalTheme.buttonTextActive, { fontSize: getResponsiveSize(18) }]}>Jouer</Text>
+                        <Text style={[modalTheme.buttonText, modalTheme.buttonTextActive, { fontSize: getResponsiveSize(18) }]}>{t('matchmaking.play_btn')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity 
                         style={{ marginTop: getResponsiveSize(15), padding: getResponsiveSize(10) }}
                         onPress={() => { playButtonSound(); onBack(); }}
                     >
-                        <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: getResponsiveSize(16) }}>Retour</Text>
+                        <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: getResponsiveSize(16) }}>{t('common.back')}</Text>
                     </TouchableOpacity>
                 </ScrollView>
             </Pressable>

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Text, StyleSheet, ImageBackground, Dimensions, ScrollView, Animated, Image, Modal, Keyboard, Platform, Share, ActivityIndicator, FlatList, AppState, Pressable } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
@@ -148,6 +149,7 @@ const Pawn = ({ color, x, y, r, opacity = 1, onPress, skin }) => {
 };
 
 const GameScreen = ({ navigation, route }) => {
+  const { t } = useTranslation();
   const { width, height } = useResponsive();
   
   // Configuration du plateau dynamique (Phase 2 Item 6)
@@ -235,7 +237,7 @@ const GameScreen = ({ navigation, route }) => {
   // Define players early to avoid ReferenceError in useEffect
   const player1 = {
     id: ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite) ? getPlayerId(playersData?.black) : currentUserId,
-    pseudo: mode === 'local' ? 'Joueur 1' : ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite) ? playersData?.black?.pseudo : (user?.pseudo || 'Joueur 1'),
+    pseudo: mode === 'local' ? t('game.player1') : ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite) ? playersData?.black?.pseudo : (user?.pseudo || t('game.player1')),
     avatar: ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite) ? playersData?.black?.avatar : user?.avatar,
     country: ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite) ? playersData?.black?.country : user?.country,
     coins: ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite) ? playersData?.black?.coins : ((mode === 'online_custom' || mode === 'live') && isLocalPlayerWhite ? playersData?.white?.coins : user?.coins),
@@ -282,14 +284,14 @@ const GameScreen = ({ navigation, route }) => {
         ? (getPlayerId(opponent) || getPlayerId(route.params?.opponent))
         : getPlayerId(playersData?.black)),
     pseudo: mode === 'ai'
-      ? 'IA'
+      ? t('game.ai_name')
       : mode === 'local'
-      ? 'Joueur 2'
+      ? t('game.player2')
       : mode === 'online'
-      ? (opponent?.pseudo || route.params?.opponent?.pseudo || 'Adversaire')
+      ? (opponent?.pseudo || route.params?.opponent?.pseudo || t('game.opponent'))
       : ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite)
-        ? (playersData?.white?.pseudo || 'En attente...')
-        : (playersData?.black?.pseudo || ((mode === 'online_custom' || mode === 'live' || mode === 'spectator') ? 'En attente...' : 'Joueur 2')),
+        ? (playersData?.white?.pseudo || t('game.waiting_short'))
+        : (playersData?.black?.pseudo || ((mode === 'online_custom' || mode === 'live' || mode === 'spectator') ? t('game.waiting_short') : t('game.player2'))),
     avatar: mode === 'online'
       ? (opponent?.avatar || route.params?.opponent?.avatar)
       : ((mode === 'spectator' || mode === 'online_custom' || mode === 'live') && !isLocalPlayerWhite)
@@ -357,7 +359,7 @@ const GameScreen = ({ navigation, route }) => {
   const hasShownVersus = useRef(false);
 
   useEffect(() => {
-    const isPlayer2Ready = player2 && player2.pseudo && player2.pseudo !== 'En attente...';
+    const isPlayer2Ready = player2 && player2.pseudo && player2.pseudo !== t('game.waiting_short');
     const shouldShow = 
         (mode === 'ai') || 
         (mode === 'online') || 
@@ -467,11 +469,11 @@ const GameScreen = ({ navigation, route }) => {
             if (params.betAmount > currentCoins) {
                 const manque = params.betAmount - currentCoins;
                 showAlert(
-                    'Solde insuffisant',
-                    `Il vous manque ${Number(manque).toLocaleString()} coins.`,
+                    t('game.insufficient_balance'),
+                    t('game.missing_coins', { amount: Number(manque).toLocaleString() }),
                     [
-                        { text: 'Magasin', onPress: () => navigation.navigate('Home', { screen: 'Magasin' }) },
-                        { text: 'Retour', style: 'cancel', onPress: () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home')) }
+                        { text: t('game.shop'), onPress: () => navigation.navigate('Home', { screen: 'Magasin' }) },
+                        { text: t('common.back'), style: 'cancel', onPress: () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home')) }
                     ]
                 );
                 return;
@@ -488,19 +490,19 @@ const GameScreen = ({ navigation, route }) => {
                     const missingMatch = message.match(/Manque\s+(\d+)\s+coins/i);
                     const manque = missingMatch ? Number(missingMatch[1]) : null;
                     showAlert(
-                        'Solde insuffisant',
-                        manque !== null ? `Il vous manque ${Number(manque).toLocaleString()} coins.` : 'Vous n\'avez pas assez de coins.',
+                        t('game.insufficient_balance'),
+                        manque !== null ? t('game.missing_coins', { amount: Number(manque).toLocaleString() }) : t('game.not_enough_coins'),
                         [
-                            { text: 'Magasin', onPress: () => navigation.navigate('Home', { screen: 'Magasin' }) },
-                            { text: 'Retour', style: 'cancel', onPress: () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home')) }
+                            { text: t('game.shop'), onPress: () => navigation.navigate('Home', { screen: 'Magasin' }) },
+                            { text: t('common.back'), style: 'cancel', onPress: () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home')) }
                         ]
                     );
                     return;
                 }
 
                 console.log('Débit IA échoué:', err);
-                showAlert('Erreur', 'Impossible de débiter la mise.', [
-                    { text: 'Retour', style: 'cancel', onPress: () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home')) }
+                showAlert(t('common.error'), t('game.bet_debit_failed'), [
+                    { text: t('common.back'), style: 'cancel', onPress: () => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home')) }
                 ]);
             });
         }
@@ -987,12 +989,12 @@ const GameScreen = ({ navigation, route }) => {
             }
             setTimeout(() => {
               setAlertData({
-                title: `Match ${nextGameNumber - 1} terminé`,
+                title: t('game.match_finished', { number: nextGameNumber - 1 }),
                 message: winnerColor === 'black'
-                  ? `${currentParams.players?.black?.pseudo || 'Joueur 1'} gagne ! \nScore: ${blackScore} - ${whiteScore}`
+                  ? `${currentParams.players?.black?.pseudo || t('game.player1')} ${t('game.wins')} \n${t('game.score_label')}: ${blackScore} - ${whiteScore}`
                   : winnerColor === 'white'
-                    ? `${currentParams.players?.white?.pseudo || 'Joueur 2'} gagne ! \nScore: ${blackScore} - ${whiteScore}`
-                    : `Match nul\nScore: ${blackScore} - ${whiteScore}`
+                    ? `${currentParams.players?.white?.pseudo || t('game.player2')} ${t('game.wins')} \n${t('game.score_label')}: ${blackScore} - ${whiteScore}`
+                    : `${t('game.draw')}\n${t('game.score_label')}: ${blackScore} - ${whiteScore}`
               });
               setNextMatchVisible(true);
               // Démarrer un timer de 30s comme NextMatchModal par défaut
@@ -1058,15 +1060,15 @@ const GameScreen = ({ navigation, route }) => {
       }
 
       if (data.reason === 'resign' && (mode === 'online' || mode === 'online_custom')) {
-        const loserPseudo = opponent?.pseudo || "Votre adversaire";
-        const coinsMsg = (data.gains || 0) > 0 ? `\n🏆 +${data.gains} coins crédités !` : '';
+        const loserPseudo = opponent?.pseudo || t('game.opponent');
+        const coinsMsg = (data.gains || 0) > 0 ? `\n🏆 +${data.gains} ${t('game.coins_credited')}` : '';
         if (isWinner) {
           showAlert(
-            "🎉 Victoire par forfait !",
-            `${loserPseudo} a quitté la partie. Vous remportez la victoire !${coinsMsg}`,
+            t('game.victory_forfeit_title'),
+            t('game.victory_forfeit_msg', { pseudo: loserPseudo }) + coinsMsg,
             [
               {
-                text: 'Super !',
+                text: t('game.great'),
                 onPress: () => {
                   try { setShowGameMenu(false); } catch (_) {}
                   navigation.navigate('Home');
@@ -1079,11 +1081,11 @@ const GameScreen = ({ navigation, route }) => {
         }
 
         showAlert(
-          "Partie terminée",
-          "Vous avez quitté la partie. Retour à l'accueil.",
+          t('game.game_over_title'),
+          t('game.you_left_game'),
           [
             {
-              text: 'OK',
+              text: t('common.ok'),
               onPress: () => {
                 try { setShowGameMenu(false); } catch (_) {}
                 navigation.navigate('Home');
@@ -1254,13 +1256,13 @@ const GameScreen = ({ navigation, route }) => {
         setGameOver(true);
 
         setTimeout(() => {
-             setAlertData({ 
-                 title: `Match ${data.nextGameNumber - 1} terminé`, 
-                 message: `${data.winner === 'black' 
-                     ? (params.players?.black?.pseudo || 'Joueur 1') 
-                     : (params.players?.white?.pseudo || 'Joueur 2') 
-                 } gagne ! \nScore: ${data.score.black} - ${data.score.white}` 
-             }); 
+             setAlertData({
+                 title: t('game.match_finished', { number: data.nextGameNumber - 1 }),
+                 message: `${data.winner === 'black'
+                     ? (params.players?.black?.pseudo || t('game.player1'))
+                     : (params.players?.white?.pseudo || t('game.player2'))
+                 } ${t('game.wins')} \n${t('game.score_label')}: ${data.score.black} - ${data.score.white}`
+             });
          
              setNextMatchVisible(true); 
              
@@ -1433,8 +1435,8 @@ const GameScreen = ({ navigation, route }) => {
 
     const handleLiveRoomClosed = () => {
         if (isExitingRef.current) return;
-        showAlert("Live terminé", "Le créateur a fermé le live.", [
-            { text: "OK", onPress: () => navigation.navigate('Home'), style: 'cancel' }
+        showAlert(t('game.live_ended_title'), t('game.live_ended_msg'), [
+            { text: t('common.ok'), onPress: () => navigation.navigate('Home'), style: 'cancel' }
         ]);
     };
 
@@ -1475,13 +1477,13 @@ const GameScreen = ({ navigation, route }) => {
         } catch (_) {}
 
         if (isWinner) {
-            const coinsMsg = coinsAwarded > 0 ? `\n🏆 +${coinsAwarded} coins crédités !` : '';
+            const coinsMsg = coinsAwarded > 0 ? `\n🏆 +${coinsAwarded} ${t('game.coins_credited')}` : '';
             showAlert(
-                "🎉 Victoire par forfait !",
-                `${loserPseudo || "Votre adversaire"} a quitté la partie. Vous remportez la victoire !${coinsMsg}`,
+                t('game.victory_forfeit_title'),
+                t('game.victory_forfeit_msg', { pseudo: loserPseudo || t('game.opponent') }) + coinsMsg,
                 [
                     {
-                        text: "Super !",
+                        text: t('game.great'),
                         onPress: () => {
                             try {
                                 syncBalance();
@@ -1506,10 +1508,10 @@ const GameScreen = ({ navigation, route }) => {
         }
 
         const msg = winnerPseudo
-            ? `${winnerPseudo} gagne par forfait.${coinsAwarded > 0 ? `\nGain: +${coinsAwarded} coins` : ''}`
-            : `Partie terminée.${coinsAwarded > 0 ? `\nGain: +${coinsAwarded} coins` : ''}`;
+            ? `${winnerPseudo} ${t('game.wins_by_forfeit')}${coinsAwarded > 0 ? `\n${t('game.gain_label')}: +${coinsAwarded} ${t('game.coins')}` : ''}`
+            : `${t('game.game_over_title')}${coinsAwarded > 0 ? `\n${t('game.gain_label')}: +${coinsAwarded} ${t('game.coins')}` : ''}`;
 
-        showAlert("Partie terminée", msg, [{ text: "OK", onPress: () => {} }]);
+        showAlert(t('game.game_over_title'), msg, [{ text: t('common.ok'), onPress: () => {} }]);
     };
 
     const handleOpponentLeftLive = () => {
@@ -1518,12 +1520,12 @@ const GameScreen = ({ navigation, route }) => {
             setShowResultModal(false);
             setNextMatchVisible(false);
             setWaitingForNextRound(true);
-            setWaitingMessage("⏸️ L'adversaire a quitté. En attente d'un nouvel adversaire…");
+            setWaitingMessage(t('game.opponent_left_waiting'));
             showAlert(
-                "Adversaire parti",
-                "L'adversaire a quitté la partie. Le créateur peut inviter un nouveau joueur.",
+                t('game.opponent_left_title'),
+                t('game.opponent_left_spectator_msg'),
                 [
-                    { text: "OK", onPress: () => {} }
+                    { text: t('common.ok'), onPress: () => {} }
                 ]
             );
             return;
@@ -1545,11 +1547,11 @@ const GameScreen = ({ navigation, route }) => {
             return;
         }
         showAlert(
-            "Adversaire parti",
-            "Votre adversaire a quitté la partie. Le live reste actif.",
+            t('game.opponent_left_title'),
+            t('game.opponent_left_live_msg'),
             [
-                { 
-                    text: "Attendre un autre joueur",
+                {
+                    text: t('game.wait_another_player'),
                     onPress: () => {
                         socket.emit('reset_live_opponent', { gameId: params.gameId });
                         if (params.roomConfig) {
@@ -1564,7 +1566,7 @@ const GameScreen = ({ navigation, route }) => {
                     }
                 },
                 {
-                    text: "Arrêter le live",
+                    text: t('game.stop_live'),
                     style: 'destructive',
                     onPress: () => {
                         isExitingRef.current = true;
@@ -1603,7 +1605,7 @@ const GameScreen = ({ navigation, route }) => {
         setLiveElapsedSec(0);
         setWaitingForNextRound(true);
         setShowGameMenu(false);
-        setWaitingMessage("Partie annulée. En attente du créateur...");
+        setWaitingMessage(t('game.game_cancelled_waiting'));
 
         const myId = (userRef.current?._id || userRef.current?.id || '').toString();
         const updatedCoins = data?.updatedCoins || {};
@@ -1612,7 +1614,7 @@ const GameScreen = ({ navigation, route }) => {
         }
 
         const betAmount = Number(data?.betAmount ?? paramsRef.current?.betAmount ?? 0) || 0;
-        const refundMsg = betAmount > 0 ? `\n🪙 Mise remboursée : ${betAmount.toLocaleString()}` : '';
+        const refundMsg = betAmount > 0 ? `\n🪙 ${t('game.bet_refunded')}: ${betAmount.toLocaleString()}` : '';
         const currentParams = paramsRef.current || {};
         const creatorId = currentParams?.roomConfig?.createur?._id || currentParams?.roomConfig?.createur?.id;
         const isCreator = creatorId && myId && creatorId.toString() === myId.toString();
@@ -1620,11 +1622,11 @@ const GameScreen = ({ navigation, route }) => {
 
         if (isCreator) {
             showAlert(
-                "Partie annulée",
-                `Annulation acceptée. La partie est annulée pour les deux joueurs.${refundMsg}\n\nVous pouvez relancer la partie.`,
+                t('game.game_cancelled_title'),
+                `${t('game.cancel_accepted_both')}${refundMsg}\n\n${t('game.can_restart')}`,
                 [
                     {
-                        text: "Retour salle",
+                        text: t('game.back_to_room'),
                         style: 'cancel',
                         onPress: () => {
                             if (currentParams.roomConfig) {
@@ -1635,7 +1637,7 @@ const GameScreen = ({ navigation, route }) => {
                         }
                     },
                     {
-                        text: "Relancer",
+                        text: t('game.restart'),
                         onPress: () => {
                             try { socket.emit('start_live_game', { gameId }); } catch (_) {}
                         }
@@ -1647,9 +1649,9 @@ const GameScreen = ({ navigation, route }) => {
         }
 
         showAlert(
-            "Partie annulée",
-            `Annulation acceptée. La partie est annulée pour les deux joueurs.${refundMsg}\n\nEn attente du créateur...`,
-            [{ text: "OK", style: 'cancel' }],
+            t('game.game_cancelled_title'),
+            `${t('game.cancel_accepted_both')}${refundMsg}\n\n${t('game.waiting_creator')}`,
+            [{ text: t('common.ok'), style: 'cancel' }],
             { cancelable: false }
         );
     };
@@ -1669,21 +1671,21 @@ const GameScreen = ({ navigation, route }) => {
         if (lastHandledActionRequestIdRef.current === requestId) return;
         lastHandledActionRequestIdRef.current = requestId;
 
-        const fromPseudo = data?.fromPseudo || opponent?.pseudo || 'Adversaire';
+        const fromPseudo = data?.fromPseudo || opponent?.pseudo || t('game.opponent');
         const currentParams = paramsRef.current;
         const isTournament = !!currentParams?.tournamentSettings;
-        const title = type === 'cancel' ? "Demande d'annulation" : "Demande d'abandon";
+        const title = type === 'cancel' ? t('game.cancel_request_title') : t('game.abandon_request_title');
         const message = type === 'cancel'
             ? (
                 isTournament
-                  ? `${fromPseudo} demande d'annuler cette manche.\nSi vous acceptez, la manche sera rejouée (plateau réinitialisé) et le score ne change pas.`
-                  : `${fromPseudo} demande d'annuler la partie.\nSi vous acceptez, la mise est remboursée aux deux joueurs.`
+                  ? t('game.cancel_request_tournament_msg', { pseudo: fromPseudo })
+                  : t('game.cancel_request_msg', { pseudo: fromPseudo })
               )
-            : `${fromPseudo} vous demande d'abandonner.\nSi vous acceptez, vous perdez la partie.`;
+            : t('game.abandon_request_msg', { pseudo: fromPseudo });
 
         showAlert(title, message, [
             {
-                text: "Refuser",
+                text: t('game.refuse'),
                 style: "cancel",
                 onPress: () => {
                     playButtonSound();
@@ -1691,7 +1693,7 @@ const GameScreen = ({ navigation, route }) => {
                 }
             },
             {
-                text: "Accepter",
+                text: t('game.accept'),
                 style: "destructive",
                 onPress: () => {
                     playButtonSound();
@@ -1715,20 +1717,20 @@ const GameScreen = ({ navigation, route }) => {
 
         if (!accepted) {
             const msg =
-                reason === 'expired' ? 'Votre demande a expiré.' :
-                reason === 'move_started' ? 'Votre demande a été annulée (la partie a commencé).' :
-                reason === 'too_early' ? "Votre demande a été refusée (moins de 20 pions posés par vous)." :
-                'Votre demande a été refusée.';
-            showAlert('Demande', msg, [{ text: 'OK', style: 'cancel' }]);
+                reason === 'expired' ? t('game.request_expired') :
+                reason === 'move_started' ? t('game.request_cancelled_started') :
+                reason === 'too_early' ? t('game.request_refused_too_early') :
+                t('game.request_refused');
+            showAlert(t('game.request_title'), msg, [{ text: t('common.ok'), style: 'cancel' }]);
             return;
         }
 
         showAlert(
-            'Demande acceptée',
+            t('game.request_accepted_title'),
             type === 'cancel'
-              ? (isTournament ? "La manche va être rejouée (plateau réinitialisé)." : "La partie va être annulée pour les deux joueurs.")
-              : "L'adversaire a accepté d'abandonner.",
-            [{ text: 'OK', style: 'cancel' }]
+              ? (isTournament ? t('game.round_will_replay') : t('game.game_will_cancel'))
+              : t('game.opponent_accepted_abandon'),
+            [{ text: t('common.ok'), style: 'cancel' }]
         );
     };
 
@@ -1882,13 +1884,13 @@ const GameScreen = ({ navigation, route }) => {
 
 
   // Déterminer les noms pour l'affichage
-  const joueurNoir = mode === 'ai' 
-    ? (iaColors.joueur === 'black' ? 'Vous' : configIA?.difficulte || 'IA') 
-    : 'Joueur 1';
+  const joueurNoir = mode === 'ai'
+    ? (iaColors.joueur === 'black' ? t('game.you') : configIA?.difficulte || t('game.ai_name'))
+    : t('game.player1');
 
   const joueurBlanc = mode === 'ai'
-    ? (iaColors.joueur === 'white' ? 'Vous' : configIA?.difficulte || 'IA')
-    : 'Joueur 2';
+    ? (iaColors.joueur === 'white' ? t('game.you') : configIA?.difficulte || t('game.ai_name'))
+    : t('game.player2');
 
   const handleSendFriendRequest = async () => {
     if (!selectedProfile || !selectedProfile.id) return;
@@ -1905,13 +1907,13 @@ const GameScreen = ({ navigation, route }) => {
         
         const data = await res.json();
         if (res.ok) {
-            showAlert("Succès", "Demande d'ami envoyée !", [{ text: 'OK', style: 'cancel' }]);
+            showAlert(t('common.success'), t('game.friend_request_sent'), [{ text: t('common.ok'), style: 'cancel' }]);
             setSelectedProfile(null);
         } else {
-            showAlert("Info", data.message || "Impossible d'envoyer la demande.", [{ text: 'OK', style: 'cancel' }]);
+            showAlert(t('common.info'), data.message || t('game.friend_request_failed'), [{ text: t('common.ok'), style: 'cancel' }]);
         }
     } catch (error) {
-        showAlert("Erreur", "Erreur réseau.", [{ text: 'OK', style: 'cancel' }]);
+        showAlert(t('common.error'), t('errors.network'), [{ text: t('common.ok'), style: 'cancel' }]);
     }
   };
 
@@ -1956,7 +1958,7 @@ const GameScreen = ({ navigation, route }) => {
           timeControl: params.timeControl,
           gameId: params.gameId
       });
-      appAlert("Invitation envoyée", "En attente de la réponse...");
+      appAlert(t('game.invite_sent'), t('game.waiting_response'));
       setShowInviteModal(false);
   };
 
@@ -1976,7 +1978,7 @@ const GameScreen = ({ navigation, route }) => {
               }}
           >
               <View style={[styles.modalContent, { height: '70%', width: '90%' }]} onStartShouldSetResponder={() => true}>
-                  <Text style={styles.modalPseudo}>Inviter un joueur</Text>
+                  <Text style={styles.modalPseudo}>{t('game.invite_player')}</Text>
                   
                   {/* Onglets */}
                   <View style={{flexDirection: 'row', marginBottom: getResponsiveSize(15), borderBottomWidth: getResponsiveSize(1), borderBottomColor: '#f1c40f'}}>
@@ -1987,7 +1989,7 @@ const GameScreen = ({ navigation, route }) => {
                               setInviteMode('friends');
                           }}
                       >
-                          <Text style={{color: inviteMode === 'friends' ? '#f1c40f' : '#fff', fontWeight: 'bold'}}>Amis</Text>
+                          <Text style={{color: inviteMode === 'friends' ? '#f1c40f' : '#fff', fontWeight: 'bold'}}>{t('game.friends_tab')}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity 
                           style={{flex: 1, padding: getResponsiveSize(10), alignItems: 'center', borderBottomWidth: inviteMode === 'online' ? 2 : 0, borderBottomColor: '#f1c40f'}}
@@ -1996,12 +1998,12 @@ const GameScreen = ({ navigation, route }) => {
                               setInviteMode('online');
                           }}
                       >
-                          <Text style={{color: inviteMode === 'online' ? '#f1c40f' : '#fff', fontWeight: 'bold'}}>En ligne</Text>
+                          <Text style={{color: inviteMode === 'online' ? '#f1c40f' : '#fff', fontWeight: 'bold'}}>{t('game.online_tab')}</Text>
                       </TouchableOpacity>
                   </View>
 
                   <Text style={{color:'#fff', marginBottom: getResponsiveSize(10)}}>
-                      {inviteMode === 'friends' ? 'Amis en ligne :' : 'Tous les joueurs en ligne :'}
+                      {inviteMode === 'friends' ? t('game.online_friends_label') : t('game.all_online_players_label')}
                   </Text>
                   
                   {loadingFriends ? (
@@ -2012,7 +2014,7 @@ const GameScreen = ({ navigation, route }) => {
                           keyExtractor={item => item._id}
                           ListEmptyComponent={
                               <Text style={{color: '#999', textAlign: 'center'}}>
-                                  {inviteMode === 'friends' ? 'Aucun ami en ligne.' : 'Aucun joueur en ligne.'}
+                                  {inviteMode === 'friends' ? t('game.no_online_friends') : t('game.no_online_players')}
                               </Text>
                           }
                           renderItem={({ item }) => (
@@ -2057,14 +2059,14 @@ const GameScreen = ({ navigation, route }) => {
                       />
                   )}
 
-                  <TouchableOpacity 
-                      style={[styles.closeButton, { marginTop: 20 }]} 
+                  <TouchableOpacity
+                      style={[styles.closeButton, { marginTop: 20 }]}
                       onPress={() => {
                           playButtonSound();
                           setShowInviteModal(false);
                       }}
                   >
-                      <Text style={styles.closeButtonText}>Fermer</Text>
+                      <Text style={styles.closeButtonText}>{t('common.close')}</Text>
                   </TouchableOpacity>
               </View>
           </TouchableOpacity>
@@ -2074,12 +2076,12 @@ const GameScreen = ({ navigation, route }) => {
   const handleQuitGame = () => {
     if (isWaitingState && params.gameId) {
         appAlert(
-            "Annuler la partie ?",
-            "Voulez-vous fermer la salle et récupérer votre mise ?",
+            t('game.cancel_game_title'),
+            t('game.cancel_game_waiting_msg'),
             [
-                { text: "Non", style: "cancel" },
-                { 
-                    text: "Oui, quitter", 
+                { text: t('common.no'), style: "cancel" },
+                {
+                    text: t('game.yes_quit'),
                     style: "destructive",
                     onPress: () => {
                         socket.emit('quit_waiting_room', { gameId: params.gameId, userId: user?._id });
@@ -2099,10 +2101,10 @@ const GameScreen = ({ navigation, route }) => {
         const isCreator = Boolean(myId && creatorId && myId.toString() === creatorId.toString());
 
         if (isSpectatorMode) {
-            appAlert("Quitter ?", "Retourner à l'accueil ?", [
-                { text: "Annuler", style: "cancel" },
+            appAlert(t('game.quit_title'), t('game.go_home_msg'), [
+                { text: t('common.cancel'), style: "cancel" },
                 {
-                    text: "Accueil",
+                    text: t('game.home'),
                     onPress: () => {
                         isExitingRef.current = true;
                         setShowGameMenu(false);
@@ -2114,10 +2116,10 @@ const GameScreen = ({ navigation, route }) => {
         }
 
         if (!isCreator) {
-            appAlert("Quitter la partie live ?", "Choisissez une option :", [
-                { text: "Annuler", style: "cancel" },
+            appAlert(t('game.quit_live_title'), t('game.choose_option'), [
+                { text: t('common.cancel'), style: "cancel" },
                 {
-                    text: "Continuer à suivre",
+                    text: t('game.keep_watching'),
                     onPress: () => {
                         playButtonSound();
                         setIsSpectatorMode(true);
@@ -2128,7 +2130,7 @@ const GameScreen = ({ navigation, route }) => {
                     }
                 },
                 {
-                    text: "Retourner à l'accueil",
+                    text: t('game.go_home'),
                     style: "destructive",
                     onPress: () => {
                         playButtonSound();
@@ -2144,10 +2146,10 @@ const GameScreen = ({ navigation, route }) => {
             return;
         }
 
-        appAlert("Quitter la partie live ?", "Vous perdrez automatiquement la partie.", [
-            { text: "Annuler", style: "cancel" },
+        appAlert(t('game.quit_live_title'), t('game.quit_lose_auto'), [
+            { text: t('common.cancel'), style: "cancel" },
             {
-                text: "Quitter",
+                text: t('game.quit'),
                 style: "destructive",
                 onPress: () => {
                     playButtonSound();
@@ -2164,12 +2166,12 @@ const GameScreen = ({ navigation, route }) => {
     }
 
     appAlert(
-        "Quitter la partie ?",
-        "Vous perdrez automatiquement la partie.",
+        t('game.quit_title'),
+        t('game.quit_lose_auto'),
         [
-            { text: "Annuler", style: "cancel" },
-            { 
-                text: "Quitter", 
+            { text: t('common.cancel'), style: "cancel" },
+            {
+                text: t('game.quit'),
                 style: "destructive",
                 onPress: () => {
                     if (mode === 'online' || mode === 'online_custom') {
@@ -2199,17 +2201,17 @@ const GameScreen = ({ navigation, route }) => {
       try {
         socket.emit('request_action', { gameId, type }, (res) => {
           if (!res?.ok) {
-            showAlert('Erreur', res?.message || "Impossible d'envoyer la demande.", [{ text: 'OK', style: 'cancel' }]);
+            showAlert(t('common.error'), res?.message || t('game.request_send_failed'), [{ text: t('common.ok'), style: 'cancel' }]);
             return;
           }
           showAlert(
-            'Demande envoyée',
-            type === 'cancel' ? "Votre demande d'annulation a été envoyée." : "Votre demande d'abandon a été envoyée.",
-            [{ text: 'OK', style: 'cancel' }]
+            t('game.request_sent_title'),
+            type === 'cancel' ? t('game.cancel_request_sent') : t('game.abandon_request_sent'),
+            [{ text: t('common.ok'), style: 'cancel' }]
           );
         });
       } catch (e) {
-        showAlert('Erreur', "Impossible d'envoyer la demande.", [{ text: 'OK', style: 'cancel' }]);
+        showAlert(t('common.error'), t('game.request_send_failed'), [{ text: t('common.ok'), style: 'cancel' }]);
       }
     }, 50);
   };
@@ -2219,13 +2221,13 @@ const GameScreen = ({ navigation, route }) => {
     const currentParams = paramsRef.current;
     const isTournament = !!currentParams?.tournamentSettings;
     showAlert(
-      "Annuler la partie",
+      t('game.cancel_game_menu_title'),
       isTournament
-        ? "Vous allez envoyer une demande d'annulation à votre adversaire.\nS'il accepte, la manche sera rejouée (plateau réinitialisé) et le score ne change pas."
-        : "Vous allez envoyer une demande d'annulation à votre adversaire.\nSi l'adversaire accepte, la partie est annulée pour les deux joueurs et la mise est remboursée.",
+        ? t('game.cancel_game_tournament_desc')
+        : t('game.cancel_game_desc'),
       [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Envoyer', onPress: () => { playButtonSound(); sendActionRequest('cancel'); } }
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.send'), onPress: () => { playButtonSound(); sendActionRequest('cancel'); } }
       ]
     );
   };
@@ -2233,11 +2235,11 @@ const GameScreen = ({ navigation, route }) => {
   const handleRequestAbandon = () => {
     playButtonSound();
     showAlert(
-      "Abandonner",
-      "Vous allez demander à votre adversaire d'abandonner.\nSi l'adversaire accepte, c'est lui qui abandonne et vous gagnez la partie.",
+      t('game.abandon_menu_title'),
+      t('game.abandon_desc'),
       [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Envoyer', style: 'destructive', onPress: () => { playButtonSound(); sendActionRequest('abandon'); } }
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.send'), style: 'destructive', onPress: () => { playButtonSound(); sendActionRequest('abandon'); } }
       ]
     );
   };
@@ -2260,7 +2262,7 @@ const GameScreen = ({ navigation, route }) => {
             <View style={styles.menuContent} onStartShouldSetResponder={() => true}>
                 <TouchableOpacity style={styles.menuItem} onPress={() => { playButtonSound(); handleQuitGame(); }}>
                     <Ionicons name="exit-outline" size={24} color="#ffffffff" />
-                    <Text style={[styles.menuText, { color: '#ffffffff' }]}>Quitter la partie</Text>
+                    <Text style={[styles.menuText, { color: '#ffffffff' }]}>{t('game.quit_game')}</Text>
                 </TouchableOpacity>
                 
                 <View style={styles.menuDivider} />
@@ -2272,23 +2274,23 @@ const GameScreen = ({ navigation, route }) => {
                       onPress={() => {
                         playButtonSound();
                         if (gameOver) {
-                          showAlert('Info', 'La partie est déjà terminée.', [{ text: 'OK', style: 'cancel' }]);
+                          showAlert(t('common.info'), t('game.game_already_over'), [{ text: t('common.ok'), style: 'cancel' }]);
                           return;
                         }
                         const myPlacedStonesCount = Array.isArray(board) ? board.filter(s => s && s.player === player1.color).length : 0;
                         if (myPlacedStonesCount < 20) {
-                          showAlert('Info', "L'annulation est possible à partir de 20 pions posés par vous.", [{ text: 'OK', style: 'cancel' }]);
+                          showAlert(t('common.info'), t('game.cancel_min_20_stones'), [{ text: t('common.ok'), style: 'cancel' }]);
                           return;
                         }
                         if (!(params.gameId || params.roomId || params.matchId)) {
-                          showAlert('Erreur', 'ID de partie manquant.', [{ text: 'OK', style: 'cancel' }]);
+                          showAlert(t('common.error'), t('game.missing_game_id'), [{ text: t('common.ok'), style: 'cancel' }]);
                           return;
                         }
                         handleRequestCancel();
                       }}
                     >
                         <Ionicons name="close-circle-outline" size={24} color="#ffffffff" />
-                        <Text style={styles.menuText}>Annuler la partie</Text>
+                        <Text style={styles.menuText}>{t('game.cancel_game_menu_title')}</Text>
                     </TouchableOpacity>
 
                     <View style={styles.menuDivider} />
@@ -2298,18 +2300,18 @@ const GameScreen = ({ navigation, route }) => {
                       onPress={() => {
                         playButtonSound();
                         if (gameOver) {
-                          showAlert('Info', 'La partie est déjà terminée.', [{ text: 'OK', style: 'cancel' }]);
+                          showAlert(t('common.info'), t('game.game_already_over'), [{ text: t('common.ok'), style: 'cancel' }]);
                           return;
                         }
                         if (!(params.gameId || params.roomId || params.matchId)) {
-                          showAlert('Erreur', 'ID de partie manquant.', [{ text: 'OK', style: 'cancel' }]);
+                          showAlert(t('common.error'), t('game.missing_game_id'), [{ text: t('common.ok'), style: 'cancel' }]);
                           return;
                         }
                         handleRequestAbandon();
                       }}
                     >
                         <Ionicons name="hand-left-outline" size={24} color="#ffffffff" />
-                        <Text style={styles.menuText}>Abandonner</Text>
+                        <Text style={styles.menuText}>{t('game.abandon_menu_title')}</Text>
                     </TouchableOpacity>
 
                     <View style={styles.menuDivider} />
@@ -2318,13 +2320,13 @@ const GameScreen = ({ navigation, route }) => {
 
                 <TouchableOpacity style={styles.menuItem} onPress={() => { playButtonSound(); dispatch(toggleSound()); setShowGameMenu(false); }}>
                     <Ionicons name={isSoundEnabled ? "volume-high" : "volume-mute"} size={24} color="#ffffffff" />
-                    <Text style={styles.menuText}>Son des pions : {isSoundEnabled ? "Activé" : "Désactivé"}</Text>
+                    <Text style={styles.menuText}>{t('game.pawn_sound')}: {isSoundEnabled ? t('game.sound_on') : t('game.sound_off')}</Text>
                 </TouchableOpacity>
 
                 <View style={styles.menuDivider} />
 
                 <TouchableOpacity style={styles.menuItem} onPress={() => { playButtonSound(); setShowGameMenu(false); }}>
-                    <Text style={styles.closeMenuText}>Fermer</Text>
+                    <Text style={styles.closeMenuText}>{t('common.close')}</Text>
                 </TouchableOpacity>
             </View>
         </TouchableOpacity>
@@ -2355,7 +2357,7 @@ const GameScreen = ({ navigation, route }) => {
                  <Text style={styles.modalPseudo}>{selectedProfile?.pseudo}</Text>
                  {selectedProfile?.level && (
                     <Text style={{color: '#f59e0b', fontSize: getResponsiveSize(16), marginBottom: 5, fontWeight: 'bold'}}>
-                        Niveau {selectedProfile.level}
+                        {t('profile.level')} {selectedProfile.level}
                     </Text>
                  )}
                  {selectedProfile?.country && <Text style={styles.modalFlag}>{selectedProfile.country}</Text>}
@@ -2363,18 +2365,18 @@ const GameScreen = ({ navigation, route }) => {
                  {(mode === 'online' || mode === 'live' || mode === 'spectator') && selectedProfile?.id && selectedProfile.id !== (user?._id || user?.id) && (
                      <TouchableOpacity style={styles.friendButton} onPress={() => { playButtonSound(); handleSendFriendRequest(); }}>
                         <Ionicons name="person-add" size={getResponsiveSize(20)} color="white" style={{marginRight: getResponsiveSize(8)}} />
-                        <Text style={styles.friendButtonText}>Demander en ami</Text>
+                        <Text style={styles.friendButtonText}>{t('social.add_friend')}</Text>
                      </TouchableOpacity>
                  )}
                  
-                 <TouchableOpacity 
-                    style={styles.closeButton} 
+                 <TouchableOpacity
+                    style={styles.closeButton}
                     onPress={() => {
                         playButtonSound();
                         setSelectedProfile(null);
                     }}
                  >
-                    <Text style={styles.closeButtonText}>Fermer</Text>
+                    <Text style={styles.closeButtonText}>{t('common.close')}</Text>
                  </TouchableOpacity>
             </View>
         </TouchableOpacity>
@@ -2390,12 +2392,12 @@ const GameScreen = ({ navigation, route }) => {
           <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 999 }]}>
               <View style={{ alignItems: 'center', justifyContent: 'center' }}>
                   <ActivityIndicator size="large" color="#f1c40f" style={{ marginBottom: 20 }} />
-                  <Text style={{ color: '#fff', fontSize: getResponsiveSize(20), fontWeight: 'bold', marginBottom: 10 }}>En attente d'un adversaire...</Text>
+                  <Text style={{ color: '#fff', fontSize: getResponsiveSize(20), fontWeight: 'bold', marginBottom: 10 }}>{t('game.waiting_opponent_title')}</Text>
                   <Text style={{ color: '#fff', fontSize: getResponsiveSize(16), textAlign: 'center', maxWidth: '80%', marginBottom: 30 }}>
-                      Invitez un ami ou attendez qu'un joueur rejoigne la salle.
+                      {t('game.invite_or_wait')}
                   </Text>
                   
-                  <TouchableOpacity 
+                  <TouchableOpacity
                       style={[styles.closeButton, { width: getResponsiveSize(200) }]}
                       onPress={() => {
                            playButtonSound();
@@ -2409,7 +2411,7 @@ const GameScreen = ({ navigation, route }) => {
                            }
                       }}
                   >
-                      <Text style={styles.closeButtonText}>Annuler</Text>
+                      <Text style={styles.closeButtonText}>{t('common.cancel')}</Text>
                   </TouchableOpacity>
               </View>
           </View>
@@ -2596,7 +2598,7 @@ const GameScreen = ({ navigation, route }) => {
                   <Text style={styles.playerCoinsText}>💰 {Number(player.coins).toLocaleString()}</Text>
               )}
               <Text style={[styles.playerCoinsText, { fontSize: getResponsiveSize(11), color: '#e5e7eb', marginTop: 2 }]}>
-                  Coups: {board.filter(p => p.player === player.color).length}
+                  {t('game.moves')}: {board.filter(p => p.player === player.color).length}
               </Text>
           </View>
       )}
@@ -3060,14 +3062,14 @@ const GameScreen = ({ navigation, route }) => {
 
         // Générer message
         const messages = [
-            "Intéressant...",
-            "Hmm, voyons voir",
-            "Stratégie en cours",
-            "Bon coup !",
-            "Essayons ceci",
-            "Analysons...",
-            "Parfait !",
-            "C'est parti !"
+            t('game.ai_msg_1'),
+            t('game.ai_msg_2'),
+            t('game.ai_msg_3'),
+            t('game.ai_msg_4'),
+            t('game.ai_msg_5'),
+            t('game.ai_msg_6'),
+            t('game.ai_msg_7'),
+            t('game.ai_msg_8'),
         ];
 
         setMessageIA(messages[Math.floor(Math.random() * messages.length)]);
@@ -3141,8 +3143,8 @@ const GameScreen = ({ navigation, route }) => {
                        
                        setNextAiConfig(nextConfigIA);
                        setAlertData({
-                           title: `Match ${tournamentGameNumber} terminé`,
-                           message: `Score: ${scoreUser} - ${scoreIA}\nProchain: Match ${nextGameNumber}/${tournamentTotalGames}`
+                           title: t('game.match_finished', { number: tournamentGameNumber }),
+                           message: `${t('game.score_label')}: ${scoreUser} - ${scoreIA}\n${t('game.next_match')}: ${t('game.match_number', { number: nextGameNumber, total: tournamentTotalGames })}`
                        });
                        setNextMatchVisible(true);
                        } else {
@@ -3252,8 +3254,8 @@ const GameScreen = ({ navigation, route }) => {
                      const scoreIA = newScore[iaColor] || 0;
                      setNextAiConfig(nextConfigIA);
                      setAlertData({
-                         title: `Match ${tournamentGameNumber} terminé`,
-                         message: `Score: ${scoreUser} - ${scoreIA}\nProchain: Match ${nextGameNumber}/${tournamentTotalGames}`
+                         title: t('game.match_finished', { number: tournamentGameNumber }),
+                         message: `${t('game.score_label')}: ${scoreUser} - ${scoreIA}\n${t('game.next_match')}: ${t('game.match_number', { number: nextGameNumber, total: tournamentTotalGames })}`
                      });
                      setNextMatchVisible(true);
                  } else {
@@ -3368,8 +3370,8 @@ const GameScreen = ({ navigation, route }) => {
             console.log('[handlePress] Socket disconnected, attempting reconnect...');
             socket.connect();
             // Retry emit after short delay or alert user
-            appAlert('Erreur connexion', 'Connexion au serveur perdue. Tentative de reconnexion...');
-            
+            appAlert(t('game.connection_error'), t('game.connection_lost'));
+
             // Tentative de reconnexion immédiate et envoi
             setTimeout(() => {
                 if (socket.connected) {
@@ -3497,8 +3499,8 @@ const GameScreen = ({ navigation, route }) => {
                 const scoreIADisplay = newScore[iaColor] || 0;
                 setNextAiConfig(nextConfigIA);
                 setAlertData({
-                    title: `Match ${tournamentGameNumber} terminé`,
-                    message: `Score: ${scoreUserDisplay} - ${scoreIADisplay}\nProchain: Match ${nextGameNumber}/${tournamentTotalGames}`
+                    title: t('game.match_finished', { number: tournamentGameNumber }),
+                    message: `${t('game.score_label')}: ${scoreUserDisplay} - ${scoreIADisplay}\n${t('game.next_match')}: ${t('game.match_number', { number: nextGameNumber, total: tournamentTotalGames })}`
                 });
                 setNextMatchVisible(true);
             } else {
@@ -3727,8 +3729,8 @@ const GameScreen = ({ navigation, route }) => {
                      const scoreIA = newScore[iaColor] || 0;
                      setNextAiConfig(nextConfigIA);
                      setAlertData({
-                         title: `Match ${tournamentGameNumber} terminé`,
-                         message: `Score: ${scoreUser} - ${scoreIA}\nProchain: Match ${nextGameNumber}/${tournamentTotalGames}`
+                         title: t('game.match_finished', { number: tournamentGameNumber }),
+                         message: `${t('game.score_label')}: ${scoreUser} - ${scoreIA}\n${t('game.next_match')}: ${t('game.match_number', { number: nextGameNumber, total: tournamentTotalGames })}`
                      });
                      setNextMatchVisible(true);
                  } else {
@@ -3939,8 +3941,8 @@ const GameScreen = ({ navigation, route }) => {
             const scoreUserDisplay = newScore[userColor] || 0;
             const scoreIADisplay = newScore[iaColor] || 0;
             setAlertData({
-              title: `Match ${tournamentGameNumber} terminé`,
-              message: `Score: ${scoreUserDisplay} - ${scoreIADisplay}\nProchain: Match ${nextGameNumber}/${tournamentTotalGames}`
+              title: t('game.match_finished', { number: tournamentGameNumber }),
+              message: `${t('game.score_label')}: ${scoreUserDisplay} - ${scoreIADisplay}\n${t('game.next_match')}: ${t('game.match_number', { number: nextGameNumber, total: tournamentTotalGames })}`
             });
             setNextMatchVisible(true);
           } else {
@@ -4041,7 +4043,7 @@ const GameScreen = ({ navigation, route }) => {
       });
     } else {
       socket.connect();
-      appAlert('Erreur connexion', 'Connexion au serveur perdue. Tentative de reconnexion...');
+      appAlert(t('game.connection_error'), t('game.connection_lost'));
       setTimeout(() => {
         if (socket.connected) {
           socket.emit('make_move', {
@@ -4138,27 +4140,27 @@ const GameScreen = ({ navigation, route }) => {
              const requiredBet = Number(paramsRef.current?.betAmount ?? 0);
              const myCoins = Number(user?.coins ?? 0);
              showAlert(
-                 'Revanche !',
-                 'Votre adversaire souhaite rejouer. Acceptez-vous ?',
+                 t('game.rematch_request'),
+                 t('game.rematch_received_msg'),
                  [
-                     { 
-                         text: 'Refuser', 
+                     {
+                         text: t('game.refuse'),
                          onPress: () => {
                              if (!gameIdToUse) return;
                              socket.emit('respond_rematch', { gameId: gameIdToUse, accepted: false });
                          },
                          style: 'cancel'
                      },
-                     { 
-                         text: 'Accepter', 
+                     {
+                         text: t('game.accept'),
                          onPress: () => {
                              if (!gameIdToUse) return;
                              if (myCoins < requiredBet) {
-                                 showAlert('Erreur', 'Pas assez de coins pour rejouer.', [{ text: 'OK', style: 'cancel' }]);
+                                 showAlert(t('common.error'), t('game.not_enough_coins_replay'), [{ text: t('common.ok'), style: 'cancel' }]);
                                  return;
                              }
                              socket.emit('respond_rematch', { gameId: gameIdToUse, accepted: true });
-                         } 
+                         }
                      }
                  ]
              );
@@ -4166,12 +4168,12 @@ const GameScreen = ({ navigation, route }) => {
 
         const handleRematchDeclined = () => {
             setRematchRequested(false);
-            showAlert('Refusé', 'Votre adversaire a décliné la revanche.', [{ text: 'OK', style: 'cancel' }]);
+            showAlert(t('game.rematch_declined_title'), t('game.rematch_declined_msg'), [{ text: t('common.ok'), style: 'cancel' }]);
         };
 
         const handleRematchFailed = (msg) => {
             setRematchRequested(false);
-            showAlert('Erreur', msg || 'La revanche a échoué.', [{ text: 'OK', style: 'cancel' }]);
+            showAlert(t('common.error'), msg || t('game.rematch_failed'), [{ text: t('common.ok'), style: 'cancel' }]);
         };
 
         socket.on('rematch_requested', handleRematchRequested);
@@ -4245,7 +4247,7 @@ const GameScreen = ({ navigation, route }) => {
                     {isDraw || isTournamentDraw || isCancel ? '🤝' : (victoire ? '🏆' : '😢')}
                   </Text>
                   <Text style={styles.titreResult}>
-                    {isCancel ? 'PARTIE ANNULÉE' : (isDraw || isTournamentDraw ? 'MATCH NUL' : (victoire ? 'VICTOIRE !' : 'DÉFAITE'))}
+                    {isCancel ? t('game.result_cancelled') : (isDraw || isTournamentDraw ? t('game.result_draw') : (victoire ? t('game.result_victory') : t('game.result_defeat')))}
                   </Text>
 
                   {(type === 'live' || type === 'online' || type === 'online_custom' || type === 'ai' || type === 'ia') && resultData?.isTournament && (
@@ -4256,7 +4258,7 @@ const GameScreen = ({ navigation, route }) => {
 
                   {canShowOpponent && (
                       <Text style={styles.adversaireResult} numberOfLines={1}>
-                          Contre {adversaire?.pseudo || 'Adversaire'}
+                          {t('game.against')} {adversaire?.pseudo || t('game.opponent')}
                       </Text>
                   )}
 
@@ -4266,7 +4268,7 @@ const GameScreen = ({ navigation, route }) => {
                     showsVerticalScrollIndicator={false}
                   >
                       <View style={styles.miniBoardWrapper}>
-                          <Text style={styles.miniBoardLabel}>Plateau final</Text>
+                          <Text style={styles.miniBoardLabel}>{t('game.final_board')}</Text>
                           <View style={styles.resultMiniBoard}>
                               {(() => {
                                   const miniWidth = getResponsiveSize(isTablet ? 170 : (isLiveResult ? 122 : 135));
@@ -4351,19 +4353,19 @@ const GameScreen = ({ navigation, route }) => {
                           <>
                               {raisonVictoire === 'timeout_adverse' && (
                                   <View style={styles.raisonContainer}>
-                                      <Text style={styles.raisonTexte}>⏰ Votre adversaire a dépassé le temps limite</Text>
+                                      <Text style={styles.raisonTexte}>⏰ {t('game.opponent_timeout')}</Text>
                                   </View>
                               )}
-                              
+
                               {raisonVictoire === 'disconnect' && (
                                   <View style={styles.raisonContainer}>
-                                      <Text style={styles.raisonTexte}>🔌 Adversaire déconnecté</Text>
+                                      <Text style={styles.raisonTexte}>🔌 {t('game.opponent_disconnected')}</Text>
                                   </View>
                               )}
 
                               {raisonDefaite === 'timeout' && (
                                   <View style={[styles.raisonContainer, styles.raisonDefaite]}>
-                                      <Text style={[styles.raisonTexte, styles.raisonTexteDefaite]}>⏰ Vous avez dépassé le temps limite</Text>
+                                      <Text style={[styles.raisonTexte, styles.raisonTexteDefaite]}>⏰ {t('game.you_timeout')}</Text>
                                   </View>
                               )}
                           </>
@@ -4371,18 +4373,18 @@ const GameScreen = ({ navigation, route }) => {
 
                       {(isDraw || isTournamentDraw || isCancel) ? (
                           <View style={styles.drawContainer}>
-                              <Text style={styles.drawLabel}>Mise remboursée :</Text>
+                              <Text style={styles.drawLabel}>{t('game.bet_refunded')} :</Text>
                               <Text style={styles.drawMontant}>🪙 {Number(gains ?? 0).toLocaleString()}</Text>
                           </View>
                       ) : (
                           victoire ? (
                               <View style={styles.gainsContainer}>
-                                  <Text style={styles.gainsLabel}>Vous avez gagné :</Text>
+                                  <Text style={styles.gainsLabel}>{t('game.you_won_label')} :</Text>
                                   <Text style={styles.gainsMontant}>+🪙 {Number(gains ?? 0).toLocaleString()}</Text>
                               </View>
                           ) : (
                               <View style={styles.perteContainer}>
-                                  <Text style={styles.perteLabel}>Vous avez perdu :</Text>
+                                  <Text style={styles.perteLabel}>{t('game.you_lost_label')} :</Text>
                                   <Text style={styles.perteMontant}>-🪙 {Number(montantPari ?? 0).toLocaleString()}</Text>
                               </View>
                           )
@@ -4396,21 +4398,21 @@ const GameScreen = ({ navigation, route }) => {
                                   showRewarded({ amount: 10, reason: 'Récompense défaite', metadata: { source: 'defeat_reward', context: type } });
                               }}
                           >
-                              <Text style={styles.boutonRewardedTexteResult}>🎁 Regarder une pub — +10 coins</Text>
+                              <Text style={styles.boutonRewardedTexteResult}>🎁 {t('game.watch_ad_reward')}</Text>
                           </TouchableOpacity>
                       )}
 
                       {type === 'ia' && statsIA && (
                           <View style={styles.statsContainer}>
-                              <Text style={styles.statsLabel}>Mode {difficulte.charAt(0).toUpperCase() + difficulte.slice(1)}</Text>
-                              <Text style={styles.statsTaux}>{tauxVictoire}% de victoires</Text>
-                              <Text style={styles.statsParties}>{statsIA.jouees} parties jouées</Text>
+                              <Text style={styles.statsLabel}>{t('game.ai_mode_label')} {difficulte.charAt(0).toUpperCase() + difficulte.slice(1)}</Text>
+                              <Text style={styles.statsTaux}>{tauxVictoire}% {t('game.win_rate_label')}</Text>
+                              <Text style={styles.statsParties}>{statsIA.jouees} {t('game.games_played_label')}</Text>
                           </View>
                       )}
 
                       {type === 'local' && (
                            <Text style={styles.messageResult}>
-                               {isTournamentDraw ? 'Match nul – pas de victoire pour le tournoi' : (isDraw ? 'Match nul !' : `Le joueur ${resultData.winnerColor === 'black' ? 'Rouge' : 'Bleu'} a gagné !`)}
+                               {isTournamentDraw ? t('game.draw_no_winner') : (isDraw ? t('game.draw_exclaim') : t('game.local_winner', { color: resultData.winnerColor === 'black' ? t('game.color_red') : t('game.color_blue') }))}
                            </Text>
                       )}
 
@@ -4430,7 +4432,7 @@ const GameScreen = ({ navigation, route }) => {
                               onPress={() => {
                                   playButtonSound();
                                   if (user.coins < montantPari) {
-                                      showAlert('Solde insuffisant', 'Vous n\'avez pas assez de coins pour rejouer.', [{ text: 'OK', style: 'cancel' }]);
+                                      showAlert(t('game.insufficient_balance'), t('game.not_enough_coins_replay'), [{ text: t('common.ok'), style: 'cancel' }]);
                                       return;
                                   }
                                   
@@ -4441,7 +4443,7 @@ const GameScreen = ({ navigation, route }) => {
                               }}
                           >
                               <Text style={styles.boutonTexteResult}>
-                                  {rematchRequested ? 'Demande envoyée...' : (isTournament && tournamentOver ? '🔄 Nouveau Tournoi' : (victoire ? '🔄 Rejouer' : '🔄 Revanche (Même mise)'))}
+                                  {rematchRequested ? t('game.request_sent_short') : (isTournament && tournamentOver ? `🔄 ${t('game.new_tournament')}` : (victoire ? `🔄 ${t('game.replay')}` : `🔄 ${t('game.rematch_same_bet')}`))}
                               </Text>
                           </TouchableOpacity>
                       )}
@@ -4461,14 +4463,14 @@ const GameScreen = ({ navigation, route }) => {
                                   playButtonSound();
                                   try {
                                       const message = type === 'online'
-                                          ? `Je viens de gagner contre ${adversaire?.pseudo || 'un adversaire'} sur DeadPions ! 🏆💰\nViens m'affronter !`
-                                          : (type === 'ia' 
-                                              ? `Je viens de battre l'IA en mode ${difficulte} sur DeadPions ! 🤖🏆\nPeux-tu faire mieux ?`
-                                              : `Victoire sur DeadPions ! 🏆`);
-                                      
+                                          ? t('game.share_win_online', { pseudo: adversaire?.pseudo || t('game.opponent') })
+                                          : (type === 'ia'
+                                              ? t('game.share_win_ai', { difficulte })
+                                              : t('game.share_win_generic'));
+
                                       await Share.share({
                                           message,
-                                          title: 'Ma victoire sur DeadPions'
+                                          title: t('game.share_title')
                                       });
                                   } catch (error) {
                                       // console.log('Error sharing:', error);
@@ -4484,7 +4486,7 @@ const GameScreen = ({ navigation, route }) => {
 
                   {mode === 'spectator' && (
                       <View style={styles.spectatorNoteContainer}>
-                          <Text style={styles.spectatorNote}>Résultat affiché – le créateur choisit la suite…</Text>
+                          <Text style={styles.spectatorNote}>{t('game.spectator_result_note')}</Text>
                       </View>
                   )}
 
@@ -4510,7 +4512,7 @@ const GameScreen = ({ navigation, route }) => {
                                                disabled={rematchRequested}
                                            >
                                                <Text style={styles.boutonTexteResult}>
-                                                   {rematchRequested ? 'Demande envoyée...' : '🔄 Nouveau tournoi'}
+                                                   {rematchRequested ? t('game.request_sent_short') : `🔄 ${t('game.new_tournament')}`}
                                                </Text>
                                            </TouchableOpacity>
 
@@ -4527,7 +4529,7 @@ const GameScreen = ({ navigation, route }) => {
                                                   }
                                               }}
                                           >
-                                              <Text style={styles.boutonTexteResult}>👥 Choisir un autre adversaire</Text>
+                                              <Text style={styles.boutonTexteResult}>👥 {t('game.choose_opponent')}</Text>
                                           </TouchableOpacity>
                                       </>
                                   ) : null;
@@ -4548,7 +4550,7 @@ const GameScreen = ({ navigation, route }) => {
                                       navigation.navigate('Home');
                                   }}
                               >
-                                  <Text style={styles.boutonTexteResult}>🛑 Arrêter le live</Text>
+                                  <Text style={styles.boutonTexteResult}>🛑 {t('game.stop_live')}</Text>
                               </TouchableOpacity>
                           </>
                       ) : (
@@ -4569,11 +4571,11 @@ const GameScreen = ({ navigation, route }) => {
                                           if (needsDebit && currentCoins < montantPari) {
                                               const manque = montantPari - currentCoins;
                                               showAlert(
-                                                  'Solde insuffisant',
-                                                  `Il vous manque ${Number(manque).toLocaleString()} coins.`,
+                                                  t('game.insufficient_balance'),
+                                                  t('game.missing_coins', { amount: Number(manque).toLocaleString() }),
                                                   [
-                                                      { text: 'Magasin', onPress: () => navigation.navigate('Home', { screen: 'Magasin' }) },
-                                                      { text: 'OK', style: 'cancel' }
+                                                      { text: t('game.shop'), onPress: () => navigation.navigate('Home', { screen: 'Magasin' }) },
+                                                      { text: t('common.ok'), style: 'cancel' }
                                                   ]
                                               );
                                               return;
@@ -4607,12 +4609,16 @@ const GameScreen = ({ navigation, route }) => {
                                   }}
                               >
                                   <Text style={styles.boutonTexteResult}>
-                                      {type === 'online' ? '🔙 Changer d\'adversaire' : 
-                                      (type === 'online_custom' ? '🏠 Quitter' : 
-                                      ((type === 'ia' || type === 'ai') && isTournament && !tournamentOver ? '➡️ Match Suivant' : 
-                                      ((type === 'ia' || type === 'ai') && isTournament && tournamentOver ? '🔄 Nouveau Tournoi' : 
-                                      (type === 'local' && isTournament && !tournamentOver ? '➡️ Match Suivant' :
-                                      (type === 'local' && isTournament && tournamentOver ? '🔄 Nouveau Tournoi' : '🔄 Rejouer')))))}
+                                      {(() => {
+                                        if (type === 'online') return `🔙 ${t('game.change_opponent')}`;
+                                        if (type === 'online_custom') return `🏠 ${t('game.quit')}`;
+                                        const isAi = type === 'ia' || type === 'ai';
+                                        if (isAi && isTournament && !tournamentOver) return `➡️ ${t('game.next_match_btn')}`;
+                                        if (isAi && isTournament && tournamentOver) return `🔄 ${t('game.new_tournament')}`;
+                                        if (type === 'local' && isTournament && !tournamentOver) return `➡️ ${t('game.next_match_btn')}`;
+                                        if (type === 'local' && isTournament && tournamentOver) return `🔄 ${t('game.new_tournament')}`;
+                                        return `🔄 ${t('game.replay')}`;
+                                      })()}
                                   </Text>
                               </TouchableOpacity>
 
@@ -4624,7 +4630,7 @@ const GameScreen = ({ navigation, route }) => {
                                       navigation.navigate('Home');
                                   }}
                               >
-                                  <Text style={styles.boutonTexteResult}>🏠 Menu</Text>
+                                  <Text style={styles.boutonTexteResult}>🏠 {t('game.menu')}</Text>
                               </TouchableOpacity>
                           </>
                       )}
@@ -4693,7 +4699,7 @@ const GameScreen = ({ navigation, route }) => {
                 <Text style={styles.prizeBadgeText}>
                   🏆 {prizeAmount.toLocaleString()} 💰
                 </Text>
-                <Text style={styles.prizeBadgeSub}>à gagner</Text>
+                <Text style={styles.prizeBadgeSub}>{t('game.to_win')}</Text>
               </View>
             ) : null}
             <View style={[styles.liveDurationBadge, { marginTop: 0 }]}>
@@ -4706,7 +4712,7 @@ const GameScreen = ({ navigation, route }) => {
               <Text style={styles.prizeBadgeText}>
                 🏆 {prizeAmount.toLocaleString()} 💰
               </Text>
-              <Text style={styles.prizeBadgeSub}>à gagner</Text>
+              <Text style={styles.prizeBadgeSub}>{t('game.to_win')}</Text>
             </View>
           ) : null
         )}
@@ -4793,14 +4799,14 @@ const GameScreen = ({ navigation, route }) => {
                     playButtonSound();
                     if (!canRequestCancel) {
                       if (gameOver) {
-                        showAlert('Info', 'La partie est déjà terminée.', [{ text: 'OK', style: 'cancel' }]);
+                        showAlert(t('common.info'), t('game.game_already_over'), [{ text: t('common.ok'), style: 'cancel' }]);
                         return;
                       }
                       if (!gameId) {
-                        showAlert('Erreur', 'ID de partie manquant.', [{ text: 'OK', style: 'cancel' }]);
+                        showAlert(t('common.error'), t('game.missing_game_id'), [{ text: t('common.ok'), style: 'cancel' }]);
                         return;
                       }
-                      showAlert('Info', "L'annulation est possible à partir de 20 pions posés par vous.", [{ text: 'OK', style: 'cancel' }]);
+                      showAlert(t('common.info'), t('game.cancel_min_20_stones'), [{ text: t('common.ok'), style: 'cancel' }]);
                       return;
                     }
                     handleRequestCancel();
@@ -4815,10 +4821,10 @@ const GameScreen = ({ navigation, route }) => {
                     playButtonSound();
                     if (!canRequestAbandon) {
                       if (gameOver) {
-                        showAlert('Info', 'La partie est déjà terminée.', [{ text: 'OK', style: 'cancel' }]);
+                        showAlert(t('common.info'), t('game.game_already_over'), [{ text: t('common.ok'), style: 'cancel' }]);
                         return;
                       }
-                      showAlert('Erreur', 'ID de partie manquant.', [{ text: 'OK', style: 'cancel' }]);
+                      showAlert(t('common.error'), t('game.missing_game_id'), [{ text: t('common.ok'), style: 'cancel' }]);
                       return;
                     }
                     handleRequestAbandon();
@@ -4852,10 +4858,10 @@ const GameScreen = ({ navigation, route }) => {
               <TouchableOpacity
                 style={[styles.actionBtn, { borderColor: T.red }]}
                 onPress={() => {
-                  appAlert('Quitter', 'Voulez-vous quitter le mode spectateur ?', [
-                    { text: 'Annuler', style: 'cancel' },
+                  appAlert(t('game.quit_title'), t('game.quit_spectator_msg'), [
+                    { text: t('common.cancel'), style: 'cancel' },
                     {
-                      text: 'Quitter', style: 'destructive',
+                      text: t('game.quit'), style: 'destructive',
                       onPress: () => {
                         if (navigation.canGoBack()) navigation.goBack();
                         else navigation.navigate('Home');
@@ -4933,10 +4939,10 @@ const GameScreen = ({ navigation, route }) => {
                 playButtonSound();
                 setShowGameMenu(false);
                 if (isLiveCreator) {
-                  showAlert('Gestion du Live', 'Que voulez-vous faire ?', [
-                    { text: 'Annuler', style: 'cancel' },
+                  showAlert(t('game.live_management'), t('game.what_do_you_want'), [
+                    { text: t('common.cancel'), style: 'cancel' },
                     {
-                      text: 'Arrêter le Live',
+                      text: t('game.stop_live'),
                       style: 'destructive',
                       onPress: () => {
                         isExitingRef.current = true;
@@ -4948,10 +4954,10 @@ const GameScreen = ({ navigation, route }) => {
                   ]);
                 } else {
                   if (mode === 'live') { handleQuitGame(); return; }
-                  showAlert('Quitter la partie', 'Voulez-vous vraiment quitter la partie ?', [
-                    { text: 'Annuler', style: 'cancel' },
+                  showAlert(t('game.quit_game'), t('game.quit_game_confirm'), [
+                    { text: t('common.cancel'), style: 'cancel' },
                     {
-                      text: 'Quitter',
+                      text: t('game.quit'),
                       style: 'destructive',
                       onPress: () => {
                         isExitingRef.current = true;
@@ -4986,7 +4992,7 @@ const GameScreen = ({ navigation, route }) => {
       {/* Badge spectateur */}
       {(mode === 'spectator' || isSpectatorMode) && (
         <View style={styles.spectatorBadgeWrapper} pointerEvents="none">
-          <Text style={styles.spectatorBadgeText}>👁️ Mode Spectateur</Text>
+          <Text style={styles.spectatorBadgeText}>👁️ {t('game.spectator_mode')}</Text>
         </View>
       )}
 
@@ -5009,7 +5015,7 @@ const GameScreen = ({ navigation, route }) => {
           <View style={[styles.spectatorHeaderPills, { pointerEvents: 'none' }]}>
               <View style={styles.spectatorPill}>
                   <Text style={styles.spectatorPillText}>
-                      Score: {(tournamentScore?.black ?? 0)} - {(tournamentScore?.white ?? 0)} {tournamentTotalGames > 1 ? `· Match ${tournamentGameNumber}/${tournamentTotalGames}` : ''}
+                      {t('game.score_label')}: {tournamentScore?.black ?? 0} - {tournamentScore?.white ?? 0}{tournamentTotalGames > 1 ? ` · ${t('game.match_number', { number: tournamentGameNumber, total: tournamentTotalGames })}` : ''}
                   </Text>
               </View>
           </View>
@@ -5024,7 +5030,7 @@ const GameScreen = ({ navigation, route }) => {
         {waitingForNextRound && (
             <View style={styles.waitingOverlay}>
                 <ActivityIndicator style={styles.indicator} size="large" color="#fdd300ff" />
-                <Text style={styles.waitingText}>{waitingMessage || "En attente de l'adversaire..."}</Text>
+                <Text style={styles.waitingText}>{waitingMessage || t('game.waiting_opponent')}</Text>
             </View>
         )}
         <PanGestureHandler
@@ -5315,9 +5321,9 @@ const GameScreen = ({ navigation, route }) => {
       {gameOver && mode === 'ai' && (
         <View style={styles.gameOverContainer}>
             <Text style={styles.gameOverText}>
-                {winner === (iaColors.joueur === 'black' ? 'black' : 'white') 
-                    ? '🎉 Vous avez gagné !' 
-                    : '😢 L\'IA a gagné !'}
+                {winner === (iaColors.joueur === 'black' ? 'black' : 'white')
+                    ? `🎉 ${t('game.you_win')}`
+                    : `😢 ${t('game.ai_won')}`}
             </Text>
         </View>
       )}
@@ -5331,9 +5337,9 @@ const GameScreen = ({ navigation, route }) => {
                 <View style={[styles.modalOverlay, { zIndex: 50, justifyContent: 'center', paddingBottom: 0 }]}>
                     <View style={{ backgroundColor: 'rgba(0,0,0,0.8)', padding: getResponsiveSize(20), borderRadius: getResponsiveSize(15), alignItems: 'center', width: '80%' }}>
                         <ActivityIndicator size="large" color="#f1c40f" style={{ marginBottom: getResponsiveSize(15) }} />
-                        <Text style={{ color: '#fff', fontSize: getResponsiveSize(18), fontWeight: 'bold', marginBottom: getResponsiveSize(10) }}>En attente d'un adversaire...</Text>
+                        <Text style={{ color: '#fff', fontSize: getResponsiveSize(18), fontWeight: 'bold', marginBottom: getResponsiveSize(10) }}>{t('game.waiting_opponent_title')}</Text>
                         <Text style={{ color: '#ccc', fontSize: getResponsiveSize(14), textAlign: 'center' }}>
-                            {mode === 'live' ? "La partie commencera dès qu'un joueur rejoindra la salle." : "Invitez un ami pour commencer la partie"}
+                            {mode === 'live' ? t('game.game_starts_when_joined') : t('game.invite_friend_to_start')}
                         </Text>
                         
                         {false && (mode === 'online_custom' && params?.inviteCode) && (
@@ -5352,14 +5358,14 @@ const GameScreen = ({ navigation, route }) => {
                               onPress={async () => {
                                 try {
                                   await Share.share({
-                                    message: `Rejoins ma partie privée sur DeadPions ! 🎲\ndeadpions://invite/${params.inviteCode}`,
+                                    message: t('game.share_invite_msg', { code: params.inviteCode }),
                                     url: `deadpions://invite/${params.inviteCode}`,
-                                    title: 'Invitation DeadPions'
+                                    title: t('game.share_invite_title')
                                   });
                                 } catch (_) {}
                               }}
                             >
-                              <Text style={{ color: '#f1c40f', fontWeight: '600' }}>Partager le lien</Text>
+                              <Text style={{ color: '#f1c40f', fontWeight: '600' }}>{t('game.share_link')}</Text>
                             </TouchableOpacity>
                           </View>
                         )}
@@ -5373,7 +5379,7 @@ const GameScreen = ({ navigation, route }) => {
                                         setShowInviteModal(true);
                                     }}
                                 >
-                                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>Inviter un joueur</Text>
+                                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>{t('game.invite_player')}</Text>
                                 </TouchableOpacity>
 
                                 <TouchableOpacity 
@@ -5386,7 +5392,7 @@ const GameScreen = ({ navigation, route }) => {
                                         }
                                     }}
                                 >
-                                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>Quitter</Text>
+                                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>{t('game.quit')}</Text>
                                 </TouchableOpacity>
                             </View>
                         )}
@@ -5473,7 +5479,7 @@ const GameScreen = ({ navigation, route }) => {
                                     color={T.gold}
                                 />
                                 <Text style={styles.chatModalTitle}>
-                                    {activeModal === 'chat' ? 'Discussion' : 'Réactions'}
+                                    {activeModal === 'chat' ? t('game.chat_title') : t('game.reactions_title')}
                                 </Text>
                             </View>
                             <TouchableOpacity

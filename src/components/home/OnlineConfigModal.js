@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { Modal, Pressable, View, Text, ActivityIndicator, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { getResponsiveSize } from '../../utils/responsive';
 import { playButtonSound } from '../../utils/soundManager';
 import { modalTheme } from '../../utils/modalTheme';
@@ -24,6 +25,8 @@ const OnlineConfigModal = memo(({
   betOptions,
   onlineTimeOptions
 }) => {
+  const { t } = useTranslation();
+
   return (
     <Modal
       visible={visible}
@@ -37,41 +40,43 @@ const OnlineConfigModal = memo(({
         <Pressable style={styles.friendsModalContent} onPress={() => {}}>
           {isSearchingOnline ? (
             <View style={{ alignItems: 'center', width: '100%' }}>
-                <Text style={styles.friendsModalTitle}>Recherche d'adversaire...</Text>
+                <Text style={styles.friendsModalTitle}>{t('matchmaking.searching')}</Text>
                 <ActivityIndicator size="large" color="#f1c40f" style={{ marginVertical: getResponsiveSize(20) }} />
                 <Text style={{ color: '#f1c40f', fontSize: getResponsiveSize(26), fontWeight: 'bold', marginBottom: getResponsiveSize(8) }}>{onlineSearchTimer}s</Text>
-                <Text style={{ color: '#fff', fontSize: getResponsiveSize(13), marginBottom: getResponsiveSize(14) }}>Mise : {onlineBet.toLocaleString()} 💰</Text>
+                <Text style={{ color: '#fff', fontSize: getResponsiveSize(13), marginBottom: getResponsiveSize(14) }}>
+                  {t('game.bet_amount', { amount: onlineBet.toLocaleString() })}
+                </Text>
                 
                 <TouchableOpacity 
                     style={styles.cancelSearchButton} 
                     onPress={() => { playButtonSound(); handleCancelOnlineSearch(); }}
                 >
-                    <Text style={styles.cancelSearchButtonText}>Annuler</Text>
+                    <Text style={styles.cancelSearchButtonText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
             </View>
           ) : (
             <ScrollView contentContainerStyle={{ alignItems: 'center', width: '100%' }} style={{ width: '100%' }}>
-                <Text style={styles.friendsModalTitle}>Jeu en ligne</Text>
+                <Text style={styles.friendsModalTitle}>{t('matchmaking.online_game_title')}</Text>
 
-                <Text style={styles.friendsLabel}>Mode de jeu:</Text>
+                <Text style={styles.friendsLabel}>{t('setup.game_mode_label')}</Text>
                 <View style={styles.optionsRow}>
                     <TouchableOpacity 
                         style={[styles.friendsOptionButton, onlineMode === 'simple' && styles.friendsOptionButtonActive]}
                         onPress={() => { playButtonSound(); setOnlineMode('simple'); }}
                     >
-                        <Text style={[styles.friendsOptionText, onlineMode === 'simple' && styles.friendsOptionTextActive]}>Simple</Text>
+                        <Text style={[styles.friendsOptionText, onlineMode === 'simple' && styles.friendsOptionTextActive]}>{t('setup.simple')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
                         style={[styles.friendsOptionButton, onlineMode === 'tournament' && styles.friendsOptionButtonActive]}
                         onPress={() => { playButtonSound(); setOnlineMode('tournament'); }}
                     >
-                        <Text style={[styles.friendsOptionText, onlineMode === 'tournament' && styles.friendsOptionTextActive]}>Tournoi</Text>
+                        <Text style={[styles.friendsOptionText, onlineMode === 'tournament' && styles.friendsOptionTextActive]}>{t('setup.tournament')}</Text>
                     </TouchableOpacity>
                 </View>
 
                 {onlineMode === 'tournament' && (
                     <>
-                        <Text style={styles.friendsLabel}>Nombre de parties:</Text>
+                        <Text style={styles.friendsLabel}>{t('setup.series_length_label')}</Text>
                         <View style={styles.optionsRow}>
                             {[2, 4, 6, 8, 10].map(num => (
                                 <TouchableOpacity 
@@ -86,7 +91,7 @@ const OnlineConfigModal = memo(({
                     </>
                 )}
 
-                <Text style={styles.friendsLabel}>Mise (coins):</Text>
+                <Text style={styles.friendsLabel}>{t('setup.bet_label')}</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginVertical: getResponsiveSize(10) }}>
                     {(() => {
                         const availableBets = betOptions.filter(b => b <= (userCoins || 0));
@@ -151,16 +156,16 @@ const OnlineConfigModal = memo(({
                     })()}
                 </View>
 
-                <Text style={styles.friendsLabel}>Temps par tour:</Text>
+                <Text style={styles.friendsLabel}>{t('setup.time_per_turn_label')}</Text>
                 <View style={styles.optionsRow}>
                     {onlineTimeOptions.map(opt => (
                         <TouchableOpacity 
-                            key={opt.label} 
+                            key={opt.labelKey ?? opt.label} 
                             style={[styles.friendsOptionButton, onlineTime === opt.value && styles.friendsOptionButtonActive]}
                             onPress={() => { playButtonSound(); setOnlineTime(opt.value); }}
                         >
                             <Text style={[styles.friendsOptionText, onlineTime === opt.value && styles.friendsOptionTextActive]}>
-                                {opt.label}
+                                {t(opt.labelKey ?? opt.label)}
                             </Text>
                         </TouchableOpacity>
                     ))}
@@ -168,10 +173,10 @@ const OnlineConfigModal = memo(({
 
                 <View style={styles.modalButtons}>
                     <TouchableOpacity style={styles.modalButtonCancel} onPress={() => { playButtonSound(); onClose(); }}>
-                        <Text style={styles.modalButtonText}>Annuler</Text>
+                        <Text style={styles.modalButtonText}>{t('common.cancel')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.modalButtonConfirm} onPress={() => { playButtonSound(); handleStartOnlineSearch(); }}>
-                        <Text style={styles.modalButtonText}>JOUER</Text>
+                        <Text style={styles.modalButtonText}>{t('matchmaking.play_btn')}</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>

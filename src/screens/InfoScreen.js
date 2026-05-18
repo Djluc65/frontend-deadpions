@@ -1,78 +1,76 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, ImageBackground, TouchableOpacity, Image, Linking, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSelector } from 'react-redux';
-import { translations } from '../utils/translations';
+import { useTranslation } from 'react-i18next';
 import { getResponsiveSize } from '../utils/responsive';
 import { T } from '../utils/theme';
 import { appAlert } from '../services/appAlert';
 
 const InfoScreen = ({ navigation }) => {
-  const settings = useSelector(state => state.settings || { language: 'fr' });
-  const t = translations[settings.language] || translations.fr;
-  const version = "1.0.0 (Early Access)";
+  const { t } = useTranslation();
+  const version = "1.0.1 (Early Access)";
 
   const openLink = async (url) => {
     try {
       const supported = await Linking.canOpenURL(url);
       if (!supported) {
         if (url.startsWith('mailto:')) {
-          appAlert('Impossible d’ouvrir', 'Aucune app e-mail n’est disponible sur cet appareil.\n\nContact : deadpions@gmail.com');
+          appAlert(t('info.cannot_open'), t('info.no_email_app'));
           return;
         }
-        appAlert('Impossible d’ouvrir', `Lien non supporté : ${url}`);
+        appAlert(t('info.cannot_open'), t('info.unsupported_link', { url }));
         return;
       }
       await Linking.openURL(url);
     } catch (e) {
       if (url.startsWith('mailto:')) {
-        appAlert('Impossible d’ouvrir', 'Impossible d’ouvrir votre app e-mail.\n\nContact : deadpions@gmail.com');
+        appAlert(t('info.cannot_open'), t('info.cannot_open_email_app'));
         return;
       }
-      appAlert('Erreur', 'Impossible d’ouvrir ce lien pour le moment.');
+      appAlert(t('common.error'), t('info.cannot_open_link'));
     }
   };
 
   const sections = [
     {
-      title: "Règles du Jeu",
+      title: t('info.rules_title'),
       icon: "game-controller-outline",
-      content: "Le but est d'aligner exactement 5 pions de votre couleur (ni plus, ni moins) horizontalement, verticalement ou en diagonale. Le premier joueur à réussir cet alignement remporte la partie."
+      content: t('info.rules_content')
     },
     {
-      title: "Besoin d'aide ?",
+      title: t('info.help_title'),
       icon: "chatbubbles-outline",
-      content: "Posez vos questions à notre Assistant IA pour comprendre les règles ou obtenir des conseils.",
+      content: t('info.help_content'),
       action: () => navigation.navigate('Assistant'),
-      actionLabel: "Parler à l'Assistant"
+      actionLabel: t('info.help_action')
     },
     {
-      title: "À Propos",
+      title: t('info.about_title'),
       icon: "information-circle-outline",
-      content: "DeadPions est un jeu de stratégie développé avec passion. Affrontez vos amis, des joueurs du monde entier ou notre IA."
+      content: t('info.about_content')
     },
     {
-      title: "Contact & Support",
+      title: t('info.contact_title'),
       icon: "headset-outline",
-      content: "Besoin d'aide ? Contactez-nous directement :",
+      content: t('info.contact_content'),
       subActions: [
-        { 
-          label: "deadpions@gmail.com", 
-          link: "mailto:deadpions@gmail.com", 
-          icon: "mail" 
+        {
+          label: "deadpions@gmail.com",
+          link: "mailto:deadpions@gmail.com",
+          icon: "mail"
         },
-        { 
-          label: "WhatsApp: +33 7 58 57 11 87", 
-          link: "https://wa.me/33758571187", 
-          icon: "logo-whatsapp" 
+        {
+          label: "WhatsApp: +33 7 58 57 11 87",
+          link: "https://wa.me/33758571187",
+          icon: "logo-whatsapp"
         }
       ]
     },
     {
-      title: "Mentions Légales",
+      title: t('info.legal_title'),
       icon: "document-text-outline",
-      action: () => openLink('https://deadpions.eu'), // Placeholder
-      actionLabel: "Conditions d'utilisation"
+      action: () => openLink('https://deadpions.eu'),
+      actionLabel: t('info.legal_action')
     }
   ];
 
@@ -87,7 +85,7 @@ const InfoScreen = ({ navigation }) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={getResponsiveSize(28)} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Informations</Text>
+        <Text style={styles.headerTitle}>{t('info.screen_title')}</Text>
         <View style={{ width: getResponsiveSize(28) }} /> 
       </View>
 
@@ -127,7 +125,7 @@ const InfoScreen = ({ navigation }) => {
         ))}
 
         <View style={styles.footer}>
-          <Text style={styles.copyright}>© 2024 DeadPions. Tous droits réservés.</Text>
+          <Text style={styles.copyright}>{t('info.copyright')}</Text>
         </View>
       </ScrollView>
     </ImageBackground>

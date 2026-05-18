@@ -6,10 +6,12 @@ import socket from '../services/socket';
 import { getResponsiveSize } from '../utils/responsive';
 import { modalTheme } from '../utils/modalTheme';
 import { appAlert } from '../services/appAlert';
+import { useTranslation } from 'react-i18next';
 
 // Composant global qui écoute les invitations de partie (socket) partout dans l'application
 const GlobalInviteListener = () => {
     const navigation = useNavigation();
+    const { t } = useTranslation();
     // Récupère l'utilisateur connecté depuis Redux
     const user = useSelector(state => state.auth.user);
     // Stocke l'invitation en cours (null si aucune)
@@ -54,7 +56,10 @@ const GlobalInviteListener = () => {
 
         const handleInvitationDeclined = (data) => {
             // L'autre joueur a refusé l'invitation
-            appAlert("Refusé", `${data.recipientPseudo || "L'adversaire"} a refusé l'invitation.`);
+            appAlert(
+              t('invite.declined_title'),
+              t('invite.declined_desc', { pseudo: data.recipientPseudo || t('game.opponent') })
+            );
         };
 
         socket.on('game_invitation', handleInvitation);
@@ -256,23 +261,25 @@ const GlobalInviteListener = () => {
         >
             <View style={styles.centeredView}>
                 <View style={styles.modalView}>
-                    <Text style={styles.modalTitle}>Invitation de {invitation.senderPseudo}</Text>
+                    <Text style={styles.modalTitle}>{t('invite.modal_title', { pseudo: invitation.senderPseudo })}</Text>
                     <Text style={styles.modalText}>
-                        Mise: {invitation.betAmount} pièces{'\n'}
-                        Temps: {invitation.timeControl ? `${invitation.timeControl / 60} min` : 'Illimité'}
+                        {t('invite.bet_line', { amount: invitation.betAmount })}{'\n'}
+                        {invitation.timeControl
+                          ? t('invite.time_minutes', { minutes: invitation.timeControl / 60 })
+                          : t('invite.time_unlimited')}
                     </Text>
                     <View style={styles.buttonContainer}>
                         <TouchableOpacity
                             style={[styles.button, styles.buttonDecline]}
                             onPress={handleDecline}
                         >
-                            <Text style={[styles.textStyle, styles.textOnDark]}>Refuser</Text>
+                            <Text style={[styles.textStyle, styles.textOnDark]}>{t('invite.decline')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.button, styles.buttonAccept]}
                             onPress={handleAccept}
                         >
-                            <Text style={[styles.textStyle, styles.textPrimary]}>Accepter</Text>
+                            <Text style={[styles.textStyle, styles.textPrimary]}>{t('invite.accept')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * AnimatedGlowingSearchBar (Web Version)
@@ -6,6 +7,7 @@ import React from 'react';
  * For React Native Mobile, a translation using Animated and View is required.
  */
 const SearchComponent = () => {
+  const { t } = useTranslation();
   return (
     <div className="relative flex items-center justify-center">
       <div className="absolute z-[-1] w-full h-min-screen"></div>
@@ -44,7 +46,7 @@ const SearchComponent = () => {
         </div>
 
         <div id="main" className="relative group">
-          <input placeholder="Search..." type="text" name="text" className="bg-[#010201] border-none w-[301px] h-[56px] rounded-lg text-white px-[59px] text-lg focus:outline-none placeholder-gray-400" />
+          <input placeholder={t('common.search')} type="text" name="text" className="bg-[#010201] border-none w-[301px] h-[56px] rounded-lg text-white px-[59px] text-lg focus:outline-none placeholder-gray-400" />
           <div id="input-mask" className="pointer-events-none w-[100px] h-[20px] absolute bg-gradient-to-r from-transparent to-black top-[18px] left-[70px] group-focus-within:hidden"></div>
           <div id="pink-mask" className="pointer-events-none w-[30px] h-[20px] absolute bg-[#cf30aa] top-[10px] left-[5px] blur-2xl opacity-80 transition-all duration-2000 group-hover:opacity-0"></div>
           <div className="absolute h-[42px] w-[40px] overflow-hidden top-[7px] right-[7px] rounded-lg 

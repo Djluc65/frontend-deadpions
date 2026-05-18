@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useCoinsContext } from '../context/CoinsContext';
 import { getResponsiveSize } from '../utils/responsive';
+import { useTranslation } from 'react-i18next';
 
 const SyncIndicator = () => {
+    const { t } = useTranslation();
     const { isLoading, lastSync } = useCoinsContext();
     const [timeDisplay, setTimeDisplay] = useState('');
 
@@ -11,15 +13,15 @@ const SyncIndicator = () => {
     useEffect(() => {
         const updateTime = () => {
             if (!lastSync) {
-                setTimeDisplay('Jamais');
+                setTimeDisplay(t('sync.never'));
                 return;
             }
             const seconds = Math.floor((Date.now() - lastSync) / 1000);
             if (seconds < 60) {
-                setTimeDisplay(`Il y a ${seconds}s`);
+                setTimeDisplay(t('sync.ago_seconds', { count: seconds }));
             } else {
                 const minutes = Math.floor(seconds / 60);
-                setTimeDisplay(`Il y a ${minutes}min`);
+                setTimeDisplay(t('sync.ago_minutes', { count: minutes }));
             }
         };
 
@@ -35,11 +37,11 @@ const SyncIndicator = () => {
             {isLoading ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <ActivityIndicator size="small" color="#FFD700" style={{ marginRight: getResponsiveSize(5) }} />
-                    <Text style={styles.syncText}>Sync...</Text>
+                    <Text style={styles.syncText}>{t('sync.syncing')}</Text>
                 </View>
             ) : (
                 <Text style={styles.syncText}>
-                    ✓ Synchronisé {timeDisplay}
+                    {t('sync.synced', { time: timeDisplay })}
                 </Text>
             )}
         </View>

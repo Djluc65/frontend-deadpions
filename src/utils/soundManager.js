@@ -3,6 +3,8 @@ import { store } from '../redux/store';
 
 let buttonSound = null;
 let gameStartSound = null;
+let lastButtonSoundAt = 0;
+let buttonSoundInitPromise = null;
 
 export const playButtonSound = async () => {
   const state = store.getState();
@@ -13,18 +15,36 @@ export const playButtonSound = async () => {
   if (!isSoundEnabled) return;
 
   try {
-    const { sound } = await Audio.Sound.createAsync(
-      require('../../assets/song/bouton2.mp3')
-    );
-    buttonSound = sound;
-    await sound.playAsync();
-    
-    // Libérer la ressource après la lecture
-    sound.setOnPlaybackStatusUpdate(async (status) => {
-      if (status.didJustFinish) {
-        await sound.unloadAsync();
+    const now = Date.now();
+    if (now - lastButtonSoundAt < 180) return;
+    lastButtonSoundAt = now;
+
+    if (!buttonSound) {
+      if (!buttonSoundInitPromise) {
+        buttonSoundInitPromise = Audio.Sound.createAsync(
+          require('../../assets/song/bouton2.mp3'),
+          { shouldPlay: false }
+        ).then(({ sound }) => {
+          buttonSound = sound;
+          return sound;
+        }).finally(() => {
+          buttonSoundInitPromise = null;
+        });
       }
-    });
+      await buttonSoundInitPromise;
+    }
+
+    if (!buttonSound) return;
+
+    try {
+      await buttonSound.stopAsync();
+    } catch (_) {}
+
+    try {
+      await buttonSound.setPositionAsync(0);
+    } catch (_) {}
+
+    await buttonSound.playAsync();
   } catch (error) {
     console.log('Error playing button sound', error);
   }

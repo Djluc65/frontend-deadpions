@@ -2,12 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Platform, TouchableOpacity, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getResponsiveSize } from '../utils/responsive';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Banner to prompt user to install the PWA.
  * Only shown on Web when the 'beforeinstallprompt' event is fired.
  */
 const PwaInstallBanner = () => {
+  const { t } = useTranslation();
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [visible, setVisible] = useState(false);
   const slideAnim = useRef(new Animated.Value(-100)).current;
@@ -66,11 +68,11 @@ const PwaInstallBanner = () => {
       <View style={styles.content}>
         <Ionicons name="download-outline" size={24} color="#f1c40f" />
         <View style={styles.textContainer}>
-          <Text style={styles.title}>Installer DeadPions2</Text>
-          <Text style={styles.subtitle}>Ajoutez le jeu à votre écran d'accueil pour un accès rapide.</Text>
+          <Text style={styles.title}>{t('pwa.install_title')}</Text>
+          <Text style={styles.subtitle}>{t('pwa.install_subtitle')}</Text>
         </View>
         <TouchableOpacity style={styles.installButton} onPress={handleInstall}>
-          <Text style={styles.installButtonText}>Installer</Text>
+          <Text style={styles.installButtonText}>{t('pwa.install_button')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.closeButton} onPress={hideBanner}>
           <Ionicons name="close" size={20} color="#ccc" />

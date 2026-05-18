@@ -3,7 +3,7 @@ import { createSlice } from '@reduxjs/toolkit';
 const initialState = {
   isMusicEnabled: true,
   isSoundEnabled: true,
-  language: 'fr', // 'fr', 'en', 'es', etc.
+  language: null, // null = non défini (première installation) → auto-détection device
 };
 
 const settingsSlice = createSlice({

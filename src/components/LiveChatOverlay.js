@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import EmojiAnimation from './EmojiAnimation';
 import { getEmojiSource } from '../utils/emojis';
 import { getResponsiveSize, SCREEN_WIDTH } from '../utils/responsive';
+import { useTranslation } from 'react-i18next';
 
 const width = SCREEN_WIDTH;
 
@@ -18,6 +19,7 @@ const LiveChatOverlay = ({
     currentUser,
     bottomOffset = getResponsiveSize(20)
 }) => {
+    const { t } = useTranslation();
     const [inputText, setInputText] = useState('');
     const [floatingReactions, setFloatingReactions] = useState([]);
     const [showReactions, setShowReactions] = useState(false);
@@ -146,7 +148,7 @@ const LiveChatOverlay = ({
                         style={styles.input}
                         value={inputText}
                         onChangeText={setInputText}
-                        placeholder="Message..."
+                        placeholder={t('chat.message_placeholder')}
                         placeholderTextColor="#ccc"
                         onSubmitEditing={handleSend}
                     />

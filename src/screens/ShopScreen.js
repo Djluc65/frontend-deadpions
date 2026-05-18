@@ -7,6 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useSelector, useDispatch } from 'react-redux';
 import { useStripe } from '@stripe/stripe-react-native';
 import * as Linking from 'expo-linking';
+import { useTranslation } from 'react-i18next';
 import { API_URL, WEBSITE_URL } from '../config';
 import CoinsService from '../services/CoinsService';
 import TransactionService from '../services/TransactionService';
@@ -43,6 +44,7 @@ const IAP_SKUS = Platform.select({
 });
 
 const ShopScreen = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const { user, token } = useSelector(state => state.auth);
   const dispatch = useDispatch();
@@ -81,8 +83,8 @@ const ShopScreen = () => {
       setLoading(false);
       purchaseInFlightRef.current = false;
       appAlert(
-        'Info',
-        `Si aucune fenêtre d'achat n'apparaît:\n\nCauses fréquentes:\n- Produit In-App Purchase indisponible (sandbox / pays / appareil)\n- Achats In-App désactivés (Temps d'écran)\n- Problème de connexion à l'App Store\n\nRéessaie dans quelques instants.${sku ? `\n\nProduit: ${sku}` : ''}`
+        t('shop.iap_info_title'),
+        t('shop.iap_no_window_message') + (sku ? `\n\n${t('shop.iap_product_label')}: ${sku}` : '')
       );
     }, 60000);
   }, [clearPurchaseTimeout]);
@@ -99,7 +101,7 @@ const ShopScreen = () => {
       return await iapInitPromiseRef.current;
     } catch (err) {
       console.warn('IAP Init Error:', err);
-      appAlert('Erreur', "Impossible d'initialiser les achats in-app.");
+      appAlert(t('common.error'), t('shop.iap_init_error'));
       return false;
     } finally {
       iapInitPromiseRef.current = null;
@@ -202,7 +204,7 @@ const ShopScreen = () => {
       clearPurchaseTimeout();
       purchaseInFlightRef.current = false;
       if (error.code !== 'E_USER_CANCELLED') {
-         appAlert('Erreur', `L'achat a échoué: ${error.message}`);
+         appAlert(t('common.error'), t('shop.purchase_failed_message', { message: error.message }));
       }
       setLoading(false);
     });
@@ -231,14 +233,14 @@ const ShopScreen = () => {
 
       const data = await response.json();
       if (response.ok && data.success) {
-        appAlert('Succès', data?.message || 'Achat validé !');
+        appAlert(t('common.success'), data?.message || t('shop.purchase_validated'));
         await refreshUserProfile();
       } else {
-        throw new Error(data.message || 'Validation Apple échouée');
+        throw new Error(data.message || t('shop.apple_validation_failed'));
       }
     } catch (err) {
       console.error('Verify Apple Purchase Error:', err);
-      appAlert('Erreur', 'Impossible de valider votre achat auprès du serveur.');
+      appAlert(t('common.error'), t('shop.cannot_validate_server'));
     } finally {
       setLoading(false);
     }
@@ -261,14 +263,14 @@ const ShopScreen = () => {
 
       const data = await response.json();
       if (response.ok && data.success) {
-        appAlert('Succès', data?.message || 'Achat validé !');
+        appAlert(t('common.success'), data?.message || t('shop.purchase_validated'));
         await refreshUserProfile();
       } else {
-        throw new Error(data.message || 'Validation Google Play échouée');
+        throw new Error(data.message || t('shop.google_validation_failed'));
       }
     } catch (err) {
       console.error('Verify Android Purchase Error:', err);
-      appAlert('Erreur', 'Impossible de valider votre achat auprès du serveur.');
+      appAlert(t('common.error'), t('shop.cannot_validate_server'));
     } finally {
       setLoading(false);
     }
@@ -355,20 +357,20 @@ const ShopScreen = () => {
       if (supported) {
         await Linking.openURL(shopUrl);
       } else {
-        appAlert('Info', `Rendez-vous sur ${WEBSITE_URL} pour acheter des coins.`);
+        appAlert(t('shop.iap_info_title'), t('shop.visit_website_for_coins', { url: WEBSITE_URL }));
       }
     } catch {
-      appAlert('Info', `Rendez-vous sur ${WEBSITE_URL} pour acheter des coins.`);
+      appAlert(t('shop.iap_info_title'), t('shop.visit_website_for_coins', { url: WEBSITE_URL }));
     }
   };
 
   const COIN_PACKS = [
-    { id: 'pack_beginner', coins: 50000, price: '1,99 €', label: 'Débutant' },
-    { id: 'pack_popular', coins: 100000, price: '2,99 €', label: 'Populaire', bonus: '+20%' },
-    { id: 'pack_bestseller', coins: 500000, price: '5,99 €', label: 'Best Seller', bonus: 'HOT' },
-    { id: 'pack_pro', coins: 1000000, price: '10,99 €', label: 'Pro' },
-    { id: 'pack_expert', coins: 2500000, price: '20,99 €', label: 'Expert' },
-    { id: 'pack_whale', coins: 5000000, price: '29,99 €', label: 'Whale', highlight: true },
+    { id: 'pack_beginner', coins: 50000, price: '1,99 €', labelKey: 'pack_beginner' },
+    { id: 'pack_popular', coins: 100000, price: '2,99 €', labelKey: 'pack_popular', bonus: '+20%' },
+    { id: 'pack_bestseller', coins: 500000, price: '5,99 €', labelKey: 'pack_bestseller', bonus: 'HOT' },
+    { id: 'pack_pro', coins: 1000000, price: '10,99 €', labelKey: 'pack_pro' },
+    { id: 'pack_expert', coins: 2500000, price: '20,99 €', labelKey: 'pack_expert' },
+    { id: 'pack_whale', coins: 5000000, price: '29,99 €', labelKey: 'pack_whale', highlight: true },
   ];
 
   const handleBuyPremium = async () => {
@@ -378,9 +380,9 @@ const ShopScreen = () => {
   const handleRestorePurchases = async () => {
     if (loading) return;
     if (!user || !token) {
-      appAlert('Connexion requise', 'Connectez-vous pour restaurer vos achats.', [
-        { text: 'Plus tard', style: 'cancel' },
-        { text: 'Se connecter', onPress: () => navigation.navigate('Login') }
+      appAlert(t('shop.login_required'), t('shop.login_to_restore'), [
+        { text: t('shop.later'), style: 'cancel' },
+        { text: t('auth.login'), onPress: () => navigation.navigate('Login') }
       ]);
       return;
     }
@@ -395,16 +397,16 @@ const ShopScreen = () => {
 
       if (Platform.OS === 'ios') {
         await IAP.restorePurchases();
-        appAlert('Succès', 'Vos achats ont été restaurés avec succès !');
+        appAlert(t('common.success'), t('shop.restore_success'));
       } else if (Platform.OS === 'android') {
         await IAP.restorePurchases();
-        appAlert('Succès', 'Vos achats ont été restaurés avec succès !');
+        appAlert(t('common.success'), t('shop.restore_success'));
       }
-      
+
       await refreshUserProfile();
     } catch (err) {
       console.error('Restore Purchases Error:', err);
-      appAlert('Erreur', 'Impossible de restaurer vos achats. Veuillez réessayer.');
+      appAlert(t('common.error'), t('shop.restore_error'));
     } finally {
       setLoading(false);
     }
@@ -416,21 +418,21 @@ const ShopScreen = () => {
     if (isIOS || isAndroid) {
         if (loading) return;
         if (!user || !token) {
-          appAlert('Connexion requise', 'Connectez-vous pour acheter et restaurer vos achats.', [
-            { text: 'Plus tard', style: 'cancel' },
-            { text: 'Se connecter', onPress: () => navigation.navigate('Login') }
+          appAlert(t('shop.login_required'), t('shop.login_to_buy'), [
+            { text: t('shop.later'), style: 'cancel' },
+            { text: t('auth.login'), onPress: () => navigation.navigate('Login') }
           ]);
           return;
         }
         if (purchaseInFlightRef.current) {
-          appAlert('Info', "Un achat est déjà en cours. Si aucune fenêtre ne s'affiche, quitte et relance l'app, puis réessaie.");
+          appAlert(t('shop.iap_info_title'), t('shop.purchase_in_progress'));
           return;
         }
         setLoading(true);
         purchaseInFlightRef.current = true;
         try {
             const sku = plan === 'Mensuel' ? IAP_SKUS.subscription_monthly : IAP_SKUS.subscription_yearly;
-            if (!sku) throw new Error('Produit non configuré');
+            if (!sku) throw new Error(t('shop.product_not_configured'));
             const ready = await ensureIapReady();
             if (!ready) {
               setLoading(false);
@@ -457,15 +459,15 @@ const ShopScreen = () => {
             setLoading(false);
             purchaseInFlightRef.current = false;
             if (err?.code !== 'E_USER_CANCELLED') {
-              appAlert('Erreur', err?.message ? `L'achat a échoué: ${err.message}` : "L'achat a échoué.");
+              appAlert(t('common.error'), err?.message ? t('shop.purchase_failed_message', { message: err.message }) : t('shop.purchase_failed'));
             }
         }
         return;
     }
     appAlert(
-      "Abonnement DeadPions+",
-      `Vous avez choisi l'offre ${plan}. Cette fonctionnalité sera bientôt disponible avec les paiements réels (Stripe/Apple/Google).`,
-      [{ text: "OK" }]
+      t('shop.subscription_title'),
+      t('shop.subscription_coming_soon', { plan }),
+      [{ text: t('common.ok') }]
     );
   };
 
@@ -484,19 +486,19 @@ const ShopScreen = () => {
       if (!contentType || !contentType.includes("application/json")) {
         const text = await response.text();
         console.error("Non-JSON response:", text);
-        throw new Error("Erreur serveur: Réponse invalide (HTML reçue)");
+        throw new Error(t('shop.server_invalid_response'));
       }
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Erreur lors de l\'initialisation du paiement');
+        throw new Error(errorData.message || t('shop.payment_init_error'));
       }
 
       const { clientSecret, paymentIntentId, pack } = await response.json();
       return { clientSecret, paymentIntentId, pack };
     } catch (error) {
       console.error("fetchPaymentSheetParams error:", error);
-      appAlert('Erreur', error.message || 'Impossible de contacter le serveur de paiement');
+      appAlert(t('common.error'), error.message || t('shop.payment_server_unreachable'));
       return { clientSecret: null };
     }
   };
@@ -514,7 +516,7 @@ const ShopScreen = () => {
 
       const contentType = response.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
-         throw new Error("Erreur serveur: Impossible de vérifier le paiement");
+         throw new Error(t('shop.server_cannot_verify_payment'));
       }
 
       const data = await response.json();
@@ -530,26 +532,26 @@ const ShopScreen = () => {
             { uniqueId: paymentIntentId, packId: packDetails?.id }
         );
 
-        appAlert('Succès', data.message);
+        appAlert(t('common.success'), data.message);
         dispatch(updateUser({ coins: result?.nouveauSolde ?? (user?.coins || 0) + creditedCoins }));
         const newBalance = await CoinsService.obtenirSolde(token);
         dispatch(updateUser({ coins: newBalance }));
         await refreshUserProfile();
       } else {
-         appAlert('Attention', data.message || 'Paiement non validé');
+         appAlert(t('shop.payment_warning'), data.message || t('shop.payment_not_validated'));
       }
     } catch (error) {
       console.error('Erreur verification:', error);
-      appAlert('Erreur', 'Impossible de vérifier le paiement');
+      appAlert(t('common.error'), t('shop.cannot_verify_payment'));
     }
   };
 
   const handleBuyCoins = async (packId, coins, price, label) => {
     if (loading) return;
     if (!user || !token) {
-      appAlert('Connexion requise', 'Connectez-vous pour acheter et restaurer vos achats.', [
-        { text: 'Plus tard', style: 'cancel' },
-        { text: 'Se connecter', onPress: () => navigation.navigate('Login') }
+      appAlert(t('shop.login_required'), t('shop.login_to_buy'), [
+        { text: t('shop.later'), style: 'cancel' },
+        { text: t('auth.login'), onPress: () => navigation.navigate('Login') }
       ]);
       return;
     }
@@ -559,14 +561,14 @@ const ShopScreen = () => {
 
     if (isIOS) {
       if (purchaseInFlightRef.current) {
-        appAlert('Info', "Un achat est déjà en cours. Si aucune fenêtre ne s'affiche, quitte et relance l'app, puis réessaie.");
+        appAlert(t('shop.iap_info_title'), t('shop.purchase_in_progress'));
         return;
       }
       setLoading(true);
       purchaseInFlightRef.current = true;
       try {
         const sku = IAP_SKUS[packId];
-        if (!sku) throw new Error('Produit non configuré pour Apple');
+        if (!sku) throw new Error(t('shop.product_not_configured_apple'));
         const ready = await ensureIapReady();
         if (!ready) {
           setLoading(false);
@@ -585,7 +587,7 @@ const ShopScreen = () => {
         setLoading(false);
         purchaseInFlightRef.current = false;
         if (err?.code !== 'E_USER_CANCELLED') {
-          appAlert('Erreur', err?.message ? `L'achat a échoué: ${err.message}` : "L'achat a échoué.");
+          appAlert(t('common.error'), err?.message ? t('shop.purchase_failed_message', { message: err.message }) : t('shop.purchase_failed'));
         }
       }
       return;
@@ -597,7 +599,7 @@ const ShopScreen = () => {
       purchaseInFlightRef.current = true;
       try {
         const sku = IAP_SKUS[packId];
-        if (!sku) throw new Error('Produit non configuré pour Android');
+        if (!sku) throw new Error(t('shop.product_not_configured_android'));
         
         const ready = await ensureIapReady();
         if (!ready) {
@@ -620,7 +622,7 @@ const ShopScreen = () => {
         console.error('IAP Purchase Error:', err);
         clearPurchaseTimeout();
         if (err.code !== 'E_USER_CANCELLED') {
-          appAlert('Erreur', err.message || "L'achat a échoué");
+          appAlert(t('common.error'), err.message || t('shop.purchase_failed'));
         }
         setLoading(false);
         purchaseInFlightRef.current = false;
@@ -634,25 +636,25 @@ const ShopScreen = () => {
       try {
         const { clientSecret, paymentIntentId, pack } = await fetchPaymentSheetParams(packId);
         if (!clientSecret) {
-          appAlert('Erreur', 'Impossible d\'initialiser le paiement Stripe.');
+          appAlert(t('common.error'), t('shop.stripe_init_error'));
           setLoading(false);
           return;
         }
         // Sur le Web, on redirige vers une page de checkout ou on utilise Stripe Checkout
         // Pour cet exemple, on peut utiliser Stripe.js ou rediriger vers une URL de paiement
-        appAlert('Paiement Web', 'Redirection vers la plateforme de paiement sécurisée...', [
-          { text: 'Annuler', style: 'cancel', onPress: () => setLoading(false) },
-          { text: 'Continuer', onPress: () => openWebShop({ packId, paymentIntentId }) }
+        appAlert(t('shop.web_payment_title'), t('shop.redirecting_to_payment'), [
+          { text: t('common.cancel'), style: 'cancel', onPress: () => setLoading(false) },
+          { text: t('shop.continue'), onPress: () => openWebShop({ packId, paymentIntentId }) }
         ]);
       } catch (err) {
         console.error('Web Payment Error:', err);
-        appAlert('Erreur', 'Le service de paiement est indisponible sur le web.');
+        appAlert(t('common.error'), t('shop.web_payment_unavailable'));
         setLoading(false);
       }
       return;
     }
 
-    appAlert('Info', 'Les achats In-App (IAP) sont disponibles sur iOS et Android uniquement. Utilisez la version Web pour les autres paiements.');
+    appAlert(t('shop.iap_info_title'), t('shop.iap_platforms_only'));
     return;
 
     try {
@@ -660,7 +662,7 @@ const ShopScreen = () => {
       const { clientSecret, paymentIntentId, pack } = await fetchPaymentSheetParams(packId);
 
       if (!clientSecret) {
-        appAlert('Erreur', 'Impossible d\'initialiser le paiement');
+        appAlert(t('common.error'), t('shop.stripe_init_error'));
         setLoading(false);
         return;
       }
@@ -672,7 +674,7 @@ const ShopScreen = () => {
         returnURL: Linking.createURL('stripe-redirect'), // URL de redirection pour la production
         allowsDelayedPaymentMethods: true,
         defaultBillingDetails: {
-            name: user?.username || 'Joueur DeadPions',
+            name: user?.username || t('shop.default_player_name'),
         },
         applePay: {
             merchantCountryCode: 'FR',
@@ -685,7 +687,7 @@ const ShopScreen = () => {
       });
 
       if (initError) {
-        appAlert('Erreur', initError.message);
+        appAlert(t('common.error'), initError.message || t('shop.payment_generic_error'));
         setLoading(false);
         return;
       }
@@ -694,7 +696,7 @@ const ShopScreen = () => {
       const { error: paymentError } = await presentPaymentSheet();
 
       if (paymentError) {
-        appAlert(`Erreur de paiement`, paymentError.message);
+        appAlert(t('shop.payment_error_title'), paymentError.message);
       } else {
         // 4. Verify Payment on Backend
         // On passe les détails du pack pour l'historique si le backend ne renvoie pas tout
@@ -702,7 +704,7 @@ const ShopScreen = () => {
       }
     } catch (error) {
       console.error(error);
-      appAlert('Erreur', 'Une erreur est survenue lors du paiement.');
+      appAlert(t('common.error'), t('shop.payment_generic_error'));
     } finally {
       setLoading(false);
     }
@@ -718,10 +720,10 @@ const ShopScreen = () => {
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
           
-          <Text style={styles.headerTitle}>Boutique</Text>
-          
+          <Text style={styles.headerTitle}>{t('shop.title')}</Text>
+
           {isIOS && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.restoreButton}
               onPress={handleRestorePurchases}
               disabled={loading}
@@ -729,15 +731,15 @@ const ShopScreen = () => {
               {loading ? (
                 <ActivityIndicator size="small" color="white" />
               ) : (
-                <Text style={styles.restoreButtonText}>Restaurer les achats</Text>
+                <Text style={styles.restoreButtonText}>{t('shop.restore_purchases')}</Text>
               )}
             </TouchableOpacity>
           )}
           
           {/* Section Premium */}
           <View style={[styles.sectionContainer, { maxWidth: sectionMaxWidth }]}>
-            <Text style={styles.sectionTitle}>💎 DeadPions+ Premium</Text>
-            <Text style={styles.sectionSubtitle}>Salles illimitées, Coach IA, Stats avancées & Zéro pub !</Text>
+            <Text style={styles.sectionTitle}>💎 {t('shop.premium_section_title')}</Text>
+            <Text style={styles.sectionSubtitle}>{t('shop.premium_section_subtitle')}</Text>
             
             {user?.isEarlyAccess && (
               <View style={{
@@ -749,43 +751,43 @@ const ShopScreen = () => {
                 borderColor: T.green,
               }}>
                 <Text style={{ color: T.green, fontWeight: '800', textAlign: 'center', marginBottom: getResponsiveSize(4), fontSize: getResponsiveSize(13), textTransform: 'uppercase', letterSpacing: 0.3 }}>
-                  ✅ PREMIUM ACTIVÉ (OFFRE DE LANCEMENT)
+                  ✅ {t('shop.early_access_active')}
                 </Text>
                 <Text style={{ color: T.textDim, textAlign: 'center', fontSize: getResponsiveSize(12) }}>
-                  Profitez de tous les avantages gratuitement jusqu'au {new Date(user.earlyAccessEndDate).toLocaleDateString()}.
+                  {t('shop.early_access_until', { date: new Date(user.earlyAccessEndDate).toLocaleDateString() })}
                 </Text>
               </View>
             )}
 
             <View style={styles.subscriptionContainer}>
               {/* Offre Mensuelle */}
-              <TouchableOpacity 
-                style={styles.subCard} 
+              <TouchableOpacity
+                style={styles.subCard}
                 onPress={() => handleSubscription('Mensuel')}
               >
-                <Text style={styles.subName}>Mensuel</Text>
+                <Text style={styles.subName}>{t('shop.monthly')}</Text>
                 <Text style={styles.subPrice}>2,99 €</Text>
-                <Text style={styles.subPeriod}>/ mois</Text>
-                <Text style={styles.subPerk}>+50 000 coins / mois</Text>
-                <Text style={styles.subPerk}>Salles illimitées • Coach IA • Stats avancées • Zéro pub</Text>
-                <Text style={styles.subDetail}>{isIOS ? 'S\'abonner avec Apple' : 'Bientôt disponible'}</Text>
+                <Text style={styles.subPeriod}>{t('shop.per_month')}</Text>
+                <Text style={styles.subPerk}>{t('shop.monthly_coins_perk')}</Text>
+                <Text style={styles.subPerk}>{t('shop.premium_perks_summary')}</Text>
+                <Text style={styles.subDetail}>{isIOS ? t('shop.subscribe_with_apple') : t('shop.coming_soon')}</Text>
               </TouchableOpacity>
 
               {/* Offre Annuelle */}
-              <TouchableOpacity 
-                style={[styles.subCard, styles.bestValueCard]} 
+              <TouchableOpacity
+                style={[styles.subCard, styles.bestValueCard]}
                 onPress={() => handleSubscription('Annuel')}
               >
                 <View style={styles.bestValueBadge}>
-                  <Text style={styles.bestValueText}>MEILLEURE OFFRE</Text>
+                  <Text style={styles.bestValueText}>{t('shop.best_value')}</Text>
                 </View>
-                <Text style={[styles.subName, styles.highlightText]}>Annuel</Text>
+                <Text style={[styles.subName, styles.highlightText]}>{t('shop.annual')}</Text>
                 <Text style={[styles.subPrice, styles.highlightText]}>19,99 €</Text>
-                <Text style={[styles.subPeriod, styles.highlightText]}>/ an</Text>
-                <Text style={[styles.subPerk, styles.highlightText]}>+60 000 coins / mois</Text>
-                <Text style={[styles.subPerk, styles.highlightText]}>Crédit mensuel pendant 1 an</Text>
-                <Text style={[styles.subDetail, styles.highlightText]}>{isIOS ? 'S\'abonner avec Apple' : 'Bientôt disponible'}</Text>
-                <Text style={[styles.subDetail, styles.highlightText]}>~1,66 € / mois</Text>
+                <Text style={[styles.subPeriod, styles.highlightText]}>{t('shop.per_year')}</Text>
+                <Text style={[styles.subPerk, styles.highlightText]}>{t('shop.annual_coins_perk')}</Text>
+                <Text style={[styles.subPerk, styles.highlightText]}>{t('shop.annual_credit_perk')}</Text>
+                <Text style={[styles.subDetail, styles.highlightText]}>{isIOS ? t('shop.subscribe_with_apple') : t('shop.coming_soon')}</Text>
+                <Text style={[styles.subDetail, styles.highlightText]}>{t('shop.annual_per_month')}</Text>
                 <Text style={[styles.saveText]}>-45%</Text>
               </TouchableOpacity>
             </View>
@@ -793,9 +795,9 @@ const ShopScreen = () => {
 
           {/* Section Pions Premium */}
           <View style={[styles.sectionContainer, { maxWidth: sectionMaxWidth }]}>
-            <Text style={styles.sectionTitle}>🏆 Collection Pions Premium</Text>
-            <Text style={styles.sectionSubtitle}>Débloquez des pions uniques en 3D stylisés.</Text>
-            
+            <Text style={styles.sectionTitle}>🏆 {t('shop.pions_section_title')}</Text>
+            <Text style={styles.sectionSubtitle}>{t('shop.pions_section_subtitle')}</Text>
+
             <TouchableOpacity
               style={{
                 backgroundColor: T.red,
@@ -810,7 +812,7 @@ const ShopScreen = () => {
               onPress={() => navigation.navigate('PremiumPions')}
             >
               <Text style={{ color: '#fff', fontWeight: '800', fontSize: getResponsiveSize(14), textTransform: 'uppercase', letterSpacing: 0.3 }}>
-                VOIR LA COLLECTION
+                {t('shop.see_collection')}
               </Text>
             </TouchableOpacity>
 
@@ -832,7 +834,7 @@ const ShopScreen = () => {
                     <ActivityIndicator color="#1B1305" />
                 ) : (
                     <Text style={{ color: '#1B1305', fontWeight: '800', fontSize: getResponsiveSize(14), textTransform: 'uppercase', letterSpacing: 0.3 }}>
-                      DÉBLOQUER TOUT — 4,99 €
+                      {t('shop.unlock_all_price')}
                     </Text>
                 )}
               </TouchableOpacity>
@@ -841,15 +843,15 @@ const ShopScreen = () => {
 
           {/* Section Coins */}
           <View style={[styles.sectionContainer, { maxWidth: sectionMaxWidth }]}>
-            <Text style={styles.sectionTitle}>🪙 Packs de Coins</Text>
-            <Text style={styles.sectionSubtitle}>Pour vos skins et personnalisations.</Text>
+            <Text style={styles.sectionTitle}>🪙 {t('shop.coins_section_title')}</Text>
+            <Text style={styles.sectionSubtitle}>{t('shop.coins_section_subtitle')}</Text>
             
             <View style={styles.coinsGrid}>
               {COIN_PACKS.map((pack, index) => (
                 <TouchableOpacity 
                   key={index} 
                   style={[styles.coinCard, pack.highlight && styles.highlightCard]}
-                  onPress={() => handleBuyCoins(pack.id, pack.coins, pack.price, pack.label)}
+                  onPress={() => handleBuyCoins(pack.id, pack.coins, pack.price, t(`shop.${pack.labelKey}`))}
                   disabled={loading}
                 >
                   {pack.bonus && (
@@ -858,7 +860,7 @@ const ShopScreen = () => {
                     </View>
                   )}
                   <Text style={styles.coinAmount}>{pack.coins.toLocaleString()}</Text>
-                  <Text style={styles.coinLabel}>Coins</Text>
+                  <Text style={styles.coinLabel}>{t('shop.coins')}</Text>
                   <View style={[styles.priceButton, loading && { opacity: 0.7 }, iosCoinsUseWebShop && { backgroundColor: '#888' }]}>
                     {loading ? (
                         <ActivityIndicator size="small" color="white" />
@@ -866,7 +868,7 @@ const ShopScreen = () => {
                         <>
                           <Text style={styles.priceText}>{pack.price}</Text>
                           {isIOS && (
-                            <Text style={styles.priceSubText}>Apple Pay</Text>
+                            <Text style={styles.priceSubText}>{t('shop.apple_pay')}</Text>
                           )}
                         </>
                     )}
@@ -878,21 +880,21 @@ const ShopScreen = () => {
 
           {!user?.isPremium && !user?.isEarlyAccess && (
             <View style={[styles.sectionContainer, { maxWidth: sectionMaxWidth }]}>
-              <Text style={styles.sectionTitle}>🎁 Coins gratuits</Text>
-              <Text style={styles.sectionSubtitle}>Regardez une publicité récompensée pour gagner 10 coins.</Text>
+              <Text style={styles.sectionTitle}>🎁 {t('shop.free_coins_section_title')}</Text>
+              <Text style={styles.sectionSubtitle}>{t('shop.free_coins_section_subtitle')}</Text>
 
               <TouchableOpacity
                 style={[styles.rewardedButton, !showAds && { opacity: 0.6 }]}
                 onPress={showRewarded}
                 disabled={loading || !showAds}
               >
-                <Text style={styles.rewardedButtonText}>REGARDER LA PUB — +10 COINS</Text>
+                <Text style={styles.rewardedButtonText}>{t('shop.watch_ad_button')}</Text>
               </TouchableOpacity>
             </View>
           )}
 
           <Text style={styles.disclaimer}>
-            DeadPions n'est pas un jeu d'argent. Les Coins ne sont pas convertibles en monnaie réelle.
+            {t('shop.disclaimer')}
           </Text>
 
         </ScrollView>

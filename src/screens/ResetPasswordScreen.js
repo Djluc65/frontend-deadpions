@@ -7,8 +7,10 @@ import { validatePassword } from '../utils/validation';
 import { getResponsiveSize } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
 import { T } from '../utils/theme';
+import { useTranslation } from 'react-i18next';
 
 const ResetPasswordScreen = ({ route, navigation }) => {
+  const { t } = useTranslation();
   const { email, devToken } = route.params || {};
   const [resetCode, setResetCode] = useState(devToken || '');
   const [newPassword, setNewPassword] = useState('');
@@ -23,18 +25,21 @@ const ResetPasswordScreen = ({ route, navigation }) => {
 
   const handleResetPassword = async () => {
     if (!resetCode || !newPassword || !confirmPassword) {
-      appAlert('Erreur', 'Veuillez remplir tous les champs');
+      appAlert(t('common.error'), t('auth.fill_all_fields'));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      appAlert('Erreur', 'Les mots de passe ne correspondent pas');
+      appAlert(t('common.error'), t('auth.error_passwords_mismatch'));
       return;
     }
 
     const validation = validatePassword(newPassword);
     if (!validation.isValid) {
-      appAlert('Mot de passe trop faible', validation.message);
+      appAlert(
+        t('validation.weak_password_title'),
+        t(validation.messageKey, validation.messageParams)
+      );
       return;
     }
 
@@ -52,21 +57,21 @@ const ResetPasswordScreen = ({ route, navigation }) => {
 
       if (response.ok) {
         appAlert(
-          'Succès',
-          'Votre mot de passe a été réinitialisé avec succès.',
+          t('common.success'),
+          t('auth.reset_success_desc'),
           [
             { 
-              text: 'Se connecter', 
+              text: t('common.login_action'), 
               onPress: () => navigation.navigate('Login') 
             }
           ]
         );
       } else {
-        appAlert('Erreur', data.message || "Erreur lors de la réinitialisation");
+        appAlert(t('common.error'), data.message || t('errors.generic'));
       }
     } catch (error) {
       console.error(error);
-      appAlert('Erreur', 'Erreur serveur');
+      appAlert(t('common.error'), t('errors.server'));
     } finally {
       setLoading(false);
     }
@@ -81,11 +86,11 @@ const ResetPasswordScreen = ({ route, navigation }) => {
       <View style={styles.bgOverlay} pointerEvents="none" />
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.container}>
-          <Text style={styles.title}>Réinitialisation</Text>
-          <Text style={styles.subtitle}>Entrez le code reçu par email ({email}) et votre nouveau mot de passe.</Text>
+          <Text style={styles.title}>{t('auth.reset_screen_title')}</Text>
+          <Text style={styles.subtitle}>{t('auth.reset_subtitle', { email })}</Text>
           
           <Input 
-            placeholder="Code à 6 chiffres"
+            placeholder={t('auth.reset_code_placeholder')}
             value={resetCode} 
             onChangeText={setResetCode} 
             keyboardType="number-pad"
@@ -93,21 +98,21 @@ const ResetPasswordScreen = ({ route, navigation }) => {
           />
           
           <Input 
-            placeholder="Nouveau mot de passe" 
+            placeholder={t('auth.new_password_placeholder')} 
             value={newPassword} 
             onChangeText={setNewPassword} 
             secureTextEntry 
           />
 
           <Input 
-            placeholder="Confirmer mot de passe" 
+            placeholder={t('auth.password_confirm')} 
             value={confirmPassword} 
             onChangeText={setConfirmPassword} 
             secureTextEntry 
           />
           
           <Button 
-            title={loading ? "Chargement..." : "Valider"} 
+            title={loading ? t('common.loading') : t('common.confirm')} 
             onPress={handleResetPassword} 
             disabled={loading}
           />

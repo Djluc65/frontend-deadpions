@@ -1,6 +1,7 @@
 import React, { useState, memo, useEffect } from 'react';
 import { View, Text, Modal, Pressable, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { getResponsiveSize } from '../../utils/responsive';
 import { playButtonSound } from '../../utils/soundManager';
 import { ONLINE_TIME_OPTIONS } from '../../utils/constants';
@@ -8,6 +9,7 @@ import { modalTheme } from '../../utils/modalTheme';
 import { T } from '../../utils/theme';
 
 const LocalGameSetup = memo(({ visible, onClose, navigation }) => {
+  const { t } = useTranslation();
   const [step, setStep] = useState(1);
   const [localMode, setLocalMode] = useState('simple');
   const [localSeriesLength, setLocalSeriesLength] = useState(2);
@@ -73,28 +75,28 @@ const LocalGameSetup = memo(({ visible, onClose, navigation }) => {
                 <ScrollView contentContainerStyle={{ alignItems: 'center', width: '100%' }} style={{ width: '100%' }}>
                     {step === 1 ? (
                         <>
-                            <Text style={styles.friendsModalTitle}>Partie Locale</Text>
+                            <Text style={styles.friendsModalTitle}>{t('local.title')}</Text>
 
                             {/* MODE DE JEU */}
-                            <Text style={styles.friendsLabel}>Mode de jeu:</Text>
+                            <Text style={styles.friendsLabel}>{t('setup.game_mode_label')}</Text>
                             <View style={styles.optionsRow}>
                                 <TouchableOpacity 
                                     style={[styles.friendsOptionButton, localMode === 'simple' && styles.friendsOptionButtonActive]}
                                     onPress={() => { playButtonSound(); setLocalMode('simple'); }}
                                 >
-                                    <Text style={[styles.friendsOptionText, localMode === 'simple' && styles.friendsOptionTextActive]}>Simple</Text>
+                                    <Text style={[styles.friendsOptionText, localMode === 'simple' && styles.friendsOptionTextActive]}>{t('setup.simple')}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity 
                                     style={[styles.friendsOptionButton, localMode === 'tournament' && styles.friendsOptionButtonActive]}
                                     onPress={() => { playButtonSound(); setLocalMode('tournament'); }}
                                 >
-                                    <Text style={[styles.friendsOptionText, localMode === 'tournament' && styles.friendsOptionTextActive]}>Tournoi</Text>
+                                    <Text style={[styles.friendsOptionText, localMode === 'tournament' && styles.friendsOptionTextActive]}>{t('setup.tournament')}</Text>
                                 </TouchableOpacity>
                             </View>
 
                             {localMode === 'tournament' && (
                                 <>
-                                    <Text style={styles.friendsLabel}>Nombre de parties:</Text>
+                                    <Text style={styles.friendsLabel}>{t('setup.series_length_label')}</Text>
                                     <View style={styles.optionsRow}>
                                         {[2, 4, 6, 8, 10].map(num => (
                                             <TouchableOpacity 
@@ -110,16 +112,16 @@ const LocalGameSetup = memo(({ visible, onClose, navigation }) => {
                             )}
 
                             {/* TEMPS PAR TOUR */}
-                            <Text style={styles.friendsLabel}>Temps par tour:</Text>
+                            <Text style={styles.friendsLabel}>{t('setup.time_per_turn_label')}</Text>
                             <View style={styles.optionsRow}>
                                 {ONLINE_TIME_OPTIONS.map(opt => (
                                     <TouchableOpacity 
-                                        key={opt.label} 
+                                        key={opt.labelKey} 
                                         style={[styles.friendsOptionButton, localTime === opt.value && styles.friendsOptionButtonActive]}
                                         onPress={() => { playButtonSound(); setLocalTime(opt.value); }}
                                     >
                                         <Text style={[styles.friendsOptionText, localTime === opt.value && styles.friendsOptionTextActive]}>
-                                            {opt.label}
+                                            {t(opt.labelKey)}
                                         </Text>
                                     </TouchableOpacity>
                                 ))}
@@ -127,10 +129,10 @@ const LocalGameSetup = memo(({ visible, onClose, navigation }) => {
 
                             <View style={styles.modalButtons}>
                                 <TouchableOpacity style={styles.modalButtonCancel} onPress={() => { playButtonSound(); onClose(); }}>
-                                    <Text style={styles.modalButtonText}>Annuler</Text>
+                                    <Text style={styles.modalButtonText}>{t('common.cancel')}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity style={styles.modalButtonConfirm} onPress={() => { playButtonSound(); setStep(2); }}>
-                                    <Text style={[styles.modalButtonText, styles.modalButtonTextActive]}>Suivant</Text>
+                                    <Text style={[styles.modalButtonText, styles.modalButtonTextActive]}>{t('common.next')}</Text>
                                 </TouchableOpacity>
                             </View>
                         </>
@@ -144,12 +146,12 @@ const LocalGameSetup = memo(({ visible, onClose, navigation }) => {
                                 >
                                     <Ionicons name="arrow-back" size={getResponsiveSize(24)} color={T.gold} />
                                 </TouchableOpacity>
-                                <Text style={[styles.friendsModalTitle, { marginBottom: 0 }]}>Configuration Locale</Text>
+                                <Text style={[styles.friendsModalTitle, { marginBottom: 0 }]}>{t('local.config_title')}</Text>
                             </View>
                             
                             {/* QUI COMMENCE */}
                             <View style={styles.sectionContainer}>
-                                <Text style={styles.sectionTitle}>Qui commence ?</Text>
+                                <Text style={styles.sectionTitle}>{t('setup.who_starts_label')}</Text>
                                 <View style={{ flexDirection: 'row', gap: getResponsiveSize(10), width: '100%' }}>
                                     {['joueur1', 'joueur2', 'aleatoire'].map(opt => (
                                         <TouchableOpacity
@@ -170,7 +172,7 @@ const LocalGameSetup = memo(({ visible, onClose, navigation }) => {
                                                 fontWeight: 'bold',
                                                 color: localPremierJoueur === opt ? '#1B1305' : T.textDim
                                             }}>
-                                                {opt === 'joueur1' ? 'Joueur 1' : opt === 'joueur2' ? 'Joueur 2' : 'Aléatoire'}
+                                                {opt === 'joueur1' ? t('game.player1') : opt === 'joueur2' ? t('game.player2') : t('common.random')}
                                             </Text>
                                         </TouchableOpacity>
                                     ))}
@@ -179,12 +181,12 @@ const LocalGameSetup = memo(({ visible, onClose, navigation }) => {
 
                             {/* COULEUR JOUEUR 1 */}
                             <View style={styles.sectionContainer}>
-                                <Text style={styles.sectionTitle}>Couleur Joueur 1</Text>
+                                <Text style={styles.sectionTitle}>{t('local.player1_color_label')}</Text>
                                 <View style={{ flexDirection: 'row', gap: getResponsiveSize(10), width: '100%' }}>
                                      {[
-                                        { id: 'noir', icon: '🔴', label: 'Rouge' },
-                                        { id: 'blanc', icon: '✖', label: 'Bleu' },
-                                        { id: 'aleatoire', icon: '🎲', label: 'Aléa.' }
+                                        { id: 'noir', icon: '🔴', label: t('colors.red') },
+                                        { id: 'blanc', icon: '✖', label: t('colors.blue') },
+                                        { id: 'aleatoire', icon: '🎲', label: t('common.random_short') }
                                       ].map(opt => (
                                         <TouchableOpacity
                                             key={opt.id}
@@ -214,10 +216,10 @@ const LocalGameSetup = memo(({ visible, onClose, navigation }) => {
 
                             <View style={styles.modalButtons}>
                                 <TouchableOpacity style={styles.modalButtonCancel} onPress={() => { playButtonSound(); setStep(1); }}>
-                                    <Text style={styles.modalButtonText}>Retour</Text>
+                                    <Text style={styles.modalButtonText}>{t('common.back')}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity style={styles.modalButtonConfirm} onPress={() => { playButtonSound(); handleStartGame(); }}>
-                                    <Text style={[styles.modalButtonText, styles.modalButtonTextActive]}>JOUER</Text>
+                                    <Text style={[styles.modalButtonText, styles.modalButtonTextActive]}>{t('matchmaking.play_btn')}</Text>
                                 </TouchableOpacity>
                             </View>
                         </>

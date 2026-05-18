@@ -16,15 +16,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../config';
 import { getResponsiveSize } from '../utils/responsive';
 import { T } from '../utils/theme';
+import { useTranslation } from 'react-i18next';
 
 const AssistantScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const token = useSelector(state => state.auth.token);
-  const [messages, setMessages] = useState([
-    { id: '1', role: 'assistant', content: "Bonjour ! Je suis l'assistant DeadPions. Comment puis-je vous aider aujourd'hui ?" }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const flatListRef = useRef(null);
+  
+  useEffect(() => {
+    if (messages.length > 0) return;
+    setMessages([{ id: '1', role: 'assistant', content: t('assistant.greeting') }]);
+  }, [t]);
 
   const sendMessage = async () => {
     if (!inputText.trim() || isLoading) return;
@@ -67,7 +72,7 @@ const AssistantScreen = ({ navigation }) => {
         const errorMessage = { 
           id: (Date.now() + 1).toString(), 
           role: 'assistant', 
-          content: "Désolé, je rencontre des difficultés pour répondre. Veuillez réessayer plus tard." 
+          content: t('assistant.error_generic')
         };
         setMessages(prev => [...prev, errorMessage]);
       }
@@ -76,7 +81,7 @@ const AssistantScreen = ({ navigation }) => {
       const errorMessage = { 
         id: (Date.now() + 1).toString(), 
         role: 'assistant', 
-        content: "Erreur de connexion. Vérifiez votre réseau." 
+        content: t('errors.network')
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -115,7 +120,7 @@ const AssistantScreen = ({ navigation }) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={getResponsiveSize(28)} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Assistant DeadPions</Text>
+        <Text style={styles.headerTitle}>{t('assistant.title')}</Text>
         <View style={{ width: getResponsiveSize(28) }} /> 
       </View>
 
@@ -138,7 +143,7 @@ const AssistantScreen = ({ navigation }) => {
             style={styles.input}
             value={inputText}
             onChangeText={setInputText}
-            placeholder="Posez votre question..."
+            placeholder={t('assistant.placeholder')}
             placeholderTextColor="#bdc3c7"
             multiline
             maxLength={500}

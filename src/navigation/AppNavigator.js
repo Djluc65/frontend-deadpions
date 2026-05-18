@@ -6,6 +6,7 @@ import { socket } from '../utils/socket';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { appAlert } from '../services/appAlert';
 import { updateUser } from '../redux/slices/authSlice';
+import i18n from '../i18n/index';
 
 // Écrans
 import WaitingScreen from '../screens/WaitingScreen';
@@ -87,7 +88,7 @@ function InviteJoinScreen({ route, navigation }) {
 
     const handleError = (msg) => {
       cleanup();
-      appAlert('Invitation', typeof msg === 'string' ? msg : 'Code invalide ou expiré.');
+      appAlert(i18n.t('invite.title'), typeof msg === 'string' ? msg : i18n.t('join_code.invalid_or_expired'));
       navigation.replace('Home');
     };
 

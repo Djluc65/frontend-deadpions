@@ -6,6 +6,7 @@ import { useCoinsContext } from '../context/CoinsContext';
 import { getResponsiveSize } from '../utils/responsive';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { appAlert } from '../services/appAlert';
+import { useTranslation } from 'react-i18next';
 
 let mobileAds;
 let AdEventType;
@@ -99,6 +100,7 @@ export function useAdManager() {
 }
 
 export default function AdSystem({ children }) {
+  const { t } = useTranslation();
   const { user } = useSelector((state) => state.auth);
   const { credit } = useCoinsContext();
 
@@ -482,20 +484,20 @@ export default function AdSystem({ children }) {
 
   const showRewarded = useCallback((options = {}) => {
     if (!showAds) {
-      appAlert('Pub indisponible', "Les publicités ne sont pas disponibles pour ce compte/appareil.");
+      appAlert(t('ads.unavailable_title'), t('ads.unavailable_desc_account'));
       return;
     }
     if (Platform.OS === 'ios' && !attReady) {
-      appAlert('Pub indisponible', "Autorisation iOS en attente. Relance l'app ou accepte la demande de suivi.");
+      appAlert(t('ads.unavailable_title'), t('ads.unavailable_desc_ios_att'));
       return;
     }
     if (!RewardedAd) {
-      appAlert('Pub indisponible', 'Module de publicité non disponible sur ce build.');
+      appAlert(t('ads.unavailable_title'), t('ads.unavailable_desc_build'));
       return;
     }
     const rewarded = setupRewarded();
     if (!rewarded) {
-      appAlert('Pub indisponible', 'Impossible de préparer la pub. Réessayez dans quelques instants.');
+      appAlert(t('ads.unavailable_title'), t('ads.unavailable_desc_prepare'));
       return;
     }
     if (options && typeof options === 'object') {
@@ -539,10 +541,10 @@ export default function AdSystem({ children }) {
       if (!pendingShowRewardedRef.current) return;
       pendingShowRewardedRef.current = false;
       rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
-      appAlert('Pub indisponible', 'Impossible de charger la publicité. Réessayez dans quelques instants.');
+      appAlert(t('ads.unavailable_title'), t('ads.unavailable_desc_load'));
       if (adDebugEnabled) console.warn('[ADS] rewarded timeout (no ad loaded to show)');
     }, 12000);
-  }, [showAds, rewardedLoaded, setupRewarded, attReady]);
+  }, [showAds, rewardedLoaded, setupRewarded, attReady, t]);
 
   const value = useMemo(
     () => ({

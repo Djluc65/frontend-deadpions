@@ -5,8 +5,10 @@ import { CommonActions } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import { getResponsiveSize } from '../utils/responsive';
 import { useAdManager } from '../ads/AdSystem';
+import { useTranslation } from 'react-i18next';
 
 const ResultatJeuOnline = ({ route, navigation }) => {
+  const { t } = useTranslation();
   const { victoire, gains, montantPari, adversaire, raisonDefaite, raisonVictoire, timeouts } = route.params;
   const user = useSelector(state => state.auth.user);
   const { showAds, showRewarded } = useAdManager();
@@ -20,13 +22,15 @@ const ResultatJeuOnline = ({ route, navigation }) => {
       <View style={styles.bgOverlay} pointerEvents="none" />
       <View style={styles.card}>
         <Text style={styles.emoji}>{victoire ? '🏆' : '😢'}</Text>
-        <Text style={styles.titre}>{victoire ? 'VICTOIRE !' : 'DÉFAITE'}</Text>
-        <Text style={styles.adversaire}>Contre {adversaire?.pseudo || 'Adversaire'}</Text>
+        <Text style={styles.titre}>{victoire ? t('game.you_win') : t('game.you_lose')}</Text>
+        <Text style={styles.adversaire}>
+          {t('game.against')} {adversaire?.pseudo || t('game.opponent')}
+        </Text>
 
         {raisonVictoire === 'timeout_adverse' && (
             <View style={styles.raisonContainer}>
                 <Text style={styles.raisonTexte}>
-                    ⏰ Votre adversaire a dépassé le temps limite 5 fois
+                    {t('game.opponent_timeout_times', { count: 5 })}
                 </Text>
             </View>
         )}
@@ -34,32 +38,34 @@ const ResultatJeuOnline = ({ route, navigation }) => {
         {raisonDefaite === 'timeout' && (
             <View style={[styles.raisonContainer, styles.raisonDefaite]}>
                 <Text style={[styles.raisonTexte, styles.raisonTexteDefaite]}>
-                    ⏰ Vous avez dépassé le temps limite {timeouts || 5} fois
+                    {t('game.you_timeout_times', { count: timeouts || 5 })}
                 </Text>
             </View>
         )}
 
         {victoire ? (
           <View style={styles.gainsContainer}>
-            <Text style={styles.gainsLabel}>Vous avez gagné :</Text>
+            <Text style={styles.gainsLabel}>{t('game.you_won_label')} :</Text>
             <Text style={styles.gainsMontant}>+🪙 {gains.toLocaleString()}</Text>
-            <Text style={styles.gainsInfo}>(95% de {(montantPari * 2).toLocaleString()} coins)</Text>
+            <Text style={styles.gainsInfo}>
+              {t('results.commission_info', { percent: 95, amount: (montantPari * 2).toLocaleString() })}
+            </Text>
           </View>
         ) : (
           <View style={styles.perteContainer}>
-            <Text style={styles.perteLabel}>Vous avez perdu :</Text>
+            <Text style={styles.perteLabel}>{t('game.you_lost_label')} :</Text>
             <Text style={styles.perteMontant}>-🪙 {montantPari.toLocaleString()}</Text>
           </View>
         )}
 
         <View style={styles.soldeContainer}>
-            <Text style={styles.soldeLabel}>Nouveau solde :</Text>
+            <Text style={styles.soldeLabel}>{t('results.new_balance')} :</Text>
             <Text style={styles.soldeMontant}>🪙 {user?.coins?.toLocaleString()}</Text>
         </View>
 
         {canShowRewardedCta && (
           <TouchableOpacity style={styles.boutonRewarded} onPress={showRewarded}>
-            <Text style={styles.boutonRewardedTexte}>🎁 Regarder une pub — +10 coins</Text>
+            <Text style={styles.boutonRewardedTexte}>{t('rewards.watch_ad_button')}</Text>
           </TouchableOpacity>
         )}
 
@@ -68,7 +74,7 @@ const ResultatJeuOnline = ({ route, navigation }) => {
             style={styles.boutonRejouer} 
             onPress={() => navigation.navigate('Home')}
           >
-            <Text style={styles.boutonTexte}>🔄 Rejouer</Text>
+            <Text style={styles.boutonTexte}>🔄 {t('game.replay')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -80,7 +86,7 @@ const ResultatJeuOnline = ({ route, navigation }) => {
               })
             )}
           >
-            <Text style={styles.boutonTexte}>🏠 Menu</Text>
+            <Text style={styles.boutonTexte}>🏠 {t('game.menu')}</Text>
           </TouchableOpacity>
         </View>
       </View>

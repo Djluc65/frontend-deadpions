@@ -8,6 +8,7 @@ import { socket } from '../utils/socket';
 import CoinsFeedback from '../components/CoinsFeedback';
 import { API_URL } from '../config';
 import { appAlert } from '../services/appAlert';
+import i18n from '../i18n/index';
 
 const CoinsContext = createContext(null);
 
@@ -147,7 +148,7 @@ export const CoinsProvider = ({ children }) => {
                 lastAuthErrorAtRef.current = Date.now();
                 if (!authErrorAlertedRef.current) {
                     authErrorAlertedRef.current = true;
-                    appAlert('Session expirée', 'Veuillez vous reconnecter pour synchroniser vos coins.');
+                    appAlert(i18n.t('auth.session_expired_title'), i18n.t('auth.session_expired_desc'));
                 }
                 dispatch(logout());
                 return { success: false, token: null };

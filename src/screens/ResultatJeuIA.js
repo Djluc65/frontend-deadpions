@@ -6,8 +6,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { getResponsiveSize } from '../utils/responsive';
 import { useAdManager } from '../ads/AdSystem';
+import { useTranslation } from 'react-i18next';
 
 const ResultatJeuIA = ({ route, navigation }) => {
+  const { t } = useTranslation();
   const { victoire, difficulte, configIA } = route.params;
   const [stats, setStats] = useState(null);
   const [scaleAnim] = useState(new Animated.Value(0));
@@ -58,6 +60,12 @@ const ResultatJeuIA = ({ route, navigation }) => {
   };
 
   const tauxVictoire = stats ? ((stats.gagnees / stats.jouees) * 100).toFixed(0) : 0;
+  const difficultyLabel =
+    difficulte === 'facile'
+      ? t('ai.difficulty_easy')
+      : difficulte === 'moyen'
+        ? t('ai.difficulty_medium')
+        : t('ai.difficulty_hard');
 
   return (
     <View style={styles.container}>
@@ -67,26 +75,24 @@ const ResultatJeuIA = ({ route, navigation }) => {
         </Text>
         
         <Text style={styles.titre}>
-          {victoire ? 'Victoire !' : 'Défaite'}
+          {victoire ? t('game.you_win') : t('game.you_lose')}
         </Text>
         
         <Text style={styles.message}>
-          {victoire 
-            ? 'Félicitations ! Vous avez battu l\'IA !'
-            : 'L\'IA a gagné cette fois. Réessayez !'}
+          {victoire ? t('results.ai_victory_msg') : t('results.ai_defeat_msg')}
         </Text>
         
         {stats && (
           <View style={styles.statsContainer}>
-            <Text style={styles.statsLabel}>Mode {difficulte.charAt(0).toUpperCase() + difficulte.slice(1)}</Text>
-            <Text style={styles.statsTaux}>{tauxVictoire}% de victoires</Text>
-            <Text style={styles.statsParties}>{stats.jouees} parties jouées</Text>
+            <Text style={styles.statsLabel}>{t('results.ai_mode_label', { difficulty: difficultyLabel })}</Text>
+            <Text style={styles.statsTaux}>{t('results.ai_win_rate', { percent: tauxVictoire })}</Text>
+            <Text style={styles.statsParties}>{t('results.ai_games_played', { count: stats.jouees })}</Text>
           </View>
         )}
 
         {!victoire && showAds && (
           <TouchableOpacity style={styles.boutonRewarded} onPress={showRewarded}>
-            <Text style={styles.boutonRewardedTexte}>🎁 Regarder une pub — +10 coins</Text>
+            <Text style={styles.boutonRewardedTexte}>{t('rewards.watch_ad_button')}</Text>
           </TouchableOpacity>
         )}
         
@@ -103,7 +109,7 @@ const ResultatJeuIA = ({ route, navigation }) => {
               navigation.replace('Game', { modeJeu: 'ia', configIA });
             }}
           >
-            <Text style={styles.boutonTexte}>🔄 Rejouer</Text>
+            <Text style={styles.boutonTexte}>🔄 {t('game.replay')}</Text>
           </TouchableOpacity>
           
           <TouchableOpacity
@@ -115,7 +121,7 @@ const ResultatJeuIA = ({ route, navigation }) => {
               })
             )}
           >
-            <Text style={styles.boutonTexteMenu}>🏠 Menu</Text>
+            <Text style={styles.boutonTexteMenu}>🏠 {t('game.menu')}</Text>
           </TouchableOpacity>
         </View>
       </Animated.View>

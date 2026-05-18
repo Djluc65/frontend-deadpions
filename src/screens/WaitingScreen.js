@@ -8,8 +8,10 @@ import { API_URL } from '../config';
 import { Asset } from 'expo-asset';
 import { getResponsiveSize, isTablet, SCREEN_WIDTH, SCREEN_HEIGHT } from '../utils/responsive';
 import * as SplashScreen from 'expo-splash-screen';
+import { useTranslation } from 'react-i18next';
 
 const WaitingScreen = ({ navigation }) => {
+  const { t } = useTranslation();
   const { token, refreshToken } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const [attGateVisible, setAttGateVisible] = useState(false);
@@ -233,19 +235,19 @@ const WaitingScreen = ({ navigation }) => {
       {attGateVisible && (
         <View style={styles.attOverlay}>
           <View style={styles.attCard}>
-            <Text style={styles.attTitle}>Autoriser le suivi ?</Text>
+            <Text style={styles.attTitle}>{t('att.title')}</Text>
             <Text style={styles.attText}>
-              DeadPions utilise cette autorisation pour proposer des publicités personnalisées et mesurer la performance.
+              {t('att.desc')}
             </Text>
             <Text style={styles.attHint}>
-              Si la popup Apple n'apparaît pas: Réglages → Confidentialité et sécurité → Suivi → Autoriser les demandes de suivi des apps.
+              {t('att.hint')}
             </Text>
             <View style={styles.attButtons}>
               <TouchableOpacity style={styles.attBtnSecondary} onPress={skipAtt} activeOpacity={0.9}>
-                <Text style={styles.attBtnSecondaryText}>Plus tard</Text>
+                <Text style={styles.attBtnSecondaryText}>{t('common.later')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.attBtnPrimary} onPress={acceptAtt} activeOpacity={0.9}>
-                <Text style={styles.attBtnPrimaryText}>Continuer</Text>
+                <Text style={styles.attBtnPrimaryText}>{t('common.continue')}</Text>
               </TouchableOpacity>
             </View>
           </View>

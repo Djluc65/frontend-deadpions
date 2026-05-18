@@ -4,7 +4,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { toggleMusic, toggleSound, setLanguage } from '../../redux/slices/settingsSlice';
-import { translations } from '../../utils/translations';
+import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n/index';
 import { playButtonSound } from '../../utils/soundManager';
 import { getResponsiveSize } from '../../utils/responsive';
 import { modalTheme } from '../../utils/modalTheme';
@@ -13,8 +14,19 @@ import { T } from '../../utils/theme';
 const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
   const dispatch = useDispatch();
   const navigation = useNavigation();
-  const settings = useSelector(state => state.settings || { isMusicEnabled: true, isSoundEnabled: true, language: 'fr' });
-  const t = translations[settings.language] || translations.fr;
+  const settings = useSelector(state => state.settings || { isMusicEnabled: true, isSoundEnabled: true, language: null });
+  const activeLanguage = settings.language || i18n.language || 'en';
+  const { t } = useTranslation();
+  const FLAGS = {
+    fr: '🇫🇷',
+    en: '🇬🇧',
+    ht: '🇭🇹',
+    es: '🇪🇸',
+    pt: '🇧🇷',
+    de: '🇩🇪',
+    ja: '🇯🇵',
+    zh: '🇨🇳',
+  };
 
   return (
     <Modal
@@ -25,10 +37,10 @@ const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
     >
       <Pressable style={styles.modalOverlay} onPress={onClose}>
         <Pressable style={styles.modalContent} onPress={() => {}}>
-          <Text style={styles.modalTitle}>{t.settings}</Text>
+          <Text style={styles.modalTitle}>{t('settings.title')}</Text>
           
           <View style={styles.settingRow}>
-            <Text style={styles.settingText}>{t.music}</Text>
+            <Text style={styles.settingText}>{t('settings.music')}</Text>
             <Switch
               trackColor={{ false: T.bg3, true: T.blue }}
               thumbColor={settings.isMusicEnabled ? "#f5dd4b" : "#f4f3f4"}
@@ -41,7 +53,7 @@ const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
           </View>
 
           <View style={styles.settingRow}>
-            <Text style={styles.settingText}>{t.sound}</Text>
+            <Text style={styles.settingText}>{t('settings.sound')}</Text>
             <Switch
               trackColor={{ false: T.bg3, true: T.blue }}
               thumbColor={settings.isSoundEnabled ? "#f5dd4b" : "#f4f3f4"}
@@ -53,31 +65,25 @@ const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
             />
           </View>
 
-          <View style={styles.settingRow}>
-            <Text style={styles.settingText}>{t.language}</Text>
-            <View style={styles.languageContainer}>
-              <TouchableOpacity 
-                style={[styles.langButton, settings.language === 'fr' && styles.langButtonActive]}
-                hitSlop={{ top: getResponsiveSize(15), bottom: getResponsiveSize(15), left: getResponsiveSize(15), right: getResponsiveSize(15) }}
-                onPress={() => {
-                  playButtonSound();
-                  handlePlaySound();
-                  dispatch(setLanguage('fr'));
-                }}
-              >
-                <Text style={[styles.langText, settings.language === 'fr' && styles.langTextActive]}>FR</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.langButton, settings.language === 'en' && styles.langButtonActive]}
-                hitSlop={{ top: getResponsiveSize(15), bottom: getResponsiveSize(15), left: getResponsiveSize(15), right: getResponsiveSize(15) }}
-                onPress={() => {
-                  playButtonSound();
-                  handlePlaySound();
-                  dispatch(setLanguage('en'));
-                }}
-              >
-                <Text style={[styles.langText, settings.language === 'en' && styles.langTextActive]}>EN</Text>
-              </TouchableOpacity>
+          <View style={styles.languageBlock}>
+            <Text style={styles.settingText}>{t('settings.language')}</Text>
+            <View style={styles.languageGrid}>
+              {['fr', 'en', 'ht', 'es', 'pt', 'de', 'ja', 'zh'].map((lang) => (
+                <TouchableOpacity
+                  key={lang}
+                  style={[styles.langButton, activeLanguage === lang && styles.langButtonActive]}
+                  hitSlop={{ top: getResponsiveSize(12), bottom: getResponsiveSize(12), left: getResponsiveSize(12), right: getResponsiveSize(12) }}
+                  onPress={() => {
+                    playButtonSound();
+                    handlePlaySound();
+                    dispatch(setLanguage(lang));
+                  }}
+                >
+                  <Text style={[styles.langText, activeLanguage === lang && styles.langTextActive]} numberOfLines={1}>
+                    {FLAGS[lang]} {t(`languages.${lang}`)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
 
@@ -90,7 +96,7 @@ const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
             }}
           >
             <Ionicons name="information-circle-outline" size={getResponsiveSize(24)} color={T.gold} />
-            <Text style={styles.infoButtonText}>{settings.language === 'en' ? 'About & Rules' : 'Infos & Règles'}</Text>
+            <Text style={styles.infoButtonText}>{t('settings.about_rules')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -102,7 +108,7 @@ const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
               onClose();
             }}
           >
-            <Text style={styles.closeButtonText}>{t.close}</Text>
+            <Text style={styles.closeButtonText}>{t('common.close')}</Text>
           </TouchableOpacity>
         </Pressable>
       </Pressable>
@@ -127,9 +133,17 @@ const styles = StyleSheet.create({
     color: T.text,
     fontWeight: '600',
   },
-  languageContainer: {
+  languageBlock: {
+    width: '100%',
+    marginBottom: getResponsiveSize(20),
+    paddingHorizontal: getResponsiveSize(10),
+  },
+  languageGrid: {
     flexDirection: 'row',
-    gap: getResponsiveSize(10),
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: getResponsiveSize(12),
+    rowGap: getResponsiveSize(10),
   },
   langButton: {
     padding: getResponsiveSize(8),
@@ -137,7 +151,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: T.borderSoft,
     backgroundColor: T.bg3,
-    minWidth: getResponsiveSize(36),
+    width: '48%',
     alignItems: 'center',
   },
   langButtonActive: {
@@ -147,6 +161,7 @@ const styles = StyleSheet.create({
   langText: {
     color: T.textDim,
     fontWeight: '700',
+    fontSize: getResponsiveSize(13),
   },
   langTextActive: {
     color: '#1B1305',
