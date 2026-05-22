@@ -46,10 +46,12 @@ const SocialScreen = ({ navigation }) => {
   
   // Data State
   const [friends, setFriends] = useState([]);
+  const [blockedUsers, setBlockedUsers] = useState([]);
   const [requestsReceived, setRequestsReceived] = useState([]);
   const [requestsSent, setRequestsSent] = useState([]);
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [showBlocked, setShowBlocked] = useState(false);
 
   // Modals
   const [isAddFriendVisible, setIsAddFriendVisible] = useState(false);
@@ -205,6 +207,19 @@ const SocialScreen = ({ navigation }) => {
           isOnline: f.isOnline,
           lastSeen: f.lastSeen,
           currentGame: f.currentGame
+        })));
+      }
+
+      // Fetch Blocked
+      const blockedRes = await fetch(`${API_URL}/users/me/blocked`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (blockedRes.ok) {
+        const blockedData = await blockedRes.json();
+        setBlockedUsers(blockedData.map(b => ({
+          id: b._id,
+          name: b.pseudo,
+          avatar: getAvatarUri(b.avatar)
         })));
       }
 
@@ -445,6 +460,25 @@ const SocialScreen = ({ navigation }) => {
     } finally {
       setConfirmBlockVisible(false);
       setBlockTarget(null);
+    }
+  };
+
+  const handleUnblockUser = async (targetId) => {
+    try {
+      const res = await fetch(`${API_URL}/users/${targetId}/block`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setBlockedUsers(prev => prev.filter(b => b.id !== targetId));
+        setToast({ visible: true, message: t('social.user_unblocked') || "Utilisateur débloqué", type: 'success' });
+        fetchData();
+      } else {
+        const data = await res.json();
+        appAlert(t('common.error'), data.message);
+      }
+    } catch (error) {
+      appAlert(t('common.error'), t('errors.network'));
     }
   };
 
@@ -829,71 +863,112 @@ const SocialScreen = ({ navigation }) => {
   );
 
   const renderFriends = () => (
-    <FlatList
-        data={filteredFriends}
-        extraData={tick}
-        numColumns={isDesktop ? 3 : isTablet ? 2 : 1}
-        key={isDesktop ? 'friends-3col' : isTablet ? 'friends-2col' : 'friends-1col'}
-        keyExtractor={item => item.id.toString()}
-        contentContainerStyle={styles.listContent}
-      refreshing={loading}
-      onRefresh={fetchData}
-      keyboardDismissMode="on-drag"
-      keyboardShouldPersistTaps="handled"
-      renderItem={({ item }) => {
-        const statusInfo = getStatusInfo(item.isOnline, item.lastSeen);
-        return (
-          <View style={[styles.friendItem, isTablet && styles.friendItemTablet]}>
-            <View style={styles.friendAvatarContainer}>
-              <Image source={item.avatar} style={[styles.avatar, isTablet && styles.avatarTablet]} />
-              <View style={[styles.statusIndicator, { backgroundColor: statusInfo.color }]} />
-            </View>
-            <View style={styles.friendInfo}>
-              <Text style={styles.friendName}>{item.name}</Text>
-              <Text style={[styles.lastSeen, { color: statusInfo.color }]}>{statusInfo.text}</Text>
-            </View>
-            <View style={styles.friendActions}>
-              {item.currentGame ? (
-                  <TouchableOpacity 
-                    style={[styles.actionButton, { backgroundColor: '#3498db', marginRight: getResponsiveSize(5) }]}
-                    onPress={() => handleJoinSpectator(item)}
-                  >
-                    <Ionicons name="eye" size={getResponsiveSize(20)} color="#fff" />
-                  </TouchableOpacity>
-              ) : (
-                  <TouchableOpacity 
-                    style={[styles.actionButton, { backgroundColor: '#f39c12', marginRight: getResponsiveSize(5) }]}
-                    onPress={() => {
-                        setSelectedFriend(item);
-                        setInviteBet(100);
-                        setInviteTime(null);
-                        setInviteConfigVisible(true);
-                    }}
-                  >
-                    <Ionicons name="game-controller" size={getResponsiveSize(20)} color="#fff" />
-                  </TouchableOpacity>
-              )}
+    <View style={{ flex: 1 }}>
+      {blockedUsers.length > 0 && (
+        <TouchableOpacity 
+          style={styles.showBlockedBtn} 
+          onPress={() => setShowBlocked(!showBlocked)}
+        >
+          <Ionicons 
+            name={showBlocked ? "chevron-up" : "chevron-down"} 
+            size={getResponsiveSize(18)} 
+            color={T.gold} 
+          />
+          <Text style={styles.showBlockedText}>
+            {showBlocked ? t('social.hide_blocked') : t('social.show_blocked', { count: blockedUsers.length })}
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {showBlocked && blockedUsers.length > 0 ? (
+        <FlatList
+          data={blockedUsers}
+          keyExtractor={item => `blocked-${item.id}`}
+          contentContainerStyle={[styles.listContent, { paddingBottom: 10 }]}
+          renderItem={({ item }) => (
+            <View style={styles.friendItem}>
+              <Image source={item.avatar} style={styles.avatar} />
+              <View style={styles.friendInfo}>
+                <Text style={styles.friendName}>{item.name}</Text>
+                <Text style={[styles.lastSeen, { color: T.red }]}>{t('social.blocked')}</Text>
+              </View>
               <TouchableOpacity 
-                style={styles.actionButton}
-                onPress={() => navigation.navigate('Chat', { friendId: item.id, friendName: item.name, friendAvatar: item.avatar })}
+                style={[styles.actionButton, { backgroundColor: T.bg3 }]} 
+                onPress={() => handleUnblockUser(item.id)}
               >
-                <Ionicons name="chatbubble-ellipses-outline" size={getResponsiveSize(20)} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionButton} onPress={() => handleBlockFriend(item)}>
-                <Ionicons name="ban-outline" size={getResponsiveSize(20)} color="#e74c3c" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionButton} onPress={() => handleReportUser(item)}>
-                <Ionicons name="alert-circle-outline" size={getResponsiveSize(20)} color={T.gold} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionButton} onPress={() => handleRemoveFriend(item)}>
-                <Ionicons name="trash-outline" size={getResponsiveSize(20)} color="#e74c3c" />
+                <Ionicons name="person-add-outline" size={getResponsiveSize(20)} color={T.gold} />
               </TouchableOpacity>
             </View>
-          </View>
-        );
-      }}
-      ListEmptyComponent={!loading && <Text style={styles.emptyText}>{t('social.no_friends_found')}</Text>}
-    />
+          )}
+        />
+      ) : null}
+
+      <FlatList
+          data={filteredFriends}
+          extraData={tick}
+          numColumns={isDesktop ? 3 : isTablet ? 2 : 1}
+          key={isDesktop ? 'friends-3col' : isTablet ? 'friends-2col' : 'friends-1col'}
+          keyExtractor={item => item.id.toString()}
+          contentContainerStyle={styles.listContent}
+        refreshing={loading}
+        onRefresh={fetchData}
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        renderItem={({ item }) => {
+          const statusInfo = getStatusInfo(item.isOnline, item.lastSeen);
+          return (
+            <View style={[styles.friendItem, isTablet && styles.friendItemTablet]}>
+              <View style={styles.friendAvatarContainer}>
+                <Image source={item.avatar} style={[styles.avatar, isTablet && styles.avatarTablet]} />
+                <View style={[styles.statusIndicator, { backgroundColor: statusInfo.color }]} />
+              </View>
+              <View style={styles.friendInfo}>
+                <Text style={styles.friendName}>{item.name}</Text>
+                <Text style={[styles.lastSeen, { color: statusInfo.color }]}>{statusInfo.text}</Text>
+              </View>
+              <View style={styles.friendActions}>
+                {item.currentGame ? (
+                    <TouchableOpacity 
+                      style={[styles.actionButton, { backgroundColor: '#3498db', marginRight: getResponsiveSize(5) }]}
+                      onPress={() => handleJoinSpectator(item)}
+                    >
+                      <Ionicons name="eye" size={getResponsiveSize(20)} color="#fff" />
+                    </TouchableOpacity>
+                ) : (
+                    <TouchableOpacity 
+                      style={[styles.actionButton, { backgroundColor: '#f39c12', marginRight: getResponsiveSize(5) }]}
+                      onPress={() => {
+                          setSelectedFriend(item);
+                          setInviteBet(100);
+                          setInviteTime(null);
+                          setInviteConfigVisible(true);
+                      }}
+                    >
+                      <Ionicons name="game-controller" size={getResponsiveSize(20)} color="#fff" />
+                    </TouchableOpacity>
+                )}
+                <TouchableOpacity 
+                  style={styles.actionButton}
+                  onPress={() => navigation.navigate('Chat', { friendId: item.id, friendName: item.name, friendAvatar: item.avatar })}
+                >
+                  <Ionicons name="chatbubble-ellipses-outline" size={getResponsiveSize(20)} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionButton} onPress={() => handleBlockFriend(item)}>
+                  <Ionicons name="ban-outline" size={getResponsiveSize(20)} color="#e74c3c" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionButton} onPress={() => handleReportUser(item)}>
+                  <Ionicons name="alert-circle-outline" size={getResponsiveSize(20)} color={T.gold} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionButton} onPress={() => handleRemoveFriend(item)}>
+                  <Ionicons name="trash-outline" size={getResponsiveSize(20)} color="#e74c3c" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          );
+        }}
+        ListEmptyComponent={!loading && <Text style={styles.emptyText}>{t('social.no_friends_found')}</Text>}
+      />
+    </View>
   );
 
   const renderRequests = () => (
@@ -1803,6 +1878,24 @@ const styles = StyleSheet.create({
     marginBottom: getResponsiveSize(18),
     textAlign: 'center',
     lineHeight: getResponsiveSize(22),
+  },
+  showBlockedBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    backgroundColor: T.bg2,
+    marginHorizontal: 20,
+    marginTop: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: T.borderSoft,
+  },
+  showBlockedText: {
+    color: T.gold,
+    fontSize: getResponsiveSize(14),
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
 });
 

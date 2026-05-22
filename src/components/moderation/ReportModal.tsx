@@ -4,6 +4,7 @@ import { T } from '../../utils/theme';
 import { getResponsiveSize } from '../../utils/responsive';
 import { useReport } from '../../hooks/useReport';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 interface ReportModalProps {
   targetId: string;
@@ -14,12 +15,12 @@ interface ReportModalProps {
   onSuccess?: () => void;
 }
 
-const REASONS = [
-  "Comportement abusif",
-  "Triche / exploit",
-  "Nom inapproprié",
-  "Spam",
-  "Autre"
+const REASON_KEYS = [
+  "abusive",
+  "cheating",
+  "inappropriate_name",
+  "spam",
+  "other"
 ];
 
 const ReportModal: React.FC<ReportModalProps> = ({
@@ -30,6 +31,7 @@ const ReportModal: React.FC<ReportModalProps> = ({
   onClose,
   onSuccess
 }) => {
+  const { t } = useTranslation();
   const [reason, setReason] = useState("");
   const [details, setDetails] = useState("");
   const { submit, loading } = useReport();
@@ -39,7 +41,7 @@ const ReportModal: React.FC<ReportModalProps> = ({
     const success = await submit({
       targetId,
       type: targetType,
-      reason,
+      reason: t(`social.report_reasons.${reason}`),
       details,
       contextGameId
     });
@@ -57,31 +59,33 @@ const ReportModal: React.FC<ReportModalProps> = ({
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.container} onPress={() => {}}>
           <View style={styles.header}>
-            <Text style={styles.title}>Signaler</Text>
+            <Text style={styles.title}>{t('social.report_user_title')}</Text>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={24} color={T.textDim} />
             </TouchableOpacity>
           </View>
 
           <ScrollView style={styles.content}>
-            <Text style={styles.label}>Motif du signalement :</Text>
-            {REASONS.map((r) => (
+            <Text style={styles.label}>{t('social.report_reason_label')}</Text>
+            {REASON_KEYS.map((key) => (
               <TouchableOpacity 
-                key={r} 
+                key={key} 
                 style={styles.radioRow} 
-                onPress={() => setReason(r)}
+                onPress={() => setReason(key)}
               >
-                <View style={[styles.radio, reason === r && styles.radioSelected]}>
-                  {reason === r && <View style={styles.radioInner} />}
+                <View style={[styles.radio, reason === key && styles.radioSelected]}>
+                  {reason === key && <View style={styles.radioInner} />}
                 </View>
-                <Text style={[styles.radioLabel, reason === r && styles.radioLabelSelected]}>{r}</Text>
+                <Text style={[styles.radioLabel, reason === key && styles.radioLabelSelected]}>
+                  {t(`social.report_reasons.${key}`)}
+                </Text>
               </TouchableOpacity>
             ))}
 
-            <Text style={[styles.label, { marginTop: 20 }]}>Détails additionnels (optionnel) :</Text>
+            <Text style={[styles.label, { marginTop: 20 }]}>{t('social.report_details_label')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Max 200 caractères..."
+              placeholder={t('social.report_details_placeholder')}
               placeholderTextColor={T.textMuted}
               multiline
               maxLength={200}
@@ -96,7 +100,7 @@ const ReportModal: React.FC<ReportModalProps> = ({
             onPress={handleSubmit}
           >
             <Text style={styles.submitBtnText}>
-              {loading ? "Envoi..." : "Envoyer le signalement"}
+              {loading ? t('social.report_sending_btn') : t('social.report_submit_btn')}
             </Text>
           </TouchableOpacity>
         </Pressable>
