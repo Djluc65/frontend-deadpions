@@ -471,7 +471,7 @@
       "first_to_wins": "El primero en {{count}} victorias gana",
       "bet_coins": "Apuesta (monedas)",
       "time_per_move": "Tiempo por turno",
-      "create_live_room_btn": "Crear sala live",
+      "create_live_room_btn": "Crear",
       "status_waiting": "EN ESPERA",
       "host_label": "Anfitrión ({{color}})",
       "opponent_label": "Rival ({{color}})",

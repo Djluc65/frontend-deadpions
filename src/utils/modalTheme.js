@@ -39,6 +39,12 @@ export const modalTheme = {
     textAlign: 'center',
     lineHeight: getResponsiveSize(22),
   },
+  subtitle: {
+    fontSize: getResponsiveSize(14),
+    color: T.textDim,
+    textAlign: 'center',
+    lineHeight: getResponsiveSize(20),
+  },
   text: {
     fontSize: getResponsiveSize(15),
     color: T.text,

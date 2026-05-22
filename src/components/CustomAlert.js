@@ -10,13 +10,17 @@ const CustomAlert = ({ visible, title, message, buttons = [], onClose, dismissOn
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
 
+  // On iOS, <Modal visible={false}> leaves an invisible touch interceptor that blocks all gestures.
+  // Returning null when not visible completely removes the Modal from the native view hierarchy.
+  if (!visible) return null;
+
   const handleBackdropPress = () => {
     if (dismissOnBackdropPress && onClose) onClose();
   };
 
   return (
     <Modal
-      visible={visible}
+      visible={true}
       transparent={true}
       animationType="fade"
       onRequestClose={onClose}

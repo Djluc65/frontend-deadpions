@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import CustomAlert from './CustomAlert';
 import { setAppAlertHandler } from '../services/appAlert';
 
@@ -18,9 +18,12 @@ const normalizeButtons = (buttons) => {
 const AppAlertHost = () => {
   const queueRef = useRef([]);
   const [state, setState] = useState({ visible: false, title: '', message: '', buttons: [] });
+  // stateRef lets show() read current visibility without a stale closure
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
-  const show = useMemo(() => (payload) => {
-    if (state.visible) {
+  const show = useCallback((payload) => {
+    if (stateRef.current.visible) {
       queueRef.current.push(payload);
       return;
     }
@@ -30,20 +33,18 @@ const AppAlertHost = () => {
       message: payload?.message || '',
       buttons: normalizeButtons(payload?.buttons)
     });
-  }, [state.visible]);
+  }, []);
 
   useEffect(() => {
     setAppAlertHandler(show);
     return () => setAppAlertHandler(null);
   }, [show]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setState(prev => ({ ...prev, visible: false }));
     const next = queueRef.current.shift();
-    if (next) {
-      setTimeout(() => show(next), 0);
-    }
-  };
+    if (next) setTimeout(() => show(next), 0);
+  }, [show]);
 
   return (
     <CustomAlert

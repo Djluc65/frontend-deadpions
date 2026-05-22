@@ -468,7 +468,7 @@
       "first_to_wins": "{{count}}勝した最初のプレイヤーが勝利",
       "bet_coins": "賭け金（コイン）",
       "time_per_move": "1手あたりの時間",
-      "create_live_room_btn": "ライブルームを作成",
+      "create_live_room_btn": "作成",
       "status_waiting": "待機中",
       "host_label": "ホスト（{{color}}）",
       "opponent_label": "対戦相手（{{color}}）",

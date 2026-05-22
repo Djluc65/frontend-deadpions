@@ -337,12 +337,12 @@ const styles = StyleSheet.create({
     height: rs(6),
   },
   timeoutUsed: {
-    backgroundColor: T.gold,
-    borderColor: T.goldDeep,
+    backgroundColor: T.red,
+    borderColor: 'rgba(230,57,70,0.4)',
   },
   timeoutFree: {
-    backgroundColor: T.bg3,
-    borderColor: T.borderMid,
+    backgroundColor: T.green,
+    borderColor: 'rgba(46,194,126,0.3)',
   },
 
   // Timer bar

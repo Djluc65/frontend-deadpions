@@ -204,7 +204,6 @@ const ProfileScreen = ({ navigation }) => {
               });
 
               if (response.ok) {
-                appAlert(t('common.success'), t('profile.account_deactivated'));
                 dispatch(logout());
                 navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
               } else {
@@ -238,9 +237,12 @@ const ProfileScreen = ({ navigation }) => {
               });
 
               if (response.ok) {
-                appAlert(t('profile.account_deleted_title'), t('profile.account_deleted'));
+                // Déconnexion et redirection immédiate pour éviter les conflits de modals
                 dispatch(logout());
-                navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'Login' }],
+                });
               } else {
                 appAlert(t('common.error'), t('profile.error_delete'));
               }
@@ -442,8 +444,8 @@ const ProfileScreen = ({ navigation }) => {
                   <View style={styles.dangerZone}>
                     <Text style={styles.dangerTitle}>{t('profile.danger_zone')}</Text>
                     <TouchableOpacity style={styles.dangerButton} onPress={handleDeactivate}>
-                      <Ionicons name="pause-circle-outline" size={getResponsiveSize(20)} color="#f39c12" />
-                      <Text style={[styles.dangerButtonText, { color: '#f39c12' }]}>{t('profile.deactivate_account')}</Text>
+                      <Ionicons name="power-outline" size={getResponsiveSize(20)} color="#e74c3c" />
+                      <Text style={[styles.dangerButtonText, { color: '#e74c3c' }]}>{t('profile.deactivate_account')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.dangerButton} onPress={handleDelete}>
                       <Ionicons name="trash-outline" size={getResponsiveSize(20)} color="#e74c3c" />
@@ -588,8 +590,8 @@ const ProfileScreen = ({ navigation }) => {
               <View style={styles.dangerZone}>
                 <Text style={styles.dangerTitle}>{t('profile.danger_zone')}</Text>
                 <TouchableOpacity style={styles.dangerButton} onPress={handleDeactivate}>
-                  <Ionicons name="pause-circle-outline" size={getResponsiveSize(20)} color="#f39c12" />
-                  <Text style={[styles.dangerButtonText, { color: '#f39c12' }]}>{t('profile.deactivate_account')}</Text>
+                  <Ionicons name="power-outline" size={getResponsiveSize(20)} color="#e74c3c" />
+                  <Text style={[styles.dangerButtonText, { color: '#e74c3c' }]}>{t('profile.deactivate_account')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.dangerButton} onPress={handleDelete}>
                   <Ionicons name="trash-outline" size={getResponsiveSize(20)} color="#e74c3c" />

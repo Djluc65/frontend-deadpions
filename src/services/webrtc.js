@@ -22,44 +22,27 @@ let WebRTC = {
 };
 
 // Check if the native module is linked
-// 'WebRTCModule' is the standard name for react-native-webrtc native module
 const isNativeAvailable = !!NativeModules.WebRTCModule;
 
-if (Platform.OS === 'ios') {
-  // Explicitly disable WebRTC on iOS to prevent crashes and permission errors
-  console.log("WebRTC disabled on iOS");
-  WebRTC = {
-    RTCPeerConnection: class {},
-    RTCIceCandidate: class {},
-    RTCSessionDescription: class {},
-    RTCView: () => null,
-    mediaDevices: null,
-    isAvailable: false
-  };
-} else if (Platform.OS === 'web') {
+if (Platform.OS === 'web') {
   WebRTC = {
     RTCPeerConnection: window.RTCPeerConnection || window.webkitRTCPeerConnection || window.mozRTCPeerConnection,
     RTCIceCandidate: window.RTCIceCandidate || window.webkitRTCIceCandidate || window.mozRTCIceCandidate,
     RTCSessionDescription: window.RTCSessionDescription || window.webkitRTCSessionDescription || window.mozRTCSessionDescription,
     RTCView: (props) => {
-        // Basic Video implementation for Web
         return <View {...props} />;
     },
     mediaDevices: navigator.mediaDevices,
     isAvailable: !!navigator.mediaDevices && !!(window.RTCPeerConnection || window.webkitRTCPeerConnection || window.mozRTCPeerConnection)
   };
   
-  // Add polyfill for addStream if needed (modern WebRTC uses addTrack)
-  // But for simple compatibility with old RN-WebRTC code:
   if (WebRTC.RTCPeerConnection && !WebRTC.RTCPeerConnection.prototype.addStream) {
       WebRTC.RTCPeerConnection.prototype.addStream = function(stream) {
           stream.getTracks().forEach(track => this.addTrack(track, stream));
       };
   }
-
 } else if (isNativeAvailable) {
   try {
-    // Only require the library if the native module is present
     const rnw = require('react-native-webrtc');
     WebRTC = {
       ...rnw,
@@ -69,9 +52,7 @@ if (Platform.OS === 'ios') {
     console.warn("Failed to require react-native-webrtc:", error);
   }
 } else {
-  console.log("WebRTC Native Module not found. Running in fallback mode.");
-  
-  // Mock RTCView to prevent crashes if rendered
+  console.log("WebRTC Native Module not found or disabled. Running in fallback mode.");
   WebRTC.RTCView = ({ style }) => (
     <View style={[style, styles.fallbackContainer]}>
       <Text style={styles.fallbackText}>

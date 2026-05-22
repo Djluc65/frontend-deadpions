@@ -167,7 +167,10 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, appAlert }) => {
 
   const handleJoin = useCallback((overrideCode) => {
     Keyboard.dismiss();
-    const finalCode = String(overrideCode ?? code).trim().toUpperCase();
+    // If overrideCode is an event object (from onPress or onSubmitEditing), use the code state instead
+    const codeToUse = typeof overrideCode === 'string' ? overrideCode : code;
+    const finalCode = String(codeToUse).trim().toUpperCase();
+    
     if (finalCode.length !== CODE_LENGTH) {
       setError(t('join_code.error_length', { length: CODE_LENGTH }));
       return;
@@ -363,6 +366,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     ...modalTheme.subtitle,
+    color: T.text, // Changé de T.textDim à T.text pour une visibilité maximale
     textAlign: 'center',
     marginBottom: getResponsiveSize(20),
   },

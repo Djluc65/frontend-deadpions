@@ -468,7 +468,7 @@
       "first_to_wins": "先赢得 {{count}} 局者胜",
       "bet_coins": "下注（金币）",
       "time_per_move": "每步时间",
-      "create_live_room_btn": "创建直播房间",
+      "create_live_room_btn": "创建",
       "status_waiting": "等待中",
       "host_label": "房主（{{color}}）",
       "opponent_label": "对手（{{color}}）",

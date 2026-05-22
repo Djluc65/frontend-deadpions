@@ -5,7 +5,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { socket } from '../utils/socket';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { appAlert } from '../services/appAlert';
-import { updateUser } from '../redux/slices/authSlice';
+import { updateUser, updateUserCoins } from '../redux/slices/authSlice';
 import i18n from '../i18n/index';
 
 // Écrans
@@ -94,7 +94,7 @@ function InviteJoinScreen({ route, navigation }) {
 
     const handleBalanceUpdated = (payload) => {
       const newBalance = typeof payload === 'number' ? payload : payload?.coins;
-      if (typeof newBalance === 'number') dispatch(updateUser({ coins: newBalance }));
+      if (typeof newBalance === 'number') dispatch(updateUserCoins(newBalance));
     };
 
     const cleanup = () => {

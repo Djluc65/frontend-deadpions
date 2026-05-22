@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { API_URL, WEBSITE_URL } from '../config';
 import CoinsService from '../services/CoinsService';
 import TransactionService from '../services/TransactionService';
-import { updateUser } from '../redux/slices/authSlice';
+import { updateUser, updateUserCoins } from '../redux/slices/authSlice';
 import { getResponsiveSize, isTablet, DESKTOP_BREAKPOINT } from '../utils/responsive';
 import { useAdManager } from '../ads/AdSystem';
 import { appAlert } from '../services/appAlert';
@@ -533,9 +533,9 @@ const ShopScreen = () => {
         );
 
         appAlert(t('common.success'), data.message);
-        dispatch(updateUser({ coins: result?.nouveauSolde ?? (user?.coins || 0) + creditedCoins }));
+        dispatch(updateUserCoins(result?.nouveauSolde ?? (user?.coins || 0) + creditedCoins));
         const newBalance = await CoinsService.obtenirSolde(token);
-        dispatch(updateUser({ coins: newBalance }));
+          dispatch(updateUserCoins(newBalance));
         await refreshUserProfile();
       } else {
          appAlert(t('shop.payment_warning'), data.message || t('shop.payment_not_validated'));

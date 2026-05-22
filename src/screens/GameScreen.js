@@ -14,7 +14,7 @@ import { PinchGestureHandler, PanGestureHandler, State } from 'react-native-gest
 import { API_URL } from '../config';
 import { calculerCoupIA } from '../utils/IAEngine';
 import { socket } from '../utils/socket';
-import { updateUser } from '../redux/slices/authSlice';
+import { updateUser, updateUserCoins } from '../redux/slices/authSlice';
 import { setPlayers, setSpectators } from '../redux/slices/gameSlice';
 import { toggleSound } from '../redux/slices/settingsSlice';
 import { AudioController } from '../utils/AudioController';
@@ -449,7 +449,7 @@ const GameScreen = ({ navigation, route }) => {
         // Si trouvé et différent des pièces utilisateur actuelles, mettre à jour Redux
         if (myGameCoins !== null && myGameCoins !== undefined && user?.coins !== myGameCoins) {
             console.log(`[GameScreen] Syncing initial coins from params: ${user?.coins} -> ${myGameCoins}`);
-            dispatch(updateUser({ coins: myGameCoins }));
+            dispatch(updateUserCoins(myGameCoins));
         }
     }
   }, [params.players, mode]);
@@ -1038,7 +1038,7 @@ const GameScreen = ({ navigation, route }) => {
           const opponentId = player2.id;
 
           if (data.updatedCoins[myId] !== undefined) {
-             dispatch(updateUser({ coins: data.updatedCoins[myId] }));
+             dispatch(updateUserCoins(data.updatedCoins[myId]));
           }
           if (data.updatedCoins[opponentId] !== undefined) {
              setOpponentCoins(data.updatedCoins[opponentId]);
@@ -1144,7 +1144,7 @@ const GameScreen = ({ navigation, route }) => {
     };
 
     const handleBalanceUpdated = (newBalance) => {
-      dispatch(updateUser({ coins: newBalance }));
+      dispatch(updateUserCoins(newBalance));
     };
 
     const handlePlayersCoinsUpdated = ({ updatedCoins } = {}) => {
@@ -1152,7 +1152,7 @@ const GameScreen = ({ navigation, route }) => {
 
       const myId = (userRef.current?._id || userRef.current?.id || '').toString();
       if (myId && updatedCoins[myId] !== undefined) {
-        dispatch(updateUser({ coins: updatedCoins[myId] }));
+        dispatch(updateUserCoins(updatedCoins[myId]));
       }
 
       const opponentId = player2?.id?.toString?.() || '';
@@ -1336,7 +1336,7 @@ const GameScreen = ({ navigation, route }) => {
             const opponentId = player2.id;
 
             if (data.updatedCoins[myId] !== undefined) {
-               dispatch(updateUser({ coins: data.updatedCoins[myId] }));
+               dispatch(updateUserCoins(data.updatedCoins[myId]));
             }
             if (data.updatedCoins[opponentId] !== undefined) {
                setOpponentCoins(data.updatedCoins[opponentId]);
@@ -1479,9 +1479,9 @@ const GameScreen = ({ navigation, route }) => {
         }
 
         if (isWinner && typeof winnerBalance === 'number') {
-            dispatch(updateUser({ coins: winnerBalance }));
+            dispatch(updateUserCoins(winnerBalance));
         } else if (isLoser && typeof loserBalance === 'number') {
-            dispatch(updateUser({ coins: loserBalance }));
+            dispatch(updateUserCoins(loserBalance));
         }
 
         try {
@@ -1622,7 +1622,7 @@ const GameScreen = ({ navigation, route }) => {
         const myId = (userRef.current?._id || userRef.current?.id || '').toString();
         const updatedCoins = data?.updatedCoins || {};
         if (myId && updatedCoins[myId] !== undefined) {
-            dispatch(updateUser({ coins: updatedCoins[myId] }));
+            dispatch(updateUserCoins(updatedCoins[myId]));
         }
 
         const betAmount = Number(data?.betAmount ?? paramsRef.current?.betAmount ?? 0) || 0;
@@ -2505,7 +2505,7 @@ const GameScreen = ({ navigation, route }) => {
                                             width: getResponsiveSize(8), 
                                             height: getResponsiveSize(8), 
                                             borderRadius: getResponsiveSize(4), 
-                                            backgroundColor: i < (timeouts[player.color] || 0) ? '#FFD700' : '#4ade80', // Yellow : Green
+                                            backgroundColor: i < (timeouts[player.color] || 0) ? '#E63946' : '#2EC27E', // Red : Green
                                             marginHorizontal: getResponsiveSize(2),
                                             borderWidth: getResponsiveSize(0.5),
                                             borderColor: 'rgba(0,0,0,0.2)'
@@ -2652,7 +2652,7 @@ const GameScreen = ({ navigation, route }) => {
                                 width: getResponsiveSize(8),
                                 height: getResponsiveSize(8),
                                 borderRadius: getResponsiveSize(4),
-                                backgroundColor: i < (timeouts[player.color] || 0) ? '#F4B41A' : '#1F2840',
+                                backgroundColor: i < (timeouts[player.color] || 0) ? '#E63946' : '#2EC27E',
                                 marginHorizontal: getResponsiveSize(2),
                                 borderWidth: getResponsiveSize(0.5),
                                 borderColor: 'rgba(0,0,0,0.2)'
@@ -4673,7 +4673,7 @@ const GameScreen = ({ navigation, route }) => {
         {showTournament && (
           <View style={styles.tournamentBadge}>
             <Text style={styles.tournamentBadgeText}>
-              Match {tournamentGameNumber}/{tournamentTotalGames}
+              {t('game.match_number_simple', { number: tournamentGameNumber, total: tournamentTotalGames })}
               {'  '}
               {tournamentScore[player1.color] || 0}–{tournamentScore[player2.color] || 0}
             </Text>

@@ -471,7 +471,7 @@
       "first_to_wins": "Erster mit {{count}} Siegen gewinnt",
       "bet_coins": "Einsatz (Münzen)",
       "time_per_move": "Zeit pro Zug",
-      "create_live_room_btn": "Live-Raum erstellen",
+      "create_live_room_btn": "Erstellen",
       "status_waiting": "WARTEND",
       "host_label": "Host ({{color}})",
       "opponent_label": "Gegner ({{color}})",

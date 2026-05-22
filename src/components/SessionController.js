@@ -8,7 +8,7 @@ import { useAdManager } from '../ads/AdSystem';
 import { appAlert } from '../services/appAlert';
 import { getResponsiveSize } from '../utils/responsive';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { updateUser } from '../redux/slices/authSlice';
+import { updateUser, updateUserCoins } from '../redux/slices/authSlice';
 import { ensureDailyReset } from '../redux/slices/rewardsSlice';
 import i18n, { detectDeviceLanguage } from '../i18n/index';
 import { setLanguage } from '../redux/slices/settingsSlice';
@@ -58,7 +58,7 @@ const SessionController = () => {
                         if (!socket.connected) socket.connect();
                         const onBalanceUpdated = (payload) => {
                             const newBalance = typeof payload === 'number' ? payload : payload?.coins;
-                            if (typeof newBalance === 'number') dispatch(updateUser({ coins: newBalance }));
+                            if (typeof newBalance === 'number') dispatch(updateUserCoins(newBalance));
                         };
                         const onSuccess = (data) => {
                             socket.off('join_code_success', onSuccess);

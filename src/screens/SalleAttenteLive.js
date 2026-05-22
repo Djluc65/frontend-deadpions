@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground, Image, Modal, FlatList, ActivityIndicator, Share, Platform, Alert, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground, Image, Modal, FlatList, ActivityIndicator, Share, Platform, useWindowDimensions } from 'react-native';
 import { T } from '../utils/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
@@ -185,29 +185,50 @@ const SalleAttenteLive = ({ route, navigation }) => {
               ]);
           };
 
+          const handleInvitationDeclined = (data) => {
+              if (isLeavingRef.current) return;
+              console.log('[InvitationDeclined]', data);
+              setOpponent(null);
+              setIsStartingGame(false);
+              
+              const creatorId = (configSalleRef.current?.createur?._id || configSalleRef.current?.createur?.id) || creatorIdRef.current;
+              const userId = user?._id || user?.id;
+              if (creatorId && userId && creatorId.toString() === userId.toString()) {
+                  setIsCreator(true);
+              }
+
+              appAlert(
+                  t('common.info'),
+                  t('live_room.invitation_declined_desc', { pseudo: data.recipientPseudo || t('common.friend') })
+              );
+          };
+
           const handleOpponentLeftLive = () => {
               if (isLeavingRef.current) return;
               const now = Date.now();
               if (now - lastOpponentLeftAlertAtRef.current < 1500) return;
               lastOpponentLeftAlertAtRef.current = now;
 
-              const creatorId = configSalleRef.current?.createur?._id || configSalleRef.current?.createur?.id;
+              const creatorId = (configSalleRef.current?.createur?._id || configSalleRef.current?.createur?.id) || creatorIdRef.current;
               const userId = user?._id || user?.id;
               const isCreatorEffective = Boolean(creatorId && userId && creatorId.toString() === userId.toString());
+              
+              console.log('[OpponentLeft] isCreatorEffective:', isCreatorEffective, 'userId:', userId, 'creatorId:', creatorId);
+              
               didNavigateToGameRef.current = false;
               setIsStartingGame(false);
               setOpponent(null);
               setInviteModalVisible(false);
               setLoadingFriends(false);
               setFriends([]);
-              if (isCreatorEffective) setIsCreator(true);
+              
               if (isCreatorEffective) {
+                  setIsCreator(true);
                   appAlert(
                       t('live_room.guest_left'),
                       t('live_room.guest_left_desc'),
                       [
-                          { text: t('common.ok') },
-                          // { text: t('live_room.invite'), onPress: () => { handleOpenInviteModal(); } }
+                          { text: t('common.ok') }
                       ]
                   );
               }
@@ -238,6 +259,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
           socket.on('live_room_joined', handleLiveRoomJoined);
           socket.on('live_room_closed', handleLiveRoomClosed);
           socket.on('opponent_left_live', handleOpponentLeftLive);
+          socket.on('invitation_declined', handleInvitationDeclined);
           socket.on('room_code_generated', handleRoomCodeGenerated);
           socket.on('error', handleError);
 
@@ -248,6 +270,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
               socket.off('live_room_joined', handleLiveRoomJoined);
               socket.off('live_room_closed', handleLiveRoomClosed);
               socket.off('opponent_left_live', handleOpponentLeftLive);
+              socket.off('invitation_declined', handleInvitationDeclined);
               socket.off('room_code_generated', handleRoomCodeGenerated);
               socket.off('error', handleError);
           };
@@ -308,16 +331,21 @@ const SalleAttenteLive = ({ route, navigation }) => {
 
   const handleBackPress = () => {
       const userId = user?._id || user?.id;
-      const creatorId = creatorIdRef.current || configSalleRef.current?.createur?._id || configSalleRef.current?.createur?.id;
+      const creatorIdFromRef = creatorIdRef.current;
+      const creatorIdFromConfig = configSalleRef.current?.createur?._id || configSalleRef.current?.createur?.id;
+      const creatorId = creatorIdFromConfig || creatorIdFromRef;
+      
       const isCreatorEffective = Boolean(userId && creatorId && userId.toString() === creatorId.toString());
+      
+      console.log('[BackPress] isCreatorEffective:', isCreatorEffective, 'userId:', userId, 'creatorId:', creatorId);
 
-      // Fermer le modal d'invitation immédiatement pour éviter les conflits d'animation iOS
-      setInviteModalVisible(false);
+      // Toujours fermer le modal s'il est ouvert
+      const wasModalOpen = inviteModalVisible;
+      if (wasModalOpen) setInviteModalVisible(false);
 
-      // Attendre 400ms que l'animation de fermeture du modal se termine avant d'afficher Alert
-      setTimeout(() => {
+      const showQuitAlert = () => {
           if (isCreatorEffective) {
-              Alert.alert(
+              appAlert(
                   t('live_room.stop_live_title'),
                   t('live_room.stop_live_desc'),
                   [
@@ -337,7 +365,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
                   ]
               );
           } else {
-              Alert.alert(
+              appAlert(
                   t('live_room.leave_live_title'),
                   t('live_room.leave_live_desc'),
                   [
@@ -356,7 +384,11 @@ const SalleAttenteLive = ({ route, navigation }) => {
                   ]
               );
           }
-      }, 400);
+      };
+
+      // ✨ On attend TOUJOURS un peu pour s'assurer que le clavier ou un modal est fermé
+      // Cela évite les conflits d'Alert dans React Native
+      setTimeout(showQuitAlert, wasModalOpen ? 350 : 50);
   };
 
 
@@ -442,8 +474,10 @@ const SalleAttenteLive = ({ route, navigation }) => {
           gameId: roomId,
           mode: 'live'
       });
-      appAlert(t('common.success'), t('live_room.invite_sent'));
       setInviteModalVisible(false);
+      setTimeout(() => {
+          appAlert(t('common.success'), t('live_room.invite_sent'));
+      }, 350);
   };
 
   if (loading || !configSalle) {
@@ -695,71 +729,73 @@ const SalleAttenteLive = ({ route, navigation }) => {
         )}
       </View>
 
-      <Modal
-        visible={inviteModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setInviteModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-                <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>{t('live_room.invite_friend_title')}</Text>
-                    <TouchableOpacity onPress={() => setInviteModalVisible(false)} style={styles.closeButton}>
-                        <Ionicons name="close" size={getResponsiveSize(24)} color="#374151" />
-                    </TouchableOpacity>
-                </View>
+      {inviteModalVisible && (
+        <Modal
+          visible={true}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setInviteModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                  <View style={styles.modalHeader}>
+                      <Text style={styles.modalTitle}>{t('live_room.invite_friend_title')}</Text>
+                      <TouchableOpacity onPress={() => setInviteModalVisible(false)} style={styles.closeButton}>
+                          <Ionicons name="close" size={getResponsiveSize(24)} color="#374151" />
+                      </TouchableOpacity>
+                  </View>
 
-                {loadingFriends ? (
-                    <ActivityIndicator size="large" color="#4f46e5" style={{ marginVertical: getResponsiveSize(20) }} />
-                ) : (
-                    <FlatList
-                        data={friends}
-                        keyExtractor={item => item.id}
-                        contentContainerStyle={
-                            Array.isArray(friends) && friends.length > 0
-                                ? styles.friendsListContent
-                                : styles.friendsListEmptyContent
-                        }
-                        ListEmptyComponent={
-                            <View style={styles.emptyFriendsState}>
-                                <View style={styles.emptyFriendsIcon}>
-                                    <Ionicons name="people-outline" size={getResponsiveSize(28)} color={T.textMuted} />
-                                </View>
-                                <Text style={styles.emptyFriendsTitle}>{t('live_room.no_friends_online')}</Text>
-                                <Text style={styles.emptyFriendsSubtitle}>
-                                    {t('live_room.no_friends_online_desc')}
-                                </Text>
-                            </View>
-                        }
-                        renderItem={({ item }) => (
-                            <View style={styles.friendItem}>
-                                <View style={styles.friendInfo}>
-                                    {item.avatar ? (
-                                        <Image source={getAvatarSource(item.avatar)} style={styles.friendAvatar} />
-                                    ) : (
-                                        <Ionicons name="person-circle-outline" size={getResponsiveSize(40)} color="#9ca3af" />
-                                    )}
-                                    <View>
-                                        <Text style={styles.friendPseudo}>{item.pseudo}</Text>
-                                        <Text style={[styles.friendStatus, { color: item.isOnline ? '#10b981' : '#9ca3af' }]}>
-                                            {item.isOnline ? t('social.online') : t('social.offline')}
-                                        </Text>
-                                    </View>
-                                </View>
-                                <TouchableOpacity 
-                                    style={styles.inviteAction}
-                                    onPress={() => { playButtonSound(); handleSendInvite(item.id); }}
-                                >
-                                    <Text style={styles.inviteActionText}>{t('live_room.invite')}</Text>
-                                </TouchableOpacity>
-                            </View>
-                        )}
-                    />
-                )}
-            </View>
-        </View>
-      </Modal>
+                  {loadingFriends ? (
+                      <ActivityIndicator size="large" color="#4f46e5" style={{ marginVertical: getResponsiveSize(20) }} />
+                  ) : (
+                      <FlatList
+                          data={friends}
+                          keyExtractor={item => item.id}
+                          contentContainerStyle={
+                              Array.isArray(friends) && friends.length > 0
+                                  ? styles.friendsListContent
+                                  : styles.friendsListEmptyContent
+                          }
+                          ListEmptyComponent={
+                              <View style={styles.emptyFriendsState}>
+                                  <View style={styles.emptyFriendsIcon}>
+                                      <Ionicons name="people-outline" size={getResponsiveSize(28)} color={T.textMuted} />
+                                  </View>
+                                  <Text style={styles.emptyFriendsTitle}>{t('live_room.no_friends_online')}</Text>
+                                  <Text style={styles.emptyFriendsSubtitle}>
+                                      {t('live_room.no_friends_online_desc')}
+                                  </Text>
+                              </View>
+                          }
+                          renderItem={({ item }) => (
+                              <View style={styles.friendItem}>
+                                  <View style={styles.friendInfo}>
+                                      {item.avatar ? (
+                                          <Image source={getAvatarSource(item.avatar)} style={styles.friendAvatar} />
+                                      ) : (
+                                          <Ionicons name="person-circle-outline" size={getResponsiveSize(40)} color="#9ca3af" />
+                                      )}
+                                      <View>
+                                          <Text style={styles.friendPseudo}>{item.pseudo}</Text>
+                                          <Text style={[styles.friendStatus, { color: item.isOnline ? '#10b981' : '#9ca3af' }]}>
+                                              {item.isOnline ? t('social.online') : t('social.offline')}
+                                          </Text>
+                                      </View>
+                                  </View>
+                                  <TouchableOpacity
+                                      style={styles.inviteAction}
+                                      onPress={() => { playButtonSound(); handleSendInvite(item.id); }}
+                                  >
+                                      <Text style={styles.inviteActionText}>{t('live_room.invite')}</Text>
+                                  </TouchableOpacity>
+                              </View>
+                          )}
+                      />
+                  )}
+              </View>
+          </View>
+        </Modal>
+      )}
     </ImageBackground>
   );
 };

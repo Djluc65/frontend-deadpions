@@ -38,11 +38,16 @@ const authSlice = createSlice({
       if (!state.user) return;
       state.user = { ...state.user, ...action.payload };
     },
+    updateUserCoins: (state, action) => {
+      if (state.user) {
+        state.user.coins = action.payload;
+      }
+    },
     updateAccessToken: (state, action) => {
       state.token = action.payload;
     },
   },
 });
 
-export const { loginStart, loginSuccess, loginFailure, logout, updateUser, updateAccessToken } = authSlice.actions;
+export const { loginStart, loginSuccess, loginFailure, logout, updateUser, updateUserCoins, updateAccessToken } = authSlice.actions;
 export default authSlice.reducer;

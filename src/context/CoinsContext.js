@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useRef } from 'r
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
-import { updateUser, updateAccessToken, logout } from '../redux/slices/authSlice';
+import { updateUser, updateAccessToken, logout, updateUserCoins } from '../redux/slices/authSlice';
 import CoinsService from '../services/CoinsService';
 import { socket } from '../utils/socket';
 import CoinsFeedback from '../components/CoinsFeedback';
@@ -63,7 +63,7 @@ export const CoinsProvider = ({ children }) => {
         console.log('Balance updated via socket:', data);
         const newBalance = typeof data === 'number' ? data : data?.coins;
         if (typeof newBalance === 'number') {
-            dispatch(updateUser({ coins: newBalance }));
+            dispatch(updateUserCoins(newBalance));
         }
     };
 

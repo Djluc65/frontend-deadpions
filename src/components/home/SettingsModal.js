@@ -3,9 +3,10 @@ import { Modal, Pressable, View, Text, Switch, TouchableOpacity, StyleSheet } fr
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { toggleMusic, toggleSound, setLanguage } from '../../redux/slices/settingsSlice';
+import { toggleMusic, toggleSound, toggleChat, setLanguage } from '../../redux/slices/settingsSlice';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n/index';
+import { usePrivacyMode } from '../../hooks/usePrivacyMode';
 import { playButtonSound } from '../../utils/soundManager';
 import { getResponsiveSize } from '../../utils/responsive';
 import { modalTheme } from '../../utils/modalTheme';
@@ -14,8 +15,9 @@ import { T } from '../../utils/theme';
 const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
   const dispatch = useDispatch();
   const navigation = useNavigation();
-  const settings = useSelector(state => state.settings || { isMusicEnabled: true, isSoundEnabled: true, language: null });
+  const settings = useSelector(state => state.settings || { isMusicEnabled: true, isSoundEnabled: true, isChatEnabled: true, language: null });
   const activeLanguage = settings.language || i18n.language || 'en';
+  const { privacyMode, updatePrivacy, loading: privacyLoading } = usePrivacyMode();
   const { t } = useTranslation();
   const FLAGS = {
     fr: '🇫🇷',
@@ -84,6 +86,41 @@ const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
                   </Text>
                 </TouchableOpacity>
               ))}
+            </View>
+          </View>
+
+          <View style={styles.settingRow}>
+            <Text style={styles.settingText}>{t('settings.chat_enabled')}</Text>
+            <Switch
+              trackColor={{ false: T.bg3, true: T.blue }}
+              thumbColor={settings.isChatEnabled ? "#f5dd4b" : "#f4f3f4"}
+              onValueChange={() => {
+                playButtonSound();
+                dispatch(toggleChat());
+              }}
+              value={settings.isChatEnabled}
+            />
+          </View>
+
+          <View style={styles.privacyBlock}>
+            <Text style={styles.settingText}>{t('settings.privacy_label')}</Text>
+            <View style={styles.privacyOptions}>
+              <TouchableOpacity 
+                style={[styles.privacyBtn, privacyMode === 'public' && styles.privacyBtnActive]}
+                onPress={() => updatePrivacy('public')}
+                disabled={privacyLoading}
+              >
+                <Ionicons name="earth" size={18} color={privacyMode === 'public' ? T.bg0 : T.textDim} />
+                <Text style={[styles.privacyBtnText, privacyMode === 'public' && styles.privacyBtnTextActive]}>{t('settings.privacy_public')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.privacyBtn, privacyMode === 'friends_only' && styles.privacyBtnActive]}
+                onPress={() => updatePrivacy('friends_only')}
+                disabled={privacyLoading}
+              >
+                <Ionicons name="people" size={18} color={privacyMode === 'friends_only' ? T.bg0 : T.textDim} />
+                <Text style={[styles.privacyBtnText, privacyMode === 'friends_only' && styles.privacyBtnTextActive]}>{t('settings.privacy_friends_only')}</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -198,6 +235,38 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     textTransform: 'uppercase',
     letterSpacing: 0.3,
+  },
+  privacyBlock: {
+    marginTop: 20,
+    width: '100%',
+  },
+  privacyOptions: {
+    flexDirection: 'row',
+    marginTop: 10,
+    backgroundColor: T.bg3,
+    borderRadius: 12,
+    padding: 4,
+  },
+  privacyBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  privacyBtnActive: {
+    backgroundColor: T.gold,
+  },
+  privacyBtnText: {
+    color: T.textDim,
+    fontSize: getResponsiveSize(12),
+    marginLeft: 6,
+    fontWeight: '600',
+  },
+  privacyBtnTextActive: {
+    color: T.bg0,
+    fontWeight: 'bold',
   },
 });
 

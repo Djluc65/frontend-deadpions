@@ -30,6 +30,9 @@ import { appAlert } from '../services/appAlert';
 import { T } from '../utils/theme';
 import AnimatedSearchBar from '../components/ui/AnimatedSearchBar';
 import GlowWrapper from '../components/ui/GlowWrapper';
+import ReportModal from '../components/moderation/ReportModal';
+import ConfirmModal from '../components/moderation/ConfirmModal';
+import ToastNotification from '../components/moderation/ToastNotification';
 
 const SocialScreen = ({ navigation }) => {
   const { t } = useTranslation();
@@ -65,6 +68,13 @@ const SocialScreen = ({ navigation }) => {
   const [inviteSeriesLength, setInviteSeriesLength] = useState(2);
   const [incomingInvite, setIncomingInvite] = useState(null);
   const [isWaitingForResponse, setIsWaitingForResponse] = useState(false);
+
+  // Moderation State
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [reportTarget, setReportTarget] = useState(null); // { id, type, pseudo }
+  const [confirmBlockVisible, setConfirmBlockVisible] = useState(false);
+  const [blockTarget, setBlockTarget] = useState(null);
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'info' });
 
   // Redux
   const dispatch = useDispatch();
@@ -411,8 +421,36 @@ const SocialScreen = ({ navigation }) => {
   };
 
   const handleBlockFriend = (friend) => {
-    // Implement block logic if API supports it
-    appAlert(t('social.info'), t('social.block_coming_soon'));
+    setBlockTarget(friend);
+    setConfirmBlockVisible(true);
+  };
+
+  const confirmBlock = async () => {
+    if (!blockTarget) return;
+    try {
+      const res = await fetch(`${API_URL}/users/${blockTarget.id}/block`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        setFriends(prev => prev.filter(f => f.id !== blockTarget.id));
+        setToast({ visible: true, message: t('social.user_blocked') || "Utilisateur bloqué", type: 'success' });
+        fetchData();
+      } else {
+        const data = await res.json();
+        appAlert(t('common.error'), data.message);
+      }
+    } catch (error) {
+      appAlert(t('common.error'), t('errors.network'));
+    } finally {
+      setConfirmBlockVisible(false);
+      setBlockTarget(null);
+    }
+  };
+
+  const handleReportUser = (user) => {
+    setReportTarget({ id: user.id || user._id, type: 'user', pseudo: user.pseudo || user.name });
+    setReportModalVisible(true);
   };
 
   const handleRemoveFriend = (friend) => {
@@ -778,11 +816,9 @@ const SocialScreen = ({ navigation }) => {
               <Text style={[styles.lastMessage, item.unread > 0 && styles.unreadMessage]} numberOfLines={1}>
                 {item.lastMessage}
               </Text>
-              {item.unread > 0 && (
-                <View style={styles.unreadBadge}>
-                  <Text style={styles.unreadBadgeText}>{item.unread}</Text>
-                </View>
-              )}
+              <View style={[styles.unreadBadge, item.unread === 0 && styles.readBadge]}>
+                <Text style={styles.unreadBadgeText}>{item.unread || 1}</Text>
+              </View>
             </View>
             {item.lastRead ? <Text style={styles.lastRead}>{item.lastRead}</Text> : null}
           </View>
@@ -845,6 +881,9 @@ const SocialScreen = ({ navigation }) => {
               </TouchableOpacity>
               <TouchableOpacity style={styles.actionButton} onPress={() => handleBlockFriend(item)}>
                 <Ionicons name="ban-outline" size={getResponsiveSize(20)} color="#e74c3c" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.actionButton} onPress={() => handleReportUser(item)}>
+                <Ionicons name="alert-circle-outline" size={getResponsiveSize(20)} color={T.gold} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.actionButton} onPress={() => handleRemoveFriend(item)}>
                 <Ionicons name="trash-outline" size={getResponsiveSize(20)} color="#e74c3c" />
@@ -1162,6 +1201,37 @@ const SocialScreen = ({ navigation }) => {
               </View>
              </View>
            </Modal>
+
+          {/* Moderation Components */}
+          {reportTarget && (
+            <ReportModal
+              visible={reportModalVisible}
+              targetId={reportTarget.id}
+              targetType={reportTarget.type}
+              onClose={() => setReportModalVisible(false)}
+              onSuccess={() => setToast({ visible: true, message: t('social.report_sent') || "Signalement envoyé. Merci.", type: 'success' })}
+            />
+          )}
+
+          <ConfirmModal
+            visible={confirmBlockVisible}
+            title={t('social.block_user_title', { pseudo: blockTarget?.name }) || `Bloquer ${blockTarget?.name} ?`}
+            message={t('social.block_user_desc') || "Il ne pourra plus vous inviter ni vous voir."}
+            confirmLabel={t('social.block') || "Bloquer"}
+            confirmColor={T.red}
+            onConfirm={confirmBlock}
+            onCancel={() => {
+              setConfirmBlockVisible(false);
+              setBlockTarget(null);
+            }}
+          />
+
+          <ToastNotification
+            visible={toast.visible}
+            message={toast.message}
+            type={toast.type}
+            onHide={() => setToast(prev => ({ ...prev, visible: false }))}
+          />
  
          </SafeAreaView>
       </TouchableWithoutFeedback>
@@ -1424,6 +1494,9 @@ const styles = StyleSheet.create({
     height: getResponsiveSize(20),
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  readBadge: {
+    backgroundColor: '#3d3d3d', // Couleur grise pour les messages lus
   },
   unreadBadgeText: {
     color: '#fff',
