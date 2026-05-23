@@ -2,10 +2,10 @@
 
 buildscript {
     ext {
-        buildToolsVersion = findProperty('android.buildToolsVersion') ?: '35.0.0'
+        buildToolsVersion = findProperty('android.buildToolsVersion') ?: '37.0.0'
         minSdkVersion = Integer.parseInt(findProperty('android.minSdkVersion') ?: '24')
         compileSdkVersion = Integer.parseInt(findProperty('android.compileSdkVersion') ?: '35')
-        targetSdkVersion = Integer.parseInt(findProperty('android.targetSdkVersion') ?: '34')
+        targetSdkVersion = Integer.parseInt(findProperty('android.targetSdkVersion') ?: '35')
         kotlinVersion = findProperty('android.kotlinVersion') ?: '1.9.25'
 
         ndkVersion = "26.1.10909125"
@@ -51,12 +51,18 @@ allprojects {
                 if (details.requested.group == "com.google.android.gms" && (details.requested.name == "play-services-ads" || details.requested.name == "play-services-ads-lite" || details.requested.name == "play-services-ads-base")) {
                     details.useVersion("23.6.0")
                 }
+                if (details.requested.group == 'com.android.billingclient' && details.requested.name == 'billing') {
+                    details.useVersion("7.1.1")
+                }
             }
         }
     }
 }
 
 subprojects {
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.CompileUsingKotlinDaemon).configureEach {
+        compilerExecutionStrategy = org.jetbrains.kotlin.gradle.tasks.KotlinCompilerExecutionStrategy.IN_PROCESS
+    }
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         kotlinOptions {
             freeCompilerArgs += ["-P", "plugin:androidx.compose.compiler.plugins.kotlin:suppressKotlinVersionCompatibilityCheck=1.9.25"]

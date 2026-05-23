@@ -1,4 +1,3 @@
-import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
 // Replace with your computer's local IP address
@@ -9,6 +8,20 @@ import Constants from 'expo-constants';
 const LOCAL_IP = '172.20.10.2';
 const PORT = '5001';
 const PROD_API_URL = 'https://backend-deadpions-production.up.railway.app/api';
+
+const envApiUrl = typeof process.env.EXPO_PUBLIC_API_URL === 'string'
+  ? process.env.EXPO_PUBLIC_API_URL.trim()
+  : '';
+
+const looksLikeLocalUrl = (url) => {
+  if (!url) return false;
+  if (url.startsWith('http://')) return true;
+  if (url.includes('localhost') || url.includes('127.0.0.1')) return true;
+  if (url.match(/:\/\/10\.\d+\.\d+\.\d+/)) return true;
+  if (url.match(/:\/\/192\.168\.\d+\.\d+/)) return true;
+  if (url.match(/:\/\/172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+/)) return true;
+  return false;
+};
 
 // Try to infer host from Expo dev environment (Dev Client / metro)
 const hostFromExpo = (() => {
@@ -22,11 +35,17 @@ const hostFromExpo = (() => {
   return null;
 })();
 
-export const API_URL =
-  process.env.EXPO_PUBLIC_API_URL ||
-  (__DEV__
-    ? (hostFromExpo ? `http://${hostFromExpo}:${PORT}/api` : `http://${LOCAL_IP}:${PORT}/api`)
-    : PROD_API_URL);
+export const API_URL = (() => {
+  if (__DEV__) {
+    return envApiUrl || (hostFromExpo ? `http://${hostFromExpo}:${PORT}/api` : `http://${LOCAL_IP}:${PORT}/api`);
+  }
+
+  if (envApiUrl && envApiUrl.startsWith('https://') && !looksLikeLocalUrl(envApiUrl)) {
+    return envApiUrl;
+  }
+
+  return PROD_API_URL;
+})();
 
 if (__DEV__) {
   console.log('🔌 API URL:', API_URL);

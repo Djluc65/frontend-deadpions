@@ -1,0 +1,50 @@
+.git
+.git/**
+.DS_Store
+
+# Node / package managers
+node_modules
+node_modules/**
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Expo / Metro / React Native caches
+.expo
+.expo/**
+.expo-home
+.expo-home/**
+.metro-cache
+.metro-cache/**
+.cache
+.cache/**
+
+# Project build outputs
+android/.gradle
+android/.gradle/**
+android/build
+android/build/**
+android/app/build
+android/app/build/**
+ios/build
+ios/build/**
+
+# Xcode user data
+ios/Pods
+ios/Pods/**
+ios/DerivedData
+ios/DerivedData/**
+
+# Temporary folders
+.tmp
+.tmp/**
+.tmp-*
+.tmp-*/**
+.tmp-export-test
+.tmp-export-test/**
+.tmp-export-test2
+.tmp-export-test2/**
+
+# Logs
+*.log
