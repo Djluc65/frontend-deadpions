@@ -343,6 +343,10 @@ export default function AdSystem({ children }) {
       setRewardedLoaded(true);
       if (pendingShowRewardedRef.current) {
         pendingShowRewardedRef.current = false;
+        if (rewardedPendingTimeoutRef.current) {
+          clearTimeout(rewardedPendingTimeoutRef.current);
+          rewardedPendingTimeoutRef.current = null;
+        }
         try {
           rewarded.show();
         } catch {}
@@ -350,6 +354,10 @@ export default function AdSystem({ children }) {
     });
 
     const unsubEarned = rewarded.addAdEventListener(RewardedAdEventType.EARNED_REWARD, async () => {
+      if (rewardedPendingTimeoutRef.current) {
+        clearTimeout(rewardedPendingTimeoutRef.current);
+        rewardedPendingTimeoutRef.current = null;
+      }
       const pending = rewardedRewardRef.current;
       const defaultReward = AdProvider.units.rewarded.reward;
       const onEarned = typeof pending?.onEarned === 'function' ? pending.onEarned : null;
@@ -371,6 +379,10 @@ export default function AdSystem({ children }) {
     });
 
     const unsubClosed = rewarded.addAdEventListener(AdEventType.CLOSED, () => {
+      if (rewardedPendingTimeoutRef.current) {
+        clearTimeout(rewardedPendingTimeoutRef.current);
+        rewardedPendingTimeoutRef.current = null;
+      }
       setRewardedLoaded(false);
       rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
       try {
@@ -379,10 +391,18 @@ export default function AdSystem({ children }) {
     });
 
     const unsubError = rewarded.addAdEventListener(AdEventType.ERROR, (err) => {
+      const hadPendingShow = pendingShowRewardedRef.current;
+      if (rewardedPendingTimeoutRef.current) {
+        clearTimeout(rewardedPendingTimeoutRef.current);
+        rewardedPendingTimeoutRef.current = null;
+      }
       setRewardedLoaded(false);
       pendingShowRewardedRef.current = false;
       rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
       if (adDebugEnabled) console.warn('[ADS] rewarded error', err);
+      if (hadPendingShow) {
+        appAlert(t('ads.unavailable_title'), t('ads.unavailable_desc_load'));
+      }
     });
 
     rewardedUnsubsRef.current = [unsubLoaded, unsubEarned, unsubClosed, unsubError];
@@ -510,6 +530,7 @@ export default function AdSystem({ children }) {
     } else {
       rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
     }
+    let shouldStartTimeout = false;
     if (rewardedLoaded) {
       let didShow = true;
       try {
@@ -518,15 +539,23 @@ export default function AdSystem({ children }) {
         didShow = false;
       }
       if (!didShow) {
+        shouldStartTimeout = true;
         pendingShowRewardedRef.current = true;
+        setTimeout(() => {
+          if (!pendingShowRewardedRef.current) return;
+          try {
+            rewarded.show();
+          } catch {}
+        }, 700);
         setTimeout(() => {
           if (!pendingShowRewardedRef.current) return;
           try {
             rewarded.load();
           } catch {}
-        }, 250);
+        }, 1400);
       }
     } else {
+      shouldStartTimeout = true;
       pendingShowRewardedRef.current = true;
       try {
         rewarded.load();
@@ -537,13 +566,15 @@ export default function AdSystem({ children }) {
       clearTimeout(rewardedPendingTimeoutRef.current);
       rewardedPendingTimeoutRef.current = null;
     }
-    rewardedPendingTimeoutRef.current = setTimeout(() => {
-      if (!pendingShowRewardedRef.current) return;
-      pendingShowRewardedRef.current = false;
-      rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
-      appAlert(t('ads.unavailable_title'), t('ads.unavailable_desc_load'));
-      if (adDebugEnabled) console.warn('[ADS] rewarded timeout (no ad loaded to show)');
-    }, 12000);
+    if (shouldStartTimeout) {
+      rewardedPendingTimeoutRef.current = setTimeout(() => {
+        if (!pendingShowRewardedRef.current) return;
+        pendingShowRewardedRef.current = false;
+        rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
+        appAlert(t('ads.unavailable_title'), t('ads.unavailable_desc_load'));
+        if (adDebugEnabled) console.warn('[ADS] rewarded timeout (no ad loaded to show)');
+      }, 12000);
+    }
   }, [showAds, rewardedLoaded, setupRewarded, attReady, t]);
 
   const value = useMemo(

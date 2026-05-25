@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 // Replace with your computer's local IP address
 // You can find it by running 'ipconfig' (Windows) or 'ifconfig' (Mac/Linux)
@@ -35,9 +36,33 @@ const hostFromExpo = (() => {
   return null;
 })();
 
+const isAndroidEmulator = (() => {
+  if (Platform.OS !== 'android') return false;
+  if (Constants.isDevice === false) return true;
+  const model = Platform.constants?.Model;
+  if (typeof model === 'string') {
+    const m = model.toLowerCase();
+    if (m.includes('sdk') || m.includes('emulator') || m.includes('android sdk built for')) return true;
+  }
+  return false;
+})();
+
 export const API_URL = (() => {
   if (__DEV__) {
-    return envApiUrl || (hostFromExpo ? `http://${hostFromExpo}:${PORT}/api` : `http://${LOCAL_IP}:${PORT}/api`);
+    const candidate = envApiUrl || (hostFromExpo ? `http://${hostFromExpo}:${PORT}/api` : `http://${LOCAL_IP}:${PORT}/api`);
+
+    if (isAndroidEmulator && looksLikeLocalUrl(candidate) && !candidate.includes('://10.0.2.2')) {
+      const match = candidate.match(/^(https?:\/\/)([^:/]+)(:\d+)?(\/.*)$/);
+      if (match) {
+        const protocol = match[1];
+        const portPart = match[3] || `:${PORT}`;
+        const path = match[4] || '/api';
+        return `${protocol}10.0.2.2${portPart}${path}`;
+      }
+      return `http://10.0.2.2:${PORT}/api`;
+    }
+
+    return candidate;
   }
 
   if (envApiUrl && envApiUrl.startsWith('https://') && !looksLikeLocalUrl(envApiUrl)) {

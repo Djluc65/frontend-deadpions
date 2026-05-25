@@ -231,16 +231,22 @@ const ShopScreen = () => {
         body: JSON.stringify({ receipt, productId }),
       });
 
-      const data = await response.json();
+      let data = null;
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
       if (response.ok && data.success) {
         appAlert(t('common.success'), data?.message || t('shop.purchase_validated'));
         await refreshUserProfile();
       } else {
-        throw new Error(data.message || t('shop.apple_validation_failed'));
+        throw new Error((data && data.message) || t('shop.apple_validation_failed'));
       }
     } catch (err) {
       console.error('Verify Apple Purchase Error:', err);
       appAlert(t('common.error'), t('shop.cannot_validate_server'));
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -261,16 +267,22 @@ const ShopScreen = () => {
         }),
       });
 
-      const data = await response.json();
+      let data = null;
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
       if (response.ok && data.success) {
         appAlert(t('common.success'), data?.message || t('shop.purchase_validated'));
         await refreshUserProfile();
       } else {
-        throw new Error(data.message || t('shop.google_validation_failed'));
+        throw new Error((data && data.message) || t('shop.google_validation_failed'));
       }
     } catch (err) {
       console.error('Verify Android Purchase Error:', err);
       appAlert(t('common.error'), t('shop.cannot_validate_server'));
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -304,6 +316,7 @@ const ShopScreen = () => {
         'isEarlyAccess',
         'earlyAccessEndDate',
         'subscriptionEndDate',
+        'subscriptionPlan',
         'dailyCreatedRooms',
         'pawnSkin',
         'pays'
@@ -671,7 +684,7 @@ const ShopScreen = () => {
       const { error: initError } = await initPaymentSheet({
         paymentIntentClientSecret: clientSecret,
         merchantDisplayName: 'DeadPions',
-        returnURL: Linking.createURL('stripe-redirect'), // URL de redirection pour la production
+        returnURL: Linking.createURL('stripe-redirect', { scheme: 'deadpions' }),
         allowsDelayedPaymentMethods: true,
         defaultBillingDetails: {
             name: user?.username || t('shop.default_player_name'),

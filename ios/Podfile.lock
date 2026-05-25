@@ -39,7 +39,7 @@ PODS:
     - ExpoModulesCore
   - ExpoLinking (7.0.5):
     - ExpoModulesCore
-  - ExpoLocalization (55.0.14):
+  - ExpoLocalization (15.0.3):
     - ExpoModulesCore
   - ExpoModulesCore (2.2.3):
     - DoubleConversion
@@ -131,12 +131,12 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - NitroIap (14.6.4):
+  - NitroIap (15.3.1):
     - DoubleConversion
     - glog
     - hermes-engine
     - NitroModules
-    - openiap (= 1.3.8)
+    - openiap (= 2.2.1)
     - RCT-Folly (= 2024.10.14.00)
     - RCTRequired
     - RCTTypeSafety
@@ -156,7 +156,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - NitroModules (0.31.1):
+  - NitroModules (0.35.7):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -179,7 +179,7 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - openiap (1.3.8)
+  - openiap (2.2.1)
   - RCT-Folly (2024.10.14.00):
     - boost
     - DoubleConversion
@@ -2191,7 +2191,7 @@ SPEC CHECKSUMS:
   ExpoKeepAwake: b0171a73665bfcefcfcc311742a72a956e6aa680
   ExpoLinearGradient: 35ebd83b16f80b3add053a2fd68cc328ed927f60
   ExpoLinking: 8d12bee174ba0cdf31239706578e29e74a417402
-  ExpoLocalization: 8bda1a33676542204301b719b3a51b29e2bbd3fd
+  ExpoLocalization: 1b4195ed48148c7f52ce790d3965cc19483fcbf2
   ExpoModulesCore: 725faec070d590810d2ea5983d9f78f7cf6a38ec
   ExpoScreenOrientation: 4a3ee98da02b0e0f86a6aa5e3c4bd96399c87581
   ExpoSplashScreen: 399ee9f85b6c8a61b965e13a1ecff8384db591c2
@@ -2209,9 +2209,9 @@ SPEC CHECKSUMS:
   libdav1d: 23581a4d8ec811ff171ed5e2e05cd27bad64c39f
   lottie-ios: a881093fab623c467d3bce374367755c272bdd59
   lottie-react-native: 2d0dd435bf125d799209ae31aa05cbb7ecae0fb0
-  NitroIap: c04b8aa0d14911e1e24662418cdf161cfc5f3487
-  NitroModules: d6760dd29502ec933c0b5aa2f9db0f86e5b2d47e
-  openiap: 264492fb10bef0bc657f16dd0e32841d35913e45
+  NitroIap: 808b9921daef07bc88703deefc1eefeb1e2d5d7e
+  NitroModules: 5a57bb66fbd9584e4e50e83a7f4b20961a100e40
+  openiap: 4910f61869070601855431ba15cd4f3a116001f7
   RCT-Folly: ea9d9256ba7f9322ef911169a9f696e5857b9e17
   RCTDeprecation: ebe712bb05077934b16c6bf25228bdec34b64f83
   RCTRequired: ca91e5dd26b64f577b528044c962baf171c6b716
