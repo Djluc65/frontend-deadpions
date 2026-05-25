@@ -137,16 +137,18 @@ const AiGameSetup = memo(({ visible, onClose, navigation, user }) => {
             onPress: () => {
               dispatch(ensureDailyReset({ nowTs: Date.now() }));
               prepareRewarded();
-              showRewarded({
-                amount: 0,
-                reason: 'Déblocage mode difficile',
-                metadata: { reward: 'ai_hard' },
-                onEarned: async () => {
-                  dispatch(unlockHardAi({ nowTs: Date.now() }));
-                  setAiDifficulte('difficile');
-                  appAlert(t('rewards.unlocked_title'), t('rewards.hard_ai_unlocked'));
-                }
-              });
+              setTimeout(() => {
+                showRewarded({
+                  amount: 0,
+                  reason: 'Déblocage mode difficile',
+                  metadata: { reward: 'ai_hard' },
+                  onEarned: async () => {
+                    dispatch(unlockHardAi({ nowTs: Date.now() }));
+                    setAiDifficulte('difficile');
+                    appAlert(t('rewards.unlocked_title'), t('rewards.hard_ai_unlocked'));
+                  }
+                });
+              }, 350);
             }
           }
         ]

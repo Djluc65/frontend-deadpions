@@ -248,6 +248,7 @@ export default function AdSystem({ children }) {
   const rewardedUnitIdRef = useRef(null);
   const rewardedUnsubsRef = useRef([]);
   const rewardedPendingTimeoutRef = useRef(null);
+  const rewardedPresentRetryCountRef = useRef(0);
   const lastDebugSnapshotRef = useRef({ key: null, at: 0 });
 
   const interstitialAdUnitId = useMemo(
@@ -353,11 +354,21 @@ export default function AdSystem({ children }) {
       }
     });
 
+    const unsubOpened = rewarded.addAdEventListener(AdEventType.OPENED, () => {
+      rewardedPresentRetryCountRef.current = 0;
+      if (rewardedPendingTimeoutRef.current) {
+        clearTimeout(rewardedPendingTimeoutRef.current);
+        rewardedPendingTimeoutRef.current = null;
+      }
+      pendingShowRewardedRef.current = false;
+    });
+
     const unsubEarned = rewarded.addAdEventListener(RewardedAdEventType.EARNED_REWARD, async () => {
       if (rewardedPendingTimeoutRef.current) {
         clearTimeout(rewardedPendingTimeoutRef.current);
         rewardedPendingTimeoutRef.current = null;
       }
+      rewardedPresentRetryCountRef.current = 0;
       const pending = rewardedRewardRef.current;
       const defaultReward = AdProvider.units.rewarded.reward;
       const onEarned = typeof pending?.onEarned === 'function' ? pending.onEarned : null;
@@ -383,6 +394,7 @@ export default function AdSystem({ children }) {
         clearTimeout(rewardedPendingTimeoutRef.current);
         rewardedPendingTimeoutRef.current = null;
       }
+      rewardedPresentRetryCountRef.current = 0;
       setRewardedLoaded(false);
       rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
       try {
@@ -392,20 +404,44 @@ export default function AdSystem({ children }) {
 
     const unsubError = rewarded.addAdEventListener(AdEventType.ERROR, (err) => {
       const hadPendingShow = pendingShowRewardedRef.current;
+      const errMessage = typeof err?.message === 'string' ? err.message : String(err || '');
+      const isPresentingError =
+        errMessage.includes('already presenting another view controller') ||
+        errMessage.includes('already presenting') ||
+        errMessage.includes('presenting another view controller');
       if (rewardedPendingTimeoutRef.current) {
         clearTimeout(rewardedPendingTimeoutRef.current);
         rewardedPendingTimeoutRef.current = null;
       }
       setRewardedLoaded(false);
+      if (adDebugEnabled) console.warn('[ADS] rewarded error', err);
+      if (isPresentingError && (hadPendingShow || rewardedRewardRef.current?.metadata)) {
+        const attempt = rewardedPresentRetryCountRef.current || 0;
+        if (attempt < 2) {
+          rewardedPresentRetryCountRef.current = attempt + 1;
+          pendingShowRewardedRef.current = true;
+          setTimeout(() => {
+            if (!pendingShowRewardedRef.current) return;
+            try {
+              rewarded.show();
+            } catch {}
+          }, 650);
+          setTimeout(() => {
+            if (!pendingShowRewardedRef.current) return;
+            try {
+              rewarded.load();
+            } catch {}
+          }, 1200);
+          return;
+        }
+      }
+      rewardedPresentRetryCountRef.current = 0;
       pendingShowRewardedRef.current = false;
       rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
-      if (adDebugEnabled) console.warn('[ADS] rewarded error', err);
-      if (hadPendingShow) {
-        appAlert(t('ads.unavailable_title'), t('ads.unavailable_desc_load'));
-      }
+      if (hadPendingShow) appAlert(t('ads.unavailable_title'), t('ads.unavailable_desc_load'));
     });
 
-    rewardedUnsubsRef.current = [unsubLoaded, unsubEarned, unsubClosed, unsubError];
+    rewardedUnsubsRef.current = [unsubLoaded, unsubOpened, unsubEarned, unsubClosed, unsubError];
     try {
       rewarded.load();
     } catch {}
@@ -530,7 +566,9 @@ export default function AdSystem({ children }) {
     } else {
       rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
     }
-    let shouldStartTimeout = false;
+    rewardedPresentRetryCountRef.current = 0;
+    pendingShowRewardedRef.current = true;
+    let shouldStartTimeout = true;
     if (rewardedLoaded) {
       let didShow = true;
       try {
@@ -539,8 +577,6 @@ export default function AdSystem({ children }) {
         didShow = false;
       }
       if (!didShow) {
-        shouldStartTimeout = true;
-        pendingShowRewardedRef.current = true;
         setTimeout(() => {
           if (!pendingShowRewardedRef.current) return;
           try {
@@ -555,8 +591,6 @@ export default function AdSystem({ children }) {
         }, 1400);
       }
     } else {
-      shouldStartTimeout = true;
-      pendingShowRewardedRef.current = true;
       try {
         rewarded.load();
       } catch {}
