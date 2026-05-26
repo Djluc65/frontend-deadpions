@@ -181,11 +181,12 @@ const GlobalInviteListener = () => {
         const state = navigation.getState();
         if (state) {
             const currentRoute = state.routes[state.index];
-            
+            if (!currentRoute) return;
+
             // Ne pas naviguer si on est déjà dans SocialScreen (gère sa propre navigation)
             if (currentRoute.name === 'Home' && currentRoute.state) {
                 const tabRoute = currentRoute.state.routes[currentRoute.state.index];
-                if (tabRoute.name === 'Social') {
+                if (tabRoute?.name === 'Social') {
                     console.log('Skipping Global navigation - in SocialScreen');
                     return;
                 }

@@ -11,11 +11,9 @@ import socket from '../services/socket';
 import { setNotificationsCount, incrementNotificationsCount } from '../redux/slices/socialSlice';
 import { playButtonSound } from '../utils/soundManager';
 import { useTranslation } from 'react-i18next';
+import Constants from 'expo-constants';
 
 import HomeScreen from '../screens/HomeScreen';
-import SocialScreen from '../screens/SocialScreen';
-import ShopScreen from '../screens/ShopScreen';
-import LiveListScreen from '../screens/LiveListScreen';
 import { getResponsiveSize, DESKTOP_BREAKPOINT } from '../utils/responsive';
 
 const Tab = createBottomTabNavigator();
@@ -251,9 +249,11 @@ const HomeTabNavigator = () => {
   const insets = useSafeAreaInsets();
 
   const isDesktopWeb = Platform.OS === 'web' && width >= DESKTOP_BREAKPOINT;
+  const isAndroidEmulator = Platform.OS === 'android' && Constants.isDevice === false;
 
   // ── Compteur de demandes d'amis ────────────────────────────────────────────
   useEffect(() => {
+    if (isAndroidEmulator) return;
     if (token) {
       const fetchRequests = async () => {
         try {
@@ -261,8 +261,11 @@ const HomeTabNavigator = () => {
             headers: { Authorization: `Bearer ${token}` },
           });
           if (res.ok) {
+            const contentType = res.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) return;
             const data = await res.json();
-            const count = data.received.filter(r => r.sender).length;
+            const received = Array.isArray(data?.received) ? data.received : [];
+            const count = received.filter(r => r?.sender).length;
             dispatch(setNotificationsCount(count));
           }
         } catch (error) {
@@ -271,10 +274,11 @@ const HomeTabNavigator = () => {
       };
       fetchRequests();
     }
-  }, [token, dispatch]);
+  }, [token, dispatch, isAndroidEmulator]);
 
   // ── Socket : nouvelles demandes ────────────────────────────────────────────
   useEffect(() => {
+    if (isAndroidEmulator) return;
     if (user && token) {
       const handleConnect = () => socket.emit('join_user_room', user._id);
 
@@ -290,7 +294,7 @@ const HomeTabNavigator = () => {
         socket.off('friend_request_received', handleNewRequest);
       };
     }
-  }, [user, token, dispatch]);
+  }, [user, token, dispatch, isAndroidEmulator]);
 
   const renderTabBar = (props) => {
     if (isDesktopWeb) {
@@ -320,9 +324,9 @@ const HomeTabNavigator = () => {
       screenOptions={{ headerShown: false }}
     >
       <Tab.Screen name="MaisonTab" component={HomeScreen} />
-      <Tab.Screen name="Social"    component={SocialScreen} />
-      <Tab.Screen name="Salle"     component={LiveListScreen} />
-      <Tab.Screen name="Magasin"   component={ShopScreen} />
+      <Tab.Screen name="Social" getComponent={() => require('../screens/SocialScreen').default} />
+      <Tab.Screen name="Salle" getComponent={() => require('../screens/LiveListScreen').default} />
+      <Tab.Screen name="Magasin" getComponent={() => require('../screens/ShopScreen').default} />
     </Tab.Navigator>
   );
 };

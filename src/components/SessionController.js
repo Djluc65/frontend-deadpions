@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import { socket } from '../utils/socket';
@@ -117,6 +117,7 @@ const SessionController = () => {
         dispatch(ensureDailyReset({ nowTs: Date.now() }));
 
         const maybeShowLoginRewardPrompt = () => {
+            if (Platform.OS === 'android') return;
             if (!showAds) return;
             if (!loginRewardPromptPendingRef.current) return;
             if (loginRewardPromptShownRef.current) return;
@@ -193,6 +194,7 @@ const SessionController = () => {
             
             // Get current route name
             const currentRoute = state.routes[state.index];
+            if (!currentRoute) return;
             if (currentRoute.name === 'Home' || currentRoute.name === 'Login') {
                 // If user manually goes to Home/Login, we consider the session "closed" or "abandoned"
                 // This prevents auto-redirecting back to Result screen after leaving it
@@ -250,6 +252,7 @@ const SessionController = () => {
                 const navState = navigation.getState();
                 if (navState) {
                     const currentRoute = navState.routes[navState.index];
+                    if (!currentRoute) return;
                     if (currentRoute.name === 'Game') {
                         const currentGameId = currentRoute.params?.gameId;
                         if (currentGameId === status.gameId) {

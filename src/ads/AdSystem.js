@@ -7,6 +7,8 @@ import { getResponsiveSize } from '../utils/responsive';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { appAlert } from '../services/appAlert';
 import { useTranslation } from 'react-i18next';
+import Constants from 'expo-constants';
+import { AD_RULES, computeAdVisibility } from './adRules';
 
 let mobileAds;
 let AdEventType;
@@ -41,37 +43,6 @@ const AdProvider = {
   targeting: {
     childDirected: false,
     maxAdContentRating: 'T'
-  }
-};
-
-const AD_RULES = {
-  gracePeriodMs: 0,
-  interstitialCooldownSec: 120,
-  actionsBeforeInterstitial: 1,
-  noAdScreens: ['Waiting', 'Login', 'Register', 'ForgotPassword', 'ResetPassword', 'Info', 'Assistant', 'PremiumPions', 'Magasin'],
-  bannerOnlyScreens: ['MaisonTab', 'Social', 'Salle', 'Profile'],
-  fullAdScreens: ['ResultatJeuOnline', 'ResultatJeuIA'],
-  shouldShowAds: (user) => {
-    if (!user) return false;
-    if (user.isPremium) return false;
-    if (user.isEarlyAccess) return false;
-    return true;
-  },
-  canShowInterstitial: (user, screenKey, lastShownAt, actionCount) => {
-    if (!AD_RULES.shouldShowAds(user)) return false;
-    if (!screenKey || !AD_RULES.fullAdScreens.includes(screenKey)) return false;
-    const secsSinceLast = lastShownAt ? (Date.now() - lastShownAt) / 1000 : Infinity;
-    if (secsSinceLast < AD_RULES.interstitialCooldownSec) return false;
-    if (actionCount < AD_RULES.actionsBeforeInterstitial) return false;
-    return true;
-  },
-  canShowBanner: (user, screenKey) => {
-    if (!AD_RULES.shouldShowAds(user)) return false;
-    if (!screenKey) return false;
-    if (AD_RULES.noAdScreens.includes(screenKey)) return false;
-    if (AD_RULES.bannerOnlyScreens.includes(screenKey)) return true;
-    if (AD_RULES.fullAdScreens.includes(screenKey)) return true;
-    return false;
   }
 };
 
@@ -125,8 +96,22 @@ export default function AdSystem({ children }) {
   const screenKey = routePath[routePath.length - 1] || null;
 
   const nativeAdsAvailable = Boolean(mobileAds && BannerAd && BannerAdSize && InterstitialAd && RewardedAd);
-  const showAds = nativeAdsAvailable && AD_RULES.shouldShowAds(user);
-  const showBanner = nativeAdsAvailable && AD_RULES.canShowBanner(user, screenKey);
+  const allowAdsOnEmulator = useMemo(() => {
+    const raw = process.env.EXPO_PUBLIC_AD_ALLOW_EMULATOR;
+    return raw === '1' || raw === 'true';
+  }, []);
+  const isAndroidEmulator = Platform.OS === 'android' && Constants.isDevice === false;
+  const { showAds, showBanner } = useMemo(
+    () =>
+      computeAdVisibility({
+        nativeAdsAvailable,
+        user,
+        screenKey,
+        isAndroidEmulator,
+        allowAdsOnEmulator
+      }),
+    [nativeAdsAvailable, user, screenKey, isAndroidEmulator, allowAdsOnEmulator]
+  );
   const bottomOffset = useMemo(() => getBottomOffsetFromRoutePath(routePath), [routePath]);
 
   useEffect(() => {

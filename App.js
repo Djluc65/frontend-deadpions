@@ -3,7 +3,7 @@ import i18n from './src/i18n/index';
 import React from 'react';
 import * as Linking from 'expo-linking';
 import { NavigationContainer } from '@react-navigation/native';
-import { Alert } from 'react-native';
+import { Alert, DevSettings, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useKeepAwake } from 'expo-keep-awake';
 import { Provider, useSelector } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
@@ -25,7 +25,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {
 });
 
 const linking = {
-  prefixes: [Linking.createURL('/'), 'deadpions://'],
+  prefixes: [Linking.createURL('/', { scheme: 'deadpions' }), 'deadpions://'],
   config: {
     screens: {
       ResetPassword: 'reset-password/:devToken',
@@ -45,6 +45,45 @@ function LanguageSync() {
   }, [language]);
 
   return null;
+}
+
+class RootErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
+  componentDidCatch(error) {
+    try {
+      console.error('[RootErrorBoundary]', error);
+    } catch {}
+  }
+
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorTitle}>Une erreur est survenue</Text>
+        <Text style={styles.errorBody} numberOfLines={6}>
+          {String(this.state.error?.message || this.state.error || '')}
+        </Text>
+        <TouchableOpacity
+          style={styles.errorButton}
+          onPress={() => {
+            try {
+              DevSettings.reload();
+            } catch {}
+          }}
+        >
+          <Text style={styles.errorButtonText}>Recharger</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 }
 
 export default function App() {
@@ -67,7 +106,9 @@ export default function App() {
                 <NavigationContainer linking={linking} fallback={<React.Fragment />}>
                   <LanguageSync />
                   <AppAlertHost />
-                  <AppNavigator />
+                  <RootErrorBoundary>
+                    <AppNavigator />
+                  </RootErrorBoundary>
                   <StatusBar style="light" />
                 </NavigationContainer>
               </CoinsProvider>
@@ -78,3 +119,37 @@ export default function App() {
     </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: '#041c55'
+  },
+  errorTitle: {
+    color: '#f1c40f',
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 12,
+    textAlign: 'center'
+  },
+  errorBody: {
+    color: '#fff',
+    fontSize: 14,
+    opacity: 0.9,
+    textAlign: 'center',
+    marginBottom: 16
+  },
+  errorButton: {
+    backgroundColor: '#f1c40f',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10
+  },
+  errorButtonText: {
+    color: '#041c55',
+    fontWeight: '800'
+  }
+});

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ActivityIndicator, ImageBackground,
-  useWindowDimensions, Animated, Easing, Platform,
+  useWindowDimensions, Animated, Easing, Platform, InteractionManager,
 } from 'react-native';
 import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import { useFocusEffect } from '@react-navigation/native';
@@ -16,20 +16,12 @@ import { useCoinsContext } from '../context/CoinsContext';
 import { getResponsiveSize, DESKTOP_BREAKPOINT } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
 import { T } from '../utils/theme';
+import Constants from 'expo-constants';
 
 // Components
 import GameCard from '../components/common/GameCard';
-import SettingsModal from '../components/home/SettingsModal';
-import AiGameSetup from '../components/home/AiGameSetup';
-import LocalGameSetup from '../components/home/LocalGameSetup';
 import HomeHeader from '../components/home/HomeHeader';
-import OnlineGameSetup from '../components/home/OnlineGameSetup';
-import FriendsGameSetup from '../components/home/FriendsGameSetup';
-import LiveGameSetup from '../components/home/LiveGameSetup';
-import BattleAnimation from '../components/BattleAnimation';
-import UserSearchModal from '../components/home/UserSearchModal';
 import PwaInstallBanner from '../components/PwaInstallBanner';
-import RewardsModal from '../components/home/RewardsModal';
 
 // ─── Constantes de layout ─────────────────────────────────────────────────────
 // Même layout sur iPhone et iPad (objectif : rendu iPad identique au rendu iPhone)
@@ -40,6 +32,7 @@ const HomeScreen = ({ navigation }) => {
   const { width, height } = useWindowDimensions();
   const isTablet = width >= 768;
   const isDesktop = Platform.OS === 'web' && width >= DESKTOP_BREAKPOINT;
+  const isAndroidEmulator = Platform.OS === 'android' && Constants.isDevice === false;
   const minDim = Math.min(width, height);
   const maxDim = Math.max(width, height);
   const isIPadAir105 =
@@ -70,9 +63,20 @@ const HomeScreen = ({ navigation }) => {
   const [aiConfigVisible,   setAiConfigVisible]   = useState(false);
   const [localConfigVisible,setLocalConfigVisible]= useState(false);
   const [rewardsVisible, setRewardsVisible] = useState(false);
+  const enableBattleAnimationOnAndroid =
+    Platform.OS === 'android' &&
+    (Constants.expoConfig?.extra?.enableBattleAnimationAndroid === true ||
+      Constants.easConfig?.extra?.enableBattleAnimationAndroid === true);
+  const [showBattleAnimation, setShowBattleAnimation] = useState(
+    Platform.OS !== 'android' ? true : enableBattleAnimationOnAndroid
+  );
+  const showHeavyImages = !isAndroidEmulator;
 
   const spinValue  = useRef(new Animated.Value(0)).current;
   const pulseValue = useRef(new Animated.Value(1)).current;
+  const BattleAnimationComponentRef = useRef(null);
+  const joinedUserRoomRef = useRef(null);
+  const lazyComponentRef = useRef({});
 
   const [onlineAnim]   = useState(new Animated.Value(1));
   const [computerAnim] = useState(new Animated.Value(1));
@@ -121,23 +125,33 @@ const HomeScreen = ({ navigation }) => {
 
   // ── Animations ────────────────────────────────────────────────────────────
   const startPulse = (anim) => {
-    Animated.loop(
+    const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(anim, { toValue: 1.2, duration: 1000, useNativeDriver: true }),
         Animated.timing(anim, { toValue: 1,   duration: 1000, useNativeDriver: true }),
       ])
-    ).start();
+    );
+    loop.start();
+    return loop;
   };
 
   useEffect(() => {
-    startPulse(onlineAnim);
-    startPulse(computerAnim);
-    startPulse(friendsAnim);
-    startPulse(localAnim);
-  }, []);
+    if (isAndroidEmulator) return;
+    const loops = [
+      startPulse(onlineAnim),
+      startPulse(computerAnim),
+      startPulse(friendsAnim),
+      startPulse(localAnim),
+    ];
+    return () => {
+      loops.forEach(l => l?.stop?.());
+    };
+  }, [isAndroidEmulator]);
 
   useEffect(() => {
-    Animated.loop(
+    if (!showHeavyImages) return;
+
+    const spinLoop = Animated.loop(
       Animated.timing(spinValue, {
         toValue: 1,
         duration: 3000,
@@ -145,30 +159,60 @@ const HomeScreen = ({ navigation }) => {
         useNativeDriver: true,
       }),
       { resetBeforeIteration: true }
-    ).start();
+    );
+    spinLoop.start();
 
-    Animated.loop(
+    const pulseLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseValue, { toValue: 1.1, duration: 1000, useNativeDriver: true }),
         Animated.timing(pulseValue, { toValue: 1,   duration: 1000, useNativeDriver: true }),
       ])
-    ).start();
-  }, []);
+    );
+    pulseLoop.start();
+
+    return () => {
+      spinLoop.stop();
+      pulseLoop.stop();
+    };
+  }, [showHeavyImages, pulseValue, spinValue]);
 
   useEffect(() => {
     const userId = user?._id || user?.id;
     if (userId) {
-      if (!socket.connected) socket.connect();
-      socket.emit('join_user_room', userId);
+      if (joinedUserRoomRef.current === userId) return;
+      joinedUserRoomRef.current = userId;
+      if (socket.connected) {
+        socket.emit('join_user_room', userId);
+        return;
+      }
+      const onConnect = () => {
+        socket.emit('join_user_room', userId);
+        socket.off('connect', onConnect);
+      };
+      socket.on('connect', onConnect);
+      socket.connect();
+      return () => {
+        socket.off('connect', onConnect);
+      };
     }
   }, [user?._id, user?.id]);
 
   useEffect(() => {
+    if (isAndroidEmulator) return;
     if (!AudioController.isRematchMode) {
       AudioController.playHomeMusic(settings.isMusicEnabled);
     }
     return () => AudioController.stopHomeMusic();
   }, [settings.isMusicEnabled]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    if (!enableBattleAnimationOnAndroid) return;
+    const task = InteractionManager.runAfterInteractions(() => {
+      setTimeout(() => setShowBattleAnimation(true), 800);
+    });
+    return () => task.cancel();
+  }, [enableBattleAnimationOnAndroid]);
 
   const handleRoomCreated = (data) => {
     navigation.navigate('Game', {
@@ -207,59 +251,116 @@ const HomeScreen = ({ navigation }) => {
   const CARD_ICON_MAIN = getResponsiveSize(40);
   const CARD_ICON_SIDE = getResponsiveSize(24);
 
+  const BackgroundContainer = isAndroidEmulator ? View : ImageBackground;
+  const backgroundProps = isAndroidEmulator
+    ? null
+    : {
+        source: require('../../assets/images/Background2-4.png'),
+        resizeMode: 'cover',
+        resizeMethod: 'resize',
+        progressiveRenderingEnabled: true,
+      };
+
+  const RewardsModalComponent = rewardsVisible
+    ? (lazyComponentRef.current.RewardsModal ||
+        (lazyComponentRef.current.RewardsModal = require('../components/home/RewardsModal').default))
+    : null;
+  const SettingsModalComponent = settingsVisible
+    ? (lazyComponentRef.current.SettingsModal ||
+        (lazyComponentRef.current.SettingsModal = require('../components/home/SettingsModal').default))
+    : null;
+  const UserSearchModalComponent = searchVisible
+    ? (lazyComponentRef.current.UserSearchModal ||
+        (lazyComponentRef.current.UserSearchModal = require('../components/home/UserSearchModal').default))
+    : null;
+  const FriendsGameSetupComponent = friendsMenuVisible
+    ? (lazyComponentRef.current.FriendsGameSetup ||
+        (lazyComponentRef.current.FriendsGameSetup = require('../components/home/FriendsGameSetup').default))
+    : null;
+  const LiveGameSetupComponent = liveConfigVisible
+    ? (lazyComponentRef.current.LiveGameSetup ||
+        (lazyComponentRef.current.LiveGameSetup = require('../components/home/LiveGameSetup').default))
+    : null;
+  const OnlineGameSetupComponent = onlineConfigVisible
+    ? (lazyComponentRef.current.OnlineGameSetup ||
+        (lazyComponentRef.current.OnlineGameSetup = require('../components/home/OnlineGameSetup').default))
+    : null;
+  const AiGameSetupComponent = aiConfigVisible
+    ? (lazyComponentRef.current.AiGameSetup ||
+        (lazyComponentRef.current.AiGameSetup = require('../components/home/AiGameSetup').default))
+    : null;
+  const LocalGameSetupComponent = localConfigVisible
+    ? (lazyComponentRef.current.LocalGameSetup ||
+        (lazyComponentRef.current.LocalGameSetup = require('../components/home/LocalGameSetup').default))
+    : null;
+
   return (
-    <ImageBackground
-      source={require('../../assets/images/Background2-4.png')}
-      style={styles.background}
-      resizeMode="cover"
+    <BackgroundContainer
+      {...(backgroundProps || {})}
+      style={[styles.background, isAndroidEmulator && { backgroundColor: '#05090f' }]}
     >
       <View style={styles.bgOverlay} pointerEvents="none" />
       <PwaInstallBanner />
-      <RewardsModal
-        visible={rewardsVisible}
-        onClose={() => setRewardsVisible(false)}
-      />
-      {/* ── Modals ── */}
-      <SettingsModal
-        visible={settingsVisible}
-        onClose={() => setSettingsVisible(false)}
-        handlePlaySound={handlePlaySound}
-      />
-      <UserSearchModal
-        visible={searchVisible}
-        onClose={() => setSearchVisible(false)}
-        navigation={navigation}
-      />
-      <FriendsGameSetup
-        visible={friendsMenuVisible}
-        onClose={() => setFriendsMenuVisible(false)}
-        navigation={navigation}
-        user={user}
-        onOpenLiveConfig={() => setLiveConfigVisible(true)}
-      />
-      <LiveGameSetup
-        visible={liveConfigVisible}
-        onClose={() => setLiveConfigVisible(false)}
-        navigation={navigation}
-        user={user}
-      />
-      <OnlineGameSetup
-        visible={onlineConfigVisible}
-        onClose={() => setOnlineConfigVisible(false)}
-        navigation={navigation}
-        user={user}
-      />
-      <AiGameSetup
-        visible={aiConfigVisible}
-        onClose={() => setAiConfigVisible(false)}
-        navigation={navigation}
-        user={user}
-      />
-      <LocalGameSetup
-        visible={localConfigVisible}
-        onClose={() => setLocalConfigVisible(false)}
-        navigation={navigation}
-      />
+      {rewardsVisible && RewardsModalComponent ? (
+        <RewardsModalComponent
+          visible={rewardsVisible}
+          onClose={() => setRewardsVisible(false)}
+        />
+      ) : null}
+      {settingsVisible && SettingsModalComponent ? (
+        <SettingsModalComponent
+          visible={settingsVisible}
+          onClose={() => setSettingsVisible(false)}
+          handlePlaySound={handlePlaySound}
+        />
+      ) : null}
+      {searchVisible && UserSearchModalComponent ? (
+        <UserSearchModalComponent
+          visible={searchVisible}
+          onClose={() => setSearchVisible(false)}
+          navigation={navigation}
+        />
+      ) : null}
+      {friendsMenuVisible && FriendsGameSetupComponent ? (
+        <FriendsGameSetupComponent
+          visible={friendsMenuVisible}
+          onClose={() => setFriendsMenuVisible(false)}
+          navigation={navigation}
+          user={user}
+          onOpenLiveConfig={() => setLiveConfigVisible(true)}
+        />
+      ) : null}
+      {liveConfigVisible && LiveGameSetupComponent ? (
+        <LiveGameSetupComponent
+          visible={liveConfigVisible}
+          onClose={() => setLiveConfigVisible(false)}
+          navigation={navigation}
+          user={user}
+        />
+      ) : null}
+      {onlineConfigVisible && OnlineGameSetupComponent ? (
+        <OnlineGameSetupComponent
+          visible={onlineConfigVisible}
+          onClose={() => setOnlineConfigVisible(false)}
+          navigation={navigation}
+          user={user}
+        />
+      ) : null}
+      {aiConfigVisible && AiGameSetupComponent ? (
+        <AiGameSetupComponent
+          visible={aiConfigVisible}
+          onClose={() => setAiConfigVisible(false)}
+          navigation={navigation}
+          user={user}
+        />
+      ) : null}
+      {localConfigVisible && LocalGameSetupComponent ? (
+        <LocalGameSetupComponent
+          visible={localConfigVisible}
+          onClose={() => setLocalConfigVisible(false)}
+          navigation={navigation}
+        />
+      ) : null}
 
       {/* ── Header ── */}
       <HomeHeader
@@ -284,26 +385,28 @@ const HomeScreen = ({ navigation }) => {
       <View style={styles.body}>
 
         {/* Logo centré — taille calculée, ne chevauche plus les cards */}
-        <View
-          style={[
-            styles.logoWrapper,
-            !isTablet && { marginTop: getResponsiveSize(-33) },
-          ]}
-          pointerEvents="none"
-        >
-          <Animated.Image
-            source={require('../../assets/images/LogoDeadPions2.png')}
+        {showHeavyImages && (
+          <View
             style={[
-              styles.logo,
-              {
-                width: logoSize,
-                height: logoSize,
-                transform: [{ scale: pulseValue }],
-              },
+              styles.logoWrapper,
+              !isTablet && { marginTop: getResponsiveSize(-33) },
             ]}
-            resizeMode="contain"
-          />
-        </View>
+            pointerEvents="none"
+          >
+            <Animated.Image
+              source={require('../../assets/images/LogoDeadPions2.png')}
+              style={[
+                styles.logo,
+                {
+                  width: logoSize,
+                  height: logoSize,
+                  transform: [{ scale: pulseValue }],
+                },
+              ]}
+              resizeMode="contain"
+            />
+          </View>
+        )}
 
         {/* Cards — grille 2×2 */}
         <View
@@ -420,10 +523,18 @@ const HomeScreen = ({ navigation }) => {
 
         {/* BattleAnimation toujours visible en bas */}
         <View style={styles.battleWrapper}>
-          <BattleAnimation />
+          {showBattleAnimation
+            ? (() => {
+                if (!BattleAnimationComponentRef.current) {
+                  BattleAnimationComponentRef.current = require('../components/BattleAnimation').default;
+                }
+                const BattleAnimationComponent = BattleAnimationComponentRef.current;
+                return BattleAnimationComponent ? <BattleAnimationComponent /> : null;
+              })()
+            : null}
         </View>
       </View>
-    </ImageBackground>
+    </BackgroundContainer>
   );
 };
 

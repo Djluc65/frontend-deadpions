@@ -15,6 +15,7 @@ import { updateUser, updateUserCoins } from '../redux/slices/authSlice';
 import { getResponsiveSize, isTablet, DESKTOP_BREAKPOINT } from '../utils/responsive';
 import { useAdManager } from '../ads/AdSystem';
 import { appAlert } from '../services/appAlert';
+import Constants from 'expo-constants';
 
 import * as IAP from 'react-native-iap';
 
@@ -49,6 +50,11 @@ const ShopScreen = () => {
   const { user, token } = useSelector(state => state.auth);
   const dispatch = useDispatch();
   const isIOS = Platform.OS === 'ios';
+  const isAndroid = Platform.OS === 'android';
+  const isProbablyEmulator = isAndroid && (
+    Constants.isDevice === false ||
+    /emulator|simulator|sdk|genymotion/i.test(`${Constants.deviceName || ''} ${Constants.modelName || ''}`)
+  );
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= DESKTOP_BREAKPOINT;
   const sectionMaxWidth = isDesktop ? 960 : isTablet ? 700 : '100%';
@@ -59,10 +65,13 @@ const ShopScreen = () => {
 
   const { showAds, showRewarded } = useAdManager();
   const [loading, setLoading] = useState(false);
+  const [iapEnabled, setIapEnabled] = useState(!isProbablyEmulator);
   const iapReadyRef = useRef(false);
   const iapInitPromiseRef = useRef(null);
   const iapCatalogReadyRef = useRef(false);
   const iapCatalogPromiseRef = useRef(null);
+  const iapInitErrorShownRef = useRef(false);
+  const subscriptionOfferTokenBySkuRef = useRef({});
   const purchaseTimeoutRef = useRef(null);
   const purchaseInFlightRef = useRef(false);
   const purchaseSkuRef = useRef(null);
@@ -90,23 +99,32 @@ const ShopScreen = () => {
   }, [clearPurchaseTimeout]);
 
   const ensureIapReady = useCallback(async () => {
+    if (!iapEnabled) return false;
     if (iapReadyRef.current) return true;
     if (iapInitPromiseRef.current) return await iapInitPromiseRef.current;
     try {
       iapInitPromiseRef.current = (async () => {
-        await IAP.initConnection();
-        iapReadyRef.current = true;
-        return true;
+        const ok = await IAP.initConnection();
+        const ready = ok === true || ok == null;
+        iapReadyRef.current = ready;
+        if (!ready) {
+          setIapEnabled(false);
+        }
+        return ready;
       })();
       return await iapInitPromiseRef.current;
     } catch (err) {
       console.warn('IAP Init Error:', err);
-      appAlert(t('common.error'), t('shop.iap_init_error'));
+      setIapEnabled(false);
+      if (!isProbablyEmulator && !iapInitErrorShownRef.current) {
+        iapInitErrorShownRef.current = true;
+        appAlert(t('common.error'), t('shop.iap_init_error'));
+      }
       return false;
     } finally {
       iapInitPromiseRef.current = null;
     }
-  }, []);
+  }, [iapEnabled, isProbablyEmulator, t]);
 
   const ensureIapCatalog = useCallback(async () => {
     if (iapCatalogReadyRef.current) return true;
@@ -132,9 +150,21 @@ const ShopScreen = () => {
 
     try {
       iapCatalogPromiseRef.current = (async () => {
-        await IAP.fetchProducts({ skus: productSkus, type: 'in-app' });
+        await IAP.getProducts({ skus: productSkus });
         if (subscriptionSkus.length) {
-          await IAP.fetchProducts({ skus: subscriptionSkus, type: 'subs' });
+          const subscriptions = await IAP.getSubscriptions({ skus: subscriptionSkus });
+          if (isAndroid) {
+            const offerTokenBySku = {};
+            for (const sub of subscriptions || []) {
+              const sku = sub?.productId;
+              const details = sub?.subscriptionOfferDetails;
+              const offerToken = Array.isArray(details) && details.length ? details[0]?.offerToken : null;
+              if (sku && offerToken) {
+                offerTokenBySku[sku] = offerToken;
+              }
+            }
+            subscriptionOfferTokenBySkuRef.current = offerTokenBySku;
+          }
         }
         iapCatalogReadyRef.current = true;
         return true;
@@ -146,12 +176,13 @@ const ShopScreen = () => {
     } finally {
       iapCatalogPromiseRef.current = null;
     }
-  }, [ensureIapReady, isIOS]);
+  }, [ensureIapReady, isAndroid]);
 
   // Initialisation IAP
   useEffect(() => {
     const initIAP = async () => {
       try {
+        if (!iapEnabled) return;
         const ready = await ensureIapReady();
         if (!ready) return;
         await ensureIapCatalog();
@@ -426,8 +457,6 @@ const ShopScreen = () => {
   };
 
   const handleSubscription = async (plan) => {
-    const isAndroid = Platform.OS === 'android';
-    
     if (isIOS || isAndroid) {
         if (loading) return;
         if (!user || !token) {
@@ -439,6 +468,10 @@ const ShopScreen = () => {
         }
         if (purchaseInFlightRef.current) {
           appAlert(t('shop.iap_info_title'), t('shop.purchase_in_progress'));
+          return;
+        }
+        if (!iapEnabled) {
+          appAlert(t('common.error'), "Les achats integres ne sont pas disponibles sur l'emulateur Android. Teste sur un appareil Android avec Play Store.");
           return;
         }
         setLoading(true);
@@ -456,14 +489,17 @@ const ShopScreen = () => {
             startPurchaseTimeout(sku);
 
             if (isIOS) {
-              await IAP.requestPurchase({
-                type: 'subs',
-                request: { apple: { sku, andDangerouslyFinishTransactionAutomatically: false } }
+              await IAP.requestSubscription({
+                sku,
+                andDangerouslyFinishTransactionAutomaticallyIOS: false
               });
             } else {
-              await IAP.requestPurchase({
-                type: 'subs',
-                request: { google: { skus: [sku] } }
+              const offerToken = subscriptionOfferTokenBySkuRef.current?.[sku];
+              if (!offerToken) {
+                throw new Error(t('shop.iap_init_error'));
+              }
+              await IAP.requestSubscription({
+                subscriptionOffers: [{ sku, offerToken }]
               });
             }
         } catch (err) {
@@ -591,8 +627,8 @@ const ShopScreen = () => {
         await ensureIapCatalog();
         startPurchaseTimeout(sku);
         await IAP.requestPurchase({
-          type: 'in-app',
-          request: { apple: { sku, andDangerouslyFinishTransactionAutomatically: false } }
+          sku,
+          andDangerouslyFinishTransactionAutomaticallyIOS: false
         });
       } catch (err) {
         console.error('IAP Purchase Error:', err);
@@ -608,6 +644,10 @@ const ShopScreen = () => {
 
     if (isAndroid) {
       if (purchaseInFlightRef.current) return;
+      if (!iapEnabled) {
+        appAlert(t('common.error'), "Les achats integres ne sont pas disponibles sur l'emulateur Android. Teste sur un appareil Android avec Play Store.");
+        return;
+      }
       setLoading(true);
       purchaseInFlightRef.current = true;
       try {
@@ -624,12 +664,7 @@ const ShopScreen = () => {
         await ensureIapCatalog();
         startPurchaseTimeout(sku);
 
-        await IAP.requestPurchase({
-          type: 'in-app',
-          request: {
-            google: { skus: [sku] }
-          }
-        });
+        await IAP.requestPurchase({ skus: [sku] });
         // Le listener purchaseUpdatedListener prend le relais
       } catch (err) {
         console.error('IAP Purchase Error:', err);
