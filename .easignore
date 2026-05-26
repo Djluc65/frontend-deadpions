@@ -20,6 +20,12 @@ pnpm-debug.log*
 .cache
 .cache/**
 
+# CocoaPods caches (local only, not needed for EAS)
+.cocoapods
+.cocoapods/**
+**/.cocoapods-home
+**/.cocoapods-home/**
+
 # Project build outputs
 android/.gradle
 android/.gradle/**

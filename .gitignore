@@ -12,3 +12,7 @@ web-build/
 ios/.cocoapods-home/
 ios/ios/.cocoapods-home/
 ios/.derivedData/
+.cocoapods/
+.cocoapods/**
+android/emulator/
+android/emulator/**
