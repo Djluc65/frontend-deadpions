@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Modal, Pressable, View, Text, Switch, TouchableOpacity, StyleSheet } from 'react-native';
+import { Modal, Pressable, View, Text, Switch, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { toggleMusic, toggleSound, toggleChat, setLanguage } from '../../redux/s
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n/index';
 import { usePrivacyMode } from '../../hooks/usePrivacyMode';
+import { useAdManager } from '../../ads/AdSystem';
 import { playButtonSound } from '../../utils/soundManager';
 import { getResponsiveSize } from '../../utils/responsive';
 import { modalTheme } from '../../utils/modalTheme';
@@ -18,6 +19,7 @@ const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
   const settings = useSelector(state => state.settings || { isMusicEnabled: true, isSoundEnabled: true, isChatEnabled: true, language: null });
   const activeLanguage = settings.language || i18n.language || 'en';
   const { privacyMode, updatePrivacy, loading: privacyLoading } = usePrivacyMode();
+  const { showPrivacyOptions } = useAdManager();
   const { t } = useTranslation();
   const FLAGS = {
     fr: '🇫🇷',
@@ -135,6 +137,19 @@ const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
             <Ionicons name="information-circle-outline" size={getResponsiveSize(24)} color={T.gold} />
             <Text style={styles.infoButtonText}>{t('settings.about_rules')}</Text>
           </TouchableOpacity>
+
+          {Platform.OS === 'android' && (
+            <TouchableOpacity
+              style={styles.infoButton}
+              onPress={() => {
+                playButtonSound();
+                showPrivacyOptions?.();
+              }}
+            >
+              <Ionicons name="shield-checkmark-outline" size={getResponsiveSize(24)} color={T.gold} />
+              <Text style={styles.infoButtonText}>{t('settings.ads_privacy')}</Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={styles.closeButton}

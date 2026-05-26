@@ -18,6 +18,7 @@ let InterstitialAd;
 let RewardedAd;
 let RewardedAdEventType;
 let TestIds;
+let AdsConsent;
 
 try {
   const gma = require('react-native-google-mobile-ads');
@@ -29,6 +30,7 @@ try {
   RewardedAd = gma.RewardedAd;
   RewardedAdEventType = gma.RewardedAdEventType;
   TestIds = gma.TestIds;
+  AdsConsent = gma.AdsConsent;
 } catch {
   mobileAds = null;
 }
@@ -77,6 +79,9 @@ export default function AdSystem({ children }) {
 
   const [attReady, setAttReady] = useState(Platform.OS !== 'ios');
   const [attAuthorized, setAttAuthorized] = useState(false);
+  const [androidConsentReady, setAndroidConsentReady] = useState(Platform.OS !== 'android');
+  const [androidGdprApplies, setAndroidGdprApplies] = useState(false);
+  const [androidNpaOnly, setAndroidNpaOnly] = useState(false);
 
   const adDebugEnabled = useMemo(() => {
     const raw = process.env.EXPO_PUBLIC_AD_DEBUG;
@@ -101,7 +106,7 @@ export default function AdSystem({ children }) {
     return raw === '1' || raw === 'true';
   }, []);
   const isAndroidEmulator = Platform.OS === 'android' && Constants.isDevice === false;
-  const { showAds, showBanner } = useMemo(
+  const baseVisibility = useMemo(
     () =>
       computeAdVisibility({
         nativeAdsAvailable,
@@ -112,7 +117,69 @@ export default function AdSystem({ children }) {
       }),
     [nativeAdsAvailable, user, screenKey, isAndroidEmulator, allowAdsOnEmulator]
   );
+  const showAds = baseVisibility.showAds && (Platform.OS !== 'android' || androidConsentReady);
+  const showBanner = baseVisibility.showBanner && (Platform.OS !== 'android' || androidConsentReady);
   const bottomOffset = useMemo(() => getBottomOffsetFromRoutePath(routePath), [routePath]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    if (!baseVisibility.showAds) {
+      setAndroidConsentReady(true);
+      setAndroidGdprApplies(false);
+      setAndroidNpaOnly(false);
+      return;
+    }
+    if (!AdsConsent || typeof AdsConsent.gatherConsent !== 'function') {
+      setAndroidConsentReady(true);
+      setAndroidGdprApplies(true);
+      setAndroidNpaOnly(true);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        setAndroidConsentReady(false);
+        const consentInfo = await AdsConsent.gatherConsent({
+          tagForUnderAgeOfConsent: Boolean(AdProvider?.targeting?.childDirected)
+        });
+        if (cancelled) return;
+
+        let gdprApplies = false;
+        try {
+          gdprApplies = await AdsConsent.getGdprApplies();
+        } catch {
+          gdprApplies = false;
+        }
+        if (cancelled) return;
+
+        let npaOnly = false;
+        if (gdprApplies) {
+          try {
+            const choices = await AdsConsent.getUserChoices();
+            npaOnly = choices?.selectPersonalisedAds === false;
+          } catch {
+            npaOnly = true;
+          }
+        }
+        if (cancelled) return;
+
+        setAndroidGdprApplies(Boolean(gdprApplies));
+        setAndroidNpaOnly(Boolean(npaOnly));
+        setAndroidConsentReady(Boolean(consentInfo?.canRequestAds));
+      } catch (err) {
+        if (cancelled) return;
+        setAndroidConsentReady(true);
+        setAndroidGdprApplies(true);
+        setAndroidNpaOnly(true);
+        if (adDebugEnabled) console.warn('[ADS] consent flow failed', err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [baseVisibility.showAds, adDebugEnabled]);
 
   useEffect(() => {
     if (Platform.OS !== 'ios') {
@@ -163,8 +230,12 @@ export default function AdSystem({ children }) {
   const requestNonPersonalizedAdsOnly = useMemo(() => {
     const raw = process.env.EXPO_PUBLIC_AD_NPA_ONLY;
     const envPrefersNpa = raw === '1' || raw === 'true';
-    return envPrefersNpa || (Platform.OS === 'ios' && attReady && !attAuthorized);
-  }, [attReady, attAuthorized]);
+    return (
+      envPrefersNpa ||
+      (Platform.OS === 'ios' && attReady && !attAuthorized) ||
+      (Platform.OS === 'android' && androidConsentReady && androidGdprApplies && androidNpaOnly)
+    );
+  }, [attReady, attAuthorized, androidConsentReady, androidGdprApplies, androidNpaOnly]);
 
   useEffect(() => {
     if (!adDebugEnabled) return;
@@ -596,15 +667,47 @@ export default function AdSystem({ children }) {
     }
   }, [showAds, rewardedLoaded, setupRewarded, attReady, t]);
 
+  const showPrivacyOptions = useCallback(async () => {
+    if (Platform.OS !== 'android') return;
+    if (!AdsConsent || typeof AdsConsent.showPrivacyOptionsForm !== 'function') return;
+
+    try {
+      const consentInfo = await AdsConsent.showPrivacyOptionsForm();
+      let gdprApplies = false;
+      try {
+        gdprApplies = await AdsConsent.getGdprApplies();
+      } catch {
+        gdprApplies = false;
+      }
+
+      let npaOnly = false;
+      if (gdprApplies) {
+        try {
+          const choices = await AdsConsent.getUserChoices();
+          npaOnly = choices?.selectPersonalisedAds === false;
+        } catch {
+          npaOnly = true;
+        }
+      }
+
+      setAndroidConsentReady(Boolean(consentInfo?.canRequestAds));
+      setAndroidGdprApplies(Boolean(gdprApplies));
+      setAndroidNpaOnly(Boolean(npaOnly));
+    } catch (err) {
+      if (adDebugEnabled) console.warn('[ADS] privacy options failed', err);
+    }
+  }, [adDebugEnabled]);
+
   const value = useMemo(
     () => ({
       showAds,
       trackAction,
       tryShowInterstitial,
       prepareRewarded,
-      showRewarded
+      showRewarded,
+      showPrivacyOptions
     }),
-    [showAds, trackAction, tryShowInterstitial, prepareRewarded, showRewarded]
+    [showAds, trackAction, tryShowInterstitial, prepareRewarded, showRewarded, showPrivacyOptions]
   );
 
   return (
