@@ -8,7 +8,6 @@ const nativeModulesToBlockOnWeb = [
   'react-native-google-mobile-ads',
   'react-native-iap',
   'react-native-webrtc',
-  'react-native-nitro-modules',
   'expo-apple-authentication',
   'expo-tracking-transparency',
   '@stripe/stripe-react-native'
