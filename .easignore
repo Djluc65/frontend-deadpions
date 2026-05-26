@@ -27,6 +27,8 @@ pnpm-debug.log*
 **/.cocoapods-home/**
 
 # Project build outputs
+android/local.properties
+android/**/local.properties
 android/.gradle
 android/.gradle/**
 android/build
