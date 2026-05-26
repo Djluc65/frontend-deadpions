@@ -10,7 +10,7 @@
     "android:emu:install": "cd android && TMPDIR=\"/Volumes/BACK UP/tmp\" GRADLE_USER_HOME=\"/Volumes/BACK UP/gradle-home\" ./gradlew :app:installDebug -PreactNativeArchitectures=x86_64 -x lint -x test --no-daemon",
     "android:emu:start": "EXPO_HOME=.expo-home npx expo start --dev-client --port 8081 --clear",
     "android:emu:open": "\"$HOME/Library/Android/sdk/platform-tools/adb\" reverse tcp:8081 tcp:8081 && \"$HOME/Library/Android/sdk/platform-tools/adb\" shell am start -a android.intent.action.VIEW -d \"exp+deadpions://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081\"",
-    "ios": "HOME=$PWD EXPO_HOME=.expo-home CP_HOME_DIR=ios/.cocoapods-home npx expo run:ios",
+    "ios": "HOME=$PWD EXPO_HOME=.expo-home CP_HOME_DIR=ios/.cocoapods-home npx expo run:ios --simulator \"iPhone 17 Pro\"",
     "web": "EXPO_HOME=.expo-home npx expo start --web",
     "test": "node tests/validation.script.mjs",
     "test:jest": "jest",
