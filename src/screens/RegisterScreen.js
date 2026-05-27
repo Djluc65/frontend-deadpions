@@ -217,6 +217,7 @@ const RegisterScreen = ({ navigation }) => {
             value={pseudo} 
             onChangeText={setPseudo} 
             maxLength={7}
+            innerStyle={{ backgroundColor: '#05060B' }}
           />
           <Input 
             placeholder={t('auth.email')}
@@ -224,9 +225,10 @@ const RegisterScreen = ({ navigation }) => {
             onChangeText={setEmail} 
             keyboardType="email-address"
             autoCapitalize="none"
+            innerStyle={{ backgroundColor: '#05060B' }}
           />
-          <Input placeholder={t('auth.password')} value={password} onChangeText={setPassword} secureTextEntry />
-          <Input placeholder={t('auth.password_confirm')} value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
+          <Input placeholder={t('auth.password')} value={password} onChangeText={setPassword} secureTextEntry innerStyle={{ backgroundColor: '#05060B' }} />
+          <Input placeholder={t('auth.password_confirm')} value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry innerStyle={{ backgroundColor: '#05060B' }} />
           
           <Button title={t('auth.register')} onPress={handleRegister} />
           <Button 

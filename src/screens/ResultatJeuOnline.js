@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: getResponsiveSize(400),
     borderWidth: 1.5,
-    borderColor: T.gold,
+    borderColor: T.cyan,
     ...T.shadowCard,
   },
   emoji: {
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
   soldeMontant: {
     fontSize: getResponsiveSize(22),
     fontWeight: '800',
-    color: T.gold,
+    color: T.cyan,
   },
   boutonRewarded: {
     width: '100%',

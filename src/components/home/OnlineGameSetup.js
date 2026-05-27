@@ -198,7 +198,7 @@ const OnlineGameSetup = memo(({ visible, onClose, navigation, user }) => {
                     {isSearching ? (
                         <View style={{ alignItems: 'center', width: '100%' }}>
                             <Text style={styles.friendsModalTitle}>{t('matchmaking.searching_short')}</Text>
-                            <ActivityIndicator size="large" color={T.gold} style={{ marginVertical: getResponsiveSize(20) }} />
+                            <ActivityIndicator size="large" color={T.cyan} style={{ marginVertical: getResponsiveSize(20) }} />
                             <Text style={styles.timerText}>{searchTimer}s</Text>
                             <Text style={styles.betInfo}>
                                 {t('game.bet_amount', { amount: bet.toLocaleString() })}
@@ -314,13 +314,18 @@ const styles = StyleSheet.create({
         paddingVertical: getResponsiveSize(6),
         borderRadius: getResponsiveSize(T.radiusPill),
         borderWidth: 1,
-        borderColor: T.borderSoft,
+        borderColor: 'rgba(150, 180, 255, 0.18)',
         margin: getResponsiveSize(4),
         backgroundColor: T.bg3,
     },
     friendsOptionButtonActive: {
-        backgroundColor: T.gold,
-        borderColor: T.gold,
+        backgroundColor: T.cyan,
+        borderColor: T.cyan,
+        shadowColor: T.cyan,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.35,
+        shadowRadius: getResponsiveSize(10),
+        elevation: 6,
     },
     friendsOptionText: {
         color: T.textDim,
@@ -328,7 +333,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     friendsOptionTextActive: {
-        color: '#1B1305',
+        color: '#05060B',
     },
     modalButtons: {
         flexDirection: 'row',
@@ -344,15 +349,17 @@ const styles = StyleSheet.create({
     modalButtonConfirm: {
         flex: 1,
         ...modalTheme.button,
-        ...modalTheme.buttonActive,
+        backgroundColor: T.cyan,
+        borderColor: T.cyan,
+        shadowColor: T.cyan,
     },
     modalButtonText: {
         ...modalTheme.buttonText,
         textTransform: 'uppercase'
     },
-    modalButtonTextActive: modalTheme.buttonTextActive,
+    modalButtonTextActive: { color: '#05060B' },
     timerText: {
-        color: T.gold,
+        color: T.cyan,
         fontSize: getResponsiveSize(26),
         fontWeight: 'bold',
         marginBottom: getResponsiveSize(8)
@@ -385,17 +392,17 @@ const styles = StyleSheet.create({
         borderRadius: getResponsiveSize(T.radiusPill),
         marginHorizontal: getResponsiveSize(8),
         borderWidth: 1,
-        borderColor: T.border
+        borderColor: T.cyanBorder
     },
     betSmallText: {
-        color: T.gold,
+        color: T.cyan,
         fontSize: getResponsiveSize(12),
         opacity: 0.5,
         width: getResponsiveSize(60),
         textAlign: 'center'
     },
     betMainText: {
-        color: T.gold,
+        color: T.cyan,
         fontSize: getResponsiveSize(18),
         fontWeight: 'bold',
         width: getResponsiveSize(100),

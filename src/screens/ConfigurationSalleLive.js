@@ -11,6 +11,8 @@ import { appAlert } from '../services/appAlert';
 import { useAdManager } from '../ads/AdSystem';
 import { consumeLiveRoom, ensureDailyReset, incrementLiveBonus, selectLiveRemaining } from '../redux/slices/rewardsSlice';
 
+const INPUT_BORDER_W = Math.max(1, Math.round(getResponsiveSize(1)));
+
 /**
  * Écran de configuration pour la création d'une salle live.
  * Permet à l'utilisateur de définir les paramètres de la salle (nom, confidentialité, spectateurs, etc.).
@@ -37,6 +39,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
   const [tournamentGames, setTournamentGames] = useState(2); // Nombre de manches
   const [betAmount, setBetAmount] = useState(100); // Mise
   const [modeSpectateur, setModeSpectateur] = useState('libre'); // 'libre' (tout le monde) ou 'modere' (approbation requise)
+  const [focusedField, setFocusedField] = useState(null);
   
   // Options prédéfinies pour les limites de spectateurs
   const limitsSpectateurs = [10, 20, 50, 100, 200, 500, 1000, 5000, 10000];
@@ -226,12 +229,14 @@ const ConfigurationSalleLive = ({ navigation }) => {
             <View style={styles.inputGroup}>
             <Text style={styles.label}>{t('live_room.room_name_label')}</Text>
             <TextInput
-                style={styles.input}
+                style={[styles.input, focusedField === 'nomSalle' && styles.inputFocused]}
                 value={nomSalle}
                 onChangeText={setNomSalle}
                 placeholder={t('live_room.room_name_placeholder')}
                 placeholderTextColor="rgba(255, 255, 255, 0.5)"
                 maxLength={40}
+                onFocus={() => setFocusedField('nomSalle')}
+                onBlur={() => setFocusedField(null)}
             />
             <Text style={styles.helperText}>
                 {t('live_room.char_count', { count: nomSalle.length, max: 40 })}
@@ -242,7 +247,7 @@ const ConfigurationSalleLive = ({ navigation }) => {
             <View style={styles.inputGroup}>
             <Text style={styles.label}>{t('live_room.description_label')}</Text>
             <TextInput
-                style={[styles.input, styles.textArea]}
+                style={[styles.input, styles.textArea, focusedField === 'description' && styles.inputFocused]}
                 value={description}
                 onChangeText={setDescription}
                 placeholder={t('live_room.description_placeholder')}
@@ -250,6 +255,8 @@ const ConfigurationSalleLive = ({ navigation }) => {
                 multiline
                 numberOfLines={3}
                 maxLength={150}
+                onFocus={() => setFocusedField('description')}
+                onBlur={() => setFocusedField(null)}
             />
             <Text style={styles.helperText}>
                 {t('live_room.char_count', { count: description.length, max: 150 })}
@@ -280,13 +287,15 @@ const ConfigurationSalleLive = ({ navigation }) => {
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>{t('live_room.password_label')}</Text>
                 <TextInput
-                style={styles.input}
+                style={[styles.input, focusedField === 'motDePasse' && styles.inputFocused]}
                 value={motDePasse}
                 onChangeText={setMotDePasse}
                 placeholder={t('live_room.password_placeholder')}
                 placeholderTextColor="rgba(255, 255, 255, 0.5)"
                 secureTextEntry
                 maxLength={20}
+                onFocus={() => setFocusedField('motDePasse')}
+                onBlur={() => setFocusedField(null)}
                 />
             </View>
             )}
@@ -676,12 +685,15 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: T.bg3,
-    borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderWidth: INPUT_BORDER_W,
+    borderColor: T.cyanBorder,
     borderRadius: getResponsiveSize(T.radiusSm),
     padding: getResponsiveSize(12),
     fontSize: getResponsiveSize(15),
     color: T.text,
+  },
+  inputFocused: {
+    borderColor: T.cyan,
   },
   textArea: {
     minHeight: getResponsiveSize(80),

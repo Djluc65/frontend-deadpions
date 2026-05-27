@@ -42,6 +42,7 @@ import { useTranslation } from 'react-i18next';
 
 const width = SCREEN_WIDTH;
 const height = SCREEN_HEIGHT;
+const INPUT_BORDER_W = Math.max(1, Math.round(getResponsiveSize(1)));
 
 const QUICK_MESSAGE_KEYS = ["quick_gg", "quick_good_game", "quick_well_played", "quick_see_you"];
 
@@ -194,6 +195,7 @@ const ChatScreen = ({ route, navigation }) => {
   // ── Messages ──
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [moderationError, setModerationError] = useState(null);
 
@@ -1255,13 +1257,15 @@ const ChatScreen = ({ route, navigation }) => {
                 <View style={styles.inputContainer}>
                   <TextInput
                     ref={inputRef}
-                    style={styles.input}
+                    style={[styles.input, isInputFocused && styles.inputFocused]}
                     placeholder={t('chat.message_placeholder') || 'Message…'}
                     placeholderTextColor="#8696a0"
                     value={inputText}
                     onChangeText={handleInputChange}
                     multiline
                     maxLength={2000}
+                    onFocus={() => setIsInputFocused(true)}
+                    onBlur={() => setIsInputFocused(false)}
                   />
                   {inputText.trim().length > 0 ? (
                     <TouchableOpacity style={styles.sendBtn} onPress={() => handleSendMessage()}>
@@ -1417,7 +1421,10 @@ const styles = StyleSheet.create({
     color: T.text, borderRadius: getResponsiveSize(22),
     paddingHorizontal: getResponsiveSize(16), paddingVertical: getResponsiveSize(10),
     maxHeight: getResponsiveSize(120), fontSize: getResponsiveSize(15),
-    borderWidth: 1, borderColor: T.borderSoft,
+    borderWidth: INPUT_BORDER_W, borderColor: T.cyanBorder,
+  },
+  inputFocused: {
+    borderColor: T.cyan,
   },
   sendBtn: {
     width: getResponsiveSize(44), height: getResponsiveSize(44),

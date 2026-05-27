@@ -23,6 +23,8 @@ const REASON_KEYS = [
   "other"
 ];
 
+const INPUT_BORDER_W = Math.max(1, Math.round(getResponsiveSize(1)));
+
 const ReportModal: React.FC<ReportModalProps> = ({
   targetId,
   targetType,
@@ -34,6 +36,7 @@ const ReportModal: React.FC<ReportModalProps> = ({
   const { t } = useTranslation();
   const [reason, setReason] = useState("");
   const [details, setDetails] = useState("");
+  const [isDetailsFocused, setIsDetailsFocused] = useState(false);
   const { submit, loading } = useReport();
 
   const handleSubmit = async () => {
@@ -84,13 +87,15 @@ const ReportModal: React.FC<ReportModalProps> = ({
 
             <Text style={[styles.label, { marginTop: 20 }]}>{t('social.report_details_label')}</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, isDetailsFocused && styles.inputFocused]}
               placeholder={t('social.report_details_placeholder')}
               placeholderTextColor={T.textMuted}
               multiline
               maxLength={200}
               value={details}
               onChangeText={setDetails}
+              onFocus={() => setIsDetailsFocused(true)}
+              onBlur={() => setIsDetailsFocused(false)}
             />
           </ScrollView>
 
@@ -186,8 +191,11 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveSize(14),
     minHeight: 100,
     textAlignVertical: 'top',
-    borderWidth: 1,
-    borderColor: T.borderMid
+    borderWidth: INPUT_BORDER_W,
+    borderColor: T.cyanBorder
+  },
+  inputFocused: {
+    borderColor: T.cyan
   },
   submitBtn: {
     backgroundColor: T.red,

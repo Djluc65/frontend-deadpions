@@ -5,6 +5,10 @@ import { playButtonSound } from '../../utils/soundManager';
 import { getResponsiveSize } from '../../utils/responsive';
 import { modalTheme } from '../../utils/modalTheme';
 import { useTranslation } from 'react-i18next';
+import { T } from '../../utils/theme';
+
+const CYBER_CYAN = '#5BD2FF';
+const CYBER_EDGE = 'rgba(150, 180, 255, 0.18)';
 
 const CreateRoomModal = memo(({
   visible,
@@ -98,7 +102,7 @@ const CreateRoomModal = memo(({
                                 disabled={!canGoPrev}
                                 style={{ padding: getResponsiveSize(5), opacity: !canGoPrev ? 0.3 : 1 }}
                             >
-                                <Ionicons name="remove-circle-outline" size={getResponsiveSize(30)} color="#fff" />
+                                <Ionicons name="remove-circle-outline" size={getResponsiveSize(30)} color={CYBER_CYAN} />
                             </TouchableOpacity>
                             
                             <View style={styles.betDisplay}>
@@ -136,7 +140,7 @@ const CreateRoomModal = memo(({
                                 disabled={!canGoNext}
                                 style={{ padding: getResponsiveSize(5), opacity: !canGoNext ? 0.3 : 1 }}
                             >
-                                <Ionicons name="add-circle-outline" size={getResponsiveSize(30)} color="#fff" />
+                                <Ionicons name="add-circle-outline" size={getResponsiveSize(30)} color={CYBER_CYAN} />
                             </TouchableOpacity>
                         </>
                     );
@@ -211,7 +215,7 @@ const CreateRoomModal = memo(({
                   <Text style={[styles.modalButtonText, styles.modalButtonCancelText]} numberOfLines={1}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalButtonConfirm} onPress={() => { playButtonSound(); handleCreateRoom(); }}>
-                  <Text style={styles.modalButtonText} numberOfLines={1}>{t('common.create')}</Text>
+                  <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]} numberOfLines={1}>{t('common.create')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -228,11 +232,11 @@ const styles = StyleSheet.create({
   friendsModalTitle: modalTheme.title,
   friendsLabel: {
     fontSize: getResponsiveSize(14),
-    color: '#f1c40f',
-    alignSelf: 'center',
-    textAlign: 'center',
+    color: T.textDim,
+    alignSelf: 'flex-start',
     marginBottom: getResponsiveSize(5),
-    fontWeight: 'bold',
+    marginTop: getResponsiveSize(8),
+    fontWeight: '700',
   },
   optionsRow: {
     flexDirection: 'row',
@@ -245,29 +249,29 @@ const styles = StyleSheet.create({
   friendsOptionButton: {
     paddingVertical: getResponsiveSize(8),
     paddingHorizontal: getResponsiveSize(12),
-    borderRadius: getResponsiveSize(10),
-    borderWidth: getResponsiveSize(1),
-    borderColor: 'rgba(241, 196, 15, 0.5)',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: getResponsiveSize(T.radiusSm),
+    borderWidth: 1,
+    borderColor: CYBER_EDGE,
+    backgroundColor: T.bg3,
     marginBottom: getResponsiveSize(4),
   },
   friendsOptionButtonActive: {
-    backgroundColor: '#f1c40f',
-    borderColor: '#f1c40f',
-    shadowColor: '#f1c40f',
+    backgroundColor: CYBER_CYAN,
+    borderColor: CYBER_CYAN,
+    shadowColor: CYBER_CYAN,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
+    shadowOpacity: 0.35,
     shadowRadius: getResponsiveSize(6),
-    elevation: 5,
+    elevation: 4,
   },
   friendsOptionText: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: T.textDim,
     fontSize: getResponsiveSize(12),
-    fontWeight: '500',
+    fontWeight: '600',
   },
   friendsOptionTextActive: {
-    color: '#041c55',
-    fontWeight: 'bold',
+    color: '#05060B',
+    fontWeight: '800',
   },
   modalButtons: {
     flexDirection: 'row',
@@ -296,16 +300,25 @@ const styles = StyleSheet.create({
   modalButtonConfirm: {
     flex: 1,
     ...modalTheme.buttonBase,
-    ...modalTheme.buttonPrimary,
+    backgroundColor: CYBER_CYAN,
+    borderWidth: 1.5,
+    borderColor: CYBER_CYAN,
+    shadowColor: CYBER_CYAN,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: getResponsiveSize(8),
+    elevation: 6,
     alignItems: 'center',
     paddingVertical: getResponsiveSize(10),
   },
   modalButtonText: {
     ...modalTheme.buttonTextBase,
-    ...modalTheme.buttonTextPrimary,
     fontSize: getResponsiveSize(13)
   },
   modalButtonCancelText: modalTheme.buttonTextOnDark,
+  modalButtonTextConfirm: {
+    color: '#05060B',
+  },
   betDisplay: {
     flexDirection: 'row', 
     alignItems: 'center', 
@@ -313,21 +326,21 @@ const styles = StyleSheet.create({
     width: getResponsiveSize(120),
     height: getResponsiveSize(40),
     overflow: 'hidden',
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    borderRadius: getResponsiveSize(20),
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
+    borderRadius: getResponsiveSize(T.radiusPill),
     marginHorizontal: getResponsiveSize(8),
-    borderWidth: getResponsiveSize(1),
-    borderColor: 'rgba(241, 196, 15, 0.3)'
+    borderWidth: 1,
+    borderColor: 'rgba(91, 210, 255, 0.35)'
   },
   prevBetText: {
-    color: '#f1c40f', 
+    color: CYBER_CYAN, 
     fontSize: getResponsiveSize(12), 
     opacity: 0.5, 
     width: getResponsiveSize(60), 
     textAlign: 'center'
   },
   currentBetText: {
-    color: '#f1c40f', 
+    color: CYBER_CYAN, 
     fontSize: getResponsiveSize(18), 
     fontWeight: 'bold', 
     width: getResponsiveSize(100),
@@ -337,7 +350,7 @@ const styles = StyleSheet.create({
     textShadowRadius: getResponsiveSize(10)
   },
   nextBetText: {
-    color: '#f1c40f', 
+    color: CYBER_CYAN, 
     fontSize: getResponsiveSize(12), 
     opacity: 0.5, 
     width: getResponsiveSize(60), 

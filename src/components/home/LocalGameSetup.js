@@ -8,6 +8,9 @@ import { ONLINE_TIME_OPTIONS } from '../../utils/constants';
 import { modalTheme } from '../../utils/modalTheme';
 import { T } from '../../utils/theme';
 
+const CYBER_CYAN = '#5BD2FF';
+const CYBER_EDGE = 'rgba(150, 180, 255, 0.18)';
+
 const LocalGameSetup = memo(({ visible, onClose, navigation }) => {
   const { t } = useTranslation();
   const [step, setStep] = useState(1);
@@ -144,7 +147,7 @@ const LocalGameSetup = memo(({ visible, onClose, navigation }) => {
                                     style={{ position: 'absolute', left: 0, padding: getResponsiveSize(10), zIndex: 10 }}
                                     hitSlop={{ top: getResponsiveSize(15), bottom: getResponsiveSize(15), left: getResponsiveSize(15), right: getResponsiveSize(15) }}
                                 >
-                                    <Ionicons name="arrow-back" size={getResponsiveSize(24)} color={T.gold} />
+                                    <Ionicons name="arrow-back" size={getResponsiveSize(24)} color={CYBER_CYAN} />
                                 </TouchableOpacity>
                                 <Text style={[styles.friendsModalTitle, { marginBottom: 0 }]}>{t('local.config_title')}</Text>
                             </View>
@@ -159,18 +162,18 @@ const LocalGameSetup = memo(({ visible, onClose, navigation }) => {
                                             style={{
                                                 flex: 1,
                                                 paddingVertical: getResponsiveSize(12),
-                                                backgroundColor: localPremierJoueur === opt ? T.gold : T.bg3,
+                                                backgroundColor: localPremierJoueur === opt ? CYBER_CYAN : T.bg3,
                                                 borderRadius: getResponsiveSize(T.radiusSm),
                                                 alignItems: 'center',
                                                 borderWidth: 1,
-                                                borderColor: localPremierJoueur === opt ? T.gold : T.borderSoft
+                                                borderColor: localPremierJoueur === opt ? CYBER_CYAN : CYBER_EDGE
                                             }}
                                             onPress={() => { playButtonSound(); setLocalPremierJoueur(opt); }}
                                         >
                                             <Text style={{
                                                 fontSize: getResponsiveSize(14),
                                                 fontWeight: 'bold',
-                                                color: localPremierJoueur === opt ? '#1B1305' : T.textDim
+                                                color: localPremierJoueur === opt ? '#05060B' : T.textDim
                                             }}>
                                                 {opt === 'joueur1' ? t('game.player1') : opt === 'joueur2' ? t('game.player2') : t('common.random')}
                                             </Text>
@@ -193,11 +196,11 @@ const LocalGameSetup = memo(({ visible, onClose, navigation }) => {
                                             style={{
                                                 flex: 1,
                                                 paddingVertical: getResponsiveSize(12),
-                                                backgroundColor: localCouleurJoueur1 === opt.id ? T.gold : T.bg3,
+                                                backgroundColor: localCouleurJoueur1 === opt.id ? CYBER_CYAN : T.bg3,
                                                 borderRadius: getResponsiveSize(T.radiusSm),
                                                 alignItems: 'center',
                                                 borderWidth: 1,
-                                                borderColor: localCouleurJoueur1 === opt.id ? T.gold : T.borderSoft
+                                                borderColor: localCouleurJoueur1 === opt.id ? CYBER_CYAN : CYBER_EDGE
                                             }}
                                             onPress={() => { playButtonSound(); setLocalCouleurJoueur1(opt.id); }}
                                         >
@@ -205,7 +208,7 @@ const LocalGameSetup = memo(({ visible, onClose, navigation }) => {
                                             <Text style={{
                                                 fontSize: getResponsiveSize(14),
                                                 fontWeight: 'bold',
-                                                color: localCouleurJoueur1 === opt.id ? '#1B1305' : T.textDim
+                                                color: localCouleurJoueur1 === opt.id ? '#05060B' : T.textDim
                                             }}>
                                                 {opt.label}
                                             </Text>
@@ -264,15 +267,20 @@ const styles = StyleSheet.create({
     paddingVertical: getResponsiveSize(6),
     borderRadius: getResponsiveSize(T.radiusPill),
     borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderColor: CYBER_EDGE,
     margin: getResponsiveSize(4),
     backgroundColor: T.bg3,
     minWidth: '10%',
     alignItems: 'center',
   },
   friendsOptionButtonActive: {
-    backgroundColor: T.gold,
-    borderColor: T.gold,
+    backgroundColor: CYBER_CYAN,
+    borderColor: CYBER_CYAN,
+    shadowColor: CYBER_CYAN,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: getResponsiveSize(8),
+    elevation: 6,
   },
   friendsOptionText: {
     color: T.textDim,
@@ -280,7 +288,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   friendsOptionTextActive: {
-    color: '#1B1305',
+    color: '#05060B',
   },
   modalButtons: {
     flexDirection: 'row',
@@ -296,13 +304,21 @@ const styles = StyleSheet.create({
   modalButtonConfirm: {
     flex: 1,
     ...modalTheme.button,
-    ...modalTheme.buttonActive,
+    backgroundColor: CYBER_CYAN,
+    borderColor: CYBER_CYAN,
+    shadowColor: CYBER_CYAN,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: getResponsiveSize(8),
+    elevation: 6,
   },
   modalButtonText: {
     ...modalTheme.buttonText,
     textTransform: 'uppercase'
   },
-  modalButtonTextActive: modalTheme.buttonTextActive,
+  modalButtonTextActive: {
+    color: '#05060B',
+  },
   sectionContainer: {
     width: '100%',
     backgroundColor: T.bg2,

@@ -561,30 +561,9 @@ const evaluateMoveStrategic = (boardMatrix, row, col, player, adversaire) => {
         }
     }
 
-    if (block4 > 0) score += SCORES.WIN; // ATTENTION: block4 ici signifie "L'adversaire aurait eu 4".
-    // Wait.
-    // Si l'adversaire a 3 (X X X .), et je joue ., je bloque son 4.
-    // getSequenceInfo me dit : si l'adversaire joue ., il a 4.
-    // Donc je bloque la CREATION de 4.
-    // Ce n'est PAS "Bloquer une victoire" (Bloquer un 5).
-    // Bloquer un 5 est géré par "len >= 5".
-    
-    // Donc:
-    // len >= 5 -> Adversaire aurait eu 5 -> C'est un blocage de victoire -> SCORES.WIN.
-    // len === 4 -> Adversaire aurait eu 4 -> C'est un blocage de création de 4 -> SCORES.BLOCK_OPEN_3 (car il avait 3 avant).
-    // Mais attendez.
-    // Si l'adversaire a 4 (X X X X .), et je joue ., je bloque son 5.
-    // getSequenceInfo renverra 5 (4+1). -> SCORES.WIN.
-    
-    // Si l'adversaire a 3 (X X X .), et je joue ., je bloque son 4.
-    // getSequenceInfo renverra 4.
-    // Si ce 4 est ouvert (blockedEnds < 2), c'est une menace.
-    // Donc score += SCORES.BLOCK_OPEN_3 (ou plus fort?).
-    // Dans SCORES, BLOCK_OPEN_3 = 20000.
-    // CREATE_4 = 50000.
-    // Donc CREATE_4 > BLOCK_OPEN_3. C'est ce qu'on veut (Attaque > Défense).
-    
-    if (block4 > 0) score += SCORES.BLOCK_OPEN_3; // Correction: block4 ici = Adversaire passe de 3 à 4.
+    // len >= 5 → adversaire aurait eu 5 → déjà compté dans la boucle (SCORES.WIN)
+    // len === 4 → adversaire passerait de 3 à 4 → on bloque cette montée
+    if (block4 > 0) score += SCORES.BLOCK_OPEN_3;
     if (block3 > 0) score += SCORES.BLOCK_2; // Adversaire passe de 2 à 3.
     
     // Blocage de fourchette adverse
@@ -645,6 +624,84 @@ const getBestStrategicMove = (boardMatrix, player, adversaire) => {
     return bestMove;
 };
 
+// ─── RÈGLE 1 : VICTOIRE/BLOCAGE IMMÉDIAT — fenêtre glissante de 5 ────────────
+// Détecte toutes les formes de 4+1 vide dans une fenêtre :
+//   XXXX.  |  .XXXX  |  XX.XX  |  X.XXX  |  XXX.X
+// Remplace findCriticalMove (qui ratait les séquences brisées).
+const findImmediateWin = (boardMatrix, player) => {
+  const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      for (const [dr, dc] of dirs) {
+        let stones = 0, emptyPos = null, ok = true;
+        for (let i = 0; i < 5; i++) {
+          const nr = r + dr*i, nc = c + dc*i;
+          if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) { ok = false; break; }
+          const cell = boardMatrix[nr][nc];
+          if (cell === player) {
+            stones++;
+          } else if (cell === null) {
+            if (emptyPos !== null) { ok = false; break; } // 2e case vide → pas une menace directe
+            emptyPos = { row: nr, col: nc };
+          } else {
+            ok = false; break; // Pion adverse dans la fenêtre → bloqué
+          }
+        }
+        if (ok && stones === 4 && emptyPos) return emptyPos;
+      }
+    }
+  }
+  return null;
+};
+
+// ─── RÈGLE RACING : trouver le meilleur coup d'extension ─────────────────────
+// Cherche la séquence consécutive la plus longue de `player` (>= minLen)
+// avec au moins une extrémité libre, et retourne le coup pour l'allonger.
+// Utilisée pour que l'IA continue d'attaquer quand l'adversaire ignore sa menace.
+const findBestExtendMove = (boardMatrix, player, minLen) => {
+  const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+  let best = null;
+  let bestScore = -1;
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (boardMatrix[r][c] !== player) continue;
+      for (const [dr, dc] of dirs) {
+        // On part du début de la séquence (évite les doublons)
+        const pr = r - dr, pc = c - dc;
+        if (pr >= 0 && pr < ROWS && pc >= 0 && pc < COLS && boardMatrix[pr][pc] === player) continue;
+
+        // Compter la séquence consécutive vers l'avant
+        let seqLen = 0;
+        for (let i = 0; i < 5; i++) {
+          const nr = r + dr*i, nc = c + dc*i;
+          if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) break;
+          if (boardMatrix[nr][nc] === player) seqLen++;
+          else break;
+        }
+        if (seqLen < minLen) continue;
+
+        // Vérifier les extrémités libres
+        const br = r - dr,          bc = c - dc;
+        const ar = r + dr * seqLen, ac = c + dc * seqLen;
+        const openBefore = br >= 0 && br < ROWS && bc >= 0 && bc < COLS && boardMatrix[br][bc] === null;
+        const openAfter  = ar >= 0 && ar < ROWS && ac >= 0 && ac < COLS && boardMatrix[ar][ac] === null;
+        const openEnds = (openBefore ? 1 : 0) + (openAfter ? 1 : 0);
+        if (openEnds === 0) continue; // Séquence morte, inutile de l'étendre
+
+        // Score = longueur * 10 + extrémités ouvertes (favorise les plus longues et les plus ouvertes)
+        const score = seqLen * 10 + openEnds * 3;
+        if (score > bestScore) {
+          bestScore = score;
+          // Priorité à l'extension vers l'avant, sinon vers l'arrière
+          best = openAfter ? { row: ar, col: ac } : { row: br, col: bc };
+        }
+      }
+    }
+  }
+  return bestScore >= 0 ? best : null;
+};
+
 export const calculerCoupIA = (board, difficulte, currentPlayer) => {
   const map = createBoardMap(board);
   const adversaire = currentPlayer === 'black' ? 'white' : 'black';
@@ -664,43 +721,69 @@ export const calculerCoupIA = (board, difficulte, currentPlayer) => {
     }
   }
 
-  // 1. VICTOIRE IMMÉDIATE (Absolu)
-  const winningMove = findCriticalMove(boardMatrix, currentPlayer, 4);
-  if (winningMove) {
-    console.log('🤖 IA joue case gagnante (4 alignés):', winningMove);
-    return winningMove;
+  // ── P1 : VICTOIRE IMMÉDIATE ──────────────────────────────────────────────────
+  // Fenêtre glissante : couvre XXXX. | .XXXX | XX.XX | X.XXX | XXX.X
+  // Si l'IA peut gagner en 1 coup → elle gagne, QUOI QUE fasse l'adversaire.
+  const winMove = findImmediateWin(boardMatrix, currentPlayer);
+  if (winMove) {
+    console.log('🏆 IA gagne immédiatement:', winMove);
+    return winMove;
   }
 
-  // 2. BLOCAGE CRITIQUE (Absolu)
-  const blockingMove = findCriticalMove(boardMatrix, adversaire, 4);
-  if (blockingMove) {
-    console.log('🛡️ IA bloque le joueur (4 alignés):', blockingMove);
-    return blockingMove;
+  // ── P2 : BLOCAGE VICTOIRE ADVERSE ───────────────────────────────────────────
+  // L'adversaire peut gagner en 1 coup → bloquer.
+  // Exception : si P1 avait trouvé quelque chose, ce serait déjà retourné.
+  // Arrivé ici, l'IA n'a PAS de victoire immédiate → elle bloque.
+  const oppWinMove = findImmediateWin(boardMatrix, adversaire);
+  if (oppWinMove) {
+    console.log('🛡️ IA bloque la victoire adverse:', oppWinMove);
+    return oppWinMove;
   }
 
-  // 3. STRATÉGIE OFFENSIVE & DÉFENSIVE (Priorité Absolue via Scoring)
-  // Gère: Create 4 > Create Double > Block Double > Block 3 > etc.
+  // ── P3 : RÈGLE RACING (Règle 1 & 2 utilisateur) ─────────────────────────────
+  // Principe : si l'IA a une séquence active (≥3) et peut créer un 4 menaçant,
+  // elle ATTAQUE plutôt que de bloquer le 3 adverse.
+  //
+  // • Règle 1 : IA a 4 non bloqué + adversaire a aussi 4 → IA gagne (P1 le gère).
+  //             Ce cas est impossible ici (P1 l'aurait capté).
+  // • Règle 2 : IA a 3 + adversaire a 3 (ignore le 3 de l'IA) → IA étend son 3.
+  //             En créant un 4 menaçant, l'adversaire sera FORCÉ de bloquer
+  //             au tour suivant (sinon P1/P2 s'applique), perdant son tempo.
+  if (difficulte !== 'facile') {
+    const extendMove = findBestExtendMove(boardMatrix, currentPlayer, 3);
+    if (extendMove) {
+      // Simuler le coup : est-ce qu'il crée un 4 menaçant (win-in-1 pour le tour suivant) ?
+      boardMatrix[extendMove.row][extendMove.col] = currentPlayer;
+      const createsThreat = findImmediateWin(boardMatrix, currentPlayer) !== null;
+      boardMatrix[extendMove.row][extendMove.col] = null;
+
+      if (createsThreat) {
+        // L'extension crée un 4 que l'adversaire devra bloquer → avantage de tempo
+        console.log('⚡ Racing Rule — IA étend son 3 → crée un 4 menaçant:', extendMove);
+        return extendMove;
+      }
+    }
+  }
+
+  // ── P4 : STRATÉGIE OFFENSIVE & DÉFENSIVE (scoring) ──────────────────────────
   const strategicMove = getBestStrategicMove(boardMatrix, currentPlayer, adversaire);
-  
-  if (strategicMove && strategicMove.score >= SCORES.BLOCK_2) { // Seuil minimal pour un coup stratégique
-      console.log(`🧠 Coup Stratégique (Score: ${strategicMove.score}):`, strategicMove);
-      return strategicMove;
+  if (strategicMove && strategicMove.score >= SCORES.BLOCK_2) {
+    console.log(`🧠 Coup Stratégique (Score: ${strategicMove.score}):`, strategicMove);
+    return strategicMove;
   }
-  
-  // 4. FALLBACK (Heuristiques classiques si aucun coup stratégique fort)
+
+  // ── P5 : FALLBACK Minimax ────────────────────────────────────────────────────
   const pionsAdverses = board.filter(p => p.player === adversaire);
   const modeDefense = pionsAdverses.length >= 1;
-
   const pressionMap = calculerPression(map, adversaire);
   const candidats = obtenirCoupsPertinents(board, map, modeDefense, adversaire);
-  
+
   let profondeur = 3;
   if (difficulte === 'difficile') profondeur = 4;
   if (difficulte === 'moyen') profondeur = 3;
   if (difficulte === 'facile') profondeur = 1;
 
   const topCandidats = candidats.slice(0, 15);
-
   const meilleur = minimax(board, map, profondeur, currentPlayer, -Infinity, Infinity, true, topCandidats, pressionMap);
   return meilleur.coup || candidats[0];
 };

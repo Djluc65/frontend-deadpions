@@ -18,12 +18,15 @@ import { getResponsiveSize } from '../utils/responsive';
 import { T } from '../utils/theme';
 import { useTranslation } from 'react-i18next';
 
+const INPUT_BORDER_W = Math.max(1, Math.round(getResponsiveSize(1)));
+
 const AssistantScreen = ({ navigation }) => {
   const { t } = useTranslation();
   const token = useSelector(state => state.auth.token);
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const flatListRef = useRef(null);
   
   useEffect(() => {
@@ -140,13 +143,15 @@ const AssistantScreen = ({ navigation }) => {
 
         <View style={styles.inputContainer}>
           <TextInput
-            style={styles.input}
+            style={[styles.input, isInputFocused && styles.inputFocused]}
             value={inputText}
             onChangeText={setInputText}
             placeholder={t('assistant.placeholder')}
             placeholderTextColor="#bdc3c7"
             multiline
             maxLength={500}
+            onFocus={() => setIsInputFocused(true)}
+            onBlur={() => setIsInputFocused(false)}
           />
           <TouchableOpacity 
             style={[styles.sendButton, (!inputText.trim() || isLoading) && styles.sendButtonDisabled]} 
@@ -252,9 +257,12 @@ const styles = StyleSheet.create({
     paddingVertical: getResponsiveSize(10),
     marginRight: getResponsiveSize(10),
     maxHeight: getResponsiveSize(100),
-    borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderWidth: INPUT_BORDER_W,
+    borderColor: T.cyanBorder,
     fontSize: getResponsiveSize(15),
+  },
+  inputFocused: {
+    borderColor: T.cyan,
   },
   sendButton: {
     backgroundColor: T.gold,

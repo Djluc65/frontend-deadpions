@@ -4,6 +4,9 @@ import EmojiAnimation from './EmojiAnimation';
 import { emojisDisponibles, getEmojiSource } from '../utils/emojis';
 import { getResponsiveSize } from '../utils/responsive';
 import { useTranslation } from 'react-i18next';
+import { T } from '../utils/theme';
+
+const INPUT_BORDER_W = Math.max(1, Math.round(getResponsiveSize(1)));
 
 const ChatEnLigne = ({ 
   matchId, 
@@ -19,6 +22,7 @@ const ChatEnLigne = ({
   const [messageInput, setMessageInput] = useState('');
   const [emojisPresses, setEmojisPresses] = useState([]);
   const [lastMessageTime, setLastMessageTime] = useState(0);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   
   const scrollViewRef = useRef(null);
   
@@ -147,13 +151,15 @@ const ChatEnLigne = ({
           style={styles.inputContainer}
         >
           <TextInput
-            style={styles.input}
+            style={[styles.input, isInputFocused && styles.inputFocused]}
             value={messageInput}
             onChangeText={setMessageInput}
             placeholder={t('chat.message_placeholder')}
             placeholderTextColor="#9ca3af"
             multiline
             maxLength={200}
+            onFocus={() => setIsInputFocused(true)}
+            onBlur={() => setIsInputFocused(false)}
           />
           <TouchableOpacity
             style={[
@@ -303,7 +309,12 @@ const styles = StyleSheet.create({
     marginRight: getResponsiveSize(8),
     maxHeight: getResponsiveSize(80),
     fontSize: getResponsiveSize(14),
-    color: '#111827'
+    color: '#111827',
+    borderWidth: INPUT_BORDER_W,
+    borderColor: T.cyanBorder,
+  },
+  inputFocused: {
+    borderColor: T.cyan,
   },
   sendButton: {
     width: getResponsiveSize(40),

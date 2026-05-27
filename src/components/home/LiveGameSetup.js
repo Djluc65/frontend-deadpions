@@ -14,6 +14,8 @@ import { T } from '../../utils/theme';
 import { useAdManager } from '../../ads/AdSystem';
 import { consumeLiveRoom, ensureDailyReset, incrementLiveBonus, selectLiveRemaining } from '../../redux/slices/rewardsSlice';
 
+const INPUT_BORDER_W = Math.max(1, Math.round(getResponsiveSize(1)));
+
 const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
     const dispatch = useDispatch();
     const { t } = useTranslation();
@@ -37,6 +39,7 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
     const [tournamentGames, setTournamentGames] = useState(2);
     const [betAmount, setBetAmount] = useState(100);
     const [modeSpectateur, setModeSpectateur] = useState('libre');
+    const [focusedField, setFocusedField] = useState(null);
     
     const [isCreating, setIsCreating] = useState(false);
     const [step, setStep] = useState(1);
@@ -313,19 +316,21 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                     <View style={styles.stepContainer}>
                         <Text style={styles.friendsLabel}>{t('live_room.room_name_label')}</Text>
                         <TextInput
-                            style={styles.input}
+                            style={[styles.input, focusedField === 'nomSalle' && styles.inputFocused]}
                             placeholder={t('live_room.room_name_placeholder')}
                             placeholderTextColor={T.textMuted}
                             value={nomSalle}
                             onChangeText={setNomSalle}
                             maxLength={30}
+                            onFocus={() => setFocusedField('nomSalle')}
+                            onBlur={() => setFocusedField(null)}
                         />
 
                         <View style={styles.switchContainer}>
                             <Text style={styles.switchLabel}>{t('live_room.private_room')}</Text>
                             <Switch
-                                trackColor={{ false: T.bg3, true: T.blue }}
-                                thumbColor={sallePrivee ? T.gold : T.textMuted}
+                                trackColor={{ false: T.bg3, true: T.cyanSoft }}
+                                thumbColor={sallePrivee ? T.cyan : T.textMuted}
                                 onValueChange={setSallePrivee}
                                 value={sallePrivee}
                             />
@@ -333,12 +338,14 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
 
                         {sallePrivee && (
                             <TextInput
-                                style={[styles.input, { marginTop: getResponsiveSize(10) }]}
+                                style={[styles.input, { marginTop: getResponsiveSize(10) }, focusedField === 'motDePasse' && styles.inputFocused]}
                                 placeholder={t('live_room.password_placeholder')}
                                 placeholderTextColor={T.textMuted}
                                 value={motDePasse}
                                 onChangeText={setMotDePasse}
                                 secureTextEntry
+                                onFocus={() => setFocusedField('motDePasse')}
+                                onBlur={() => setFocusedField(null)}
                             />
                         )}
                     </View>
@@ -442,8 +449,8 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                         <View style={styles.switchContainer}>
                             <Text style={styles.switchLabel}>{t('live_room.chat_label')}</Text>
                             <Switch
-                                trackColor={{ false: T.bg3, true: T.blue }}
-                                thumbColor={chatActif ? T.gold : T.textMuted}
+                                trackColor={{ false: T.bg3, true: T.cyanSoft }}
+                                thumbColor={chatActif ? T.cyan : T.textMuted}
                                 onValueChange={setChatActif}
                                 value={chatActif}
                             />
@@ -452,8 +459,8 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                         <View style={styles.switchContainer}>
                             <Text style={styles.switchLabel}>{t('live_room.audio_lobby_label')}</Text>
                             <Switch
-                                trackColor={{ false: T.bg3, true: T.blue }}
-                                thumbColor={audioLobbyActif ? T.gold : T.textMuted}
+                                trackColor={{ false: T.bg3, true: T.cyanSoft }}
+                                thumbColor={audioLobbyActif ? T.cyan : T.textMuted}
                                 onValueChange={setAudioLobbyActif}
                                 value={audioLobbyActif}
                             />
@@ -475,7 +482,7 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                         <Text style={[styles.friendsLabel, { marginTop: getResponsiveSize(14) }]}>
                             {t('live_room.remaining_today_label')}
                         </Text>
-                        <Text style={{ color: T.gold, fontWeight: '900', fontSize: getResponsiveSize(18), marginBottom: getResponsiveSize(6) }}>
+                        <Text style={{ color: T.cyan, fontWeight: '900', fontSize: getResponsiveSize(18), marginBottom: getResponsiveSize(6) }}>
                             {liveRemaining}
                         </Text>
                     </View>
@@ -502,7 +509,7 @@ const LiveGameSetup = memo(({ visible, onClose, navigation, user }) => {
                     {isCreating ? (
                         <View style={{ alignItems: 'center', width: '100%' }}>
                             <Text style={styles.friendsModalTitle}>{t('live_room.creating_title')}</Text>
-                            <ActivityIndicator size="large" color={T.gold} style={{ marginVertical: getResponsiveSize(20) }} />
+                            <ActivityIndicator size="large" color={T.cyan} style={{ marginVertical: getResponsiveSize(20) }} />
                             <Text style={styles.betInfo}>{t('common.loading')}</Text>
                         </View>
                     ) : (
@@ -557,7 +564,7 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase'
     },
     stepIndicator: {
-        color: 'rgba(255, 255, 255, 0.6)',
+        color: T.textDim,
         fontSize: getResponsiveSize(12),
         marginBottom: getResponsiveSize(10),
         fontWeight: '600',
@@ -568,10 +575,10 @@ const styles = StyleSheet.create({
     },
     friendsLabel: {
         fontSize: getResponsiveSize(14),
-        color: '#fff',
+        color: T.textDim,
         marginBottom: getResponsiveSize(8),
         marginTop: getResponsiveSize(8),
-        fontWeight: 'bold',
+        fontWeight: '700',
         alignSelf: 'flex-start',
         marginLeft: getResponsiveSize(10)
     },
@@ -586,20 +593,21 @@ const styles = StyleSheet.create({
         paddingVertical: getResponsiveSize(6),
         borderRadius: getResponsiveSize(20),
         borderWidth: getResponsiveSize(1),
-        borderColor: '#f1c40f',
+        borderColor: T.cyanBorderStrong,
         margin: getResponsiveSize(4),
-        backgroundColor: 'transparent',
+        backgroundColor: 'rgba(10, 14, 28, 0.92)',
     },
     friendsOptionButtonActive: {
-        backgroundColor: '#f1c40f',
+        backgroundColor: T.cyan,
+        borderColor: T.cyan,
     },
     friendsOptionText: {
-        color: '#f1c40f',
+        color: T.textDim,
         fontSize: getResponsiveSize(12),
-        fontWeight: 'bold',
+        fontWeight: '700',
     },
     friendsOptionTextActive: {
-        color: '#0f2350',
+        color: '#05060B',
     },
     modalButtons: {
         flexDirection: 'row',
@@ -632,10 +640,10 @@ const styles = StyleSheet.create({
     },
     modalButtonTextActive: modalTheme.buttonTextActive,
     betInfo: {
-        color: '#fff',
+        color: T.text,
         fontSize: getResponsiveSize(14),
         marginBottom: getResponsiveSize(14),
-        fontWeight: 'bold'
+        fontWeight: '700'
     },
     betDisplay: {
         flexDirection: 'row',
@@ -644,23 +652,23 @@ const styles = StyleSheet.create({
         width: getResponsiveSize(124),
         height: getResponsiveSize(44),
         overflow: 'hidden',
-        backgroundColor: 'rgba(0,0,0,0.3)',
+        backgroundColor: 'rgba(10, 14, 28, 0.92)',
         borderRadius: getResponsiveSize(22),
         marginHorizontal: getResponsiveSize(8),
         borderWidth: 1,
-        borderColor: 'rgba(241, 196, 15, 0.3)'
+        borderColor: T.cyanBorder
     },
     betSmallText: {
-        color: '#f1c40f',
+        color: T.cyan,
         fontSize: getResponsiveSize(12),
         opacity: 0.5,
         width: getResponsiveSize(60),
         textAlign: 'center'
     },
     betMainText: {
-        color: '#f1c40f',
+        color: T.cyan,
         fontSize: getResponsiveSize(18),
-        fontWeight: 'bold',
+        fontWeight: '900',
         width: getResponsiveSize(100),
         textAlign: 'center',
         textShadowColor: 'rgba(0, 0, 0, 0.75)',
@@ -669,14 +677,17 @@ const styles = StyleSheet.create({
     },
     input: {
         width: '95%',
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        borderWidth: 1,
-        borderColor: '#f1c40f',
+        backgroundColor: 'rgba(10, 14, 28, 0.92)',
+        borderWidth: INPUT_BORDER_W,
+        borderColor: T.cyanBorder,
         borderRadius: getResponsiveSize(15),
         padding: getResponsiveSize(10),
-        color: '#fff',
+        color: T.text,
         fontSize: getResponsiveSize(14),
         marginBottom: getResponsiveSize(5),
+    },
+    inputFocused: {
+        borderColor: T.cyan,
     },
     switchContainer: {
         flexDirection: 'row',
@@ -684,14 +695,16 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         width: '90%',
         marginVertical: getResponsiveSize(5),
-        backgroundColor: 'rgba(0,0,0,0.2)',
+        backgroundColor: 'rgba(10, 14, 28, 0.72)',
         padding: getResponsiveSize(8),
         borderRadius: getResponsiveSize(15),
+        borderWidth: 1,
+        borderColor: T.cyanBorder,
     },
     switchLabel: {
-        color: '#fff',
+        color: T.textDim,
         fontSize: getResponsiveSize(14),
-        fontWeight: 'bold',
+        fontWeight: '700',
     }
 });
 

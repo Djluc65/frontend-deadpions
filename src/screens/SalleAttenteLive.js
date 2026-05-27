@@ -487,7 +487,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
             style={[styles.background, { justifyContent: 'center', alignItems: 'center' }]}
           >
               <View style={styles.bgOverlay} pointerEvents="none" />
-              <ActivityIndicator size="large" color="#f1c40f" />
+              <ActivityIndicator size="large" color={T.cyan} />
               <Text style={{ color: '#fff', marginTop: getResponsiveSize(20) }}>{t('live_room.loading_room')}</Text>
           </ImageBackground>
       );
@@ -513,7 +513,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
                 <Text style={styles.liveText}>{t('live_room.status_waiting')}</Text>
             </View>
         </View>
-        <TouchableOpacity onPress={() => { playButtonSound(); handleShare(); }} style={styles.shareButton}>
+        <TouchableOpacity onPress={() => { playButtonSound(); handleShare(); }} style={styles.headerIconButton}>
             <Ionicons name="share-social-outline" size={getResponsiveSize(24)} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -568,10 +568,10 @@ const SalleAttenteLive = ({ route, navigation }) => {
                         <View style={styles.waitingOpponent}>
                             {isCreator ? (
                                 <TouchableOpacity onPress={() => { playButtonSound(); handleOpenInviteModal(); }} style={styles.inviteButton}>
-                                    <View style={[styles.avatarImage, styles.avatarPlaceholder, { borderColor: '#10b981', borderStyle: 'solid', borderWidth: getResponsiveSize(2) }]}>
-                                        <Ionicons name="add" size={getResponsiveSize(32)} color="#10b981" />
+                                    <View style={[styles.avatarImage, styles.avatarPlaceholder, { borderColor: T.cyan, borderStyle: 'solid', borderWidth: getResponsiveSize(2) }]}>
+                                        <Ionicons name="add" size={getResponsiveSize(32)} color={T.cyan} />
                                     </View>
-                                    <Text style={[styles.waitingTextSmall, { color: '#10b981', fontWeight: 'bold', marginTop: getResponsiveSize(4) }]}>{t('live_room.invite')}</Text>
+                                    <Text style={[styles.waitingTextSmall, { color: T.cyan, fontWeight: 'bold', marginTop: getResponsiveSize(4) }]}>{t('live_room.invite')}</Text>
                                 </TouchableOpacity>
                             ) : (
                                 <>
@@ -620,7 +620,7 @@ const SalleAttenteLive = ({ route, navigation }) => {
                                 style={styles.refreshButton}
                                 disabled={!roomId || isGeneratingCode}
                             >
-                                <Ionicons name="refresh" size={getResponsiveSize(20)} color={T.gold} />
+                                <Ionicons name="refresh" size={getResponsiveSize(20)} color={T.cyan} />
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -631,14 +631,14 @@ const SalleAttenteLive = ({ route, navigation }) => {
                 </Text>
 
                 <TouchableOpacity 
-                    style={styles.shareButton} 
+                    style={styles.shareInviteButton} 
                     onPress={() => {
                         playButtonSound();
                         handleShare();
                     }}
                 >
-                    <Ionicons name="share-social-outline" size={getResponsiveSize(20)} color="#1B1305" />
-                    <Text style={styles.shareButtonText}>{t('live_room.share_invite_btn')}</Text>
+                    <Ionicons name="share-social-outline" size={getResponsiveSize(20)} color="#05060B" />
+                    <Text style={styles.shareInviteButtonText}>{t('live_room.share_invite_btn')}</Text>
                 </TouchableOpacity>
 
                 <View style={styles.divider} />
@@ -647,8 +647,8 @@ const SalleAttenteLive = ({ route, navigation }) => {
 
             <View style={styles.paramsGrid}>
                 <View style={styles.paramItem}>
-                    <Ionicons name="cash-outline" size={getResponsiveSize(20)} color="#f1c40f" />
-                    <Text style={[styles.paramText, { color: '#f1c40f' }]}>
+                    <Ionicons name="cash-outline" size={getResponsiveSize(20)} color={T.cyan} />
+                    <Text style={[styles.paramText, { color: T.cyan }]}>
                         {configSalle.parametres.betAmount ? `${configSalle.parametres.betAmount.toLocaleString()} 🪙` : t('matchmaking.bet_free')}
                     </Text>
                 </View>
@@ -741,12 +741,12 @@ const SalleAttenteLive = ({ route, navigation }) => {
                   <View style={styles.modalHeader}>
                       <Text style={styles.modalTitle}>{t('live_room.invite_friend_title')}</Text>
                       <TouchableOpacity onPress={() => setInviteModalVisible(false)} style={styles.closeButton}>
-                          <Ionicons name="close" size={getResponsiveSize(24)} color="#374151" />
+                          <Ionicons name="close" size={getResponsiveSize(24)} color={T.textDim} />
                       </TouchableOpacity>
                   </View>
 
                   {loadingFriends ? (
-                      <ActivityIndicator size="large" color="#4f46e5" style={{ marginVertical: getResponsiveSize(20) }} />
+                      <ActivityIndicator size="large" color={T.cyan} style={{ marginVertical: getResponsiveSize(20) }} />
                   ) : (
                       <FlatList
                           data={friends}
@@ -817,9 +817,9 @@ const styles = StyleSheet.create({
     paddingTop: getResponsiveSize(50),
     paddingHorizontal: getResponsiveSize(20),
     paddingBottom: getResponsiveSize(18),
-    backgroundColor: T.bg1,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
     borderBottomWidth: 1,
-    borderBottomColor: T.borderSoft,
+    borderBottomColor: T.cyanBorder,
   },
   headerTitleContainer: {
     alignItems: 'center',
@@ -858,17 +858,17 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: getResponsiveSize(8),
-    backgroundColor: T.bg2,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
     borderRadius: getResponsiveSize(T.radiusMd),
     borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderColor: T.cyanBorder,
   },
-  shareButton: {
+  headerIconButton: {
     padding: getResponsiveSize(8),
-    backgroundColor: T.bg2,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
     borderRadius: getResponsiveSize(T.radiusMd),
     borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderColor: T.cyanBorder,
   },
   content: {
     flex: 1,
@@ -880,12 +880,12 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   card: {
-    backgroundColor: T.bg2,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
     borderRadius: getResponsiveSize(T.radiusMd),
     padding: getResponsiveSize(18),
     marginBottom: getResponsiveSize(16),
     borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderColor: T.cyanBorder,
     ...T.shadowCard,
   },
   playersContainer: {
@@ -931,7 +931,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderStyle: 'dashed',
-    borderColor: T.borderSoft,
+    borderColor: T.cyanBorder,
   },
   waitingTextSmall: {
     fontSize: getResponsiveSize(12),
@@ -958,14 +958,14 @@ const styles = StyleSheet.create({
     height: getResponsiveSize(60),
     borderRadius: getResponsiveSize(30),
     borderWidth: 2,
-    borderColor: T.border,
+    borderColor: T.cyanBorderStrong,
   },
   flag: {
     position: 'absolute',
     bottom: getResponsiveSize(-2),
     right: getResponsiveSize(-2),
     fontSize: getResponsiveSize(18),
-    backgroundColor: T.bg3,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
     borderRadius: getResponsiveSize(10),
     overflow: 'hidden',
     padding: getResponsiveSize(2),
@@ -982,8 +982,8 @@ const styles = StyleSheet.create({
   },
   level: {
     fontSize: getResponsiveSize(10),
-    color: '#1B1305',
-    backgroundColor: T.gold,
+    color: '#05060B',
+    backgroundColor: T.cyan,
     paddingHorizontal: getResponsiveSize(8),
     paddingVertical: getResponsiveSize(2),
     borderRadius: getResponsiveSize(T.radiusSm),
@@ -992,7 +992,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: T.borderSoft,
+    backgroundColor: T.cyanBorder,
     marginVertical: getResponsiveSize(14),
   },
   paramsGrid: {
@@ -1030,10 +1030,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: getResponsiveSize(36),
-    backgroundColor: T.bg2,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
     borderRadius: getResponsiveSize(T.radiusMd),
     borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderColor: T.cyanBorder,
   },
   emptyStateText: {
     color: T.textMuted,
@@ -1044,11 +1044,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: getResponsiveSize(10),
-    backgroundColor: T.bg2,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
     borderRadius: getResponsiveSize(T.radiusSm),
     marginBottom: getResponsiveSize(8),
     borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderColor: T.cyanBorder,
   },
   specAvatar: {
     fontSize: getResponsiveSize(18),
@@ -1060,9 +1060,9 @@ const styles = StyleSheet.create({
   },
   footer: {
     padding: getResponsiveSize(16),
-    backgroundColor: T.bg1,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
     borderTopWidth: 1,
-    borderTopColor: T.borderSoft,
+    borderTopColor: T.cyanBorder,
   },
   mainButton: {
     backgroundColor: T.red,
@@ -1098,13 +1098,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: T.bg2,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
     width: isTablet ? '50%' : '90%',
     maxHeight: '80%',
     borderRadius: getResponsiveSize(T.radiusMd),
     padding: getResponsiveSize(20),
     borderWidth: 1,
-    borderColor: T.gold,
+    borderColor: T.cyanBorder,
     ...T.shadowCard,
   },
   modalHeader: {
@@ -1113,7 +1113,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: getResponsiveSize(18),
     borderBottomWidth: 1,
-    borderBottomColor: T.borderSoft,
+    borderBottomColor: T.cyanBorder,
     paddingBottom: getResponsiveSize(14),
   },
   modalTitle: {
@@ -1125,10 +1125,10 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: getResponsiveSize(5),
-    backgroundColor: T.bg3,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
     borderRadius: getResponsiveSize(T.radiusSm),
     borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderColor: T.cyanBorder,
   },
   friendItem: {
     flexDirection: 'row',
@@ -1136,7 +1136,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: getResponsiveSize(12),
     borderBottomWidth: 1,
-    borderBottomColor: T.borderSoft,
+    borderBottomColor: T.cyanBorder,
   },
   friendInfo: {
     flexDirection: 'row',
@@ -1150,7 +1150,7 @@ const styles = StyleSheet.create({
     marginRight: getResponsiveSize(12),
     backgroundColor: T.bg3,
     borderWidth: 2,
-    borderColor: T.border,
+    borderColor: T.cyanBorderStrong,
   },
   friendPseudo: {
     fontSize: getResponsiveSize(14),
@@ -1162,15 +1162,15 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveSize(12),
   },
   inviteAction: {
-    backgroundColor: T.green,
+    backgroundColor: T.cyan,
     paddingHorizontal: getResponsiveSize(14),
     paddingVertical: getResponsiveSize(8),
     borderRadius: getResponsiveSize(T.radiusPill),
   },
   inviteActionText: {
-    color: '#fff',
+    color: '#05060B',
     fontSize: getResponsiveSize(12),
-    fontWeight: '700',
+    fontWeight: '800',
     textTransform: 'uppercase',
   },
   friendsListContent: {
@@ -1187,9 +1187,9 @@ const styles = StyleSheet.create({
     paddingVertical: getResponsiveSize(18),
     paddingHorizontal: getResponsiveSize(12),
     borderWidth: 1,
-    borderColor: T.gold,
+    borderColor: T.cyanBorder,
     borderRadius: getResponsiveSize(T.radiusMd),
-    backgroundColor: 'rgba(244,180,26,0.06)',
+    backgroundColor: T.cyanSoft2,
   },
   emptyFriendsIcon: {
     width: getResponsiveSize(52),
@@ -1226,7 +1226,7 @@ const styles = StyleSheet.create({
   inviteSectionTitle: {
     fontSize: getResponsiveSize(14),
     fontWeight: '800',
-    color: T.gold,
+    color: T.cyan,
     marginBottom: getResponsiveSize(16),
     letterSpacing: 0.5,
   },
@@ -1242,6 +1242,8 @@ const styles = StyleSheet.create({
     padding: getResponsiveSize(10),
     backgroundColor: '#fff',
     borderRadius: getResponsiveSize(T.radiusMd),
+    borderWidth: 1,
+    borderColor: T.cyanBorder,
     ...T.shadowCard,
   },
   codeContainer: {
@@ -1263,12 +1265,12 @@ const styles = StyleSheet.create({
   codeText: {
     fontSize: getResponsiveSize(24),
     fontWeight: '900',
-    color: T.text,
+    color: T.cyan,
     letterSpacing: 2,
   },
   refreshButton: {
     padding: getResponsiveSize(6),
-    backgroundColor: 'rgba(244,180,26,0.1)',
+    backgroundColor: T.cyanSoft,
     borderRadius: getResponsiveSize(T.radiusSm),
   },
   inviteHint: {
@@ -1280,8 +1282,8 @@ const styles = StyleSheet.create({
     lineHeight: getResponsiveSize(16),
     paddingHorizontal: getResponsiveSize(30),
   },
-  shareButton: {
-    backgroundColor: T.gold,
+  shareInviteButton: {
+    backgroundColor: T.cyan,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1292,8 +1294,8 @@ const styles = StyleSheet.create({
     gap: getResponsiveSize(10),
     ...T.shadowBtn,
   },
-  shareButtonText: {
-    color: '#1B1305',
+  shareInviteButtonText: {
+    color: '#05060B',
     fontSize: getResponsiveSize(13),
     fontWeight: '800',
     letterSpacing: 0.5,

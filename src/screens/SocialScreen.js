@@ -110,7 +110,7 @@ const SocialScreen = ({ navigation }) => {
     // < 1 min: Yellow with seconds
     if (seconds < 60) {
       return {
-        color: '#f1c40f', // Yellow
+        color: T.cyan,
         text: t('social.last_seen_seconds', { count: Math.max(0, seconds) })
       };
     }
@@ -1064,7 +1064,7 @@ const SocialScreen = ({ navigation }) => {
           {renderSearchBar()}
           
           <View style={styles.contentContainer}>
-            {loading && <ActivityIndicator size="large" color="#f1c40f" style={{ marginTop: getResponsiveSize(20) }} />}
+            {loading && <ActivityIndicator size="large" color={T.cyan} style={{ marginTop: getResponsiveSize(20) }} />}
             {!loading && activeTab === 'discussions' && renderDiscussions()}
             {!loading && activeTab === 'friends' && renderFriends()}
             {!loading && activeTab === 'requests' && renderRequests()}
@@ -1095,7 +1095,7 @@ const SocialScreen = ({ navigation }) => {
                   <View style={styles.addFriendResultsBox}>
                     {friendSearchLoading ? (
                       <View style={styles.addFriendLoadingRow}>
-                        <ActivityIndicator size="small" color={T.gold} />
+                        <ActivityIndicator size="small" color={T.cyan} />
                         <Text style={styles.addFriendLoadingText}>{t('social.searching')}</Text>
                       </View>
                     ) : friendSearchResults.length > 0 ? (
@@ -1117,7 +1117,7 @@ const SocialScreen = ({ navigation }) => {
                                 </Text>
                               )}
                             </View>
-                            <Ionicons name="add-circle" size={getResponsiveSize(22)} color={T.gold} />
+                            <Ionicons name="add-circle" size={getResponsiveSize(22)} color={T.cyan} />
                           </TouchableOpacity>
                         )}
                       />
@@ -1131,7 +1131,7 @@ const SocialScreen = ({ navigation }) => {
                     <Text style={styles.modalButtonText}>{t('common.cancel')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.modalButtonConfirm} onPress={handleSendRequest}>
-                    <Text style={styles.modalButtonText}>{t('social.search_and_add')}</Text>
+                    <Text style={[styles.modalButtonText, styles.modalButtonTextDark]}>{t('social.search_and_add')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1216,7 +1216,7 @@ const SocialScreen = ({ navigation }) => {
                     <Text style={styles.modalButtonText}>{t('common.cancel')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.modalButtonConfirm} onPress={handleSendInvite}>
-                    <Text style={styles.modalButtonText}>{t('common.send')}</Text>
+                    <Text style={[styles.modalButtonText, styles.modalButtonTextDark]}>{t('common.send')}</Text>
                   </TouchableOpacity>
                 </View>
                 </ScrollView>
@@ -1233,9 +1233,9 @@ const SocialScreen = ({ navigation }) => {
           >
             <View style={styles.modalOverlay}>
               <View style={[styles.modalContent, isTablet && styles.modalContentTablet, isDesktop && styles.modalContentDesktop]}>
-                <ActivityIndicator size="large" color="#041c55" style={{ marginBottom: getResponsiveSize(20) }} />
+                <ActivityIndicator size="large" color={T.cyan} style={{ marginBottom: getResponsiveSize(20) }} />
                 <Text style={styles.modalTitle}>{t('social.waiting_for_opponent')}</Text>
-                <Text style={{ textAlign: 'center', marginBottom: getResponsiveSize(20), color: '#666' }}>
+                <Text style={{ textAlign: 'center', marginBottom: getResponsiveSize(20), color: T.textDim }}>
                   {t('social.game_starts_when_accepted', { name: selectedFriend?.name || t('social.friend') })}
                 </Text>
 
@@ -1270,7 +1270,7 @@ const SocialScreen = ({ navigation }) => {
                     <Text style={styles.modalButtonText}>{t('social.decline')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.modalButtonConfirm} onPress={handleAcceptInvite}>
-                    <Text style={styles.modalButtonText}>{t('social.accept')}</Text>
+                    <Text style={[styles.modalButtonText, styles.modalButtonTextDark]}>{t('social.accept')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1352,7 +1352,7 @@ const styles = StyleSheet.create({
     marginBottom: getResponsiveSize(18),
   },
   loginGateBtn: {
-    backgroundColor: T.gold,
+    backgroundColor: T.cyan,
     paddingVertical: getResponsiveSize(13),
     paddingHorizontal: getResponsiveSize(24),
     borderRadius: getResponsiveSize(T.radiusMd),
@@ -1364,7 +1364,7 @@ const styles = StyleSheet.create({
     minWidth: getResponsiveSize(220),
   },
   loginGateBtnText: {
-    color: '#1B1305',
+    color: '#05060B',
     fontWeight: '800',
     fontSize: getResponsiveSize(14),
     textTransform: 'uppercase',
@@ -1382,12 +1382,12 @@ const styles = StyleSheet.create({
   coinContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: T.bg2,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
     paddingHorizontal: getResponsiveSize(12),
     paddingVertical: getResponsiveSize(6),
     borderRadius: getResponsiveSize(T.radiusPill),
     borderWidth: 1,
-    borderColor: T.border,
+    borderColor: T.cyanBorder,
   },
   coinIcon: {
     fontSize: getResponsiveSize(14),
@@ -1403,11 +1403,11 @@ const styles = StyleSheet.create({
     gap: getResponsiveSize(8),
   },
   iconButton: {
-    backgroundColor: T.bg2,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
     padding: getResponsiveSize(8),
     borderRadius: getResponsiveSize(T.radiusMd),
     borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderColor: T.cyanBorder,
   },
 
   // Tabs
@@ -1416,7 +1416,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSize(10),
     marginBottom: getResponsiveSize(8),
     borderBottomWidth: 1,
-    borderBottomColor: T.borderSoft,
+    borderBottomColor: T.cyanBorder,
     backgroundColor: 'rgba(5,9,15,0.4)', // Légère transparence pour voir le fond
   },
   tab: {
@@ -1429,7 +1429,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   activeTab: {
-    borderBottomColor: T.gold,
+    borderBottomColor: T.cyan,
   },
   tabText: {
     color: T.textMuted,
@@ -1459,14 +1459,14 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: T.bg2,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
     marginHorizontal: getResponsiveSize(14),
     borderRadius: getResponsiveSize(T.radiusMd),
     paddingHorizontal: getResponsiveSize(12),
     marginBottom: getResponsiveSize(12),
     height: getResponsiveSize(42),
     borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderColor: T.cyanBorder,
   },
   searchIcon: {
     marginRight: getResponsiveSize(10),
@@ -1497,13 +1497,13 @@ const styles = StyleSheet.create({
   // Chat Item
   chatItem: {
     flexDirection: 'row',
-    backgroundColor: T.bg2,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
     padding: getResponsiveSize(12),
     borderRadius: getResponsiveSize(T.radiusMd),
     marginBottom: getResponsiveSize(8),
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderColor: T.cyanBorder,
   },
   avatar: {
     width: getResponsiveSize(40),
@@ -1511,7 +1511,7 @@ const styles = StyleSheet.create({
     borderRadius: getResponsiveSize(20),
     marginRight: getResponsiveSize(12),
     borderWidth: 1,
-    borderColor: T.border,
+    borderColor: T.cyanBorderStrong,
   },
   avatarTablet: {
     width: getResponsiveSize(48),
@@ -1549,7 +1549,7 @@ const styles = StyleSheet.create({
   unreadChatItem: {
     backgroundColor: T.bg3,
     borderLeftWidth: 3,
-    borderLeftColor: T.blue,
+    borderLeftColor: T.cyan,
   },
   unreadChatName: {
     color: T.text,
@@ -1563,7 +1563,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   unreadBadge: {
-    backgroundColor: T.blue,
+    backgroundColor: T.cyan,
     borderRadius: getResponsiveSize(10),
     width: getResponsiveSize(20),
     height: getResponsiveSize(20),
@@ -1588,14 +1588,14 @@ const styles = StyleSheet.create({
   // Friend Item
   friendItem: {
     flexDirection: 'row',
-    backgroundColor: T.bg2,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
     padding: getResponsiveSize(12),
     borderRadius: getResponsiveSize(T.radiusMd),
     marginBottom: getResponsiveSize(8),
     alignItems: 'center',
     minHeight: getResponsiveSize(64),
     borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderColor: T.cyanBorder,
   },
   friendItemTablet: {
     flex: 1,
@@ -1614,7 +1614,7 @@ const styles = StyleSheet.create({
     height: getResponsiveSize(11),
     borderRadius: getResponsiveSize(6),
     borderWidth: 2,
-    borderColor: T.bg2,
+    borderColor: 'rgba(10, 14, 28, 0.92)',
   },
   friendInfo: {
     flex: 1,
@@ -1633,7 +1633,7 @@ const styles = StyleSheet.create({
     backgroundColor: T.bg3,
     borderRadius: getResponsiveSize(T.radiusMd),
     borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderColor: T.cyanBorder,
   },
   lastSeen: {
     color: T.textMuted,
@@ -1643,7 +1643,7 @@ const styles = StyleSheet.create({
 
   // Request Item
   sectionTitle: {
-    color: T.gold,
+    color: T.cyan,
     fontSize: getResponsiveSize(12),
     fontWeight: '800',
     marginBottom: getResponsiveSize(8),
@@ -1653,13 +1653,13 @@ const styles = StyleSheet.create({
   },
   requestItem: {
     flexDirection: 'row',
-    backgroundColor: T.bg2,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
     padding: getResponsiveSize(12),
     borderRadius: getResponsiveSize(T.radiusMd),
     marginBottom: getResponsiveSize(8),
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderColor: T.cyanBorder,
   },
   requestInfo: {
     flex: 1,
@@ -1715,12 +1715,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: T.bg2,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
     padding: getResponsiveSize(20),
     borderRadius: getResponsiveSize(T.radiusLg),
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: T.border,
+    borderColor: T.cyanBorder,
     ...T.shadowCard,
     width: '85%',
   },
@@ -1745,7 +1745,7 @@ const styles = StyleSheet.create({
   modalInput: {
     width: '100%',
     borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderColor: T.cyanBorder,
     borderRadius: getResponsiveSize(T.radiusMd),
     padding: getResponsiveSize(12),
     marginBottom: getResponsiveSize(18),
@@ -1761,28 +1761,34 @@ const styles = StyleSheet.create({
     paddingVertical: getResponsiveSize(11),
     paddingHorizontal: getResponsiveSize(20),
     borderRadius: getResponsiveSize(T.radiusMd),
-    backgroundColor: T.bg3,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
     borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderColor: T.cyanBorder,
   },
   modalButtonConfirm: {
     paddingVertical: getResponsiveSize(11),
     paddingHorizontal: getResponsiveSize(20),
     borderRadius: getResponsiveSize(T.radiusMd),
-    backgroundColor: T.gold,
+    backgroundColor: T.cyan,
+    borderWidth: 1.5,
+    borderColor: T.cyan,
   },
   modalButtonText: {
     color: T.text,
     fontWeight: '700',
   },
+  modalButtonTextDark: {
+    color: '#05060B',
+    fontWeight: '800',
+  },
   addFriendResultsBox: {
     width: '100%',
     marginTop: getResponsiveSize(10),
     marginBottom: getResponsiveSize(14),
-    backgroundColor: T.bg3,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
     borderRadius: getResponsiveSize(T.radiusMd),
     borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderColor: T.cyanBorder,
     maxHeight: getResponsiveSize(220),
     overflow: 'hidden',
   },
@@ -1809,7 +1815,7 @@ const styles = StyleSheet.create({
     paddingVertical: getResponsiveSize(10),
     paddingHorizontal: getResponsiveSize(12),
     borderBottomWidth: 1,
-    borderBottomColor: T.borderSoft,
+    borderBottomColor: T.cyanBorder,
     gap: getResponsiveSize(10),
   },
   addFriendResultAvatar: {
@@ -1817,8 +1823,8 @@ const styles = StyleSheet.create({
     height: getResponsiveSize(34),
     borderRadius: getResponsiveSize(17),
     borderWidth: 1,
-    borderColor: T.border,
-    backgroundColor: T.bg2,
+    borderColor: T.cyanBorderStrong,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
   },
   addFriendResultInfo: {
     flex: 1,
@@ -1857,19 +1863,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSize(14),
     borderRadius: getResponsiveSize(T.radiusMd),
     borderWidth: 1,
-    borderColor: T.border,
-    backgroundColor: T.bg3,
+    borderColor: T.cyanBorder,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
   },
   optionButtonActive: {
-    backgroundColor: T.gold,
-    borderColor: T.gold,
+    backgroundColor: T.cyan,
+    borderColor: T.cyan,
   },
   optionText: {
     color: T.textDim,
     fontWeight: '600',
   },
   optionTextActive: {
-    color: '#1B1305',
+    color: '#05060B',
     fontWeight: '800',
   },
   inviteDetails: {
@@ -1884,15 +1890,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 10,
-    backgroundColor: T.bg2,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
     marginHorizontal: 20,
     marginTop: 10,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderColor: T.cyanBorder,
   },
   showBlockedText: {
-    color: T.gold,
+    color: T.cyan,
     fontSize: getResponsiveSize(14),
     fontWeight: 'bold',
     marginLeft: 8,

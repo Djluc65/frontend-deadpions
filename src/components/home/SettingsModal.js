@@ -46,8 +46,8 @@ const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
           <View style={styles.settingRow}>
             <Text style={styles.settingText}>{t('settings.music')}</Text>
             <Switch
-              trackColor={{ false: T.bg3, true: T.blue }}
-              thumbColor={settings.isMusicEnabled ? "#f5dd4b" : "#f4f3f4"}
+              trackColor={{ false: T.bg3, true: '#5BD2FF' }}
+              thumbColor={settings.isMusicEnabled ? '#fff' : '#8090B5'}
               onValueChange={() => {
                 handlePlaySound();
                 dispatch(toggleMusic());
@@ -59,8 +59,8 @@ const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
           <View style={styles.settingRow}>
             <Text style={styles.settingText}>{t('settings.sound')}</Text>
             <Switch
-              trackColor={{ false: T.bg3, true: T.blue }}
-              thumbColor={settings.isSoundEnabled ? "#f5dd4b" : "#f4f3f4"}
+              trackColor={{ false: T.bg3, true: '#5BD2FF' }}
+              thumbColor={settings.isSoundEnabled ? '#fff' : '#8090B5'}
               onValueChange={() => {
                 playButtonSound();
                 dispatch(toggleSound());
@@ -94,8 +94,8 @@ const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
           <View style={styles.settingRow}>
             <Text style={styles.settingText}>{t('settings.chat_enabled')}</Text>
             <Switch
-              trackColor={{ false: T.bg3, true: T.blue }}
-              thumbColor={settings.isChatEnabled ? "#f5dd4b" : "#f4f3f4"}
+              trackColor={{ false: T.bg3, true: '#5BD2FF' }}
+              thumbColor={settings.isChatEnabled ? '#fff' : '#8090B5'}
               onValueChange={() => {
                 playButtonSound();
                 dispatch(toggleChat());
@@ -134,7 +134,7 @@ const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
               navigation.navigate('Info');
             }}
           >
-            <Ionicons name="information-circle-outline" size={getResponsiveSize(24)} color={T.gold} />
+            <Ionicons name="information-circle-outline" size={getResponsiveSize(24)} color={T.cyan} />
             <Text style={styles.infoButtonText}>{t('settings.about_rules')}</Text>
           </TouchableOpacity>
 
@@ -146,7 +146,7 @@ const SettingsModal = memo(({ visible, onClose, handlePlaySound }) => {
                 showPrivacyOptions?.();
               }}
             >
-              <Ionicons name="shield-checkmark-outline" size={getResponsiveSize(24)} color={T.gold} />
+              <Ionicons name="shield-checkmark-outline" size={getResponsiveSize(24)} color={T.cyan} />
               <Text style={styles.infoButtonText}>{t('settings.ads_privacy')}</Text>
             </TouchableOpacity>
           )}
@@ -201,14 +201,19 @@ const styles = StyleSheet.create({
     padding: getResponsiveSize(8),
     borderRadius: getResponsiveSize(T.radiusSm),
     borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderColor: 'rgba(150, 180, 255, 0.18)',
     backgroundColor: T.bg3,
     width: '48%',
     alignItems: 'center',
   },
   langButtonActive: {
-    backgroundColor: T.gold,
-    borderColor: T.gold,
+    backgroundColor: '#5BD2FF',
+    borderColor: '#5BD2FF',
+    shadowColor: '#5BD2FF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: getResponsiveSize(6),
+    elevation: 4,
   },
   langText: {
     color: T.textDim,
@@ -216,7 +221,7 @@ const styles = StyleSheet.create({
     fontSize: getResponsiveSize(13),
   },
   langTextActive: {
-    color: '#1B1305',
+    color: '#05060B',
   },
   infoButton: {
     flexDirection: 'row',
@@ -224,11 +229,11 @@ const styles = StyleSheet.create({
     marginBottom: getResponsiveSize(18),
     padding: getResponsiveSize(10),
     borderWidth: 1,
-    borderColor: T.border,
+    borderColor: 'rgba(150, 180, 255, 0.18)',
     borderRadius: getResponsiveSize(T.radiusMd),
     width: '100%',
     justifyContent: 'center',
-    backgroundColor: 'rgba(244,180,26,0.06)',
+    backgroundColor: 'rgba(91, 210, 255, 0.06)',
   },
   infoButtonText: {
     color: T.text,
@@ -261,6 +266,8 @@ const styles = StyleSheet.create({
     backgroundColor: T.bg3,
     borderRadius: 12,
     padding: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(150, 180, 255, 0.12)',
   },
   privacyBtn: {
     flex: 1,
@@ -271,7 +278,12 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   privacyBtnActive: {
-    backgroundColor: T.gold,
+    backgroundColor: '#5BD2FF',
+    shadowColor: '#5BD2FF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   privacyBtnText: {
     color: T.textDim,
@@ -280,7 +292,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   privacyBtnTextActive: {
-    color: T.bg0,
+    color: '#05060B',
     fontWeight: 'bold',
   },
 });

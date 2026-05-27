@@ -81,6 +81,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
               onChangeText={setEmail} 
               keyboardType="email-address"
               autoCapitalize="none"
+              innerStyle={{ backgroundColor: '#05060B' }}
             />
           
             <Button 

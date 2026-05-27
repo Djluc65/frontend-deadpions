@@ -107,8 +107,8 @@ const LiveListScreen = () => {
                       {item.status === 'waiting' ? t('live_list.status_waiting') : t('live_list.status_live')}
                   </Text>
               </View>
-              <View style={[styles.badge, { backgroundColor: item.betAmount > 0 ? 'rgba(241, 196, 15, 0.1)' : 'rgba(59, 130, 246, 0.1)', borderColor: item.betAmount > 0 ? '#f1c40f' : '#3b82f6', borderWidth: getResponsiveSize(1) }]}>
-                  <Text style={[styles.badgeText, { color: item.betAmount > 0 ? '#f1c40f' : '#3b82f6' }]}>
+              <View style={[styles.badge, { backgroundColor: item.betAmount > 0 ? T.goldSoft : T.cyanSoft, borderColor: item.betAmount > 0 ? T.gold : T.cyan, borderWidth: getResponsiveSize(1) }]}>
+                  <Text style={[styles.badgeText, { color: item.betAmount > 0 ? T.gold : T.cyan }]}>
                       {item.betAmount > 0 ? `${item.betAmount} 💰` : t('live_list.friendly')}
                   </Text>
               </View>
@@ -276,13 +276,13 @@ const styles = StyleSheet.create({
     paddingVertical: getResponsiveSize(6),
     paddingHorizontal: getResponsiveSize(14),
     borderRadius: getResponsiveSize(T.radiusPill),
-    backgroundColor: T.bg2,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
     borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderColor: T.cyanBorder,
   },
   filterChipActive: {
-    backgroundColor: T.red,
-    borderColor: T.red,
+    backgroundColor: T.cyanSoft,
+    borderColor: T.cyan,
   },
   filterText: {
     color: T.textDim,
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   filterTextActive: {
-    color: '#fff',
+    color: T.cyan,
     fontWeight: '800',
   },
   listContent: {
@@ -316,12 +316,12 @@ const styles = StyleSheet.create({
     gap: getResponsiveSize(14),
   },
   card: {
-    backgroundColor: T.bg2,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
     borderRadius: getResponsiveSize(T.radiusMd),
     padding: getResponsiveSize(14),
     marginBottom: getResponsiveSize(14),
     borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderColor: T.cyanBorder,
     ...T.shadowCard,
     flex: 1,
   },
@@ -343,9 +343,9 @@ const styles = StyleSheet.create({
     borderRadius: getResponsiveSize(T.radiusSm),
   },
   badgeWaiting: {
-    backgroundColor: 'rgba(244,180,26,0.15)',
+    backgroundColor: T.cyanSoft,
     borderWidth: 1,
-    borderColor: T.gold,
+    borderColor: T.cyan,
   },
   badgeLive: {
     backgroundColor: 'rgba(230,57,70,0.15)',
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     borderRadius: getResponsiveSize(25),
     marginBottom: getResponsiveSize(8),
     borderWidth: 2,
-    borderColor: T.border,
+    borderColor: T.cyanBorderStrong,
   },
   playerName: {
     fontSize: getResponsiveSize(13),
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
     marginBottom: getResponsiveSize(12),
   },
   joinButton: {
-    backgroundColor: T.bg3,
+    backgroundColor: 'rgba(10, 14, 28, 0.92)',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -425,12 +425,12 @@ const styles = StyleSheet.create({
     borderRadius: getResponsiveSize(T.radiusMd),
     gap: getResponsiveSize(8),
     borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderColor: T.cyanBorder,
   },
   joinButtonActive: {
-    backgroundColor: T.blue,
-    borderColor: T.blue,
-    shadowColor: T.blue,
+    backgroundColor: T.cyan,
+    borderColor: T.cyan,
+    shadowColor: T.cyan,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
     shadowRadius: 6,

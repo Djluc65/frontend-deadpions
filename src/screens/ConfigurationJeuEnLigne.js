@@ -180,11 +180,11 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
                                     borderRadius: getResponsiveSize(T.radiusPill),
                                     marginHorizontal: getResponsiveSize(10),
                                     borderWidth: 1,
-                                    borderColor: T.border,
+                                    borderColor: T.cyanBorder,
                                 }}>
                                     <Text
                                         style={{
-                                            color: T.gold,
+                                            color: T.cyan,
                                             fontSize: getResponsiveSize(14),
                                             opacity: 0.45,
                                             width: getResponsiveSize(70),
@@ -198,7 +198,7 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
 
                                     <Text
                                         style={{
-                                            color: T.gold,
+                                            color: T.cyan,
                                             fontSize: getResponsiveSize(22),
                                             fontWeight: '900',
                                             width: getResponsiveSize(120),
@@ -213,7 +213,7 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
 
                                     <Text
                                         style={{
-                                            color: T.gold,
+                                            color: T.cyan,
                                             fontSize: getResponsiveSize(14),
                                             opacity: 0.45,
                                             width: getResponsiveSize(70),
@@ -268,7 +268,7 @@ const ConfigurationJeuEnLigne = ({ navigation }) => {
           </View>
         ) : (
           <View style={styles.waitingContainer}>
-            <ActivityIndicator size="large" color="#f1c40f" />
+            <ActivityIndicator size="large" color={T.cyan} />
             <Text style={styles.waitingText}>{t('matchmaking.searching')}</Text>
             <Text style={styles.timerText}>{tempsRestant}s</Text>
             <Text style={styles.infoText}>{t('game.bet_amount', { amount: montantPari.toLocaleString() })}</Text>
@@ -321,10 +321,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSize(12),
     borderRadius: getResponsiveSize(T.radiusPill),
     borderWidth: 1,
-    borderColor: T.border,
+    borderColor: T.cyanBorder,
   },
   coinText: {
-    color: T.gold,
+    color: T.cyan,
     fontWeight: '800',
     fontSize: getResponsiveSize(14),
   },
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: getResponsiveSize(14),
-    color: T.gold,
+    color: T.cyan,
     alignSelf: 'flex-start',
     marginBottom: getResponsiveSize(10),
     fontWeight: '800',
@@ -359,8 +359,8 @@ const styles = StyleSheet.create({
     marginBottom: getResponsiveSize(8),
   },
   selectedBet: {
-    backgroundColor: T.gold,
-    borderColor: T.gold,
+    backgroundColor: T.cyan,
+    borderColor: T.cyan,
   },
   disabledBet: {
     opacity: 0.4,
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   selectedBetText: {
-    color: '#1B1305',
+    color: '#05060B',
     fontWeight: '800',
   },
   disabledBetText: {
@@ -430,11 +430,11 @@ const styles = StyleSheet.create({
     padding: getResponsiveSize(20),
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: T.border,
+    borderColor: T.cyanBorder,
     ...T.shadowCard,
   },
   timerText: {
-    color: T.gold,
+    color: T.cyan,
     fontSize: getResponsiveSize(40),
     fontWeight: '900',
     marginVertical: getResponsiveSize(18),

@@ -34,6 +34,8 @@ const CustomAlert = ({ visible, title, message, buttons = [], onClose, dismissOn
           ]}
           onPress={() => {}}
         >
+            {/* Barre d'accent cyan en haut de la carte */}
+            <View style={styles.accentLine} />
             <View style={styles.body}>
               <Text style={styles.alertTitle}>{title}</Text>
               <Text style={styles.alertMessage}>{message}</Text>
@@ -85,6 +87,20 @@ const styles = StyleSheet.create({
     ...modalTheme.card,
     maxWidth: getResponsiveSize(460),
     minWidth: getResponsiveSize(280),
+    overflow: 'hidden',
+  },
+  // Filet cyan lumineux en haut de la carte (identique aux CyberCards de HomeScreen)
+  accentLine: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: getResponsiveSize(3),
+    backgroundColor: '#5BD2FF',
+    shadowColor: '#5BD2FF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: getResponsiveSize(6),
   },
   body: {
     width: '100%',

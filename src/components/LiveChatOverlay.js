@@ -5,8 +5,10 @@ import EmojiAnimation from './EmojiAnimation';
 import { getEmojiSource } from '../utils/emojis';
 import { getResponsiveSize, SCREEN_WIDTH } from '../utils/responsive';
 import { useTranslation } from 'react-i18next';
+import { T } from '../utils/theme';
 
 const width = SCREEN_WIDTH;
+const INPUT_BORDER_W = Math.max(1, Math.round(getResponsiveSize(1)));
 
 const LiveChatOverlay = ({ 
     messages, 
@@ -23,6 +25,7 @@ const LiveChatOverlay = ({
     const [inputText, setInputText] = useState('');
     const [floatingReactions, setFloatingReactions] = useState([]);
     const [showReactions, setShowReactions] = useState(false);
+    const [isInputFocused, setIsInputFocused] = useState(false);
     const flatListRef = useRef(null);
     const reactionIdCounter = useRef(0);
 
@@ -136,7 +139,7 @@ const LiveChatOverlay = ({
                     </View>
                 )}
 
-                <View style={styles.inputBar}>
+                <View style={[styles.inputBar, isInputFocused && styles.inputBarFocused]}>
                     <TouchableOpacity 
                         onPress={() => setShowReactions(!showReactions)} 
                         style={styles.emojiButton}
@@ -151,6 +154,8 @@ const LiveChatOverlay = ({
                         placeholder={t('chat.message_placeholder')}
                         placeholderTextColor="#ccc"
                         onSubmitEditing={handleSend}
+                        onFocus={() => setIsInputFocused(true)}
+                        onBlur={() => setIsInputFocused(false)}
                     />
                     
                     <TouchableOpacity onPress={handleSend} style={styles.sendButton}>
@@ -263,8 +268,11 @@ const styles = StyleSheet.create({
         borderRadius: getResponsiveSize(25),
         paddingHorizontal: getResponsiveSize(10),
         paddingVertical: getResponsiveSize(5),
-        borderWidth: getResponsiveSize(1),
-        borderColor: 'rgba(255,255,255,0.2)',
+        borderWidth: INPUT_BORDER_W,
+        borderColor: T.cyanBorder,
+    },
+    inputBarFocused: {
+        borderColor: T.cyan,
     },
     input: {
         flex: 1,

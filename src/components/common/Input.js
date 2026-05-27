@@ -4,12 +4,15 @@ import AnimatedSearchBar from '../ui/AnimatedSearchBar';
 import { getResponsiveSize } from '../../utils/responsive';
 import { T } from '../../utils/theme';
 
+const INPUT_BORDER_W = Math.max(1, Math.round(getResponsiveSize(1)));
+
 const Input = ({
   value,
   onChangeText,
   placeholder,
   secureTextEntry,
   style,
+  innerStyle,
   containerStyle,
   keyboardType,
   autoCapitalize,
@@ -40,7 +43,7 @@ const Input = ({
         rightIconName={isPasswordVisible ? 'eye-off-outline' : 'eye-outline'}
         rightIconColor={T.textMuted}
         onRightIconPress={secureTextEntry ? () => setIsPasswordVisible(v => !v) : undefined}
-        innerStyle={[styles.inner, isFocused && styles.innerFocused]}
+        innerStyle={[styles.inner, isFocused && styles.innerFocused, innerStyle]}
         inputStyle={[styles.input, style]}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
@@ -57,9 +60,12 @@ const styles = StyleSheet.create({
   },
   inner: {
     backgroundColor: T.bg2,
+    borderWidth: INPUT_BORDER_W,
+    borderColor: T.cyanBorder,
   },
   innerFocused: {
     backgroundColor: T.bg3,
+    borderColor: T.cyan,
   },
   input: {
     fontSize: getResponsiveSize(15),

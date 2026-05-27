@@ -235,7 +235,7 @@ const RewardsModal = memo(({ visible, onClose }) => {
           </View>
 
           <ScrollView style={{ width: '100%' }} contentContainerStyle={{ paddingTop: getResponsiveSize(14), gap: getResponsiveSize(12) }}>
-            <View style={{ width: '100%', backgroundColor: T.bg3, borderRadius: getResponsiveSize(T.radiusMd), padding: getResponsiveSize(14), borderWidth: 1, borderColor: T.borderSoft }}>
+            <View style={{ width: '100%', backgroundColor: T.bg3, borderRadius: getResponsiveSize(T.radiusMd), padding: getResponsiveSize(14), borderWidth: 1, borderColor: 'rgba(150, 180, 255, 0.18)' }}>
               <Text style={{ color: T.text, fontWeight: '900', marginBottom: getResponsiveSize(6) }}>{t('rewards.share_title')}</Text>
               <Text style={{ color: T.textDim, marginBottom: getResponsiveSize(10) }}>
                 {t('rewards.share_desc', { amount: 50 })}
@@ -250,7 +250,7 @@ const RewardsModal = memo(({ visible, onClose }) => {
                 ]}
               >
                 {busyKey === 'share' ? (
-                  <ActivityIndicator color={shareClaimed ? T.text : '#1B1305'} />
+                  <ActivityIndicator color={shareClaimed ? T.text : '#05060B'} />
                 ) : (
                   <Text style={[modalTheme.buttonText, !shareClaimed ? modalTheme.buttonTextActive : null]}>
                     {shareClaimed ? t('rewards.share_claimed') : t('rewards.share_button', { amount: 50 })}
@@ -259,7 +259,7 @@ const RewardsModal = memo(({ visible, onClose }) => {
               </TouchableOpacity>
             </View>
 
-            <View style={{ width: '100%', backgroundColor: T.bg3, borderRadius: getResponsiveSize(T.radiusMd), padding: getResponsiveSize(14), borderWidth: 1, borderColor: T.borderSoft }}>
+            <View style={{ width: '100%', backgroundColor: T.bg3, borderRadius: getResponsiveSize(T.radiusMd), padding: getResponsiveSize(14), borderWidth: 1, borderColor: 'rgba(150, 180, 255, 0.18)' }}>
               <Text style={{ color: T.text, fontWeight: '900', marginBottom: getResponsiveSize(6) }}>{t('rewards.premium_title')}</Text>
               <Text style={{ color: T.textDim, marginBottom: getResponsiveSize(10) }}>
                 {t('rewards.premium_desc', { required: premium.required || 3 })}
@@ -284,7 +284,7 @@ const RewardsModal = memo(({ visible, onClose }) => {
                 ]}
               >
                 {busyKey === 'premium' ? (
-                  <ActivityIndicator color={hasTempPremium ? T.text : '#1B1305'} />
+                  <ActivityIndicator color={hasTempPremium ? T.text : '#05060B'} />
                 ) : (
                   <Text style={[modalTheme.buttonText, !hasTempPremium ? modalTheme.buttonTextActive : null]}>
                     {hasTempPremium ? t('rewards.already_active') : t('rewards.watch_video')}
@@ -293,7 +293,7 @@ const RewardsModal = memo(({ visible, onClose }) => {
               </TouchableOpacity>
             </View>
 
-            <View style={{ width: '100%', backgroundColor: T.bg3, borderRadius: getResponsiveSize(T.radiusMd), padding: getResponsiveSize(14), borderWidth: 1, borderColor: T.borderSoft }}>
+            <View style={{ width: '100%', backgroundColor: T.bg3, borderRadius: getResponsiveSize(T.radiusMd), padding: getResponsiveSize(14), borderWidth: 1, borderColor: 'rgba(150, 180, 255, 0.18)' }}>
               <Text style={{ color: T.text, fontWeight: '900', marginBottom: getResponsiveSize(6) }}>{t('rewards.hard_ai_title')}</Text>
               <Text style={{ color: T.textDim, marginBottom: getResponsiveSize(10) }}>
                 {t('rewards.hard_ai_desc')}
@@ -313,7 +313,7 @@ const RewardsModal = memo(({ visible, onClose }) => {
                 ]}
               >
                 {busyKey === 'hard_ai' ? (
-                  <ActivityIndicator color={hardAiActive ? T.text : '#1B1305'} />
+                  <ActivityIndicator color={hardAiActive ? T.text : '#05060B'} />
                 ) : (
                   <Text style={[modalTheme.buttonText, !hardAiActive ? modalTheme.buttonTextActive : null]}>
                     {hardAiActive ? t('rewards.already_active') : t('rewards.watch_video')}
@@ -322,7 +322,7 @@ const RewardsModal = memo(({ visible, onClose }) => {
               </TouchableOpacity>
             </View>
 
-            <View style={{ width: '100%', backgroundColor: T.bg3, borderRadius: getResponsiveSize(T.radiusMd), padding: getResponsiveSize(14), borderWidth: 1, borderColor: T.borderSoft }}>
+            <View style={{ width: '100%', backgroundColor: T.bg3, borderRadius: getResponsiveSize(T.radiusMd), padding: getResponsiveSize(14), borderWidth: 1, borderColor: 'rgba(150, 180, 255, 0.18)' }}>
               <Text style={{ color: T.text, fontWeight: '900', marginBottom: getResponsiveSize(6) }}>{t('rewards.live_title')}</Text>
               <Text style={{ color: T.textDim, marginBottom: getResponsiveSize(10) }}>
                 {t('rewards.live_desc')}
@@ -336,7 +336,7 @@ const RewardsModal = memo(({ visible, onClose }) => {
                 style={[modalTheme.button, modalTheme.buttonActive]}
               >
                 {busyKey === 'live' ? (
-                  <ActivityIndicator color="#1B1305" />
+                  <ActivityIndicator color="#05060B" />
                 ) : (
                   <Text style={[modalTheme.buttonText, modalTheme.buttonTextActive]}>{t('rewards.watch_video_plus_one')}</Text>
                 )}

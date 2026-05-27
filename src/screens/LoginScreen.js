@@ -318,6 +318,7 @@ const LoginScreen = ({ navigation }) => {
               autoCapitalize="none"
               autoComplete="email"
               textContentType="emailAddress"
+              innerStyle={{ backgroundColor: '#05060B' }}
             />
             <Input 
               placeholder={t('auth.password')}
@@ -326,6 +327,7 @@ const LoginScreen = ({ navigation }) => {
               secureTextEntry 
               autoComplete="password"
               textContentType="password"
+              innerStyle={{ backgroundColor: '#05060B' }}
             />
             
             <TouchableOpacity 

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { playButtonSound } from '../../utils/soundManager';
 import { getResponsiveSize } from '../../utils/responsive';
 import { modalTheme } from '../../utils/modalTheme';
+import { T } from '../../utils/theme';
 
 const FriendsMenuModal = memo(({ 
   visible, 
@@ -35,10 +36,10 @@ const FriendsMenuModal = memo(({
                 onNavigateToLiveConfig();
             }}
           >
-            <Ionicons name="radio-outline" size={getResponsiveSize(24)} color="#f1c40f" style={{ marginRight: getResponsiveSize(10) }} />
+            <Ionicons name="radio-outline" size={getResponsiveSize(24)} color={T.cyan} style={{ marginRight: getResponsiveSize(10) }} />
             <Text style={styles.menuButtonText}>{t('friends_menu.create_live_room')}</Text>
-            <View style={{ backgroundColor: '#f1c40f', paddingHorizontal: getResponsiveSize(6), paddingVertical: getResponsiveSize(2), borderRadius: getResponsiveSize(4), marginLeft: getResponsiveSize(10) }}>
-                <Text style={{ color: '#041c55', fontSize: getResponsiveSize(10), fontWeight: 'bold' }}>{t('live_room.live_badge')}</Text>
+            <View style={{ backgroundColor: T.cyan, paddingHorizontal: getResponsiveSize(6), paddingVertical: getResponsiveSize(2), borderRadius: getResponsiveSize(4), marginLeft: getResponsiveSize(10) }}>
+                <Text style={{ color: '#05060B', fontSize: getResponsiveSize(10), fontWeight: 'bold' }}>{t('live_room.live_badge')}</Text>
             </View>
           </TouchableOpacity>
 

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { getResponsiveSize } from '../../utils/responsive';
 import { playButtonSound } from '../../utils/soundManager';
 import { modalTheme } from '../../utils/modalTheme';
+import { T } from '../../utils/theme';
 
 const OnlineConfigModal = memo(({
   visible,
@@ -41,8 +42,8 @@ const OnlineConfigModal = memo(({
           {isSearchingOnline ? (
             <View style={{ alignItems: 'center', width: '100%' }}>
                 <Text style={styles.friendsModalTitle}>{t('matchmaking.searching')}</Text>
-                <ActivityIndicator size="large" color="#f1c40f" style={{ marginVertical: getResponsiveSize(20) }} />
-                <Text style={{ color: '#f1c40f', fontSize: getResponsiveSize(26), fontWeight: 'bold', marginBottom: getResponsiveSize(8) }}>{onlineSearchTimer}s</Text>
+                <ActivityIndicator size="large" color={T.cyan} style={{ marginVertical: getResponsiveSize(20) }} />
+                <Text style={{ color: T.cyan, fontSize: getResponsiveSize(26), fontWeight: 'bold', marginBottom: getResponsiveSize(8) }}>{onlineSearchTimer}s</Text>
                 <Text style={{ color: '#fff', fontSize: getResponsiveSize(13), marginBottom: getResponsiveSize(14) }}>
                   {t('game.bet_amount', { amount: onlineBet.toLocaleString() })}
                 </Text>
@@ -176,7 +177,7 @@ const OnlineConfigModal = memo(({
                         <Text style={styles.modalButtonText}>{t('common.cancel')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.modalButtonConfirm} onPress={() => { playButtonSound(); handleStartOnlineSearch(); }}>
-                        <Text style={styles.modalButtonText}>{t('matchmaking.play_btn')}</Text>
+                        <Text style={[styles.modalButtonText, styles.modalButtonTextActive]}>{t('matchmaking.play_btn')}</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>
@@ -189,11 +190,13 @@ const OnlineConfigModal = memo(({
 
 const styles = StyleSheet.create({
   modalOverlay: modalTheme.overlay,
-  friendsModalContent: modalTheme.card,
+  friendsModalContent: {
+    ...modalTheme.card,
+  },
   friendsModalTitle: modalTheme.title,
   friendsLabel: {
     fontSize: getResponsiveSize(14),
-    color: '#f1c40f',
+    color: T.textDim,
     alignSelf: 'flex-start',
     marginBottom: getResponsiveSize(8),
     fontWeight: 'bold',
@@ -210,14 +213,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: getResponsiveSize(12),
     borderRadius: getResponsiveSize(12),
     borderWidth: getResponsiveSize(1),
-    borderColor: 'rgba(241, 196, 15, 0.5)',
+    borderColor: T.cyanBorderStrong,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     marginBottom: getResponsiveSize(4),
   },
   friendsOptionButtonActive: {
-    backgroundColor: '#f1c40f',
-    borderColor: '#f1c40f',
-    shadowColor: '#f1c40f',
+    backgroundColor: T.cyan,
+    borderColor: T.cyan,
+    shadowColor: T.cyan,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: getResponsiveSize(8),
@@ -229,7 +232,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   friendsOptionTextActive: {
-    color: '#041c55',
+    color: '#05060B',
     fontWeight: 'bold',
   },
   modalButtons: {
@@ -243,17 +246,28 @@ const styles = StyleSheet.create({
     flex: 1,
     ...modalTheme.buttonBase,
     ...modalTheme.buttonCancel,
+    borderColor: T.cyanBorder,
     alignItems: 'center',
   },
   modalButtonConfirm: {
     flex: 1,
     ...modalTheme.buttonBase,
-    ...modalTheme.buttonPrimary,
+    backgroundColor: T.cyan,
+    borderWidth: 1.5,
+    borderColor: T.cyan,
+    shadowColor: T.cyan,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.28,
+    shadowRadius: 6,
+    elevation: 5,
     alignItems: 'center',
   },
   modalButtonText: {
     ...modalTheme.buttonTextBase,
-    ...modalTheme.buttonTextPrimary,
+    ...modalTheme.buttonTextOnDark,
+  },
+  modalButtonTextActive: {
+    color: '#05060B',
   },
   cancelSearchButton: {
     ...modalTheme.buttonBase,
@@ -277,17 +291,17 @@ const styles = StyleSheet.create({
     borderRadius: getResponsiveSize(22),
     marginHorizontal: getResponsiveSize(8),
     borderWidth: getResponsiveSize(1),
-    borderColor: 'rgba(241, 196, 15, 0.3)'
+    borderColor: T.cyanBorder
   },
   prevBetText: {
-    color: '#f1c40f', 
+    color: T.cyan, 
     fontSize: getResponsiveSize(12), 
     opacity: 0.5, 
     width: getResponsiveSize(60), 
     textAlign: 'center'
   },
   currentBetText: {
-    color: '#f1c40f', 
+    color: T.cyan, 
     fontSize: getResponsiveSize(18), 
     fontWeight: 'bold', 
     width: getResponsiveSize(100),
@@ -297,7 +311,7 @@ const styles = StyleSheet.create({
     textShadowRadius: getResponsiveSize(10)
   },
   nextBetText: {
-    color: '#f1c40f', 
+    color: T.cyan, 
     fontSize: getResponsiveSize(12), 
     opacity: 0.5, 
     width: getResponsiveSize(60), 

@@ -1,14 +1,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, View, Platform } from 'react-native';
+import { StyleSheet, View, Platform, useWindowDimensions } from 'react-native';
 import { useNavigationState } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import { useCoinsContext } from '../context/CoinsContext';
-import { getResponsiveSize } from '../utils/responsive';
+import { DESKTOP_BREAKPOINT, getResponsiveSize } from '../utils/responsive';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { appAlert } from '../services/appAlert';
 import { useTranslation } from 'react-i18next';
 import Constants from 'expo-constants';
 import { AD_RULES, computeAdVisibility } from './adRules';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 let mobileAds;
 let AdEventType;
@@ -76,6 +77,8 @@ export default function AdSystem({ children }) {
   const { t } = useTranslation();
   const { user } = useSelector((state) => state.auth);
   const { credit } = useCoinsContext();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
 
   const [attReady, setAttReady] = useState(Platform.OS !== 'ios');
   const [attAuthorized, setAttAuthorized] = useState(false);
@@ -119,7 +122,21 @@ export default function AdSystem({ children }) {
   );
   const showAds = baseVisibility.showAds && (Platform.OS !== 'android' || androidConsentReady);
   const showBanner = baseVisibility.showBanner && (Platform.OS !== 'android' || androidConsentReady);
-  const bottomOffset = useMemo(() => getBottomOffsetFromRoutePath(routePath), [routePath]);
+  const bottomOffset = useMemo(() => {
+    const isInTab =
+      routePath.includes('Home') &&
+      (routePath.includes('MaisonTab') || routePath.includes('Social') || routePath.includes('Salle') || routePath.includes('Magasin'));
+    if (!isInTab) return getResponsiveSize(20);
+
+    const isDesktop = Platform.OS === 'web' && width >= DESKTOP_BREAKPOINT;
+    if (isDesktop) return getResponsiveSize(20);
+
+    const isTablet = width >= 768;
+    const dockInner = isTablet ? 64 : 56;
+    const dockBottom = Math.max((insets?.bottom ?? 0) + 8, 20);
+    const gapAboveDock = 10;
+    return dockBottom + dockInner + gapAboveDock;
+  }, [routePath, width, insets?.bottom]);
 
   useEffect(() => {
     if (Platform.OS !== 'android') return;

@@ -1,57 +1,47 @@
 import React, { memo } from 'react';
 import { View, Text, Pressable, Image, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { API_URL } from '../../config';
 import { getAvatarSource } from '../../utils/avatarUtils';
 import { getResponsiveSize } from '../../utils/responsive';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { T } from '../../utils/theme';
-import GlowWrapper from '../ui/GlowWrapper';
 
 const rs = (size) => getResponsiveSize(size);
 
-// Composant réutilisable optimisé pour la réactivité tactile
+// ─── Palette cyber ────────────────────────────────────────────────────────────
+const CYBER = {
+  cyan:   '#5BD2FF',
+  mag:    '#C875FF',
+  glass:  'rgba(10, 14, 28, 0.72)',
+  edge:   'rgba(150, 180, 255, 0.18)',
+  gold:   T.gold,
+  dim:    '#8090B5',
+  text:   '#EAF2FF',
+};
+
+// ─── Calcule le niveau à partir des coins ────────────────────────────────────
+const getLevel = (coins = 0) => Math.max(1, Math.floor(Math.sqrt(coins / 50)) + 1);
+
+// ─── Bouton tactile réutilisable ──────────────────────────────────────────────
 const HeaderTouchable = ({ onPress, onPlaySound, children, style, hitSlop }) => {
   const handlePress = () => {
-    // Feedback haptique non-bloquant (fire & forget)
-    if (Platform.OS !== 'web') {
-      Haptics.selectionAsync().catch(() => {});
-    }
-    
-    // Son non-bloquant
-    if (onPlaySound) {
-      onPlaySound();
-    }
-    
-    // Action immédiate
+    if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+    if (onPlaySound) onPlaySound();
     if (onPress) onPress();
   };
 
   return (
     <Pressable
       onPress={handlePress}
-      // Zone tactile étendue (HitSlop)
       hitSlop={hitSlop || { top: rs(20), bottom: rs(20), left: rs(20), right: rs(20) }}
-      // Maintient l'état pressé même si le doigt glisse un peu en dehors
       pressRetentionOffset={{ top: rs(20), bottom: rs(20), left: rs(20), right: rs(20) }}
-      // Ripple Android
-      android_ripple={{ 
-        color: 'rgba(255, 255, 255, 0.15)', 
-        borderless: true, 
-        radius: 30,
-        foreground: true
-      }}
-      // Le style du conteneur Pressable reste FIXE (pas de scale ici) pour ne pas réduire la zone tactile
+      android_ripple={{ color: 'rgba(91,210,255,0.15)', borderless: true, radius: 28, foreground: true }}
       style={style}
     >
       {({ pressed }) => (
-        <View style={{
-          // Les effets visuels sont appliqués sur l'enfant uniquement
-          opacity: pressed ? 0.6 : 1,
-          transform: [{ scale: pressed ? 0.96 : 1 }]
-        }}>
+        <View style={{ opacity: pressed ? 0.65 : 1, transform: [{ scale: pressed ? 0.94 : 1 }] }}>
           {children}
         </View>
       )}
@@ -59,200 +49,222 @@ const HeaderTouchable = ({ onPress, onPlaySound, children, style, hitSlop }) => 
   );
 };
 
+// ─── Composant principal ──────────────────────────────────────────────────────
 const HomeHeader = memo(({ user, navigation, onSearch, onSettings, onRewards, onPlaySound }) => {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
-  const isIPad = Platform.OS === 'ios' && Platform.isPad;
-  const isTabletLayout = !isIPad && width >= 768;
-  const coinsText = Number.isFinite(user?.coins) ? user.coins.toLocaleString('fr-FR') : `${user?.coins || 0}`;
+  const isTablet  = width >= 768;
+  const isDesktop = Platform.OS === 'web' && width >= 1024;
+
+  const coins = Number.isFinite(user?.coins) ? user.coins : (user?.coins || 0);
+  const coinsText = coins >= 1_000_000
+    ? (coins / 1_000_000).toFixed(1) + 'M'
+    : coins >= 1_000
+    ? (coins / 1_000).toFixed(1) + 'k'
+    : coins.toString();
+  const level = getLevel(coins);
+  const pseudo = user?.pseudo || t('home.welcome');
 
   const goProfileOrLogin = () => {
-    if (!user) {
-      navigation.navigate('Login');
-      return;
-    }
+    if (!user) { navigation.navigate('Login'); return; }
     navigation.navigate('Profile');
   };
 
-  const headerContentStyle = {
-    paddingHorizontal: rs(20),
-    paddingVertical: isTabletLayout ? rs(8) : rs(0),
-    minHeight: isTabletLayout ? rs(60) : rs(60),
-    maxWidth: isTabletLayout ? 500 : '100%',
-    alignSelf: 'center',
-  };
+  // Avatar : image ou initiale dans un cercle dégradé
+  const avatarSource = getAvatarSource(user?.avatar);
+  const initial = pseudo ? pseudo[0].toUpperCase() : '?';
+
+  const avatarSize = rs(isTablet ? 44 : 38);
 
   return (
-    <View style={styles.headerOuter}>
-      <SafeAreaView edges={['top']} style={styles.safeHeader}>
-      <View style={[styles.headerContent, headerContentStyle]}>
-        <View style={[styles.headerRow, isTabletLayout && styles.tabletHeaderRow]}>
-          <View style={styles.userInfo}>
-            <HeaderTouchable 
-              onPress={goProfileOrLogin}
-              onPlaySound={onPlaySound}
-              hitSlop={{ top: rs(30), bottom: rs(30), left: rs(30), right: rs(30) }}
-            >
-              {(() => {
-                const source = getAvatarSource(user?.avatar);
-                return source ? (
-                  <Image source={source} style={[styles.avatar, isTabletLayout && styles.avatarTablet]} />
-                ) : (
-                  <Ionicons name="person-circle-outline" size={rs(isTabletLayout ? 52 : 45)} color="#fff" />
-                );
-              })()}
-            </HeaderTouchable>
-            
-            <View style={styles.userText}>
-              <HeaderTouchable 
-                onPress={goProfileOrLogin}
-                onPlaySound={onPlaySound}
-                hitSlop={{ top: rs(15), bottom: rs(15), left: rs(15), right: rs(15) }}
-              >
-                <Text
-                  style={[styles.welcome, isTabletLayout && styles.welcomeTablet]}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  {user?.pseudo || t('home.welcome')}
-                </Text>
-              </HeaderTouchable>
-              <Text
-                style={[styles.coins, isTabletLayout && styles.coinsTablet]}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-              >
-                💰 {coinsText}
+    <SafeAreaView edges={['top']} style={styles.safe}>
+      <View style={[styles.row, isDesktop && styles.rowDesktop]}>
+
+        {/* ── Pill avatar + pseudo + niveau ── */}
+        <HeaderTouchable
+          onPress={goProfileOrLogin}
+          onPlaySound={onPlaySound}
+          hitSlop={{ top: rs(12), bottom: rs(12), left: rs(12), right: rs(8) }}
+        >
+          <View style={styles.userPill}>
+            {/* Avatar */}
+            <View style={[styles.avatarWrap, { width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }]}>
+              {avatarSource ? (
+                <Image
+                  source={avatarSource}
+                  style={{ width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }}
+                />
+              ) : (
+                <Text style={[styles.avatarInitial, { fontSize: rs(isTablet ? 17 : 15) }]}>{initial}</Text>
+              )}
+            </View>
+            {/* Texte */}
+            <View style={styles.userTexts}>
+              <Text style={[styles.pseudo, isTablet && { fontSize: rs(14) }]} numberOfLines={1} ellipsizeMode="tail">
+                {pseudo}
               </Text>
+              <Text style={styles.levelText}>LV.{level}</Text>
             </View>
           </View>
+        </HeaderTouchable>
 
-          <View style={styles.headerIcons}>
-            <GlowWrapper style={styles.glowIconWrapper} intensity={0.4}>
-              <HeaderTouchable
-                onPress={onRewards}
-                onPlaySound={onPlaySound}
-                hitSlop={{ top: rs(20), bottom: rs(20), left: rs(20), right: rs(4) }}
-                style={styles.iconButton}
-              >
-                <Ionicons name="gift-outline" size={rs(isTabletLayout ? 26 : 28)} color="#fff" />
-              </HeaderTouchable>
-            </GlowWrapper>
+        {/* ── Spacer ── */}
+        <View style={{ flex: 1 }} />
 
-            <GlowWrapper style={styles.glowIconWrapper} intensity={0.4}>
-              <HeaderTouchable
-                onPress={onSearch}
-                onPlaySound={onPlaySound}
-                hitSlop={{ top: rs(20), bottom: rs(20), left: rs(4), right: rs(4) }}
-                style={styles.iconButton}
-              >
-                <Ionicons name="search-outline" size={rs(isTabletLayout ? 26 : 28)} color="#fff" />
-              </HeaderTouchable>
-            </GlowWrapper>
-
-            <HeaderTouchable
-              onPress={onSettings}
-              onPlaySound={onPlaySound}
-              hitSlop={{ top: rs(20), bottom: rs(20), left: rs(4), right: rs(20) }}
-              style={styles.iconButton}
-            >
-              <Ionicons name="settings-outline" size={rs(isTabletLayout ? 26 : 28)} color="#fff" />
-            </HeaderTouchable>
-          </View>
+        {/* ── Pill coins ── */}
+        <View style={styles.coinsPill}>
+          <View style={styles.coinsDot} />
+          <Text style={styles.coinsNum}>{coinsText}</Text>
         </View>
+
+        {/* ── Boutons actions ── */}
+        <View style={styles.actions}>
+          <HeaderTouchable
+            onPress={onRewards}
+            onPlaySound={onPlaySound}
+            hitSlop={{ top: rs(18), bottom: rs(18), left: rs(10), right: rs(6) }}
+          >
+            <View style={styles.iconBtn}>
+              <Ionicons name="gift-outline" size={rs(isTablet ? 22 : 20)} color={CYBER.text} />
+            </View>
+          </HeaderTouchable>
+
+          <HeaderTouchable
+            onPress={onSearch}
+            onPlaySound={onPlaySound}
+            hitSlop={{ top: rs(18), bottom: rs(18), left: rs(6), right: rs(6) }}
+          >
+            <View style={styles.iconBtn}>
+              <Ionicons name="search-outline" size={rs(isTablet ? 22 : 20)} color={CYBER.text} />
+            </View>
+          </HeaderTouchable>
+
+          <HeaderTouchable
+            onPress={onSettings}
+            onPlaySound={onPlaySound}
+            hitSlop={{ top: rs(18), bottom: rs(18), left: rs(6), right: rs(14) }}
+          >
+            <View style={styles.iconBtn}>
+              <Ionicons name="settings-outline" size={rs(isTablet ? 22 : 20)} color={CYBER.text} />
+            </View>
+          </HeaderTouchable>
+        </View>
+
       </View>
-      </SafeAreaView>
-    </View>
+    </SafeAreaView>
   );
 });
 
 const styles = StyleSheet.create({
-  headerOuter: {
-    borderBottomWidth: 1.5,
-    borderBottomColor: T.gold,
-    shadowColor: T.gold,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 14,
+  safe: {
+    backgroundColor: 'transparent',
+    borderBottomWidth: 0,
     zIndex: 1000,
   },
-  safeHeader: {
-    backgroundColor: T.bg1,
-  },
-  headerContent: {},
-  headerRow: {
-    width: '100%',
+  row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: rs(14),
+    paddingVertical: rs(8),
+    gap: rs(8),
   },
-  tabletHeaderRow: {
-    maxWidth: 460,
+  rowDesktop: {
+    maxWidth: 1100,
     alignSelf: 'center',
+    width: '100%',
   },
-  userInfo: {
+
+  // ── Pill utilisateur ──────────────────────────────────────────────────────
+  userPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: rs(10),
-    flex: 1,
-    minWidth: 0,
-    paddingRight: rs(10),
+    backgroundColor: CYBER.glass,
+    borderWidth: 1,
+    borderColor: CYBER.edge,
+    borderRadius: rs(24),
+    paddingHorizontal: rs(8),
+    paddingVertical: rs(5),
+    gap: rs(8),
+    maxWidth: rs(180),
   },
-  avatar: {
-    width: rs(42),
-    height: rs(42),
-    borderRadius: rs(21),
-    borderWidth: 2,
-    borderColor: T.gold,
-  },
-  avatarTablet: {
-    width: rs(50),
-    height: rs(50),
-    borderRadius: rs(25),
-  },
-  userText: {
+  avatarWrap: {
+    backgroundColor: 'rgba(91, 210, 255, 0.18)',
+    alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: CYBER.cyan,
+  },
+  avatarInitial: {
+    color: CYBER.cyan,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  userTexts: {
     flexDirection: 'column',
     alignItems: 'flex-start',
-    gap: rs(2),
-    flex: 1,
-    minWidth: 0,
+    gap: rs(1),
+    flexShrink: 1,
   },
-  welcome: {
-    color: T.text,
-    fontSize: rs(16),
+  pseudo: {
+    color: CYBER.text,
+    fontSize: rs(13),
     fontWeight: '800',
-    letterSpacing: 0.2,
+    letterSpacing: 0.3,
     textTransform: 'uppercase',
   },
-  welcomeTablet: {
-    fontSize: rs(15),
-  },
-  coins: {
-    color: T.gold,
-    fontSize: rs(15),
+  levelText: {
+    color: CYBER.cyan,
+    fontSize: rs(10),
     fontWeight: '700',
+    letterSpacing: 0.5,
   },
-  coinsTablet: {
-    fontSize: rs(14),
-  },
-  headerIcons: {
+
+  // ── Pill coins ────────────────────────────────────────────────────────────
+  coinsPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: rs(12),
-    flexShrink: 0,
-  },
-  glowIconWrapper: {
-    borderRadius: rs(12),
-    padding: 1.5,
-  },
-  iconButton: {
-    padding: rs(8),
-    borderRadius: T.radiusMd,
-    backgroundColor: T.bg2,
+    backgroundColor: CYBER.glass,
     borderWidth: 1,
-    borderColor: T.borderSoft,
+    borderColor: T.goldBorderStrong,
+    borderRadius: rs(20),
+    paddingHorizontal: rs(10),
+    paddingVertical: rs(5),
+    gap: rs(5),
+  },
+  coinsDot: {
+    width: rs(7),
+    height: rs(7),
+    borderRadius: rs(4),
+    backgroundColor: T.gold,
+    shadowColor: T.gold,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  coinsNum: {
+    color: T.gold,
+    fontSize: rs(13),
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+
+  // ── Boutons icône ─────────────────────────────────────────────────────────
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: rs(6),
+  },
+  iconBtn: {
+    width: rs(34),
+    height: rs(34),
+    borderRadius: rs(10),
+    backgroundColor: CYBER.glass,
+    borderWidth: 1,
+    borderColor: CYBER.edge,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

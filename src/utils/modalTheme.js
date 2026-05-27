@@ -1,28 +1,39 @@
 import { getResponsiveSize } from './responsive';
 import { T } from './theme';
 
+// ─── Palette cyber (miroir de HomeScreen / HomeTabNavigator) ──────────────────
+const CYBER_GLASS        = 'rgba(10, 14, 28, 0.92)';
+const CYBER_EDGE         = 'rgba(150, 180, 255, 0.18)';
+const CYBER_CYAN         = '#5BD2FF';
+const CYBER_CYAN_BORDER  = 'rgba(91, 210, 255, 0.35)';
+const CYBER_TEXT_ON_CYAN = '#05060B';
+
 export const modalTheme = {
+  // ── Fond semi-opaque ────────────────────────────────────────────────────────
   overlay: {
     flex: 1,
-    backgroundColor: T.overlay,
+    backgroundColor: 'rgba(5, 6, 11, 0.85)',
     justifyContent: 'center',
     alignItems: 'center',
   },
+
+  // ── Carte principale (glassmorphisme cyber) ─────────────────────────────────
   card: {
     width: '85%',
-    backgroundColor: T.bg2,
+    backgroundColor: CYBER_GLASS,
     borderRadius: getResponsiveSize(T.radiusLg),
     padding: getResponsiveSize(20),
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: T.gold,
-    // Ombre dorée premium (HomeHeader style)
-    shadowColor: T.gold,
-    shadowOffset: { width: 0, height: 6 },
+    borderColor: CYBER_EDGE,
+    shadowColor: CYBER_CYAN,
+    shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.35,
-    shadowRadius: 10,
+    shadowRadius: getResponsiveSize(12),
     elevation: 14,
   },
+
+  // ── Typographie ─────────────────────────────────────────────────────────────
   title: {
     fontSize: getResponsiveSize(22),
     fontWeight: '800',
@@ -49,18 +60,25 @@ export const modalTheme = {
     fontSize: getResponsiveSize(15),
     color: T.text,
   },
+
+  // ── Boutons ─────────────────────────────────────────────────────────────────
   button: {
     padding: getResponsiveSize(10),
     borderRadius: getResponsiveSize(T.radiusMd),
     borderWidth: 1.5,
-    borderColor: T.gold,
+    borderColor: CYBER_CYAN_BORDER,
     backgroundColor: T.bg3,
     alignItems: 'center',
     justifyContent: 'center',
   },
   buttonActive: {
-    backgroundColor: T.gold,
-    borderColor: T.gold,
+    backgroundColor: CYBER_CYAN,
+    borderColor: CYBER_CYAN,
+    shadowColor: CYBER_CYAN,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: getResponsiveSize(8),
+    elevation: 6,
   },
   buttonText: {
     color: T.text,
@@ -71,8 +89,10 @@ export const modalTheme = {
     textTransform: 'uppercase',
   },
   buttonTextActive: {
-    color: '#1B1305',
+    color: CYBER_TEXT_ON_CYAN,
   },
+
+  // ── Variants boutons (buttonBase + modificateurs) ───────────────────────────
   buttonBase: {
     borderRadius: getResponsiveSize(T.radiusMd),
     padding: getResponsiveSize(13),
@@ -82,15 +102,19 @@ export const modalTheme = {
     justifyContent: 'center',
   },
   buttonPrimary: {
-    backgroundColor: T.gold,
+    backgroundColor: CYBER_CYAN,
     borderWidth: 1.5,
-    borderColor: T.gold,
-    ...T.shadowBtn,
+    borderColor: CYBER_CYAN,
+    shadowColor: CYBER_CYAN,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: getResponsiveSize(8),
+    elevation: 6,
   },
   buttonCancel: {
     backgroundColor: T.bg3,
     borderWidth: 1.5,
-    borderColor: T.gold,
+    borderColor: CYBER_EDGE,
   },
   buttonDestructive: {
     backgroundColor: T.danger,
@@ -104,7 +128,7 @@ export const modalTheme = {
     textTransform: 'uppercase',
   },
   buttonTextPrimary: {
-    color: '#1B1305',
+    color: CYBER_TEXT_ON_CYAN,
     fontSize: getResponsiveSize(15),
   },
   buttonTextOnDark: {

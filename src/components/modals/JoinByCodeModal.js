@@ -243,7 +243,7 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, appAlert }) => {
             <Ionicons
               name="key-outline"
               size={getResponsiveSize(26)}
-              color="#f1c40f"
+              color={T.cyan}
             />
             <Text style={styles.title}>{t('live_room.join_with_code')}</Text>
           </View>
@@ -256,7 +256,7 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, appAlert }) => {
               style={styles.scanButton} 
               onPress={startScan}
             >
-              <Ionicons name="qr-code-outline" size={20} color="#041c55" />
+              <Ionicons name="qr-code-outline" size={20} color="#05060B" />
               <Text style={styles.scanButtonText}>{t('join_code.scan_qr')}</Text>
             </TouchableOpacity>
           )}
@@ -318,13 +318,13 @@ const JoinByCodeModal = memo(({ visible, onClose, socket, appAlert }) => {
             disabled={loading || code.length !== CODE_LENGTH}
           >
             {loading ? (
-              <ActivityIndicator color="#041c55" size="small" />
+              <ActivityIndicator color="#05060B" size="small" />
             ) : (
               <>
                 <Ionicons
                   name="enter-outline"
                   size={getResponsiveSize(20)}
-                  color="#041c55"
+                  color="#05060B"
                   style={{ marginRight: getResponsiveSize(8) }}
                 />
                 <Text style={styles.joinButtonText}>{t('join_code.join_button')}</Text>
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
   scanButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f1c40f',
+    backgroundColor: T.cyan,
     paddingHorizontal: getResponsiveSize(16),
     paddingVertical: getResponsiveSize(10),
     borderRadius: getResponsiveSize(T.radiusMd),
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     ...T.shadowBtn,
   },
   scanButtonText: {
-    color: '#1B1305',
+    color: '#05060B',
     fontWeight: '800',
     fontSize: getResponsiveSize(13),
   },
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderWidth: 2,
-    borderColor: '#f1c40f',
+    borderColor: T.cyan,
     borderRadius: 20,
     backgroundColor: 'transparent',
   },
@@ -456,8 +456,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   codeBoxFilled: {
-    borderColor: T.gold,
-    backgroundColor: 'rgba(244,180,26,0.12)',
+    borderColor: T.cyan,
+    backgroundColor: T.cyanSoft,
   },
   codeBoxFocused: {
     borderColor: T.text,
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
   },
   joinButton: {
     ...modalTheme.button,
-    backgroundColor: T.gold,
+    backgroundColor: T.cyan,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   joinButtonText: {
-    color: '#1B1305',
+    color: '#05060B',
     fontWeight: '800',
     fontSize: getResponsiveSize(14),
   },

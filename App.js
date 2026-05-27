@@ -18,6 +18,7 @@ import { CoinsProvider } from './src/context/CoinsContext';
 import * as SplashScreen from 'expo-splash-screen';
 import AppAlertHost from './src/components/AppAlertHost';
 import { appAlert } from './src/services/appAlert';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync().catch(() => {
@@ -103,14 +104,16 @@ export default function App() {
           <PersistGate loading={null} persistor={persistor}>
             <QueryClientProvider client={queryClient}>
               <CoinsProvider>
-                <NavigationContainer linking={linking} fallback={<React.Fragment />}>
-                  <LanguageSync />
-                  <AppAlertHost />
-                  <RootErrorBoundary>
-                    <AppNavigator />
-                  </RootErrorBoundary>
-                  <StatusBar style="light" />
-                </NavigationContainer>
+                <SafeAreaProvider>
+                  <NavigationContainer linking={linking} fallback={<React.Fragment />}>
+                    <LanguageSync />
+                    <AppAlertHost />
+                    <RootErrorBoundary>
+                      <AppNavigator />
+                    </RootErrorBoundary>
+                    <StatusBar style="light" />
+                  </NavigationContainer>
+                </SafeAreaProvider>
               </CoinsProvider>
             </QueryClientProvider>
           </PersistGate>

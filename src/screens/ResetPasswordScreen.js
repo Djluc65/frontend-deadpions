@@ -95,6 +95,7 @@ const ResetPasswordScreen = ({ route, navigation }) => {
             onChangeText={setResetCode} 
             keyboardType="number-pad"
             maxLength={6}
+            innerStyle={{ backgroundColor: '#05060B' }}
           />
           
           <Input 
@@ -102,6 +103,7 @@ const ResetPasswordScreen = ({ route, navigation }) => {
             value={newPassword} 
             onChangeText={setNewPassword} 
             secureTextEntry 
+            innerStyle={{ backgroundColor: '#05060B' }}
           />
 
           <Input 
@@ -109,6 +111,7 @@ const ResetPasswordScreen = ({ route, navigation }) => {
             value={confirmPassword} 
             onChangeText={setConfirmPassword} 
             secureTextEntry 
+            innerStyle={{ backgroundColor: '#05060B' }}
           />
           
           <Button 

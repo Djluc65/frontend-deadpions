@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, TextInput, Animated, StyleSheet, Easing, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,9 +23,14 @@ const AnimatedSearchBar = ({
   outerStyle,
   innerStyle,
   inputStyle,
+ onFocus,
+ onBlur,
   ...props
 }) => {
   const rotateAnim = useRef(new Animated.Value(0)).current;
+  const [isFocused, setIsFocused] = useState(false);
+
+  const INPUT_BORDER_W = Math.max(1, Math.round(getResponsiveSize(1)));
 
   useEffect(() => {
     Animated.loop(
@@ -55,7 +60,7 @@ const AnimatedSearchBar = ({
         />
       </Animated.View>
 
-      <View style={[styles.innerContainer, innerStyle]}>
+      <View style={[styles.innerContainer, { borderWidth: INPUT_BORDER_W }, isFocused && styles.innerContainerFocused, innerStyle]}>
         {showLeftIcon ? (
           <Ionicons 
             name={leftIconName} 
@@ -70,6 +75,14 @@ const AnimatedSearchBar = ({
           placeholder={placeholder || "Rechercher..."}
           placeholderTextColor={T.textMuted}
           style={[styles.input, inputStyle]}
+          onFocus={(e) => {
+            setIsFocused(true);
+            onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setIsFocused(false);
+            onBlur?.(e);
+          }}
           autoCorrect={false}
           autoCapitalize="none"
           {...props}
@@ -120,6 +133,10 @@ const styles = StyleSheet.create({
     borderRadius: getResponsiveSize(12),
     paddingHorizontal: getResponsiveSize(16),
     zIndex: 1,
+    borderColor: T.cyanBorder,
+  },
+  innerContainerFocused: {
+    borderColor: T.cyan,
   },
   leftIcon: {
     marginRight: getResponsiveSize(12),
