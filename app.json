@@ -4,7 +4,11 @@
     "slug": "deadpions",
     "version": "1.0.2",
     "newArchEnabled": false,
-    "scheme": ["deadpions", "exp+deadpions", "com.googleusercontent.apps.982071763340-pte2blufa0q5q2q7imspvo6jnp9jjtrn"],
+    "scheme": [
+      "deadpions",
+      "exp+deadpions",
+      "com.googleusercontent.apps.982071763340-pte2blufa0q5q2q7imspvo6jnp9jjtrn"
+    ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -18,7 +22,7 @@
     ],
     "ios": {
       "bundleIdentifier": "com.deadpions.app",
-      "buildNumber": "118",
+      "buildNumber": "122",
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "DeadPions uses your camera to let you take a profile picture or video call with friends.",
@@ -82,7 +86,8 @@
       "expo-apple-authentication",
       "expo-tracking-transparency",
       "expo-font",
-      "react-native-iap"
+      "react-native-iap",
+      "expo-localization"
     ],
     "extra": {
       "eas": {
