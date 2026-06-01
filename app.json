@@ -34,7 +34,7 @@
       "package": "com.deadpions.app",
       "versionCode": 24,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [

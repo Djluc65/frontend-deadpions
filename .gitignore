@@ -22,3 +22,5 @@ android/.gradle/
 android/.gradle/**
 android/**/build/
 android/**/build/**
+secrets/
+secrets/**

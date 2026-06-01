@@ -151,6 +151,9 @@ const Pawn = ({ color, x, y, r, opacity = 1, onPress, skin }) => {
 const GameScreen = ({ navigation, route }) => {
   const { t } = useTranslation();
   const { width, height } = useResponsive();
+  const isLargeIpad = Platform.OS === 'ios' && Math.min(width, height) >= 900;
+  const layoutWidth = isLargeIpad ? Math.min(width, width > height ? 1194 : 834) : width;
+  const layoutHeight = isLargeIpad ? Math.min(height, width > height ? 834 : 1194) : height;
   
   // Configuration du plateau dynamique (Phase 2 Item 6)
   const isTab = width >= 600;
@@ -161,9 +164,9 @@ const GameScreen = ({ navigation, route }) => {
   const PADDING_RIGHT = getResponsiveSize(40);
   const PADDING_BOTTOM = getResponsiveSize(35);
 
-  const CELL_DIVISOR = width >= 1024 ? 11.5 : isTab ? 18.5 : 13.5;
-  const CELL_SIZE = Math.min(width * 0.9, height * 0.7) / CELL_DIVISOR;
-  const BOARD_WIDTH = Math.max(width, PADDING_LEFT + (COLS - 1) * CELL_SIZE + PADDING_RIGHT);
+  const CELL_DIVISOR = layoutWidth >= 1024 ? 11.5 : isTab ? 18.5 : 13.5;
+  const CELL_SIZE = Math.min(layoutWidth * 0.9, layoutHeight * 0.7) / CELL_DIVISOR;
+  const BOARD_WIDTH = Math.max(layoutWidth, PADDING_LEFT + (COLS - 1) * CELL_SIZE + PADDING_RIGHT);
   const BOARD_HEIGHT = PADDING_TOP + (ROWS - 1) * CELL_SIZE + PADDING_BOTTOM;
 
   const params = route.params || {};
@@ -3063,7 +3066,7 @@ const GameScreen = ({ navigation, route }) => {
     await new Promise(resolve => setTimeout(resolve, delai));
 
     // Calculer le coup de l'IA
-    const coup = calculerCoupIA(board, configIA.difficulte, currentPlayer);
+    const coup = calculerCoupIA(board, configIA.difficulte, currentPlayer, { rows: ROWS, cols: COLS });
     if (!coup || coup.row < 0 || coup.row >= ROWS || coup.col < 0 || coup.col >= COLS) {
         setIaEnReflexion(false);
         return;
@@ -3873,7 +3876,7 @@ const GameScreen = ({ navigation, route }) => {
       if (board.length === 0) {
         move = { row: Math.floor(ROWS / 2), col: Math.floor(COLS / 2) };
       } else {
-        move = calculerCoupIA(board, 'facile', player);
+        move = calculerCoupIA(board, 'facile', player, { rows: ROWS, cols: COLS });
       }
 
       if (move) {
@@ -4005,7 +4008,7 @@ const GameScreen = ({ navigation, route }) => {
       if (board.length === 0) {
         move = { row: Math.floor(ROWS / 2), col: Math.floor(COLS / 2) };
       } else {
-        move = calculerCoupIA(board, difficulte, humanColor);
+        move = calculerCoupIA(board, difficulte, humanColor, { rows: ROWS, cols: COLS });
       }
       
       if (move) {
@@ -4035,7 +4038,7 @@ const GameScreen = ({ navigation, route }) => {
     if (board.length === 0) {
       move = { row: Math.floor(ROWS / 2), col: Math.floor(COLS / 2) };
     } else {
-      move = calculerCoupIA(board, 'moyen', myColor);
+      move = calculerCoupIA(board, 'moyen', myColor, { rows: ROWS, cols: COLS });
     }
 
     if (!move || move.row < 0 || move.row >= ROWS || move.col < 0 || move.col >= COLS) return;
@@ -4244,10 +4247,10 @@ const GameScreen = ({ navigation, route }) => {
                 style={[
                   styles.resultCard,
                   {
-                    maxHeight: Math.round(height * 0.92),
+                    maxHeight: Math.round(layoutHeight * 0.92),
                     padding: getResponsiveSize(isTablet ? 24 : 18),
                   },
-                  fullHeightResult && { height: Math.round(height * 0.9) },
+                  fullHeightResult && { height: Math.round(layoutHeight * 0.9) },
                 ]}
                 pointerEvents={mode === 'spectator' ? 'none' : 'auto'}
               >
@@ -4271,7 +4274,7 @@ const GameScreen = ({ navigation, route }) => {
                   )}
 
                   <ScrollView
-                    style={[styles.resultScroll, fullHeightResult ? { flex: 1 } : { maxHeight: Math.round(height * 0.58) }]}
+                    style={[styles.resultScroll, fullHeightResult ? { flex: 1 } : { maxHeight: Math.round(layoutHeight * 0.58) }]}
                     contentContainerStyle={[styles.resultScrollContent, isLiveResult && { paddingBottom: getResponsiveSize(30) }]}
                     showsVerticalScrollIndicator={false}
                   >
