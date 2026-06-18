@@ -10,6 +10,27 @@ import { getResponsiveSize, isTablet, SCREEN_WIDTH, SCREEN_HEIGHT } from '../uti
 import * as SplashScreen from 'expo-splash-screen';
 import { useTranslation } from 'react-i18next';
 
+const DEBUG_SERVER_URL = 'http://127.0.0.1:7777/event';
+const DEBUG_SESSION_ID = 'ios-splash-stuck';
+
+// #region debug-point B-E:waiting-screen-reporting
+const reportDebugEvent = (hypothesisId, location, msg, data = {}) => {
+  fetch(DEBUG_SERVER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sessionId: DEBUG_SESSION_ID,
+      runId: 'pre-fix',
+      hypothesisId,
+      location,
+      msg: `[DEBUG] ${msg}`,
+      data,
+      ts: Date.now(),
+    }),
+  }).catch(() => {});
+};
+// #endregion
+
 const WaitingScreen = ({ navigation }) => {
   const { t } = useTranslation();
   const { token, refreshToken } = useSelector((state) => state.auth);
@@ -59,9 +80,20 @@ const WaitingScreen = ({ navigation }) => {
   useEffect(() => {
     // Hide splash screen once WaitingScreen is mounted
     const hideSplash = async () => {
+      // #region debug-point A:waiting-hide-splash-enter
+      reportDebugEvent('A', 'WaitingScreen.js:hideSplash.start', 'WaitingScreen hideSplash started');
+      // #endregion
       try {
         await SplashScreen.hideAsync();
+        // #region debug-point A:waiting-hide-splash-success
+        reportDebugEvent('A', 'WaitingScreen.js:hideSplash.hideAsync', 'WaitingScreen hideAsync succeeded');
+        // #endregion
       } catch (e) {
+        // #region debug-point D:waiting-hide-splash-failed
+        reportDebugEvent('D', 'WaitingScreen.js:hideSplash.hideAsync', 'WaitingScreen hideAsync failed', {
+          message: String(e?.message || e || ''),
+        });
+        // #endregion
         // ignore error
       }
 
@@ -78,12 +110,21 @@ const WaitingScreen = ({ navigation }) => {
         const res = await getTrackingPermissionsAsync();
         const status = res?.status ?? res;
         const normalized = normalizeAttStatus(status);
+        // #region debug-point B:att-initial-status
+        reportDebugEvent('B', 'WaitingScreen.js:hideSplash.attStatus', 'ATT initial status fetched', {
+          status: String(status),
+          normalized,
+        });
+        // #endregion
         console.log('[ATT] initial status =', status);
 
         if (normalized === 'undetermined') {
           if (!attGatePromiseRef.current) {
             attGatePromiseRef.current = new Promise((resolve) => { attResolveRef.current = resolve; });
           }
+          // #region debug-point B:att-gate-visible
+          reportDebugEvent('B', 'WaitingScreen.js:hideSplash.attGate', 'ATT gate opened');
+          // #endregion
           setAttGateVisible(true);
           return;
         }
@@ -94,6 +135,11 @@ const WaitingScreen = ({ navigation }) => {
       } catch (_) {
         await pushAttPayload({ checked: true, status: 'error', authorized: false, at: Date.now() });
       } finally {
+        // #region debug-point B:att-init-finished
+        reportDebugEvent('B', 'WaitingScreen.js:hideSplash.finally', 'ATT init finished', {
+          hasGatePromise: Boolean(attGatePromiseRef.current),
+        });
+        // #endregion
         if (typeof attInitResolveRef.current === 'function') {
           try { attInitResolveRef.current(true); } catch (_) {}
         }
@@ -104,6 +150,9 @@ const WaitingScreen = ({ navigation }) => {
   }, [pushAttPayload, normalizeAttStatus]);
 
   const acceptAtt = useCallback(async () => {
+    // #region debug-point B:att-accept-start
+    reportDebugEvent('B', 'WaitingScreen.js:acceptAtt.start', 'ATT accept pressed');
+    // #endregion
     try {
       const api = attApiRef.current;
       if (!api?.requestTrackingPermissionsAsync) {
@@ -117,6 +166,12 @@ const WaitingScreen = ({ navigation }) => {
       const status = req?.status ?? req;
       console.log('[ATT] request result =', status);
       const authorized = normalizeAttStatus(status) === 'authorized';
+      // #region debug-point B:att-accept-result
+      reportDebugEvent('B', 'WaitingScreen.js:acceptAtt.result', 'ATT request resolved', {
+        status: String(status),
+        authorized,
+      });
+      // #endregion
 
       await pushAttPayload({ checked: true, status, authorized, at: Date.now() });
     } catch (_) {
@@ -128,6 +183,9 @@ const WaitingScreen = ({ navigation }) => {
   }, [pushAttPayload, resolveAttGate, normalizeAttStatus]);
 
   const skipAtt = useCallback(async () => {
+    // #region debug-point B:att-skip
+    reportDebugEvent('B', 'WaitingScreen.js:skipAtt', 'ATT skipped by user');
+    // #endregion
     await pushAttPayload({ checked: true, status: 'skipped', authorized: false, at: Date.now() });
     setAttGateVisible(false);
     resolveAttGate();
@@ -137,6 +195,12 @@ const WaitingScreen = ({ navigation }) => {
     let isMounted = true;
     const initializeApp = async () => {
       const startTime = Date.now();
+      // #region debug-point C:initialize-app-start
+      reportDebugEvent('C', 'WaitingScreen.js:initializeApp.start', 'initializeApp started', {
+        hasToken: Boolean(token),
+        hasRefreshToken: Boolean(refreshToken),
+      });
+      // #endregion
 
       // 1. Préchargement des assets critiques en parallèle
       const loadAssets = async () => {
@@ -145,7 +209,15 @@ const WaitingScreen = ({ navigation }) => {
                 Asset.loadAsync(require('../../assets/images/Background2-4.png')),
                 Asset.loadAsync(require('../../assets/images/LogoDeadPions2.png')),
             ]);
+            // #region debug-point C:assets-loaded
+            reportDebugEvent('C', 'WaitingScreen.js:loadAssets', 'critical assets loaded');
+            // #endregion
           } catch (e) {
+              // #region debug-point D:assets-load-failed
+              reportDebugEvent('D', 'WaitingScreen.js:loadAssets', 'critical assets failed to load', {
+                message: String(e?.message || e || ''),
+              });
+              // #endregion
               console.warn("Erreur chargement assets:", e);
           }
       };
@@ -157,12 +229,21 @@ const WaitingScreen = ({ navigation }) => {
         const currentRefreshToken = refreshToken;
 
         if (!currentToken || !currentRefreshToken) {
+            // #region debug-point C:auth-missing-tokens
+            reportDebugEvent('C', 'WaitingScreen.js:authPromise', 'missing auth tokens');
+            // #endregion
             return { valid: false };
         }
         try {
             const response = await fetch(`${API_URL}/auth/me`, {
                 headers: { Authorization: `Bearer ${currentToken}` }
             });
+            // #region debug-point C:auth-me-response
+            reportDebugEvent('C', 'WaitingScreen.js:authPromise.authMe', 'auth/me completed', {
+              status: response.status,
+              ok: response.ok,
+            });
+            // #endregion
             if (response.ok) return { valid: true };
 
             // Refresh attempt
@@ -171,6 +252,12 @@ const WaitingScreen = ({ navigation }) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ refreshToken: currentRefreshToken })
             });
+            // #region debug-point C:refresh-response
+            reportDebugEvent('C', 'WaitingScreen.js:authPromise.refresh', 'refresh-token completed', {
+              status: refreshResponse.status,
+              ok: refreshResponse.ok,
+            });
+            // #endregion
 
             if (refreshResponse.ok) {
                 const data = await refreshResponse.json();
@@ -178,6 +265,11 @@ const WaitingScreen = ({ navigation }) => {
                 return { valid: true };
             }
         } catch (e) {
+            // #region debug-point D:auth-request-failed
+            reportDebugEvent('D', 'WaitingScreen.js:authPromise', 'auth flow request failed', {
+              message: String(e?.message || e || ''),
+            });
+            // #endregion
             console.log('Auth check error', e);
         }
         return { valid: false };
@@ -188,6 +280,11 @@ const WaitingScreen = ({ navigation }) => {
           loadAssets(),
           authPromise
       ]);
+      // #region debug-point C:parallel-init-finished
+      reportDebugEvent('C', 'WaitingScreen.js:initializeApp.parallel', 'assets and auth finished', {
+        authValid: Boolean(authResult?.valid),
+      });
+      // #endregion
       
       if (!isMounted) return;
 
@@ -198,14 +295,25 @@ const WaitingScreen = ({ navigation }) => {
       if (attGatePromiseRef.current) {
         try { await attGatePromiseRef.current; } catch (_) {}
       }
+      // #region debug-point B:att-waits-finished
+      reportDebugEvent('B', 'WaitingScreen.js:initializeApp.attWaits', 'ATT waits finished', {
+        gateVisible: attGateVisible,
+      });
+      // #endregion
 
       // Petit délai minimal si tout est allé trop vite pour éviter le flash
       const elapsed = Date.now() - startTime;
       if (elapsed < 500) await new Promise(r => setTimeout(r, 500 - elapsed));
 
       if (authResult.valid) {
+          // #region debug-point C:navigate-home-valid
+          reportDebugEvent('C', 'WaitingScreen.js:initializeApp.navigate', 'navigating to Home with valid auth');
+          // #endregion
           navigation.replace('Home');
       } else {
+          // #region debug-point C:navigate-home-invalid
+          reportDebugEvent('C', 'WaitingScreen.js:initializeApp.navigate', 'navigating to Home after logout');
+          // #endregion
           dispatch(logout());
           navigation.replace('Home');
       }

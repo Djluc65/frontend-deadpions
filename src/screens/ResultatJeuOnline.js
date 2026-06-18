@@ -6,6 +6,7 @@ import { useSelector } from 'react-redux';
 import { getResponsiveSize } from '../utils/responsive';
 import { useAdManager } from '../ads/AdSystem';
 import { useTranslation } from 'react-i18next';
+import StreakBadge from '../components/StreakBadge';
 
 const ResultatJeuOnline = ({ route, navigation }) => {
   const { t } = useTranslation();
@@ -20,6 +21,11 @@ const ResultatJeuOnline = ({ route, navigation }) => {
       style={styles.container}
     >
       <View style={styles.bgOverlay} pointerEvents="none" />
+      
+      <View style={styles.topBar}>
+        <StreakBadge />
+      </View>
+
       <View style={styles.card}>
         <Text style={styles.emoji}>{victoire ? '🏆' : '😢'}</Text>
         <Text style={styles.titre}>{victoire ? t('game.you_win') : t('game.you_lose')}</Text>
@@ -99,7 +105,14 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(5,9,15,0.55)',
   },
-  container: {
+  topBar: {
+    position: 'absolute',
+    top: getResponsiveSize(50),
+    width: '100%',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  card: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',

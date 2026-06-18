@@ -67,6 +67,45 @@ function getBottomOffsetFromRoutePath(routePath) {
 
 const AdManagerContext = createContext(null);
 
+import { API_URL } from '../config';
+
+// #region debug-point A:reporter
+const AD_LOG_URL = `${API_URL}/ad-debug-events/log`;
+
+const reportAdDebug = async (eventType, location, msg, extraData = {}, context = {}) => {
+  try {
+    const payload = {
+      userId: context.user?.id || context.user?._id || 'anonymous',
+      platform: Platform.OS,
+      version: '1.0.2', // TODO: Get from constants
+      environment: __DEV__ ? 'development' : 'production',
+      adUnitId: extraData.rewardedAdUnitId || extraData.adUnitId,
+      eventType,
+      message: msg,
+      location,
+      data: extraData,
+      attStatus: context.attStatus || (context.attAuthorized ? 'authorized' : 'not_authorized'),
+      showAds: context.showAds,
+      isPremium: context.isPremium,
+      isEarlyAccess: context.isEarlyAccess,
+      timestamp: Date.now()
+    };
+
+    if (__DEV__) {
+      console.log(`[AD_DEBUG] ${eventType} @ ${location}: ${msg}`, extraData);
+    }
+
+    await fetch(AD_LOG_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch (err) {
+    if (__DEV__) console.warn('[AD_DEBUG] Failed to send log', err);
+  }
+};
+// #endregion
+
 export function useAdManager() {
   const ctx = useContext(AdManagerContext);
   if (!ctx) throw new Error('useAdManager must be used within AdSystem');
@@ -82,6 +121,16 @@ export default function AdSystem({ children }) {
 
   const [attReady, setAttReady] = useState(Platform.OS !== 'ios');
   const [attAuthorized, setAttAuthorized] = useState(false);
+
+  const logAdEvent = useCallback((eventType, msg, extraData = {}) => {
+    reportAdDebug(eventType, 'AdSystem.js', msg, extraData, {
+      user,
+      attStatus: attReady ? (attAuthorized ? 'authorized' : 'not_authorized') : 'pending',
+      showAds: true, // We check showAds before calling this usually
+      isPremium: Boolean(user?.isPremium),
+      isEarlyAccess: Boolean(user?.isEarlyAccess)
+    });
+  }, [user, attReady, attAuthorized]);
   const [androidConsentReady, setAndroidConsentReady] = useState(Platform.OS !== 'android');
   const [androidGdprApplies, setAndroidGdprApplies] = useState(false);
   const [androidNpaOnly, setAndroidNpaOnly] = useState(false);
@@ -311,6 +360,7 @@ export default function AdSystem({ children }) {
   const [lastInterstitialAt, setLastInterstitialAt] = useState(null);
   const [interstitialLoaded, setInterstitialLoaded] = useState(false);
   const [rewardedLoaded, setRewardedLoaded] = useState(false);
+  const [rewardedLoading, setRewardedLoading] = useState(false);
 
   const lastScreenKeyRef = useRef(null);
   const interstitialRef = useRef(null);
@@ -323,6 +373,8 @@ export default function AdSystem({ children }) {
   const rewardedPendingTimeoutRef = useRef(null);
   const rewardedPresentRetryCountRef = useRef(0);
   const lastDebugSnapshotRef = useRef({ key: null, at: 0 });
+  const mobileAdsInitRef = useRef({ promise: null, done: false });
+  const rewardedLoadedRef = useRef(false);
 
   const interstitialAdUnitId = useMemo(
     () => (useTestAdUnits && TestIds ? TestIds.INTERSTITIAL : AdProvider.units.interstitial.id),
@@ -338,14 +390,44 @@ export default function AdSystem({ children }) {
   );
 
   useEffect(() => {
+    rewardedLoadedRef.current = rewardedLoaded;
+  }, [rewardedLoaded]);
+
+  const ensureMobileAdsInitialized = useCallback(() => {
+    if (!showAds) return Promise.resolve(false);
+    if (!mobileAds) return Promise.resolve(false);
+    if (Platform.OS === 'ios' && !attReady) return Promise.resolve(false);
+    if (mobileAdsInitRef.current.done) return Promise.resolve(true);
+    if (mobileAdsInitRef.current.promise) return mobileAdsInitRef.current.promise;
+
+    const initPromise = mobileAds()
+      .initialize()
+      .then(() => {
+        mobileAdsInitRef.current.done = true;
+        mobileAdsInitRef.current.promise = null;
+        logAdEvent('mobile_ads_initialized', 'mobile ads initialized');
+        return true;
+      })
+      .catch((err) => {
+        mobileAdsInitRef.current.done = false;
+        mobileAdsInitRef.current.promise = null;
+        logAdEvent('mobile_ads_init_failed', 'mobile ads initialize failed', {
+          errMessage: typeof err?.message === 'string' ? err.message : String(err || '')
+        });
+        if (adDebugEnabled) console.warn('[ADS] initialize failed', err);
+        return false;
+      });
+
+    mobileAdsInitRef.current.promise = initPromise;
+    return initPromise;
+  }, [showAds, attReady, adDebugEnabled, logAdEvent]);
+
+  useEffect(() => {
     if (!showAds) return;
     if (!mobileAds) return;
     if (Platform.OS === 'ios' && !attReady) return;
-    mobileAds().initialize().catch((err) => {
-      if (!adDebugEnabled) return;
-      console.warn('[ADS] initialize failed', err);
-    });
-  }, [showAds, adDebugEnabled, attReady]);
+    ensureMobileAdsInitialized();
+  }, [showAds, attReady, ensureMobileAdsInitialized]);
 
   useEffect(() => {
     if (!showAds) return;
@@ -406,15 +488,35 @@ export default function AdSystem({ children }) {
     rewardedUnsubsRef.current = [];
 
     setRewardedLoaded(false);
+    setRewardedLoading(true);
     pendingShowRewardedRef.current = false;
     rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
 
     rewardedUnitIdRef.current = rewardedAdUnitId;
+    // #region debug-point D:rewarded-create
+    logAdEvent('rewarded_create', 'creating rewarded instance', {
+      platform: Platform.OS,
+      rewardedAdUnitId,
+      requestNonPersonalizedAdsOnly,
+      useTestAdUnits,
+      showAds,
+      attReady
+    });
+    // #endregion
     rewardedRef.current = RewardedAd.createForAdRequest(rewardedAdUnitId, { requestNonPersonalizedAdsOnly });
     const rewarded = rewardedRef.current;
 
     const unsubLoaded = rewarded.addAdEventListener(RewardedAdEventType.LOADED, () => {
+      // #region debug-point A:rewarded-loaded
+      logAdEvent('rewarded_loaded', 'rewarded loaded', {
+        platform: Platform.OS,
+        rewardedAdUnitId,
+        pendingShowRewarded: pendingShowRewardedRef.current,
+        useTestAdUnits
+      });
+      // #endregion
       setRewardedLoaded(true);
+      setRewardedLoading(false);
       if (pendingShowRewardedRef.current) {
         pendingShowRewardedRef.current = false;
         if (rewardedPendingTimeoutRef.current) {
@@ -428,6 +530,7 @@ export default function AdSystem({ children }) {
     });
 
     const unsubOpened = rewarded.addAdEventListener(AdEventType.OPENED, () => {
+      logAdEvent('rewarded_opened', 'rewarded opened');
       rewardedPresentRetryCountRef.current = 0;
       if (rewardedPendingTimeoutRef.current) {
         clearTimeout(rewardedPendingTimeoutRef.current);
@@ -437,6 +540,7 @@ export default function AdSystem({ children }) {
     });
 
     const unsubEarned = rewarded.addAdEventListener(RewardedAdEventType.EARNED_REWARD, async () => {
+      logAdEvent('rewarded_reward_earned', 'rewarded reward earned');
       if (rewardedPendingTimeoutRef.current) {
         clearTimeout(rewardedPendingTimeoutRef.current);
         rewardedPendingTimeoutRef.current = null;
@@ -463,6 +567,7 @@ export default function AdSystem({ children }) {
     });
 
     const unsubClosed = rewarded.addAdEventListener(AdEventType.CLOSED, () => {
+      logAdEvent('rewarded_closed', 'rewarded closed');
       if (rewardedPendingTimeoutRef.current) {
         clearTimeout(rewardedPendingTimeoutRef.current);
         rewardedPendingTimeoutRef.current = null;
@@ -478,6 +583,18 @@ export default function AdSystem({ children }) {
     const unsubError = rewarded.addAdEventListener(AdEventType.ERROR, (err) => {
       const hadPendingShow = pendingShowRewardedRef.current;
       const errMessage = typeof err?.message === 'string' ? err.message : String(err || '');
+      // #region debug-point C:rewarded-error
+      logAdEvent('rewarded_error', 'rewarded error', {
+        platform: Platform.OS,
+        rewardedAdUnitId,
+        hadPendingShow,
+        rewardedLoaded,
+        errMessage,
+        errCode: err?.code ?? null,
+        useTestAdUnits,
+        requestNonPersonalizedAdsOnly
+      });
+      // #endregion
       const isPresentingError =
         errMessage.includes('already presenting another view controller') ||
         errMessage.includes('already presenting') ||
@@ -487,6 +604,7 @@ export default function AdSystem({ children }) {
         rewardedPendingTimeoutRef.current = null;
       }
       setRewardedLoaded(false);
+      setRewardedLoading(false);
       if (adDebugEnabled) console.warn('[ADS] rewarded error', err);
       if (isPresentingError && (hadPendingShow || rewardedRewardRef.current?.metadata)) {
         const attempt = rewardedPresentRetryCountRef.current || 0;
@@ -515,11 +633,14 @@ export default function AdSystem({ children }) {
     });
 
     rewardedUnsubsRef.current = [unsubLoaded, unsubOpened, unsubEarned, unsubClosed, unsubError];
-    try {
-      rewarded.load();
-    } catch {}
+    ensureMobileAdsInitialized().then((ok) => {
+      if (!ok) return;
+      try {
+        rewarded.load();
+      } catch {}
+    });
     return rewarded;
-  }, [showAds, rewardedAdUnitId, credit, adDebugEnabled, requestNonPersonalizedAdsOnly]);
+  }, [showAds, rewardedAdUnitId, credit, adDebugEnabled, requestNonPersonalizedAdsOnly, ensureMobileAdsInitialized, logAdEvent, rewardedLoaded, t, useTestAdUnits]);
 
   useEffect(() => {
     if (!showAds) {
@@ -603,15 +724,32 @@ export default function AdSystem({ children }) {
   const prepareRewarded = useCallback(() => {
     if (!showAds) return;
     if (!RewardedAd) return;
-    const rewarded = setupRewarded();
-    if (!rewarded) return;
-    if (rewardedLoaded) return;
-    try {
-      rewarded.load();
-    } catch {}
-  }, [showAds, rewardedLoaded, setupRewarded]);
+    if (Platform.OS === 'ios' && !attReady) return;
+    ensureMobileAdsInitialized().then((ok) => {
+      if (!ok) return;
+      const rewarded = setupRewarded();
+      if (!rewarded) return;
+      if (rewardedLoadedRef.current) return;
+      try {
+        rewarded.load();
+      } catch {}
+    });
+  }, [showAds, setupRewarded, ensureMobileAdsInitialized, attReady]);
 
   const showRewarded = useCallback((options = {}) => {
+    // #region debug-point B:show-rewarded-entry
+    logAdEvent('rewarded_request_started', 'showRewarded called', {
+      platform: Platform.OS,
+      showAds,
+      attReady,
+      rewardedLoaded,
+      nativeAdsAvailable,
+      useTestAdUnits,
+      rewardedAdUnitId,
+      hasOptions: Boolean(options && typeof options === 'object'),
+      rewardKey: options?.metadata?.reward ?? null
+    });
+    // #endregion
     if (!showAds) {
       appAlert(t('ads.unavailable_title'), t('ads.unavailable_desc_account'));
       return;
@@ -622,11 +760,6 @@ export default function AdSystem({ children }) {
     }
     if (!RewardedAd) {
       appAlert(t('ads.unavailable_title'), t('ads.unavailable_desc_build'));
-      return;
-    }
-    const rewarded = setupRewarded();
-    if (!rewarded) {
-      appAlert(t('ads.unavailable_title'), t('ads.unavailable_desc_prepare'));
       return;
     }
     if (options && typeof options === 'object') {
@@ -641,48 +774,74 @@ export default function AdSystem({ children }) {
     }
     rewardedPresentRetryCountRef.current = 0;
     pendingShowRewardedRef.current = true;
-    let shouldStartTimeout = true;
-    if (rewardedLoaded) {
-      let didShow = true;
-      try {
-        rewarded.show();
-      } catch {
-        didShow = false;
-      }
-      if (!didShow) {
-        setTimeout(() => {
-          if (!pendingShowRewardedRef.current) return;
-          try {
-            rewarded.show();
-          } catch {}
-        }, 700);
-        setTimeout(() => {
-          if (!pendingShowRewardedRef.current) return;
-          try {
-            rewarded.load();
-          } catch {}
-        }, 1400);
-      }
-    } else {
-      try {
-        rewarded.load();
-      } catch {}
-    }
 
     if (rewardedPendingTimeoutRef.current) {
       clearTimeout(rewardedPendingTimeoutRef.current);
       rewardedPendingTimeoutRef.current = null;
     }
-    if (shouldStartTimeout) {
-      rewardedPendingTimeoutRef.current = setTimeout(() => {
+    rewardedPendingTimeoutRef.current = setTimeout(() => {
+      if (!pendingShowRewardedRef.current) return;
+      logAdEvent('rewarded_timeout', 'rewarded show timeout (20s)');
+      pendingShowRewardedRef.current = false;
+      rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
+      appAlert(t('ads.unavailable_title'), t('ads.unavailable_desc_timeout'));
+      if (adDebugEnabled) console.warn('[ADS] rewarded timeout (no ad loaded to show)');
+    }, 20000);
+
+    ensureMobileAdsInitialized().then((ok) => {
+      if (!ok) {
+        if (rewardedPendingTimeoutRef.current) {
+          clearTimeout(rewardedPendingTimeoutRef.current);
+          rewardedPendingTimeoutRef.current = null;
+        }
         if (!pendingShowRewardedRef.current) return;
         pendingShowRewardedRef.current = false;
         rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
-        appAlert(t('ads.unavailable_title'), t('ads.unavailable_desc_load'));
-        if (adDebugEnabled) console.warn('[ADS] rewarded timeout (no ad loaded to show)');
-      }, 12000);
-    }
-  }, [showAds, rewardedLoaded, setupRewarded, attReady, t]);
+        appAlert(t('ads.unavailable_title'), t('ads.unavailable_desc_prepare'));
+        return;
+      }
+
+      const rewarded = setupRewarded();
+      if (!rewarded) {
+        if (rewardedPendingTimeoutRef.current) {
+          clearTimeout(rewardedPendingTimeoutRef.current);
+          rewardedPendingTimeoutRef.current = null;
+        }
+        if (!pendingShowRewardedRef.current) return;
+        pendingShowRewardedRef.current = false;
+        rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
+        appAlert(t('ads.unavailable_title'), t('ads.unavailable_desc_prepare'));
+        return;
+      }
+
+      if (rewardedLoadedRef.current) {
+        let didShow = true;
+        try {
+          rewarded.show();
+        } catch {
+          didShow = false;
+        }
+        if (!didShow) {
+          setTimeout(() => {
+            if (!pendingShowRewardedRef.current) return;
+            try {
+              rewarded.show();
+            } catch {}
+          }, 700);
+          setTimeout(() => {
+            if (!pendingShowRewardedRef.current) return;
+            try {
+              rewarded.load();
+            } catch {}
+          }, 1400);
+        }
+      } else {
+        try {
+          rewarded.load();
+        } catch {}
+      }
+    });
+  }, [showAds, rewardedAdUnitId, setupRewarded, attReady, t, logAdEvent, ensureMobileAdsInitialized, adDebugEnabled]);
 
   const showPrivacyOptions = useCallback(async () => {
     if (Platform.OS !== 'android') return;
@@ -715,6 +874,42 @@ export default function AdSystem({ children }) {
     }
   }, [adDebugEnabled]);
 
+  const getAdDiagnostics = useCallback(() => {
+    return {
+      showAds,
+      isPremium: Boolean(user?.isPremium),
+      isEarlyAccess: Boolean(user?.isEarlyAccess),
+      attReady,
+      attAuthorized,
+      adDebugEnabled,
+      rewardedAdUnitId,
+      rewardedLoaded,
+      rewardedLoading,
+      interstitialLoaded,
+      nativeAdsAvailable,
+      useTestAdUnits,
+      requestNonPersonalizedAdsOnly,
+      platform: Platform.OS,
+      lastInterstitialAt,
+      actionCount
+    };
+  }, [
+    showAds,
+    user,
+    attReady,
+    attAuthorized,
+    adDebugEnabled,
+    rewardedAdUnitId,
+    rewardedLoaded,
+    rewardedLoading,
+    interstitialLoaded,
+    nativeAdsAvailable,
+    useTestAdUnits,
+    requestNonPersonalizedAdsOnly,
+    lastInterstitialAt,
+    actionCount
+  ]);
+
   const value = useMemo(
     () => ({
       showAds,
@@ -722,9 +917,24 @@ export default function AdSystem({ children }) {
       tryShowInterstitial,
       prepareRewarded,
       showRewarded,
-      showPrivacyOptions
+      showPrivacyOptions,
+      getAdDiagnostics,
+      logAdEvent,
+      rewardedLoaded,
+      rewardedLoading
     }),
-    [showAds, trackAction, tryShowInterstitial, prepareRewarded, showRewarded, showPrivacyOptions]
+    [
+      showAds,
+      trackAction,
+      tryShowInterstitial,
+      prepareRewarded,
+      showRewarded,
+      showPrivacyOptions,
+      getAdDiagnostics,
+      logAdEvent,
+      rewardedLoaded,
+      rewardedLoading
+    ]
   );
 
   return (

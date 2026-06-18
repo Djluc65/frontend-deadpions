@@ -8,7 +8,7 @@ import { appAlert } from '../services/appAlert';
 
 const InfoScreen = ({ navigation }) => {
   const { t } = useTranslation();
-  const version = "1.0.2 (Early Access)";
+  const version = "1.0.3 (Early Access)";
 
   const openLink = async (url) => {
     try {

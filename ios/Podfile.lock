@@ -39,7 +39,7 @@ PODS:
     - ExpoModulesCore
   - ExpoLinking (7.0.5):
     - ExpoModulesCore
-  - ExpoLocalization (15.0.3):
+  - ExpoLocalization (16.0.1):
     - ExpoModulesCore
   - ExpoModulesCore (2.2.3):
     - DoubleConversion
@@ -2140,7 +2140,7 @@ SPEC CHECKSUMS:
   ExpoKeepAwake: b0171a73665bfcefcfcc311742a72a956e6aa680
   ExpoLinearGradient: 35ebd83b16f80b3add053a2fd68cc328ed927f60
   ExpoLinking: 8d12bee174ba0cdf31239706578e29e74a417402
-  ExpoLocalization: 1b4195ed48148c7f52ce790d3965cc19483fcbf2
+  ExpoLocalization: 7776ea3bdb112125390745bbaf919b734b2ad1c7
   ExpoModulesCore: 725faec070d590810d2ea5983d9f78f7cf6a38ec
   ExpoScreenOrientation: 4a3ee98da02b0e0f86a6aa5e3c4bd96399c87581
   ExpoSplashScreen: 399ee9f85b6c8a61b965e13a1ecff8384db591c2
@@ -2237,6 +2237,6 @@ SPEC CHECKSUMS:
   StripeUICore: f2d514e900c37436dc5427fdf2c29d68ab1c2935
   Yoga: feb4910aba9742cfedc059e2b2902e22ffe9954a
 
-PODFILE CHECKSUM: 9cb77be55ee2ee14e85383978fd074b6521730dc
+PODFILE CHECKSUM: 5536d5452e2c13035502b3e2f987beba5af7ae9d
 
 COCOAPODS: 1.16.2

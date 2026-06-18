@@ -21,6 +21,7 @@ import { getResponsiveSize, DESKTOP_BREAKPOINT } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
 import { T } from '../utils/theme';
 import { selectHasTempPremiumPions } from '../redux/slices/rewardsSlice';
+import StreakBadge from '../components/StreakBadge';
 
 const AVATARS = [
   'https://cdn-icons-png.flaticon.com/512/147/147144.png',
@@ -326,9 +327,12 @@ const ProfileScreen = ({ navigation }) => {
                           <Text style={styles.premiumText}>💎 {user.isEarlyAccess ? t('profile.premium_gifted') : t('shop.premium')}</Text>
                         </LinearGradient>
                       )}
-                      <Text style={styles.pseudoText}>
-                        {user?.pseudo} {selectedCountry && <Text style={{fontSize: getResponsiveSize(20)}}>{selectedCountry}</Text>}
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: getResponsiveSize(8) }}>
+                        <Text style={styles.pseudoText}>
+                          {user?.pseudo} {selectedCountry && <Text style={{fontSize: getResponsiveSize(20)}}>{selectedCountry}</Text>}
+                        </Text>
+                        <StreakBadge />
+                      </View>
                       <Text style={styles.emailText}>{user?.email}</Text>
                     </View>
                   </View>
@@ -526,6 +530,14 @@ const ProfileScreen = ({ navigation }) => {
                       {(user?.stats?.wins || 0) + (user?.stats?.losses || 0) + (user?.stats?.abandons || 0)}
                     </Text>
                     <Text style={styles.statLabel}>{t('profile.games_played')}</Text>
+                  </View>
+                  <View style={styles.statCard}>
+                    <Text style={[styles.statValue, { color: T.gold }]}>{user?.currentStreak || 0}</Text>
+                    <Text style={styles.statLabel}>Streak Actuelle</Text>
+                  </View>
+                  <View style={styles.statCard}>
+                    <Text style={[styles.statValue, { color: T.gold }]}>{user?.bestStreak || 0}</Text>
+                    <Text style={styles.statLabel}>Meilleure Streak</Text>
                   </View>
                 </View>
 

@@ -617,6 +617,7 @@ const GameScreen = ({ navigation, route }) => {
   const lastUserRoomJoinedRef = useRef(null);
   const lastLiveRoomJoinedRef = useRef(null);
   const syncReadyRef = useRef(true);
+  const reportedTournamentMatchRef = useRef(false);
 
   useEffect(() => {
     if (bubbles.player1) {
@@ -770,6 +771,43 @@ const GameScreen = ({ navigation, route }) => {
         pendingReplaceGameIdRef.current = null;
       }
   }, [params]);
+
+  useEffect(() => {
+    reportedTournamentMatchRef.current = false;
+  }, [params.gameId, params.tournamentId, params.tournamentMatchId]);
+
+  useEffect(() => {
+    const tournamentId = params.tournamentId;
+    const tournamentMatchId = params.tournamentMatchId;
+    const currentUserId = user?._id || user?.id;
+
+    if (!tournamentId || !tournamentMatchId || !currentUserId) return;
+    if (!socket.connected) socket.connect();
+
+    socket.emit('tournament_match_presence', {
+      tournamentId,
+      matchId: tournamentMatchId
+    });
+  }, [params.gameId, params.tournamentId, params.tournamentMatchId, user?._id, user?.id]);
+
+  useEffect(() => {
+    if (!gameOver || reportedTournamentMatchRef.current) return;
+    if (!params.tournamentId || !params.tournamentMatchId) return;
+    if (winner !== 'black' && winner !== 'white') return;
+
+    const blackId = getPlayerId(playersData?.black);
+    const whiteId = getPlayerId(playersData?.white);
+    const winnerId = winner === 'black' ? blackId : whiteId;
+
+    if (!winnerId) return;
+
+    reportedTournamentMatchRef.current = true;
+    socket.emit('tournament_match_result', {
+      tournamentId: params.tournamentId,
+      matchId: params.tournamentMatchId,
+      winnerId
+    });
+  }, [gameOver, params.tournamentId, params.tournamentMatchId, playersData, winner]);
 
   // --- ONLINE MODE LOGIC ---
   useEffect(() => {

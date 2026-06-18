@@ -7,6 +7,7 @@ import { getAvatarSource } from '../../utils/avatarUtils';
 import { getResponsiveSize } from '../../utils/responsive';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { T } from '../../utils/theme';
+import StreakBadge from '../StreakBadge';
 
 const rs = (size) => getResponsiveSize(size);
 
@@ -100,9 +101,12 @@ const HomeHeader = memo(({ user, navigation, onSearch, onSettings, onRewards, on
             </View>
             {/* Texte */}
             <View style={styles.userTexts}>
-              <Text style={[styles.pseudo, isTablet && { fontSize: rs(14) }]} numberOfLines={1} ellipsizeMode="tail">
-                {pseudo}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: rs(4) }}>
+                <Text style={[styles.pseudo, isTablet && { fontSize: rs(14) }]} numberOfLines={1} ellipsizeMode="tail">
+                  {pseudo}
+                </Text>
+                <StreakBadge />
+              </View>
               <Text style={styles.levelText}>LV.{level}</Text>
             </View>
           </View>

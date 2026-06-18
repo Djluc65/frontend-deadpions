@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_URL } from '../config';
 import TransactionService from './TransactionService';
 
+let lastRateLimitLogAt = 0;
+
 class CoinsService {
     // Clés pour AsyncStorage
     static STORAGE_KEY_COINS = 'user_coins';
@@ -281,8 +283,20 @@ class CoinsService {
                 }
                 return { ok: true };
             } else {
-                console.error('Erreur sync serveur:', response.status);
-                return { ok: false, status: response.status };
+                const status = response.status;
+                if (status === 429) {
+                    const now = Date.now();
+                    if (now - lastRateLimitLogAt > 5000) {
+                        lastRateLimitLogAt = now;
+                        console.warn('Erreur sync serveur:', status);
+                    }
+                    const retryAfterHeader = response.headers?.get?.('Retry-After');
+                    const retryAfterSeconds = retryAfterHeader ? Number(retryAfterHeader) : NaN;
+                    const retryAfterMs = Number.isFinite(retryAfterSeconds) ? Math.max(0, retryAfterSeconds) * 1000 : null;
+                    return { ok: false, status, retryAfterMs };
+                }
+                console.error('Erreur sync serveur:', status);
+                return { ok: false, status };
             }
         } catch (error) {
             console.error('Erreur synchronisation:', error);

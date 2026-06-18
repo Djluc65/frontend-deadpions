@@ -8,6 +8,8 @@ import socialReducer from './slices/socialSlice';
 import gameReducer from './slices/gameSlice';
 import uiReducer from './slices/uiSlice';
 import rewardsReducer from './slices/rewardsSlice';
+import streakReducer from './slices/streakSlice';
+import tournamentReducer from './slices/tournamentSlice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
@@ -16,6 +18,8 @@ const rootReducer = combineReducers({
   game: gameReducer,
   ui: uiReducer,
   rewards: rewardsReducer,
+  streak: streakReducer,
+  tournament: tournamentReducer,
 });
 
 const persistConfig = {

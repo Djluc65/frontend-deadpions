@@ -22,6 +22,10 @@ export const CoinsProvider = ({ children }) => {
     const isSyncingRef = useRef(false);
     const lastAuthErrorAtRef = useRef(0);
     const authErrorAlertedRef = useRef(false);
+    const nextSyncAllowedAtRef = useRef(0);
+    const txInFlightRef = useRef(false);
+    const txQueuedRef = useRef(false);
+    const nextTxAllowedAtRef = useRef(0);
 
     // Initialisation et écouteurs
     useEffect(() => {
@@ -69,6 +73,8 @@ export const CoinsProvider = ({ children }) => {
 
     const syncBalance = async () => {
         if (!token) return;
+        const now = Date.now();
+        if (now < nextSyncAllowedAtRef.current) return;
         
         // Éviter les appels simultanés (ex: montage initial + focus screen)
         if (isSyncingRef.current) {
@@ -89,6 +95,11 @@ export const CoinsProvider = ({ children }) => {
             // Si la synchro échoue (et qu'il y avait des transactions), on arrête là 
             // pour éviter d'écraser les données locales avec un solde serveur obsolète
             if (!syncResult.success) {
+                if (syncResult.status === 429) {
+                    const backoff = typeof syncResult.retryAfterMs === 'number' ? syncResult.retryAfterMs : 30000;
+                    nextSyncAllowedAtRef.current = Date.now() + backoff;
+                    nextTxAllowedAtRef.current = Date.now() + backoff;
+                }
                 console.warn('Sync transactions failed, skipping reconciliation to preserve local state');
                 return;
             }
@@ -116,10 +127,17 @@ export const CoinsProvider = ({ children }) => {
     const refreshBalance = syncBalance;
 
     const syncTransactions = async () => {
-        if (!token || isSyncing) return { success: false, token };
+        if (!token) return { success: false, token: null, status: 0 };
+        const now = Date.now();
+        if (now < nextTxAllowedAtRef.current) return { success: false, token, status: 429, retryAfterMs: nextTxAllowedAtRef.current - now };
+        if (txInFlightRef.current) {
+            txQueuedRef.current = true;
+            return { success: false, token, status: 0 };
+        }
         let currentToken = token;
         
         try {
+            txInFlightRef.current = true;
             setIsSyncing(true);
             let res = await CoinsService.synchroniser(currentToken);
             
@@ -141,7 +159,7 @@ export const CoinsProvider = ({ children }) => {
                 } catch (e) {
                     console.error('Erreur refresh token:', e);
                     lastAuthErrorAtRef.current = Date.now();
-                    return { success: false, token: currentToken };
+                    return { success: false, token: currentToken, status: 0 };
                 }
             }
             if (res && res.ok === false && res.status === 401) {
@@ -151,15 +169,28 @@ export const CoinsProvider = ({ children }) => {
                     appAlert(i18n.t('auth.session_expired_title'), i18n.t('auth.session_expired_desc'));
                 }
                 dispatch(logout());
-                return { success: false, token: null };
+                return { success: false, token: null, status: 401 };
+            }
+            if (res && res.ok === false && res.status === 429) {
+                const backoff = typeof res.retryAfterMs === 'number' ? res.retryAfterMs : 30000;
+                nextTxAllowedAtRef.current = Date.now() + backoff;
+                nextSyncAllowedAtRef.current = Date.now() + backoff;
+                return { success: false, token: currentToken, status: 429, retryAfterMs: backoff };
             }
             
-            return { success: res?.ok || false, token: currentToken };
+            return { success: res?.ok || false, token: currentToken, status: res?.status || 0 };
         } catch (error) {
             console.error('Erreur syncTransactions:', error);
-            return { success: false, token: currentToken };
+            return { success: false, token: currentToken, status: 0 };
         } finally {
             setIsSyncing(false);
+            txInFlightRef.current = false;
+            if (txQueuedRef.current) {
+                txQueuedRef.current = false;
+                setTimeout(() => {
+                    syncTransactions();
+                }, 1200);
+            }
         }
     };
 

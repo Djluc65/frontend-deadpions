@@ -27,6 +27,11 @@ import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import InfoScreen from '../screens/InfoScreen';
 import AssistantScreen from '../screens/AssistantScreen';
 import PremiumPionsScreen from '../screens/PremiumPionsScreen';
+import AdDiagnosticScreen from '../screens/AdDiagnosticScreen';
+import TournamentLobbyScreen from '../screens/TournamentLobbyScreen';
+import TournamentConfigScreen from '../screens/TournamentConfigScreen';
+import TournamentWaitingRoomScreen from '../screens/TournamentWaitingRoomScreen';
+import TournamentBracketScreen from '../screens/TournamentBracketScreen';
 import AdSystem from '../ads/AdSystem';
 
 const Stack = createStackNavigator();
@@ -143,6 +148,11 @@ function AppNavigator() {
         <Stack.Screen name="Info" component={InfoScreen} />
         <Stack.Screen name="Assistant" component={AssistantScreen} />
         <Stack.Screen name="PremiumPions" component={PremiumPionsScreen} />
+        <Stack.Screen name="AdDiagnostic" component={AdDiagnosticScreen} />
+        <Stack.Screen name="TournamentLobby" component={TournamentLobbyScreen} />
+        <Stack.Screen name="TournamentConfig" component={TournamentConfigScreen} />
+        <Stack.Screen name="TournamentWaitingRoom" component={TournamentWaitingRoomScreen} />
+        <Stack.Screen name="TournamentBracket" component={TournamentBracketScreen} />
       </Stack.Navigator>
       <GlobalInviteListener />
     </AdSystem>

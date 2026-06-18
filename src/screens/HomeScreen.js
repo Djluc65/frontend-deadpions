@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Pressable, ImageBackground,
-  useWindowDimensions, Animated, Easing, Platform,
+  useWindowDimensions, Animated, Easing, Platform, TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
@@ -22,6 +22,8 @@ import Constants from 'expo-constants';
 import HomeHeader from '../components/home/HomeHeader';
 import PwaInstallBanner from '../components/PwaInstallBanner';
 import CyberBattleAnimation from '../components/CyberBattleAnimation';
+import StreakRewardModal from '../components/StreakRewardModal';
+import { useStreakSocket } from '../hooks/useStreakSocket';
 
 // ─── Palette cyber ────────────────────────────────────────────────────────────
 const CYBER = {
@@ -61,6 +63,7 @@ const CyberCard = React.memo(({
   subDotColor,    // couleur du point (défaut = green)
   useRotation = false,
   spin,
+  fullWidth = false,
 }) => {
   const hotAnim  = useRef(new Animated.Value(1)).current;
   const dotAnim  = useRef(new Animated.Value(1)).current;
@@ -105,6 +108,7 @@ const CyberCard = React.memo(({
       style={({ pressed }) => [
         cStyles.card,
         { borderColor: `${color}55`, shadowColor: color },
+        fullWidth && { flex: 0, width: '100%' },
         pressed && { opacity: 0.80, transform: [{ scale: 0.965 }] },
       ]}
     >
@@ -222,6 +226,10 @@ const cStyles = StyleSheet.create({
 const HomeScreen = ({ navigation, route }) => {
   const { width } = useWindowDimensions();
   const isTablet  = width >= 768;
+
+  // Streak hooks
+  useStreakSocket();
+
   const isDesktop = Platform.OS === 'web' && width >= DESKTOP_BREAKPOINT;
   const isAndroidEmulator = Platform.OS === 'android' && Constants.isDevice === false;
 
@@ -261,7 +269,7 @@ const HomeScreen = ({ navigation, route }) => {
   // ── Sync coins au focus ───────────────────────────────────────────────────────
   useFocusEffect(
     useCallback(() => {
-      const shouldSync = !isSyncing && (!lastSync || Date.now() - lastSync > 2000);
+      const shouldSync = !isSyncing && (!lastSync || Date.now() - lastSync > 15000);
       if (shouldSync) syncBalance();
     }, [isSyncing, lastSync, syncBalance])
   );
@@ -320,6 +328,24 @@ const HomeScreen = ({ navigation, route }) => {
   }, []);
 
   // ── Handlers ──────────────────────────────────────────────────────────────────
+  const [logoTaps, setLogoTaps] = useState(0);
+  const lastLogoTapRef = useRef(0);
+
+  const handleLogoPress = () => {
+    const now = Date.now();
+    if (now - lastLogoTapRef.current > 1000) {
+      setLogoTaps(1);
+    } else {
+      const nextTaps = logoTaps + 1;
+      setLogoTaps(nextTaps);
+      if (nextTaps >= 5) {
+        navigation.navigate('AdDiagnostic');
+        setLogoTaps(0);
+      }
+    }
+    lastLogoTapRef.current = now;
+  };
+
   const handlePlaySound = async () => { await playButtonSound(); };
 
   const openOnlineConfig = useCallback(() => {
@@ -510,6 +536,8 @@ const HomeScreen = ({ navigation, route }) => {
       {onlineConfigVisible && OnlineSetupComp  ? <OnlineSetupComp       visible onClose={() => setOnlineConfigVisible(false)} navigation={navigation} user={user} /> : null}
       {aiConfigVisible && AiSetupComp          ? <AiSetupComp           visible onClose={() => setAiConfigVisible(false)} navigation={navigation} user={user} /> : null}
       {localConfigVisible && LocalSetupComp    ? <LocalSetupComp        visible onClose={() => setLocalConfigVisible(false)} navigation={navigation} /> : null}
+      
+      <StreakRewardModal />
 
       {/* ── Header ── */}
       <HomeHeader
@@ -536,15 +564,17 @@ const HomeScreen = ({ navigation, route }) => {
         {/* Animation X vs O */}
         {!isAndroidEmulator && (
           <View style={styles.battleSection}>
-            <Animated.Image
-              source={require('../../assets/images/LogoDeadPions2.png')}
-              style={[
-                styles.battleLogo,
-                { width: battleLogoSize, height: Math.round(battleLogoSize * 0.9) },
-                battleLogoLift ? { transform: [{ translateY: battleLogoLift }] } : null,
-              ]}
-              resizeMode="contain"
-            />
+            <Pressable onPress={handleLogoPress}>
+              <Animated.Image
+                source={require('../../assets/images/LogoDeadPions2.png')}
+                style={[
+                  styles.battleLogo,
+                  { width: battleLogoSize, height: Math.round(battleLogoSize * 0.9) },
+                  battleLogoLift ? { transform: [{ translateY: battleLogoLift }] } : null,
+                ]}
+                resizeMode="contain"
+              />
+            </Pressable>
             <View style={[styles.battleAnimWrap, battleAnimLift ? { marginTop: battleAnimLift } : null]}>
               <CyberBattleAnimation />
             </View>

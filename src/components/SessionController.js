@@ -141,7 +141,7 @@ const SessionController = () => {
                                 prepareRewarded();
                                 setTimeout(() => {
                                     showRewarded({ amount: 20, reason: 'login_bonus', metadata: { source: 'login_reward' } });
-                                }, 250);
+                                }, 650);
                             },
                             textStyle: { fontSize: getResponsiveSize(14) }
                         }

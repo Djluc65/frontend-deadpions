@@ -44,7 +44,7 @@ const RewardsModal = memo(({ visible, onClose }) => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const { t } = useTranslation();
-  const { showAds, prepareRewarded, showRewarded } = useAdManager();
+  const { showAds, prepareRewarded, showRewarded, rewardedLoaded, rewardedLoading } = useAdManager();
   const { credit } = useCoinsContext();
 
   const [busyKey, setBusyKey] = useState(null);
@@ -287,7 +287,9 @@ const RewardsModal = memo(({ visible, onClose }) => {
                   <ActivityIndicator color={hasTempPremium ? T.text : '#05060B'} />
                 ) : (
                   <Text style={[modalTheme.buttonText, !hasTempPremium ? modalTheme.buttonTextActive : null]}>
-                    {hasTempPremium ? t('rewards.already_active') : t('rewards.watch_video')}
+                    {hasTempPremium 
+                      ? t('rewards.already_active') 
+                      : (rewardedLoading && !rewardedLoaded ? t('common.loading') : t('rewards.watch_video'))}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -316,7 +318,9 @@ const RewardsModal = memo(({ visible, onClose }) => {
                   <ActivityIndicator color={hardAiActive ? T.text : '#05060B'} />
                 ) : (
                   <Text style={[modalTheme.buttonText, !hardAiActive ? modalTheme.buttonTextActive : null]}>
-                    {hardAiActive ? t('rewards.already_active') : t('rewards.watch_video')}
+                    {hardAiActive 
+                      ? t('rewards.already_active') 
+                      : (rewardedLoading && !rewardedLoaded ? t('common.loading') : t('rewards.watch_video'))}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -338,7 +342,9 @@ const RewardsModal = memo(({ visible, onClose }) => {
                 {busyKey === 'live' ? (
                   <ActivityIndicator color="#05060B" />
                 ) : (
-                  <Text style={[modalTheme.buttonText, modalTheme.buttonTextActive]}>{t('rewards.watch_video_plus_one')}</Text>
+                  <Text style={[modalTheme.buttonText, modalTheme.buttonTextActive]}>
+                    {rewardedLoading && !rewardedLoaded ? t('common.loading') : t('rewards.watch_video_plus_one')}
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>

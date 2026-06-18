@@ -2,7 +2,7 @@
   "expo": {
     "name": "DeadPions",
     "slug": "deadpions",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "newArchEnabled": false,
     "scheme": [
       "deadpions",
@@ -22,7 +22,7 @@
     ],
     "ios": {
       "bundleIdentifier": "com.deadpions.app",
-      "buildNumber": "125",
+      "buildNumber": "127",
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "DeadPions uses your camera to let you take a profile picture or video call with friends.",

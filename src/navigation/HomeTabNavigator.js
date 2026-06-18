@@ -211,6 +211,7 @@ const MobileBottomNav = ({ state, navigation, notificationsCount, insets, width,
     { key: 'online',   icon: 'globe-outline',            label: t('home.play_online')  },
     { key: 'computer', icon: 'hardware-chip-outline',    label: t('home.play_computer') },
     { key: 'friends',  icon: 'people-outline',           label: t('home.play_friends') },
+    { key: 'tournament', icon: 'trophy-outline',         label: "Tournois" },
     { key: 'local',    icon: 'game-controller-outline',  label: t('home.play_local') },
     { key: 'rewards',  icon: 'gift-outline',             label: t('rewards.title') },
   ]), [t]);
@@ -223,7 +224,11 @@ const MobileBottomNav = ({ state, navigation, notificationsCount, insets, width,
   const handleQuick = (key) => {
     playButtonSound();
     setQuickVisible(false);
-    navigation.navigate('MaisonTab', { quickAction: key });
+    if (key === 'tournament') {
+      navigation.navigate('TournamentLobby');
+    } else {
+      navigation.navigate('MaisonTab', { quickAction: key });
+    }
   };
 
   return (
@@ -385,7 +390,7 @@ const MobileBottomNav = ({ state, navigation, notificationsCount, insets, width,
               ]}
             >
               <View style={quickStyles.row}>
-                {quickItems.slice(0, 4).map((it) => (
+                {quickItems.slice(0, 5).map((it) => (
                   <TouchableOpacity
                     key={it.key}
                     onPress={() => handleQuick(it.key)}

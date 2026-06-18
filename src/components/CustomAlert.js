@@ -85,6 +85,7 @@ const styles = StyleSheet.create({
   modalOverlay: modalTheme.overlay,
   alertContent: {
     ...modalTheme.card,
+    backgroundColor: '#0A0E1C',
     maxWidth: getResponsiveSize(460),
     minWidth: getResponsiveSize(280),
     overflow: 'hidden',
