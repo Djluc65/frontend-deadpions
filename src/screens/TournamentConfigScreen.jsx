@@ -9,9 +9,12 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 // import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { T, TY } from '../utils/theme';
 import Button from '../components/common/Button';
@@ -22,36 +25,46 @@ import { useTournamentSocket } from '../hooks/useTournamentSocket';
 import {
   buildAutomaticTournamentName,
   buildDefaultRoundSchedule,
-  buildTournamentSummaryLines,
   calculateTournamentPot,
   calculateTournamentWinnerGain,
   DEFAULT_TOURNAMENT_CONFIG,
   estimateRoundDurationMinutes,
-  formatGamesPerMatchSummary,
-  getRoundLabel,
   getTournamentRoundsCount,
   sanitizeTournamentName,
-  TOURNAMENT_COLOR_OPTIONS,
   TOURNAMENT_ENTRY_FEE_OPTIONS,
   TOURNAMENT_GAMES_PER_MATCH_OPTIONS,
   TOURNAMENT_MODE_OPTIONS,
-  TOURNAMENT_MOVE_TIME_OPTIONS,
-  TOURNAMENT_RANK_OPTIONS,
-  TOURNAMENT_SCHEDULING_OPTIONS,
   TOURNAMENT_SIZE_OPTIONS,
-  TOURNAMENT_STARTING_PLAYER_OPTIONS,
-  TOURNAMENT_TOTAL_TIME_OPTIONS,
-  TOURNAMENT_VICTORY_RULE_OPTIONS,
-  TOURNAMENT_VISIBILITY_OPTIONS,
 } from '../utils/tournamentConfig';
+import {
+  buildTournamentSummaryLinesI18n,
+  formatGamesPerMatchSummaryI18n,
+  getRoundLabelI18n,
+  mapColorOptions,
+  mapMoveTimeOptions,
+  mapRankOptions,
+  mapSchedulingOptions,
+  mapStartingPlayerOptions,
+  mapTotalTimeOptions,
+} from '../utils/tournamentI18n';
+import { getResponsiveSize } from '../utils/responsive';
+import { useTournamentLayout } from '../utils/tournamentLayout';
 
-const SectionCard = ({ title, subtitle, children }) => (
-  <View style={styles.sectionCard}>
-    <Text style={styles.sectionTitle}>{title}</Text>
-    {subtitle ? <Text style={styles.sectionSubtitle}>{subtitle}</Text> : null}
+const rs = getResponsiveSize;
+
+const SectionCard = ({ title, subtitle, children }) => {
+  const { isTablet, contentWidth } = useTournamentLayout();
+  return (
+  <View style={[
+    styles.sectionCard,
+    isTablet && { width: contentWidth, alignSelf: 'center', padding: rs(18) },
+  ]}>
+    <Text style={[styles.sectionTitle, isTablet && { fontSize: rs(18) }]}>{title}</Text>
+    {subtitle ? <Text style={[styles.sectionSubtitle, isTablet && { fontSize: rs(14) }]}>{subtitle}</Text> : null}
     {children}
   </View>
-);
+  );
+};
 
 const SegmentedRow = ({ options, value, onChange, disabledValues = [] }) => (
   <View style={styles.segmentedRow}>
@@ -132,10 +145,11 @@ const formatTimeLabel = (value) => {
 };
 
 const TournamentConfigScreen = ({ navigation }) => {
+  const { t, i18n } = useTranslation();
+  const { isTablet, contentWidth } = useTournamentLayout();
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
-  const cleanupRef = useRef([]);
-  const submitTimeoutRef = useRef(null);
+  const safetyTimeoutRef = useRef(null);
   const [config, setConfig] = useState(DEFAULT_TOURNAMENT_CONFIG);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
@@ -147,9 +161,21 @@ const TournamentConfigScreen = ({ navigation }) => {
   const tournamentNamePreview = useMemo(() => {
     return sanitizeTournamentName(config.name) || buildAutomaticTournamentName(user?.pseudo);
   }, [config.name, user?.pseudo]);
-  const summaryLines = useMemo(() => buildTournamentSummaryLines({ ...config, name: tournamentNamePreview }), [config, tournamentNamePreview]);
+  const summaryLines = useMemo(
+    () => buildTournamentSummaryLinesI18n({ ...config, name: tournamentNamePreview }),
+    [config, tournamentNamePreview, i18n.language]
+  );
   const roundsCount = useMemo(() => getTournamentRoundsCount(config.size), [config.size]);
-  const summaryGames = useMemo(() => formatGamesPerMatchSummary(config.gamesPerMatch), [config.gamesPerMatch]);
+  const summaryGames = useMemo(
+    () => formatGamesPerMatchSummaryI18n(config.gamesPerMatch),
+    [config.gamesPerMatch, i18n.language]
+  );
+  const moveTimeOptions = useMemo(() => mapMoveTimeOptions(), [i18n.language]);
+  const totalTimeOptions = useMemo(() => mapTotalTimeOptions(), [i18n.language]);
+  const startingPlayerOptions = useMemo(() => mapStartingPlayerOptions(), [i18n.language]);
+  const colorOptions = useMemo(() => mapColorOptions(), [i18n.language]);
+  const schedulingOptions = useMemo(() => mapSchedulingOptions(), [i18n.language]);
+  const rankOptions = useMemo(() => mapRankOptions(), [i18n.language]);
   const gamesDisabledFor32 = config.size === 32 ? [8, 10] : [];
 
   useEffect(() => {
@@ -170,57 +196,13 @@ const TournamentConfigScreen = ({ navigation }) => {
   }, [config.gameMode, config.gamesPerMatch, config.moveTimeLimit, config.schedulingMode, config.size, config.totalTimeLimit]);
 
   useEffect(() => {
-    const registerListeners = () => {
-      const handleCreated = (tournament) => {
-        if (!tournament?._id) return;
-        if (submitTimeoutRef.current) {
-          clearTimeout(submitTimeoutRef.current);
-          submitTimeoutRef.current = null;
-        }
-        setIsSubmitting(false);
-        dispatch(setTournament(tournament));
-        navigation.replace('TournamentWaitingRoom', { tournamentId: tournament._id });
-      };
-
-      const handleError = (message) => {
-        if (submitTimeoutRef.current) {
-          clearTimeout(submitTimeoutRef.current);
-          submitTimeoutRef.current = null;
-        }
-        setIsSubmitting(false);
-        appAlert('Tournoi', typeof message === 'string' ? message : 'Impossible de creer le tournoi');
-      };
-
-      socket.on('tournament_created', handleCreated);
-      socket.on('tournament_error', handleError);
-
-      const cleanup = () => {
-        socket.off('tournament_created', handleCreated);
-        socket.off('tournament_error', handleError);
-      };
-
-      cleanupRef.current.push(cleanup);
-      const timeoutId = setTimeout(cleanup, 15000);
-      cleanupRef.current.push(() => clearTimeout(timeoutId));
-    };
-
-    registerListeners();
-    const renewId = setInterval(() => {
-      cleanupRef.current.forEach((fn) => fn());
-      cleanupRef.current = [];
-      registerListeners();
-    }, 14000);
-    cleanupRef.current.push(() => clearInterval(renewId));
-
     return () => {
-      if (submitTimeoutRef.current) {
-        clearTimeout(submitTimeoutRef.current);
-        submitTimeoutRef.current = null;
+      if (safetyTimeoutRef.current) {
+        clearTimeout(safetyTimeoutRef.current);
+        safetyTimeoutRef.current = null;
       }
-      cleanupRef.current.forEach((fn) => fn());
-      cleanupRef.current = [];
     };
-  }, [dispatch, navigation]);
+  }, []);
 
   const updateConfig = (patch) => {
     setConfig((prev) => ({ ...prev, ...patch }));
@@ -251,11 +233,11 @@ const TournamentConfigScreen = ({ navigation }) => {
     for (let index = 0; index < schedule.length; index += 1) {
       const item = schedule[index];
       if (!item?.scheduledAt || Number.isNaN(new Date(item.scheduledAt).getTime())) {
-        appAlert('Tournoi', `La date du Round ${index + 1} est invalide`);
+        appAlert(t('tournament.bracket.title'), t('tournament.config.error_round_invalid', { round: index + 1 }));
         return false;
       }
       if (new Date(item.scheduledAt).getTime() <= now) {
-        appAlert('Tournoi', `La date du Round ${index + 1} est depassee`);
+        appAlert(t('tournament.bracket.title'), t('tournament.config.error_round_past', { round: index + 1 }));
         return false;
       }
     }
@@ -265,11 +247,11 @@ const TournamentConfigScreen = ({ navigation }) => {
   const handleSubmit = () => {
     if (isSubmitting) return;
     if (!canAfford) {
-      appAlert('Tournoi', 'Solde insuffisant pour creer ce tournoi.');
+      appAlert(t('tournament.bracket.title'), t('tournament.config.error_insufficient'));
       return;
     }
     if (config.size === 32 && [8, 10].includes(config.gamesPerMatch)) {
-      appAlert('Tournoi', 'Indisponible pour 32 joueurs (duree excessive).');
+      appAlert(t('tournament.bracket.title'), t('tournament.config.error_unavailable'));
       return;
     }
     if (!validateSchedule()) {
@@ -277,61 +259,101 @@ const TournamentConfigScreen = ({ navigation }) => {
     }
 
     setIsSubmitting(true);
-    if (submitTimeoutRef.current) {
-      clearTimeout(submitTimeoutRef.current);
-    }
-    submitTimeoutRef.current = setTimeout(() => {
-      submitTimeoutRef.current = null;
+    
+    // Safety timeout (30 seconds)
+    safetyTimeoutRef.current = setTimeout(() => {
+      safetyTimeoutRef.current = null;
       setIsSubmitting(false);
-      appAlert('Tournoi', 'Aucune reponse du serveur apres 15 secondes. Reessayez.');
-    }, 15000);
-    createTournament({
-      ...config,
-      name: sanitizeTournamentName(config.name),
-      roundSchedule: (config.roundSchedule || []).map((item) => ({
-        round: item.round,
-        scheduledAt: item.scheduledAt instanceof Date ? item.scheduledAt.toISOString() : item.scheduledAt
-      }))
-    });
+      appAlert(
+        t('tournament.config.slow_connection'),
+        t('tournament.config.slow_connection_msg'),
+        [{ text: t('tournament.common.ok'), onPress: () => navigation.navigate('TournamentLobby') }]
+      );
+    }, 30000);
+
+    createTournament(
+      {
+        ...config,
+        name: sanitizeTournamentName(config.name),
+        roundSchedule: (config.roundSchedule || []).map((item) => ({
+          round: item.round,
+          scheduledAt: item.scheduledAt instanceof Date ? item.scheduledAt.toISOString() : item.scheduledAt
+        }))
+      },
+      (response) => {
+        // Clear safety timeout as soon as we get ACK
+        if (safetyTimeoutRef.current) {
+          clearTimeout(safetyTimeoutRef.current);
+          safetyTimeoutRef.current = null;
+        }
+        setIsSubmitting(false);
+
+        if (response?.success) {
+          if (response.tournament) {
+            dispatch(setTournament(response.tournament));
+          }
+          navigation.replace('TournamentWaitingRoom', {
+            tournamentId: response.tournamentId,
+            tournamentName: response.tournamentName
+          });
+        } else {
+          appAlert(
+            t('tournament.common.error'),
+            response?.message || t('common.error')
+          );
+        }
+      }
+    );
   };
 
   return (
     <SafeAreaView style={styles.safe}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
+      >
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={T.text} />
         </TouchableOpacity>
-        <View style={styles.headerTextWrap}>
-          <Text style={styles.title}>Configuration du tournoi</Text>
-          <Text style={styles.subtitle}>Meme logique visuelle que le mode amis, adaptee au bracket.</Text>
+        <View style={[
+          styles.headerTextWrap,
+          isTablet && { maxWidth: contentWidth, alignSelf: 'center', width: '100%' },
+        ]}>
+          <Text style={[styles.title, isTablet && { fontSize: rs(26) }]}>{t('tournament.config.title')}</Text>
+          <Text style={[styles.subtitle, isTablet && { fontSize: rs(14) }]}>{t('tournament.config.subtitle')}</Text>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <SectionCard title="Nom du tournoi">
-          <Text style={styles.fieldLabel}>Nom du tournoi</Text>
+      <ScrollView contentContainerStyle={[
+        styles.content,
+        isTablet && { alignItems: 'center', paddingHorizontal: 0, gap: rs(12) },
+      ]}>
+        <SectionCard title={t('tournament.config.name_label')}>
+          <Text style={styles.fieldLabel}>{t('tournament.config.name_label')}</Text>
           <TextInput
             style={[styles.input, focusedField === 'name' && styles.inputFocused]}
             value={config.name}
             onChangeText={(value) => updateConfig({ name: value })}
-            placeholder="Ex : Championnat DeadPions #1"
+            placeholder={t('tournament.config.name_placeholder')}
             placeholderTextColor="rgba(236, 230, 214, 0.5)"
             maxLength={40}
             onFocus={() => setFocusedField('name')}
             onBlur={() => setFocusedField(null)}
           />
-          <Text style={styles.helperText}>{config.name.length}/40</Text>
+          <Text style={styles.helperText}>{t('tournament.config.name_counter', { length: config.name.length })}</Text>
         </SectionCard>
 
-        <SectionCard title="Structure du tournoi">
-          <Text style={styles.fieldLabel}>Taille du tournoi</Text>
+        <SectionCard title={t('tournament.config.section_structure')}>
+          <Text style={styles.fieldLabel}>{t('tournament.config.size_label')}</Text>
           <SegmentedRow
             options={TOURNAMENT_SIZE_OPTIONS.map((value) => ({ label: `${value}`, value }))}
             value={config.size}
             onChange={(value) => updateConfig({ size: value })}
           />
 
-          <Text style={styles.fieldLabel}>Mise d entree</Text>
+          <Text style={styles.fieldLabel}>{t('tournament.config.entry_fee_label')}</Text>
           <SegmentedRow
             options={TOURNAMENT_ENTRY_FEE_OPTIONS.map((value) => ({ label: `${value}`, value }))}
             value={config.entryFee}
@@ -339,23 +361,30 @@ const TournamentConfigScreen = ({ navigation }) => {
           />
 
           <View style={styles.inlineInfoCard}>
-            <Text style={styles.inlineInfoText}>Pot total estime : {totalPot} coins</Text>
-            <Text style={styles.inlineInfoText}>Gain vainqueur : {winnerGain} coins</Text>
+            <Text style={styles.inlineInfoText}>
+              {t('tournament.config.pot_estimated', { amount: totalPot })}
+            </Text>
+            <Text style={styles.inlineInfoText}>
+              {t('tournament.config.winner_estimated', { amount: winnerGain })}
+            </Text>
           </View>
         </SectionCard>
 
-        <SectionCard title="Regles de jeu">
-          <Text style={styles.fieldLabel}>Mode de partie</Text>
+        <SectionCard title={t('tournament.config.section_rules')}>
+          <Text style={styles.fieldLabel}>{t('tournament.config.mode_label')}</Text>
           <SegmentedRow
-            options={TOURNAMENT_MODE_OPTIONS}
+            options={TOURNAMENT_MODE_OPTIONS.map((option) => ({
+              ...option,
+              label: t(`tournament.common.${option.value === 'classic' ? 'classique' : option.value}`)
+            }))}
             value={config.gameMode}
             onChange={(value) => updateConfig({ gameMode: value })}
           />
 
           {config.gameMode === 'chrono' ? (
             <StepSlider
-              label="Temps par coup"
-              options={TOURNAMENT_MOVE_TIME_OPTIONS}
+              label={t('tournament.config.time_per_move')}
+              options={moveTimeOptions}
               value={config.moveTimeLimit}
               onChange={(value) => updateConfig({ moveTimeLimit: value })}
             />
@@ -363,53 +392,49 @@ const TournamentConfigScreen = ({ navigation }) => {
 
           {config.gameMode === 'blitz' ? (
             <StepSlider
-              label="Temps total par joueur"
-              options={TOURNAMENT_TOTAL_TIME_OPTIONS}
+              label={t('tournament.config.total_time')}
+              options={totalTimeOptions}
               value={config.totalTimeLimit}
               onChange={(value) => updateConfig({ totalTimeLimit: value })}
             />
           ) : null}
 
-          <Text style={styles.fieldLabel}>Qui commence ?</Text>
+          <Text style={styles.fieldLabel}>{t('tournament.config.who_starts_label')}</Text>
           <SegmentedRow
-            options={TOURNAMENT_STARTING_PLAYER_OPTIONS}
+            options={startingPlayerOptions}
             value={config.startingPlayer}
             onChange={(value) => updateConfig({ startingPlayer: value })}
           />
 
-          <Text style={styles.fieldLabel}>Couleur des pions</Text>
+          <Text style={styles.fieldLabel}>{t('tournament.config.pawn_color_label')}</Text>
           <SegmentedRow
-            options={TOURNAMENT_COLOR_OPTIONS}
+            options={colorOptions}
             value={config.pawnColorMode}
             onChange={(value) => updateConfig({ pawnColorMode: value })}
           />
 
-          <Text style={styles.fieldLabel}>Regle de victoire</Text>
-          <SegmentedRow
-            options={TOURNAMENT_VICTORY_RULE_OPTIONS}
-            value={config.victoryRule}
-            onChange={(value) => updateConfig({ victoryRule: value })}
-          />
+          <Text style={styles.fieldLabel}>{t('tournament.config.win_rule_label')}</Text>
+          <Text style={styles.hintText}>{t('tournament.config.options.victory_exact')}</Text>
         </SectionCard>
 
-        <SectionCard title="Format d elimination">
-          <Text style={styles.fieldLabel}>Nombre de parties par affrontement</Text>
+        <SectionCard title={t('tournament.config.section_format')}>
+          <Text style={styles.fieldLabel}>{t('tournament.config.games_count_label')}</Text>
           <SegmentedRow
             options={TOURNAMENT_GAMES_PER_MATCH_OPTIONS.map((value) => ({ label: `${value}`, value }))}
             value={config.gamesPerMatch}
             onChange={(value) => updateConfig({ gamesPerMatch: value })}
             disabledValues={gamesDisabledFor32}
           />
-          <Text style={styles.hintText}>{summaryGames}</Text>
+          <Text style={styles.hintText}>{t('tournament.config.games_summary', { summary: summaryGames })}</Text>
           {config.size === 32 ? (
-            <Text style={styles.hintText}>Indisponible pour 32 joueurs (duree excessive) pour 8 et 10 parties.</Text>
+            <Text style={styles.hintText}>{t('tournament.config.games_unavailable')}</Text>
           ) : null}
 
           <View style={styles.toggleRow}>
             <View style={styles.toggleTextWrap}>
-              <Text style={styles.toggleTitle}>Partie de 3e place</Text>
+              <Text style={styles.toggleTitle}>{t('tournament.config.third_place_label')}</Text>
               <Text style={styles.toggleDescription}>
-                Un match supplementaire entre les deux demi-finalistes elimines pour departager la 3e et la 4e place.
+                {t('tournament.config.third_place_desc')}
               </Text>
             </View>
             <Switch
@@ -422,26 +447,29 @@ const TournamentConfigScreen = ({ navigation }) => {
           </View>
         </SectionCard>
 
-        <SectionCard title="Acces et confidentialite">
-          <Text style={styles.fieldLabel}>Visibilite du tournoi</Text>
+        <SectionCard title={t('tournament.config.section_access')}>
+          <Text style={styles.fieldLabel}>{t('tournament.config.visibility_label')}</Text>
           <SegmentedRow
-            options={TOURNAMENT_VISIBILITY_OPTIONS}
+            options={[
+              { label: t('tournament.common.public'), value: 'public' },
+              { label: t('tournament.common.private'), value: 'private' },
+            ]}
             value={config.visibility}
             onChange={(value) => updateConfig({ visibility: value })}
           />
 
-          <Text style={styles.fieldLabel}>Niveau de classement requis</Text>
+          <Text style={styles.fieldLabel}>{t('tournament.config.rank_label')}</Text>
           <SegmentedRow
-            options={TOURNAMENT_RANK_OPTIONS}
+            options={rankOptions}
             value={config.minimumRanking}
             onChange={(value) => updateConfig({ minimumRanking: value })}
           />
         </SectionCard>
 
-        <SectionCard title="Programmation des rounds">
-          <Text style={styles.fieldLabel}>Mode de demarrage des rounds</Text>
+        <SectionCard title={t('tournament.config.section_schedule')}>
+          <Text style={styles.fieldLabel}>{t('tournament.config.schedule_mode')}</Text>
           <SegmentedRow
-            options={TOURNAMENT_SCHEDULING_OPTIONS}
+            options={schedulingOptions}
             value={config.schedulingMode}
             onChange={(value) => updateConfig({
               schedulingMode: value,
@@ -456,10 +484,12 @@ const TournamentConfigScreen = ({ navigation }) => {
                 const selectedDate = item?.scheduledAt ? new Date(item.scheduledAt) : new Date(Date.now() + (30 * 60 * 1000)); // Default to 30 minutes from now
                 return (
                   <View key={`round-${item.round}`} style={styles.scheduleCard}>
-                    <Text style={styles.scheduleTitle}>{getRoundLabel(config.size, item.round)}</Text>
+                    <Text style={styles.scheduleTitle}>
+                      {t('tournament.config.round_label', { label: getRoundLabelI18n(config.size, item.round) })}
+                    </Text>
                     <View style={styles.schedulePickersRow}>
                       <View style={styles.schedulePickerBox}>
-                        <Text style={styles.schedulePickerLabel}>Date</Text>
+                        <Text style={styles.schedulePickerLabel}>{t('tournament.config.date_label')}</Text>
                         <TouchableOpacity style={styles.pickerButton} onPress={() => {
                           // For now, just use the default date; we'll add proper pickers later
                           updateRoundSchedule(item.round, { date: new Date(Date.now() + (30 * 60 * 1000)) });
@@ -468,7 +498,7 @@ const TournamentConfigScreen = ({ navigation }) => {
                         </TouchableOpacity>
                       </View>
                       <View style={styles.schedulePickerBox}>
-                        <Text style={styles.schedulePickerLabel}>Heure</Text>
+                        <Text style={styles.schedulePickerLabel}>{t('tournament.config.time_label')}</Text>
                         <TouchableOpacity style={styles.pickerButton} onPress={() => {
                           // For now, just use the default time
                           updateRoundSchedule(item.round, { time: new Date(Date.now() + (30 * 60 * 1000)) });
@@ -478,10 +508,16 @@ const TournamentConfigScreen = ({ navigation }) => {
                       </View>
                     </View>
                     <Text style={styles.scheduleMeta}>
-                      Programme : {formatDateLabel(selectedDate)} a {formatTimeLabel(selectedDate)}
+                      {t('tournament.config.scheduled_at', {
+                        date: formatDateLabel(selectedDate),
+                        time: formatTimeLabel(selectedDate)
+                      })}
                     </Text>
                     <Text style={styles.scheduleMeta}>
-                      Duree estimee du round : ~{estimates.durationMinutes} min pour {estimates.matchesInParallel} matchs en parallele
+                      {t('tournament.config.round_duration', {
+                        minutes: estimates.durationMinutes,
+                        matches: estimates.matchesInParallel
+                      })}
                     </Text>
                   </View>
                 );
@@ -490,7 +526,10 @@ const TournamentConfigScreen = ({ navigation }) => {
           ) : null}
         </SectionCard>
 
-        <View style={styles.summaryCard}>
+        <View style={[
+          styles.summaryCard,
+          isTablet && { width: contentWidth, alignSelf: 'center', padding: rs(18) },
+        ]}>
           <SummaryLine icon="🏆" text={summaryLines[0]} />
           <SummaryLine icon="⏱" text={summaryLines[1]} />
           <SummaryLine icon="🎨" text={summaryLines[2]} />
@@ -502,22 +541,27 @@ const TournamentConfigScreen = ({ navigation }) => {
         </View>
 
         {!canAfford ? (
-          <Text style={styles.errorText}>Votre solde actuel ne couvre pas cette mise.</Text>
+          <Text style={[styles.errorText, isTablet && { width: contentWidth, alignSelf: 'center' }]}>
+            {t('tournament.config.insufficient_balance')}
+          </Text>
         ) : null}
 
+        <View style={isTablet ? { width: contentWidth, alignSelf: 'center' } : undefined}>
         <Button
-          title={isSubmitting ? 'Creation en cours...' : 'Creer le tournoi'}
+          title={isSubmitting ? t('tournament.config.btn_creating') : t('tournament.config.btn_create')}
           onPress={handleSubmit}
           disabled={!canAfford || isSubmitting}
-          style={styles.primaryButton}
+          style={[styles.primaryButton, isTablet && { paddingVertical: rs(16) }]}
         />
         <Button
-          title="Annuler"
+          title={t('tournament.config.btn_cancel')}
           onPress={() => navigation.goBack()}
           tone="ghost"
           style={styles.secondaryButton}
         />
+        </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

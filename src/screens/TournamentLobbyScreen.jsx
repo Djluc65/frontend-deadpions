@@ -1,4 +1,5 @@
-// DeadPions — TournamentLobbyScreen.jsx — lobby avec recherche, filtres et suppression
+
+// DeadPions — TournamentLobbyScreen.jsx — 2026-06-19
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
@@ -6,129 +7,267 @@ import {
   RefreshControl, SafeAreaView
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
+import { Ionicons } from '@expo/vector-icons';
 import { socket } from '../utils/socket';
 import { setTournament } from '../redux/slices/tournamentSlice';
 import { API_URL } from '../config';
-import { T, TY } from '../utils/theme';
-import { Ionicons } from '@expo/vector-icons';
 import { appAlert } from '../services/appAlert';
-import Button from '../components/common/Button';
+import TournamentJoinByCodeModal from '../components/TournamentJoinByCodeModal';
+import { getResponsiveSize } from '../utils/responsive';
+import { useTournamentLayout, CARD_MAX_WIDTH } from '../utils/tournamentLayout';
 
-// ─── Carte tournoi ────────────────────────────────────
-function TournamentCard({ item, currentUserId, onSupprimer, onRejoindre, onVoirBracket }) {
-  const isCreator = item.creatorUserId === currentUserId;
-  const isFull = item.inscrits >= item.size;
-  const isInProgress = item.status === 'in_progress';
+const rs = getResponsiveSize;
 
-  const modeLabel = {
-    classique: 'Classique',
-    chrono: 'Chrono',
-    blitz: 'Blitz'
-  }[item.mode] || 'Classique';
+function formatDate(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('fr-FR', {
+    day: '2-digit', month: 'short', year: 'numeric'
+  });
+}
 
-  const progressPct = Math.min((item.inscrits / item.size) * 100, 100);
+// ─────────────────────────────────────────────────────
+// ONGLETS
+// ─────────────────────────────────────────────────────
+const TAB_KEYS = ['mesCreations', 'disponibles', 'passes'];
 
+const TAB_LABEL_KEYS = {
+  mesCreations: 'tournament.lobby.tab_mine',
+  disponibles: 'tournament.lobby.tab_available',
+  passes: 'tournament.lobby.tab_past',
+};
+
+const STATUS_COLORS = {
+  waiting: '#F4B41A',
+  in_progress: '#2ECC71',
+  finished: '#7F8C8D',
+  cancelled: '#E74C3C',
+};
+
+function TabBar({ activeTab, counts, onSelect, t, isTablet, centeredContainer }) {
   return (
-    <View style={styles.card}>
-      {/* Header : nom + pot */}
-      <View style={styles.cardHeader}>
-        <Text style={styles.tournamentName} numberOfLines={1}>{item.name}</Text>
-        <View style={styles.potBadge}>
-          <Text style={styles.potText}>Pot : {item.potTotal}</Text>
-        </View>
-      </View>
-
-      {/* Sous-titre */}
-      <Text style={styles.cardSubtitle}>
-        Mise : {item.entryFee} coins • {modeLabel}
-        {isInProgress ? '  🟢 En cours' : ''}
-      </Text>
-
-      {/* Visibilité + rang */}
-      <View style={styles.metaRow}>
-        <Text style={styles.metaText}>
-          {item.visibilite === 'prive' || item.visibilite === 'private' ? '🔒 Privé' : 'Public'}
-        </Text>
-        <Text style={styles.metaText}>
-          {item.rangMinimum === 'tous' || item.rangMinimum === 'all' ? 'Tous niveaux' : `${item.rangMinimum} et +`}
-        </Text>
-      </View>
-
-      {/* Barre de progression */}
-      <View style={styles.progressContainer}>
-        <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${progressPct}%`}]} />
-        </View>
-        <Text style={styles.progressText}>
-          {item.inscrits} / {item.size} inscrits
-        </Text>
-      </View>
-
-      {/* Gain vainqueur */}
-      <Text style={styles.gainText}>
-        🏆 Gain vainqueur : {item.gainVainqueur} coins
-      </Text>
-
-      {/* Boutons */}
-      <View style={styles.cardActions}>
-        {isInProgress ? (
+    <View style={[tabStyles.tabBar, isTablet && { ...centeredContainer, marginHorizontal: 0 }]}>
+      {TAB_KEYS.map((tabKey, i) => {
+        const isActive = activeTab === tabKey;
+        const count = counts[tabKey] || 0;
+        return (
           <TouchableOpacity
-            style={styles.btnRejoindre}
-            onPress={() => onVoirBracket(item._id)}
+            key={tabKey}
+            style={[
+              tabStyles.tabBtn,
+              isActive && tabStyles.tabBtnActive,
+              i === 0 && tabStyles.tabBtnFirst,
+              i === TAB_KEYS.length - 1 && tabStyles.tabBtnLast
+            ]}
+            onPress={() => onSelect(tabKey)}
+            activeOpacity={0.8}
           >
-            <Text style={styles.btnRejoindreText}>BRACKET</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={[styles.btnRejoindre, isFull && styles.btnDisabled]}
-            onPress={() => !isFull && onRejoindre(item)}
-            disabled={isFull}
-          >
-            <Text style={styles.btnRejoindreText}>
-              {isFull ? 'COMPLET' : 'SALLE D\'ATTENTE'}
+            {/* Badge */}
+            {count > 0 && (
+              <View style={[tabStyles.tabBadge, isActive && tabStyles.tabBadgeActive]}>
+                <Text style={[tabStyles.tabBadgeText, isActive && tabStyles.tabBadgeTextActive]}>
+                  {count}
+                </Text>
+              </View>
+            )}
+            <Text style={[tabStyles.tabLabel, isActive && tabStyles.tabLabelActive]}>
+              {t(TAB_LABEL_KEYS[tabKey])}
             </Text>
           </TouchableOpacity>
-        )}
-
-        {/* Bouton suppression visible uniquement pour le créateur */}
-        {isCreator && !isInProgress && (
-          <TouchableOpacity
-            style={styles.btnSupprimer}
-            onPress={() => onSupprimer(item)}
-          >
-            <Text style={styles.btnSupprimerText}>🗑️</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+        );
+      })}
     </View>
   );
 }
 
-// ─── Écran principal ──────────────────────────────────
-const TAILLES = ['2', '4', '8', '16', '32'];
+// ─────────────────────────────────────────────────────
+// CARTE TOURNOI
+// ─────────────────────────────────────────────────────
+function TournamentCard({
+  item, sectionKey, currentUserId,
+  onSupprimer, onRejoindre, onVoirBracket, onVoirResultat, t,
+  isTablet,
+}) {
+  const isCreator = item.creatorUserId === currentUserId;
+  const isFull = item.inscrits >= item.size;
+  const isWaiting = item.status === 'waiting';
+  const isInProgress = item.status === 'in_progress';
+  const isPasse = item.status === 'finished' || item.status === 'cancelled';
+  const progressPct = Math.min((item.inscrits / item.size) * 100, 100);
+  const statusColor = STATUS_COLORS[item.status] || STATUS_COLORS.waiting;
+  const modeKey = ({ classic: 'classique', classique: 'classique', chrono: 'chrono', blitz: 'blitz' })[item.mode] || 'classique';
+
+  return (
+    <View style={isTablet ? { width: CARD_MAX_WIDTH, alignSelf: 'center' } : undefined}>
+    <View style={[c.card, isPasse && c.cardPasse, isTablet && { marginHorizontal: 0, padding: rs(18) }]}>
+      {/* Ligne 1 : nom + statut */}
+      <View style={c.row}>
+        <Text style={[c.nom, isPasse && c.nomPasse]} numberOfLines={1}>
+          {item.name}
+        </Text>
+        <View style={[c.statusBadge, { borderColor: statusColor }]}>
+          <Text style={[c.statusText, { color: statusColor }]}>
+            {t(`tournament.common.${item.status}`, { defaultValue: t('tournament.common.waiting') })}
+          </Text>
+        </View>
+      </View>
+
+      {/* Ligne 2 : mise + mode + taille / pot */}
+      <View style={c.row}>
+        <Text style={c.sub}>
+          {item.entryFee} {t('tournament.common.coins')} • {t(`tournament.common.${modeKey}`)}
+          {' '}• {t('tournament.lobby.size_filter', { size: item.size })}
+        </Text>
+        <View style={c.potBadge}>
+          <Text style={c.potText}>{t('tournament.common.pot', { amount: item.potTotal })}</Text>
+        </View>
+      </View>
+
+      {/* Ligne 3 : visibilité + rang */}
+      <View style={c.row}>
+        <Text style={c.meta}>
+          {item.visibilite === 'prive' || item.visibilite === 'private'
+            ? t('tournament.common.private')
+            : t('tournament.common.public')}
+        </Text>
+        <Text style={c.meta}>
+          {item.rangMinimum === 'tous' || item.rangMinimum === 'all'
+            ? t('tournament.common.all_levels')
+            : t(`tournament.config.options.rank_${item.rangMinimum}`, {
+              defaultValue: t('tournament.common.rank_plus', { rank: item.rangMinimum })
+            })}
+        </Text>
+      </View>
+
+      {/* Barre de progression (sauf passés) */}
+      {!isPasse && (
+        <>
+          <View style={c.progressBg}>
+            <View style={[c.progressFill, { width: `${progressPct}%` }]} />
+          </View>
+          <View style={c.row}>
+            <Text style={c.inscrit}>
+              {t('tournament.common.inscribed', { current: item.inscrits, total: item.size })}
+            </Text>
+            <Text style={c.gain}>{t('tournament.common.winner_gain', { amount: item.gainVainqueur })}</Text>
+          </View>
+        </>
+      )}
+
+      {/* Date pour les passés */}
+      {isPasse && (
+        <Text style={c.dateText}>
+          {item.status === 'finished'
+            ? t('tournament.lobby.finished_at', { date: formatDate(item.updatedAt) })
+            : t('tournament.lobby.cancelled_at', { date: formatDate(item.updatedAt) })}
+        </Text>
+      )}
+
+      {/* Actions */}
+      <View style={c.actions}>
+        {isWaiting && sectionKey !== 'mesCreations' && !isFull && (
+          <TouchableOpacity style={c.btnPrimary} onPress={() => onRejoindre(item)}>
+            <Text style={c.btnPrimaryText}>{t('tournament.lobby.btn_waiting_room')}</Text>
+          </TouchableOpacity>
+        )}
+
+        {isWaiting && (isFull || sectionKey === 'mesCreations') && (
+          <TouchableOpacity style={c.btnOutline} onPress={() => onVoirBracket(item._id)}>
+            <Text style={c.btnOutlineText}>{t('tournament.lobby.btn_see_room')}</Text>
+          </TouchableOpacity>
+        )}
+
+        {isInProgress && (
+          <TouchableOpacity style={c.btnPrimary} onPress={() => onVoirBracket(item._id)}>
+            <Text style={c.btnPrimaryText}>{t('tournament.lobby.btn_bracket')}</Text>
+          </TouchableOpacity>
+        )}
+
+        {isPasse && (
+          <TouchableOpacity style={c.btnGhost} onPress={() => onVoirResultat(item._id)}>
+            <Text style={c.btnGhostText}>{t('tournament.lobby.btn_results')}</Text>
+          </TouchableOpacity>
+        )}
+
+        {isCreator && !isInProgress && !isPasse && (
+          <TouchableOpacity style={c.btnDelete} onPress={() => onSupprimer(item)}>
+            <Text style={c.btnDeleteIcon}>🗑</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// ÉTAT VIDE PAR ONGLET
+// ─────────────────────────────────────────────────────
+function EmptyTab({ sectionKey, onCreer, t }) {
+  const config = {
+    mesCreations: {
+      icon: '🏆',
+      textKey: 'tournament.lobby.empty_mine',
+      cta: true
+    },
+    disponibles: {
+      icon: '🎯',
+      textKey: 'tournament.lobby.empty_available',
+      cta: true
+    },
+    passes: {
+      icon: '📋',
+      textKey: 'tournament.lobby.empty_past',
+      cta: false
+    }
+  }[sectionKey];
+
+  return (
+    <View style={e.container}>
+      <Text style={e.icon}>{config.icon}</Text>
+      <Text style={e.text}>{t(config.textKey)}</Text>
+      {config.cta && (
+        <TouchableOpacity style={e.btn} onPress={onCreer}>
+          <Text style={e.btnText}>{t('tournament.lobby.btn_create')}</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────────────
+// ÉCRAN PRINCIPAL
+// ─────────────────────────────────────────────────────
+const TAILLES = ['4', '8', '16', '32'];
 
 export default function TournamentLobbyScreen({ navigation }) {
+  const { t } = useTranslation();
+  const { isTablet, centeredContainer, contentWidth } = useTournamentLayout();
   const dispatch = useDispatch();
   const currentUser = useSelector(state => state.auth.user);
   const token = useSelector(state => state.auth.token);
-  const currentUserId = currentUser?._id || currentUser?.id;
   const cleanupRef = useRef(null);
+  const searchRef = useRef(null);
 
-  const [tournaments, setTournaments] = useState([]);
+  const [mesCreations, setMesCreations] = useState([]);
+  const [disponibles, setDisponibles] = useState([]);
+  const [passes, setPasses] = useState([]);
+
+  const [activeTab, setActiveTab] = useState('mesCreations');
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
-  const [filterSize, setFilterSize] = useState(null);  // null = tous
+  const [filterTaille, setFilterTaille] = useState(null);
+  const [joinByCodeVisible, setJoinByCodeVisible] = useState(false);
 
-  // ─── Chargement initial via REST ────────────────────────
-  const fetchTournaments = useCallback(async (isRefresh = false) => {
+  // ─── Fetch ───────────────────────────────────────────
+  const fetchAll = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
-
     try {
       const params = new URLSearchParams();
-      if (filterSize) params.append('size', filterSize);
+      if (filterTaille) params.append('size', filterTaille);
       if (search.trim()) params.append('search', search.trim());
 
       const response = await fetch(`${API_URL}/tournaments?${params.toString()}`, {
@@ -136,61 +275,65 @@ export default function TournamentLobbyScreen({ navigation }) {
       });
       const data = await response.json();
       if (data.success) {
-        setTournaments(data.tournaments);
+        setMesCreations(data.mesCreations || []);
+        setDisponibles(data.disponibles || []);
+        setPasses(data.passes || []);
       }
     } catch (err) {
-      console.error('[Lobby] fetchTournaments:', err);
+      console.error('[Lobby] fetch:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filterSize, search, token]);
+  }, [filterTaille, search, token]);
 
-  // Recharger à chaque focus de l'écran
   useFocusEffect(
-    useCallback(() => {
-      fetchTournaments();
-    }, [fetchTournaments])
+    useCallback(() => { fetchAll(); }, [fetchAll])
   );
+  useEffect(() => { fetchAll(); }, [filterTaille]);
 
-  // Recharger quand le filtre taille change
-  useEffect(() => {
-    fetchTournaments();
-  }, [filterSize]);
-
-  // ─── Mises à jour temps réel via Socket.IO ───────────────
+  // ─── Socket temps réel ───────────────────────────────
   useEffect(() => {
     if (!socket.connected) socket.connect();
 
-    // Nouveau tournoi créé
-    const onAdded = ({ tournament }) => {
-      const tailleOk = !filterSize || tournament.size === parseInt(filterSize);
+    const onAdded = ({ tournament: tData }) => {
+      const tailleOk = !filterTaille ||
+        tData.size === parseInt(filterTaille);
       const searchOk = !search.trim() ||
-        tournament.name.toLowerCase().includes(search.trim().toLowerCase());
-      if (tailleOk && searchOk) {
-        setTournaments(prev => {
-          if (prev.find(t => t._id === tournament._id)) return prev;
-          return [tournament, ...prev];
-        });
+        tData.name.toLowerCase().includes(search.trim().toLowerCase());
+      if (!tailleOk || !searchOk) return;
+
+      if (tData.creatorUserId === currentUser?._id) {
+        setMesCreations(prev =>
+          prev.find(x => x._id === tData._id) ? prev : [tData, ...prev]);
+      } else {
+        setDisponibles(prev =>
+          prev.find(x => x._id === tData._id) ? prev : [tData, ...prev]);
       }
     };
 
-    // Tournoi mis à jour (nouveau joueur inscrit)
     const onUpdated = ({ tournamentId, inscrits, status }) => {
-      setTournaments(prev => prev.map(t =>
+      const upd = arr => arr.map(t =>
         t._id === tournamentId ? { ...t, inscrits, status } : t
-      ));
+      );
+      setMesCreations(upd);
+      setDisponibles(upd);
+      if (status === 'in_progress') {
+        setDisponibles(prev => prev.filter(t => t._id !== tournamentId));
+      }
     };
 
-    // Tournoi supprimé
     const onRemoved = ({ tournamentId }) => {
-      setTournaments(prev => prev.filter(t => t._id !== tournamentId));
+      const rm = arr => arr.filter(t => t._id !== tournamentId);
+      setMesCreations(rm);
+      setDisponibles(rm);
     };
 
-    // Tournoi annulé (24h écoulées)
-    const onCancelled = ({ tournamentId, tournamentName, message }) => {
-      setTournaments(prev => prev.filter(t => t._id !== tournamentId));
-      if (message) appAlert('Tournoi annulé', message);
+    const onCancelled = ({ tournamentId, message }) => {
+      const rm = arr => arr.filter(t => t._id !== tournamentId);
+      setMesCreations(rm);
+      setDisponibles(rm);
+      if (message) appAlert(t('tournament.notifications.cancelled_title'), message);
     };
 
     socket.on('lobby_tournament_added', onAdded);
@@ -212,27 +355,24 @@ export default function TournamentLobbyScreen({ navigation }) {
       socket.off('tournament_cancelled', onCancelled);
       clearTimeout(cleanupRef.current);
     };
-  }, [filterSize, search]);
+  }, [socket, filterTaille, search, currentUser]);
 
-  // ─── Recherche (debounce 400 ms) ───────────────────────
-  const searchTimeout = useRef(null);
-  const handleSearch = (text) => {
+  // ─── Recherche debounce ───────────────────────────────
+  const handleSearch = text => {
     setSearch(text);
-    clearTimeout(searchTimeout.current);
-    searchTimeout.current = setTimeout(() => {
-      fetchTournaments();
-    }, 400);
+    clearTimeout(searchRef.current);
+    searchRef.current = setTimeout(() => fetchAll(), 400);
   };
 
-  // ─── Suppression ───────────────────────────────────────
-  const handleSupprimer = (item) => {
+  // ─── Suppression ─────────────────────────────────────
+  const handleSupprimer = item => {
     Alert.alert(
-      'Supprimer le tournoi',
-      `Voulez-vous supprimer "${item.name}" ?\n\nTous les participants seront remboursés.`,
+      t('tournament.lobby.delete_title'),
+      t('tournament.lobby.delete_confirm', { name: item.name }),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('tournament.common.cancel'), style: 'cancel' },
         {
-          text: 'Supprimer',
+          text: t('tournament.common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -241,11 +381,10 @@ export default function TournamentLobbyScreen({ navigation }) {
                 headers: { 'Authorization': `Bearer ${token}` }
               });
               const data = await response.json();
-              if (!data.success) {
-                appAlert('Erreur', data.message || 'Impossible de supprimer');
-              }
+              if (!data.success)
+                Alert.alert(t('tournament.common.error'), data.message || t('common.error'));
             } catch (err) {
-              appAlert('Erreur', err.message || 'Erreur réseau');
+              Alert.alert(t('tournament.common.error'), err.message || t('tournament.join_code.error_network'));
             }
           }
         }
@@ -253,22 +392,19 @@ export default function TournamentLobbyScreen({ navigation }) {
     );
   };
 
-  // ─── Rejoindre ─────────────────────────────────────────
-  const handleRejoindre = (item) => {
+  // ─── Navigation ────────────────────────────────────────
+  const handleRejoindre = item => {
     if (item.visibilite === 'prive' || item.visibilite === 'private') {
       Alert.prompt(
-        'Tournoi privé',
-        'Entrez le code d\'invitation (6 chiffres) :',
+        t('tournament.lobby.private_title'),
+        t('tournament.lobby.private_code_label'),
         [
-          { text: 'Annuler', style: 'cancel' },
+          { text: t('tournament.common.cancel'), style: 'cancel' },
           {
-            text: 'Rejoindre',
-            onPress: (code) => {
+            text: t('tournament.common.join'),
+            onPress: code => {
               dispatch(setTournament(item));
-              navigation.navigate('TournamentWaitingRoom', {
-                tournamentId: item._id,
-                inviteCode: code
-              });
+              navigation.navigate('TournamentWaitingRoom', { tournamentId: item._id, inviteCode: code });
             }
           }
         ],
@@ -276,333 +412,241 @@ export default function TournamentLobbyScreen({ navigation }) {
       );
     } else {
       dispatch(setTournament(item));
-      navigation.navigate('TournamentWaitingRoom', {
-        tournamentId: item._id
-      });
+      navigation.navigate('TournamentWaitingRoom', { tournamentId: item._id });
     }
   };
 
-  // ─── Voir bracket ───────────────────────────────────────
-  const handleVoirBracket = (tournamentId) => {
-    navigation.navigate('TournamentBracket', { tournamentId });
+  const goCreer = () => navigation.navigate('TournamentConfig');
+  const gooBracket = id => navigation.navigate('TournamentBracket', { tournamentId: id });
+  const gooResultat = id => navigation.navigate('TournamentBracket', { tournamentId: id });
+
+  // ─── Données de l'onglet actif ─────────────────────────
+  const dataMap = {
+    mesCreations,
+    disponibles,
+    passes
+  };
+  const activeData = dataMap[activeTab] || [];
+
+  const counts = {
+    mesCreations: mesCreations.length,
+    disponibles: disponibles.length,
+    passes: passes.length
   };
 
-  // ─── État vide ──────────────────────────────────────────
-  const renderEmpty = () => {
-    if (loading) return null;
-    return (
-      <View style={styles.emptyContainer}>
-        <Ionicons name="trophy-outline" size={64} color="rgba(255,255,255,0.1)" />
-        <Text style={styles.emptyText}>Aucun tournoi disponible pour le moment.</Text>
-        <Button
-          title="CRÉER UN TOURNOI"
-          tone="ghost"
-          onPress={() => navigation.navigate('TournamentConfig')}
-          style={{ marginTop: 20 }}
-        />
-      </View>
-    );
-  };
-
-  // ─── Render ─────────────────────────────────────────────
+  // ─── Render ────────────────────────────────────────────
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.container}>
-
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={T.text} />
-          </TouchableOpacity>
-          <Text style={styles.title}>TOURNOIS</Text>
-          <TouchableOpacity
-            style={styles.btnPlus}
-            onPress={() => navigation.navigate('TournamentConfig')}
-          >
-            <Ionicons name="add-circle" size={32} color={T.gold} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Barre de recherche */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search-outline" size={16} color="#A8B4C9" style={{ marginRight: 8 }} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Rechercher un tournoi..."
-            placeholderTextColor="#ECE6D660"
-            value={search}
-            onChangeText={handleSearch}
-            returnKeyType="search"
-            onSubmitEditing={() => fetchTournaments()}
-          />
-          {search.length > 0 && (
-            <TouchableOpacity onPress={() => { setSearch(''); fetchTournaments(); }}>
-              <Ionicons name="close-circle" size={16} color="#ECE6D6" />
+    <SafeAreaView style={l.safe}>
+      <View style={l.container}>
+        {/* ─── Header ─── */}
+        <View style={[l.header, isTablet && { paddingHorizontal: 0 }]}>
+          <View style={[
+            { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' },
+            isTablet && centeredContainer,
+          ]}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={l.backButton}>
+              <Text style={l.back}>←</Text>
             </TouchableOpacity>
-          )}
+            <Text style={[l.titre, isTablet && { fontSize: rs(30) }]}>{t('tournament.lobby.title')}</Text>
+            <View style={l.headerRight}>
+              <TouchableOpacity
+                style={l.btnCode}
+                onPress={() => setJoinByCodeVisible(true)}
+              >
+                <Ionicons name="keypad-outline" size={rs(18)} color="#F4B41A" />
+              </TouchableOpacity>
+              <TouchableOpacity style={l.btnPlus} onPress={goCreer}>
+                <Text style={l.btnPlusText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
 
-        {/* Filtres de taille */}
-        <View style={styles.filterRow}>
-          {TAILLES.map(t => (
+        {/* ─── Barre de recherche ─── */}
+        <View style={[{ paddingHorizontal: isTablet ? 0 : 16 }, isTablet && { alignItems: 'center' }]}>
+          <View style={[l.searchBox, isTablet && { width: contentWidth, marginHorizontal: 0 }]}>
+            <Text style={l.searchIcon}>🔍</Text>
+            <TextInput
+              style={[l.searchInput, isTablet && { fontSize: rs(15) }]}
+              placeholder={t('tournament.lobby.search_placeholder')}
+              placeholderTextColor="#ECE6D640"
+              value={search}
+              onChangeText={handleSearch}
+            />
+            {search.length > 0 && (
+              <TouchableOpacity onPress={() => { setSearch(''); fetchAll(); }}>
+                <Text style={l.searchClear}>✕</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* ─── Filtres taille ─── */}
+        <View style={[l.filtresRow, isTablet && { ...centeredContainer, paddingHorizontal: 0 }]}>
+          {TAILLES.map(taille => (
             <TouchableOpacity
-              key={t}
-              style={[styles.filterBtn, filterSize === t && styles.filterBtnActive]}
-              onPress={() => setFilterSize(prev => prev === t ? null : t)}
+              key={taille}
+              style={[
+                l.pill,
+                filterTaille === taille && l.pillActive,
+                isTablet && { paddingHorizontal: rs(18), paddingVertical: rs(9) },
+              ]}
+              onPress={() => setFilterTaille(p => p === taille ? null : taille)}
             >
               <Text style={[
-                styles.filterText,
-                filterSize === t && styles.filterTextActive
+                l.pillText,
+                filterTaille === taille && l.pillTextActive,
+                isTablet && { fontSize: rs(15) },
               ]}>
-                {t}j
+                {t('tournament.lobby.size_filter', { size: taille })}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Liste */}
+        {/* ─── Onglets 3 colonnes ─── */}
+        <TabBar
+          activeTab={activeTab}
+          counts={counts}
+          onSelect={setActiveTab}
+          t={t}
+          isTablet={isTablet}
+          centeredContainer={centeredContainer}
+        />
+
+        {/* ─── Contenu de l'onglet actif ─── */}
         {loading ? (
-          <ActivityIndicator
-            size="large"
-            color={T.gold}
-            style={{ marginTop: 60 }}
-          />
+          <ActivityIndicator size="large" color="#F4B41A" style={{ marginTop: 60 }} />
         ) : (
           <FlatList
-            data={tournaments}
+            data={activeData}
             keyExtractor={item => item._id}
             renderItem={({ item }) => (
               <TournamentCard
                 item={item}
-                currentUserId={currentUserId}
+                sectionKey={activeTab}
+                currentUserId={currentUser?._id}
                 onSupprimer={handleSupprimer}
                 onRejoindre={handleRejoindre}
-                onVoirBracket={handleVoirBracket}
+                onVoirBracket={gooBracket}
+                onVoirResultat={gooResultat}
+                t={t}
+                isTablet={isTablet}
               />
             )}
-            ListEmptyComponent={renderEmpty}
-            contentContainerStyle={
-              tournaments.length === 0 ? styles.listEmpty : styles.list
+            ListEmptyComponent={
+              <EmptyTab sectionKey={activeTab} onCreer={goCreer} t={t} />
             }
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
-                onRefresh={() => fetchTournaments(true)}
-                tintColor={T.gold}
+                onRefresh={() => fetchAll(true)}
+                tintColor="#F4B41A"
               />
             }
+            contentContainerStyle={[
+              activeData.length === 0 ? l.listEmpty : l.listContent,
+              isTablet && { paddingHorizontal: 0, alignItems: 'center' },
+            ]}
             showsVerticalScrollIndicator={false}
           />
         )}
       </View>
+
+      <TournamentJoinByCodeModal
+        visible={joinByCodeVisible}
+        onClose={() => setJoinByCodeVisible(false)}
+      />
     </SafeAreaView>
   );
 }
 
-// ─── Styles ─────────────────────────────────────────────
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: '#060B17',
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#060B17',
-  },
+// ─────────────────────────────────────────────────────
+// STYLES
+// ─────────────────────────────────────────────────────
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 15,
-    paddingBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
-  },
-  backButton: {
-    marginRight: 15,
-  },
-  title: {
-    ...TY.heading,
-    fontSize: 26,
-    color: '#ECE6D6',
-    letterSpacing: 1,
-  },
-  btnPlus: {
-    padding: 5,
-  },
-
-  // Recherche
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+// Layout global
+const l = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: '#060B17' },
+  container: { flex: 1, backgroundColor: '#060B17' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 15, paddingBottom: 15 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  backButton: { marginRight: 15 },
+  back: { color: '#ECE6D6', fontSize: 24 },
+  titre: { fontFamily: 'BarlowCondensed-Bold', fontSize: 26, color: '#ECE6D6', letterSpacing: 1, flex: 1 },
+  btnCode: {
+    width: 36, height: 36,
+    borderRadius: 18,
     backgroundColor: '#0D1526',
-    borderRadius: 12,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  searchInput: {
-    flex: 1,
-    color: '#ECE6D6',
-    fontFamily: 'Inter',
-    fontSize: 14,
-  },
-
-  // Filtres
-  filterRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    gap: 10,
-    marginBottom: 16,
-  },
-  filterBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#1A2035',
     borderWidth: 1,
-    borderColor: '#2A3050',
-  },
-  filterBtnActive: {
-    backgroundColor: '#F4B41A',
-    borderColor: '#F4B41A',
-  },
-  filterText: {
-    color: '#A8B4C9',
-    fontFamily: 'BarlowCondensed-Bold',
-    fontSize: 14,
-  },
-  filterTextActive: {
-    color: '#060B17',
-  },
-
-  // Liste
-  list: {
-    paddingHorizontal: 20,
-    paddingBottom: 32,
-  },
-  listEmpty: {
-    flex: 1,
-  },
-
-  // Card
-  card: {
-    backgroundColor: '#0D1526',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: '#1E2A45',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  potBadge: {
-    backgroundColor: 'rgba(244, 180, 26, 0.1)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(244, 180, 26, 0.2)',
-  },
-  potText: {
-    fontFamily: 'BarlowCondensed-Bold',
-    fontSize: 12,
-    color: '#F4B41A',
-  },
-  cardSubtitle: {
-    fontFamily: 'Inter',
-    fontSize: 13,
-    color: '#A8B4C9',
-    marginBottom: 8,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  metaText: {
-    fontFamily: 'Inter',
-    fontSize: 12,
-    color: '#ECE6D660',
-  },
-  progressContainer: {
-    gap: 4,
-  },
-  progressBar: {
-    height: 6,
-    backgroundColor: '#1E2A45',
-    borderRadius: 3,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#F4B41A',
-    borderRadius: 3,
-  },
-  progressText: {
-    fontFamily: 'Inter',
-    fontSize: 12,
-    color: '#6A7791',
-    textAlign: 'right',
-    marginBottom: 6,
-  },
-  gainText: {
-    fontFamily: 'BarlowCondensed-Bold',
-    fontSize: 14,
-    color: '#F4B41A',
-    marginBottom: 12,
-  },
-  cardActions: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  btnRejoindre: {
-    flex: 1,
-    backgroundColor: '#F4B41A',
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  btnDisabled: {
-    backgroundColor: '#3A3010',
-  },
-  btnRejoindreText: {
-    fontFamily: 'BarlowCondensed-Bold',
-    fontSize: 15,
-    color: '#060B17',
-  },
-  btnSupprimer: {
-    backgroundColor: '#2A1515',
-    borderRadius: 10,
-    width: 44,
+    borderColor: '#F4B41A60',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E74C3C',
   },
-  btnSupprimerText: {
-    fontSize: 18,
-  },
+  btnPlus: { backgroundColor: '#F4B41A', width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  btnPlusText: { color: '#060B17', fontSize: 22, fontWeight: 'bold', lineHeight: 26 },
+  searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0D1526', borderRadius: 12, marginHorizontal: 16, marginBottom: 12, paddingHorizontal: 12, paddingVertical: 8 },
+  searchIcon: { fontSize: 15, marginRight: 8 },
+  searchInput: { flex: 1, color: '#ECE6D6', fontFamily: 'Inter', fontSize: 14 },
+  searchClear: { color: '#ECE6D6', fontSize: 16, paddingLeft: 8 },
+  filtresRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 8, marginBottom: 12 },
+  pill: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: '#1A2035', borderWidth: 1, borderColor: '#2A3050' },
+  pillActive: { backgroundColor: '#F4B41A', borderColor: '#F4B41A' },
+  pillText: { color: '#ECE6D6', fontFamily: 'BarlowCondensed-Bold', fontSize: 14 },
+  pillTextActive: { color: '#060B17' },
+  listContent: { paddingHorizontal: 16, paddingBottom: 40 },
+  listEmpty: { flex: 1 }
+});
 
-  // État vide
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 60,
-  },
-  emptyText: {
-    fontFamily: 'Inter',
-    fontSize: 15,
-    color: '#6A7791',
-    marginTop: 15,
-    textAlign: 'center',
-  },
+// Onglets
+const tabStyles = StyleSheet.create({
+  tabBar: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 16, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#1E2A45' },
+  tabBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 4, backgroundColor: '#0D1526', borderRightWidth: 1, borderRightColor: '#1E2A45', minHeight: 56, position: 'relative' },
+  tabBtnFirst: { borderTopLeftRadius: 11, borderBottomLeftRadius: 11 },
+  tabBtnLast: { borderTopRightRadius: 11, borderBottomRightRadius: 11, borderRightWidth: 0 },
+  tabBtnActive: { backgroundColor: '#F4B41A' },
+  tabLabel: { fontFamily: 'BarlowCondensed-Bold', fontSize: 12, color: '#ECE6D680', textAlign: 'center', letterSpacing: 0.3 },
+  tabLabelActive: { color: '#060B17' },
+  tabBadge: { position: 'absolute', top: 5, right: 6, backgroundColor: '#1E2A45', borderRadius: 9, minWidth: 18, height: 18, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  tabBadgeActive: { backgroundColor: '#060B17' },
+  tabBadgeText: { fontFamily: 'BarlowCondensed-Bold', fontSize: 11, color: '#F4B41A' },
+  tabBadgeTextActive: { color: '#F4B41A' }
+});
+
+// Cards
+const c = StyleSheet.create({
+  card: { backgroundColor: '#0D1526', borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: '#1E2A45' },
+  cardPasse: { borderColor: '#1A1A2A' },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  nom: { fontFamily: 'BarlowCondensed-Bold', fontSize: 19, color: '#ECE6D6', flex: 1, marginRight: 8 },
+  nomPasse: { color: '#ECE6D660' },
+  sub: { fontFamily: 'Inter', fontSize: 12, color: '#ECE6D870' },
+  meta: { fontFamily: 'Inter', fontSize: 12, color: '#ECE6D650' },
+  potBadge: { backgroundColor: '#F4B41A', borderRadius: 7, paddingHorizontal: 9, paddingVertical: 2 },
+  potText: { fontFamily: 'BarlowCondensed-Bold', fontSize: 12, color: '#060B17' },
+  statusBadge: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
+  statusText: { fontFamily: 'BarlowCondensed-Bold', fontSize: 11 },
+  progressBg: { height: 4, backgroundColor: '#1E2A45', borderRadius: 2, marginVertical: 6 },
+  progressFill: { height: 4, backgroundColor: '#F4B41A', borderRadius: 2 },
+  inscrit: { fontFamily: 'Inter', fontSize: 12, color: '#ECE6D660' },
+  gain: { fontFamily: 'BarlowCondensed-Bold', fontSize: 13, color: '#F4B41A' },
+  dateText: { fontFamily: 'Inter', fontSize: 12, color: '#ECE6D650', marginTop: 2, marginBottom: 6 },
+  actions: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  btnPrimary: { flex: 1, backgroundColor: '#F4B41A', borderRadius: 10, paddingVertical: 11, alignItems: 'center' },
+  btnPrimaryText: { fontFamily: 'BarlowCondensed-Bold', fontSize: 14, color: '#060B17' },
+  btnOutline: { flex: 1, borderWidth: 1, borderColor: '#F4B41A', borderRadius: 10, paddingVertical: 11, alignItems: 'center' },
+  btnOutlineText: { fontFamily: 'BarlowCondensed-Bold', fontSize: 14, color: '#F4B41A' },
+  btnGhost: { flex: 1, borderWidth: 1, borderColor: '#ECE6D640', borderRadius: 10, paddingVertical: 11, alignItems: 'center' },
+  btnGhostText: { fontFamily: 'BarlowCondensed-Bold', fontSize: 13, color: '#ECE6D680' },
+  btnDelete: { backgroundColor: '#2A1515', borderRadius: 10, width: 42, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E74C3C' },
+  btnDeleteIcon: { fontSize: 17 }
+});
+
+// État vide
+const e = StyleSheet.create({
+  container: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, paddingHorizontal: 32 },
+  icon: { fontSize: 56, marginBottom: 16, opacity: 0.3 },
+  text: { fontFamily: 'Inter', fontSize: 15, color: '#ECE6D650', textAlign: 'center', marginBottom: 28 },
+  btn: { borderWidth: 1, borderColor: '#ECE6D6', borderRadius: 12, paddingVertical: 13, paddingHorizontal: 28 },
+  btnText: { fontFamily: 'BarlowCondensed-Bold', fontSize: 15, color: '#ECE6D6', letterSpacing: 1 }
 });

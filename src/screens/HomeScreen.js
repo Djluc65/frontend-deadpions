@@ -64,7 +64,11 @@ const CyberCard = React.memo(({
   useRotation = false,
   spin,
   fullWidth = false,
+  minHeight,
+  horizontal = false,
 }) => {
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
   const hotAnim  = useRef(new Animated.Value(1)).current;
   const dotAnim  = useRef(new Animated.Value(1)).current;
 
@@ -109,34 +113,37 @@ const CyberCard = React.memo(({
         cStyles.card,
         { borderColor: `${color}55`, shadowColor: color },
         fullWidth && { flex: 0, width: '100%' },
-        pressed && { opacity: 0.80, transform: [{ scale: 0.965 }] },
+        horizontal && cStyles.cardHorizontal,
+        isTablet && cStyles.cardTablet,
+        minHeight && { minHeight },
+        pressed && { opacity: 0.80, transform: [{ scale: 0.965 }] }
       ]}
     >
       {/* Badge HOT */}
       {hot && (
-        <Animated.View style={[cStyles.hotBadge, { borderColor: `${color}80`, opacity: hotAnim }]}>
-          <Text style={[cStyles.hotText, { color }]}>HOT</Text>
+        <Animated.View style={[cStyles.hotBadge, isTablet && cStyles.hotBadgeTablet, { borderColor: `${color}80`, opacity: hotAnim }]}>
+          <Text style={[cStyles.hotText, isTablet && cStyles.hotTextTablet, { color }]}>HOT</Text>
         </Animated.View>
       )}
 
-      {/* Icône */}
-      <View style={[cStyles.iconBox, { borderColor: `${color}66`, backgroundColor: `${color}22` }]}>
-        <Animated.View style={{ transform: iconTransform }}>
-          <Ionicons name={icon} size={rs(18)} color={color} />
-        </Animated.View>
-      </View>
+      <View style={horizontal ? cStyles.cardInnerRow : cStyles.cardInnerCol}>
+        <View style={[cStyles.iconBox, isTablet && cStyles.iconBoxTablet, { borderColor: `${color}66`, backgroundColor: `${color}22` }]}>
+          <Animated.View style={{ transform: iconTransform }}>
+            <Ionicons name={icon} size={rs(isTablet ? 24 : 18)} color={color} />
+          </Animated.View>
+        </View>
 
-      {/* Textes */}
-      <View style={cStyles.texts}>
-        <Text style={cStyles.title} numberOfLines={1}>{label}</Text>
-        {sub ? (
-          <View style={cStyles.subRow}>
-            {subDot && (
-              <Animated.View style={[cStyles.dot, { backgroundColor: dotColor, opacity: dotAnim, shadowColor: dotColor }]} />
-            )}
-            <Text style={cStyles.sub} numberOfLines={1}>{sub}</Text>
-          </View>
-        ) : null}
+        <View style={[cStyles.texts, horizontal && { marginLeft: rs(isTablet ? 14 : 12) }]}>
+          <Text style={[cStyles.title, isTablet && cStyles.titleTablet]} numberOfLines={1}>{label}</Text>
+          {sub ? (
+            <View style={cStyles.subRow}>
+              {subDot && (
+                <Animated.View style={[cStyles.dot, isTablet && cStyles.dotTablet, { backgroundColor: dotColor, opacity: dotAnim, shadowColor: dotColor }]} />
+              )}
+              <Text style={[cStyles.sub, isTablet && cStyles.subTablet]} numberOfLines={1}>{sub}</Text>
+            </View>
+          ) : null}
+        </View>
       </View>
     </Pressable>
   );
@@ -148,18 +155,36 @@ const cStyles = StyleSheet.create({
     backgroundColor: CYBER.glass,
     borderWidth: 1,
     borderRadius: rs(14),
-    paddingVertical: rs(12),
+    paddingVertical: rs(10),
     paddingHorizontal: rs(12),
     flexDirection: 'column',
-    gap: rs(8),
-    minHeight: rs(96),
+    gap: rs(6),
+    minHeight: rs(84),
     overflow: 'hidden',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.35,
     shadowRadius: rs(14),
     elevation: 8,
-    // double border inner glow effect
     borderTopColor: 'rgba(255,255,255,0.06)',
+  },
+  cardTablet: {
+    paddingVertical: rs(14),
+    paddingHorizontal: rs(16),
+    gap: rs(8),
+    minHeight: rs(110),
+    borderRadius: rs(18),
+  },
+  cardInnerCol: {
+    flexDirection: 'column',
+    gap: rs(6),
+  },
+  cardInnerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardHorizontal: {
+    minHeight: rs(64),
+    paddingVertical: rs(10),
   },
   // ── HOT badge ────────────────────────────────────────────────────────────────
   hotBadge: {
@@ -171,11 +196,21 @@ const cStyles = StyleSheet.create({
     paddingHorizontal: rs(5),
     paddingVertical: rs(2),
   },
+  hotBadgeTablet: {
+    top: rs(10),
+    right: rs(10),
+    paddingHorizontal: rs(6),
+    paddingVertical: rs(3),
+    borderRadius: rs(6),
+  },
   hotText: {
     fontSize: rs(8),
     fontWeight: '900',
     letterSpacing: 1.5,
     textTransform: 'uppercase',
+  },
+  hotTextTablet: {
+    fontSize: rs(10),
   },
   // ── Icône box ─────────────────────────────────────────────────────────────────
   iconBox: {
@@ -185,6 +220,11 @@ const cStyles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  iconBoxTablet: {
+    width: rs(46),
+    height: rs(46),
+    borderRadius: rs(10),
   },
   // ── Textes ────────────────────────────────────────────────────────────────────
   texts: {
@@ -198,6 +238,10 @@ const cStyles = StyleSheet.create({
     letterSpacing: 0.4,
     textTransform: 'uppercase',
     lineHeight: rs(16),
+  },
+  titleTablet: {
+    fontSize: rs(18),
+    lineHeight: rs(19),
   },
   subRow: {
     flexDirection: 'row',
@@ -213,12 +257,20 @@ const cStyles = StyleSheet.create({
     shadowRadius: rs(4),
     elevation: 3,
   },
+  dotTablet: {
+    width: rs(8),
+    height: rs(8),
+    borderRadius: rs(4),
+  },
   sub: {
     color: CYBER.dim,
     fontSize: rs(10),
     fontWeight: '700',
     letterSpacing: 0.5,
     flex: 1,
+  },
+  subTablet: {
+    fontSize: rs(12),
   },
 });
 
@@ -252,6 +304,7 @@ const HomeScreen = ({ navigation, route }) => {
   // ── Données dynamiques des cartes ────────────────────────────────────────────
   const [onlineCount,  setOnlineCount]  = useState(null);  // nombre joueurs en ligne
   const [friendsCount, setFriendsCount] = useState(null);  // nombre d'amis
+  const [tournamentsCount, setTournamentsCount] = useState(null);
 
   const joinedUserRoomRef = useRef(null);
   const lazyComponentRef  = useRef({});
@@ -261,6 +314,7 @@ const HomeScreen = ({ navigation, route }) => {
   const [computerAnim] = useState(new Animated.Value(1));
   const [friendsAnim]  = useState(new Animated.Value(1));
   const [localAnim]    = useState(new Animated.Value(1));
+  const [tournamentAnim] = useState(new Animated.Value(1));
   const spinValue      = useRef(new Animated.Value(0)).current;
 
   const { syncBalance, isSyncing, lastSync } = useCoinsContext();
@@ -299,6 +353,26 @@ const HomeScreen = ({ navigation, route }) => {
         setFriendsCount(Array.isArray(friendData) ? friendData.length : null);
       }
     } catch (_) { /* silencieux */ }
+
+    try {
+      const tournRes = await fetch(`${API_URL}/tournaments`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (tournRes.ok) {
+        const tournData = await tournRes.json();
+        const mesCount = Array.isArray(tournData.mesCreations) ? tournData.mesCreations.length : 0;
+        const actifs = Array.isArray(tournData.disponibles)
+          ? tournData.disponibles.length + mesCount
+          : Array.isArray(tournData.tournaments)
+            ? tournData.tournaments.filter(
+                (t) => t.status === 'waiting' || t.status === 'in_progress'
+              ).length
+            : Array.isArray(tournData)
+              ? tournData.length
+              : null;
+        setTournamentsCount(actifs);
+      }
+    } catch (_) { /* silencieux */ }
   }, [token]);
 
   // Fetch au montage et au changement d'utilisateur
@@ -325,6 +399,30 @@ const HomeScreen = ({ navigation, route }) => {
     };
     socket.on('friend_request_accepted', handleFriendAccepted);
     return () => socket.off('friend_request_accepted', handleFriendAccepted);
+  }, []);
+
+  useEffect(() => {
+    const handleTournamentAdded = () => {
+      setTournamentsCount((prev) => (prev !== null ? prev + 1 : 1));
+    };
+    const handleTournamentRemoved = () => {
+      setTournamentsCount((prev) => (prev !== null && prev > 0 ? prev - 1 : 0));
+    };
+    const handleTournamentUpdated = ({ status }) => {
+      if (status === 'finished' || status === 'cancelled') {
+        setTournamentsCount((prev) => (prev !== null && prev > 0 ? prev - 1 : 0));
+      }
+    };
+
+    socket.on('lobby_tournament_added', handleTournamentAdded);
+    socket.on('lobby_tournament_removed', handleTournamentRemoved);
+    socket.on('lobby_tournament_updated', handleTournamentUpdated);
+
+    return () => {
+      socket.off('lobby_tournament_added', handleTournamentAdded);
+      socket.off('lobby_tournament_removed', handleTournamentRemoved);
+      socket.off('lobby_tournament_updated', handleTournamentUpdated);
+    };
   }, []);
 
   // ── Handlers ──────────────────────────────────────────────────────────────────
@@ -374,6 +472,17 @@ const HomeScreen = ({ navigation, route }) => {
     requestAnimationFrame(() => setFriendsMenuVisible(true));
   }, [navigation, token, user]);
 
+  const openTournamentLobby = useCallback(() => {
+    if (!user || !token) {
+      appAlert(t('auth.login_required'), t('auth.login_required_online'), [
+        { text: t('common.later'), style: 'cancel' },
+        { text: t('common.login_action'), onPress: () => navigation.navigate('Login') },
+      ]);
+      return;
+    }
+    navigation.navigate('TournamentLobby');
+  }, [navigation, token, user, t]);
+
   // ── Quick actions depuis le bouton central (TabNavigation) ───────────────────
   useFocusEffect(
     useCallback(() => {
@@ -409,6 +518,7 @@ const HomeScreen = ({ navigation, route }) => {
       startPulse(computerAnim),
       startPulse(friendsAnim),
       startPulse(localAnim),
+      startPulse(tournamentAnim),
     ];
     return () => loops.forEach(l => l?.stop?.());
   }, [isAndroidEmulator]);
@@ -485,12 +595,14 @@ const HomeScreen = ({ navigation, route }) => {
 
   // ── Interpolations ────────────────────────────────────────────────────────────
   const spinInterp  = spinValue.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
-  const cardGap     = rs(10);
-  const cardsMaxW   = isDesktop ? 860 : isTablet ? 680 : undefined;
-  const battleLogoSize = Math.round(Math.min(width * (isDesktop ? 0.22 : isTablet ? 0.28 : 0.5), 280));
-  const battleLogoLift = (!isTablet && !isDesktop) ? -50 : 0;
-  const battleAnimLift = (!isTablet && !isDesktop) ? -80 : 0;
-  const cardsDown = (!isTablet && !isDesktop) ? 100 : 0;
+  const cardGap     = rs(isTablet ? 16 : isDesktop ? 12 : 8);
+  const cardsMaxW   = isDesktop ? 1060 : isTablet ? Math.min(width * 0.85, 800) : undefined;
+  const battleLogoSize = Math.round(
+    Math.min(
+      width * (isDesktop ? 0.18 : isTablet ? 0.35 : 0.38),
+      isDesktop ? 220 : isTablet ? 240 + 70 : 160
+    ) + (isTablet ? rs(60) + 70 : rs(80))
+  );
 
   // ── Textes sous-titre des cartes ──────────────────────────────────────────────
   const onlineSub  = onlineCount !== null
@@ -499,6 +611,13 @@ const HomeScreen = ({ navigation, route }) => {
   const friendsSub = friendsCount !== null
     ? t('home.friends_count', { count: friendsCount })
     : t('home.my_friends');
+  const tournamentSub = tournamentsCount === null
+    ? t('tournament.home_card.loading')
+    : tournamentsCount === 0
+      ? t('tournament.home_card.none')
+      : tournamentsCount === 1
+        ? t('tournament.home_card.one')
+        : t('tournament.home_card.many', { count: fmt(tournamentsCount) });
 
   // ── Lazy modals ───────────────────────────────────────────────────────────────
   const lz = lazyComponentRef.current;
@@ -563,93 +682,235 @@ const HomeScreen = ({ navigation, route }) => {
 
         {/* Animation X vs O */}
         {!isAndroidEmulator && (
-          <View style={styles.battleSection}>
+          <View style={[styles.battleSection, isTablet && styles.battleSectionTablet]}>
             <Pressable onPress={handleLogoPress}>
               <Animated.Image
                 source={require('../../assets/images/LogoDeadPions2.png')}
                 style={[
                   styles.battleLogo,
                   { width: battleLogoSize, height: Math.round(battleLogoSize * 0.9) },
-                  battleLogoLift ? { transform: [{ translateY: battleLogoLift }] } : null,
+                  !isTablet && !isDesktop && { marginTop: -rs(130) },
+                  isTablet && { marginTop: -rs(420) },
                 ]}
                 resizeMode="contain"
               />
             </Pressable>
-            <View style={[styles.battleAnimWrap, battleAnimLift ? { marginTop: battleAnimLift } : null]}>
+            <View style={[
+              styles.battleAnimWrap,
+              isTablet && { overflow: 'visible' },
+              {
+                maxHeight: isTablet ? rs(160) : isDesktop ? rs(100) : rs(100),
+                marginTop: !isTablet && !isDesktop ? -rs(50) : isTablet ? -rs(70) : 0,
+              },
+            ]}>
               <CyberBattleAnimation />
             </View>
           </View>
         )}
 
-        {/* Grille 2×2 */}
+        {/* ── Grille responsive ── */}
         <View
           style={[
             styles.grid,
             { gap: cardGap },
-            cardsDown ? { marginTop: cardsDown } : null,
             cardsMaxW && { maxWidth: cardsMaxW, alignSelf: 'center', width: '100%' },
           ]}
         >
-          {/* Ligne 1 */}
-          <View style={[styles.row, { gap: cardGap }]}>
-
-            {/* En Ligne */}
-            <CyberCard
-              color={CYBER.cyan}
-              hot
-              onPress={openOnlineConfig}
-              onPlaySound={handlePlaySound}
-              icon="globe-outline"
-              anim={onlineAnim}
-              label={t('home.play_online')}
-              sub={onlineSub}
-              subDot
-              subDotColor={CYBER.green}
-              useRotation
-              spin={spinInterp}
-            />
-
-            {/* Ordinateur / IA */}
-            <CyberCard
-              color={CYBER.mag}
-              onPress={openAiConfig}
-              onPlaySound={handlePlaySound}
-              icon="hardware-chip-outline"
-              anim={computerAnim}
-              label={t('home.play_computer')}
-              sub={t('home.computer_subtitle')}
-              subDot={false}
-            />
-          </View>
-
-          {/* Ligne 2 */}
-          <View style={[styles.row, { gap: cardGap }]}>
-
-            {/* Amis */}
-            <CyberCard
-              color={CYBER.cyan}
-              onPress={openFriendsConfig}
-              onPlaySound={handlePlaySound}
-              icon="people-outline"
-              anim={friendsAnim}
-              label={t('home.play_friends')}
-              sub={friendsSub}
-              subDot={friendsCount !== null && friendsCount > 0}
-              subDotColor={CYBER.cyan}
-            />
-
-            {/* Local */}
-            <CyberCard
-              color={CYBER.gold}
-              onPress={() => setLocalConfigVisible(true)}
-              onPlaySound={handlePlaySound}
-              icon="game-controller-outline"
-              anim={localAnim}
-              label={t('home.play_local')}
-              sub={t('home.local_subtitle')}
-              subDot={false}
-            />
-          </View>
+          {isDesktop ? (
+            <View style={[styles.row, { gap: cardGap }]}>
+              <CyberCard
+                color={CYBER.cyan}
+                hot
+                onPress={openOnlineConfig}
+                onPlaySound={handlePlaySound}
+                icon="globe-outline"
+                anim={onlineAnim}
+                label={t('home.play_online')}
+                sub={onlineSub}
+                subDot
+                subDotColor={CYBER.green}
+                useRotation
+                spin={spinInterp}
+              />
+              <CyberCard
+                color={CYBER.mag}
+                onPress={openAiConfig}
+                onPlaySound={handlePlaySound}
+                icon="hardware-chip-outline"
+                anim={computerAnim}
+                label={t('home.play_computer')}
+                sub={t('home.computer_subtitle')}
+                subDot={false}
+              />
+              <CyberCard
+                color={CYBER.cyan}
+                onPress={openFriendsConfig}
+                onPlaySound={handlePlaySound}
+                icon="people-outline"
+                anim={friendsAnim}
+                label={t('home.play_friends')}
+                sub={friendsSub}
+                subDot={friendsCount !== null && friendsCount > 0}
+                subDotColor={CYBER.cyan}
+              />
+              <CyberCard
+                color={CYBER.gold}
+                onPress={() => setLocalConfigVisible(true)}
+                onPlaySound={handlePlaySound}
+                icon="game-controller-outline"
+                anim={localAnim}
+                label={t('home.play_local')}
+                sub={t('home.local_subtitle')}
+                subDot={false}
+              />
+              <CyberCard
+                color={CYBER.gold}
+                hot={tournamentsCount !== null && tournamentsCount > 0}
+                onPress={openTournamentLobby}
+                onPlaySound={handlePlaySound}
+                icon="trophy-outline"
+                anim={tournamentAnim}
+                label={t('tournament.home_card.label')}
+                sub={tournamentSub}
+                subDot={tournamentsCount !== null && tournamentsCount > 0}
+                subDotColor={CYBER.gold}
+              />
+            </View>
+          ) : isTablet ? (
+            <>
+              <View style={[styles.row, { gap: cardGap }]}>
+                <CyberCard
+                  color={CYBER.cyan}
+                  hot
+                  onPress={openOnlineConfig}
+                  onPlaySound={handlePlaySound}
+                  icon="globe-outline"
+                  anim={onlineAnim}
+                  label={t('home.play_online')}
+                  sub={onlineSub}
+                  subDot
+                  subDotColor={CYBER.green}
+                  useRotation
+                  spin={spinInterp}
+                />
+                <CyberCard
+                  color={CYBER.mag}
+                  onPress={openAiConfig}
+                  onPlaySound={handlePlaySound}
+                  icon="hardware-chip-outline"
+                  anim={computerAnim}
+                  label={t('home.play_computer')}
+                  sub={t('home.computer_subtitle')}
+                  subDot={false}
+                />
+                <CyberCard
+                  color={CYBER.cyan}
+                  onPress={openFriendsConfig}
+                  onPlaySound={handlePlaySound}
+                  icon="people-outline"
+                  anim={friendsAnim}
+                  label={t('home.play_friends')}
+                  sub={friendsSub}
+                  subDot={friendsCount !== null && friendsCount > 0}
+                  subDotColor={CYBER.cyan}
+                />
+              </View>
+              <View style={[styles.row, { gap: cardGap, justifyContent: 'center' }]}>
+                <View style={{ flex: 0.25 }} />
+                <CyberCard
+                  color={CYBER.gold}
+                  onPress={() => setLocalConfigVisible(true)}
+                  onPlaySound={handlePlaySound}
+                  icon="game-controller-outline"
+                  anim={localAnim}
+                  label={t('home.play_local')}
+                  sub={t('home.local_subtitle')}
+                  subDot={false}
+                />
+                <CyberCard
+                  color={CYBER.gold}
+                  hot={tournamentsCount !== null && tournamentsCount > 0}
+                  onPress={openTournamentLobby}
+                  onPlaySound={handlePlaySound}
+                  icon="trophy-outline"
+                  anim={tournamentAnim}
+                  label={t('tournament.home_card.label')}
+                  sub={tournamentSub}
+                  subDot={tournamentsCount !== null && tournamentsCount > 0}
+                  subDotColor={CYBER.gold}
+                />
+                <View style={{ flex: 0.25 }} />
+              </View>
+            </>
+          ) : (
+            <>
+              <View style={[styles.row, { gap: cardGap }]}>
+                <CyberCard
+                  color={CYBER.cyan}
+                  hot
+                  onPress={openOnlineConfig}
+                  onPlaySound={handlePlaySound}
+                  icon="globe-outline"
+                  anim={onlineAnim}
+                  label={t('home.play_online')}
+                  sub={onlineSub}
+                  subDot
+                  subDotColor={CYBER.green}
+                  useRotation
+                  spin={spinInterp}
+                />
+                <CyberCard
+                  color={CYBER.mag}
+                  onPress={openAiConfig}
+                  onPlaySound={handlePlaySound}
+                  icon="hardware-chip-outline"
+                  anim={computerAnim}
+                  label={t('home.play_computer')}
+                  sub={t('home.computer_subtitle')}
+                  subDot={false}
+                />
+              </View>
+              <View style={[styles.row, { gap: cardGap }]}>
+                <CyberCard
+                  color={CYBER.cyan}
+                  onPress={openFriendsConfig}
+                  onPlaySound={handlePlaySound}
+                  icon="people-outline"
+                  anim={friendsAnim}
+                  label={t('home.play_friends')}
+                  sub={friendsSub}
+                  subDot={friendsCount !== null && friendsCount > 0}
+                  subDotColor={CYBER.cyan}
+                />
+                <CyberCard
+                  color={CYBER.gold}
+                  onPress={() => setLocalConfigVisible(true)}
+                  onPlaySound={handlePlaySound}
+                  icon="game-controller-outline"
+                  anim={localAnim}
+                  label={t('home.play_local')}
+                  sub={t('home.local_subtitle')}
+                  subDot={false}
+                />
+              </View>
+              <View style={[styles.row, { gap: cardGap }]}>
+                <CyberCard
+                  color={CYBER.gold}
+                  hot={tournamentsCount !== null && tournamentsCount > 0}
+                  onPress={openTournamentLobby}
+                  onPlaySound={handlePlaySound}
+                  icon="trophy-outline"
+                  anim={tournamentAnim}
+                  label={t('tournament.home_card.label')}
+                  sub={tournamentSub}
+                  subDot={tournamentsCount !== null && tournamentsCount > 0}
+                  subDotColor={CYBER.gold}
+                  fullWidth
+                  horizontal
+                />
+              </View>
+            </>
+          )}
         </View>
       </View>
     </BackgroundContainer>
@@ -670,9 +931,10 @@ const styles = StyleSheet.create({
   body: {
     flex: 1,
     paddingHorizontal: rs(14),
-    paddingTop: rs(4),
-    paddingBottom: rs(98),
-    justifyContent: 'center',
+    paddingTop: rs(0),
+    paddingBottom: rs(140),
+    flexDirection: 'column',
+    justifyContent: 'flex-end',
   },
   bodyDesktop: {
     maxWidth: 1000,
@@ -680,16 +942,24 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   battleSection: {
-    marginBottom: rs(14),
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: rs(10),
+    minHeight: rs(120),
+    maxHeight: rs(260),
+  },
+  battleSectionTablet: {
+    maxHeight: rs(350),
   },
   battleLogo: {
     opacity: 0.95,
-    marginBottom: rs(-6),
+    marginBottom: rs(4),
   },
   battleAnimWrap: {
     width: '100%',
     alignSelf: 'stretch',
+    overflow: 'hidden',
   },
   grid: {
     flexDirection: 'column',

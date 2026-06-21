@@ -73,23 +73,23 @@ import { API_URL } from '../config';
 const AD_LOG_URL = `${API_URL}/ad-debug-events/log`;
 
 const reportAdDebug = async (eventType, location, msg, extraData = {}, context = {}) => {
-  try {
-    const payload = {
-      userId: context.user?.id || context.user?._id || 'anonymous',
-      platform: Platform.OS,
-      version: '1.0.2', // TODO: Get from constants
-      environment: __DEV__ ? 'development' : 'production',
-      adUnitId: extraData.rewardedAdUnitId || extraData.adUnitId,
-      eventType,
-      message: msg,
-      location,
-      data: extraData,
-      attStatus: context.attStatus || (context.attAuthorized ? 'authorized' : 'not_authorized'),
-      showAds: context.showAds,
-      isPremium: context.isPremium,
-      isEarlyAccess: context.isEarlyAccess,
-      timestamp: Date.now()
-    };
+    try {
+      const payload = {
+        userId: context.user?.id || context.user?._id || 'anonymous',
+        platform: Platform.OS,
+        version: '1.0.3',
+        environment: __DEV__ ? 'development' : 'production',
+        adUnitId: extraData.rewardedAdUnitId || extraData.adUnitId,
+        eventType,
+        message: msg,
+        location,
+        data: extraData,
+        attStatus: context.attStatus || (context.attAuthorized ? 'authorized' : 'not_authorized'),
+        showAds: context.showAds,
+        isPremium: context.isPremium,
+        isEarlyAccess: context.isEarlyAccess,
+        timestamp: Date.now()
+      };
 
     if (__DEV__) {
       console.log(`[AD_DEBUG] ${eventType} @ ${location}: ${msg}`, extraData);
@@ -430,13 +430,17 @@ export default function AdSystem({ children }) {
   }, [showAds, attReady, ensureMobileAdsInitialized]);
 
   useEffect(() => {
-    if (!showAds) return;
+    if (!showAds) {
+      interstitialRef.current = null;
+      setInterstitialLoaded(false);
+      pendingShowInterstitialRef.current = false;
+      return;
+    }
     if (!InterstitialAd) return;
     if (Platform.OS === 'ios' && !attReady) return;
 
-    if (!interstitialRef.current) {
-      interstitialRef.current = InterstitialAd.createForAdRequest(interstitialAdUnitId, { requestNonPersonalizedAdsOnly });
-    }
+    // Reset interstitial instance when requestNonPersonalizedAdsOnly changes
+    interstitialRef.current = InterstitialAd.createForAdRequest(interstitialAdUnitId, { requestNonPersonalizedAdsOnly });
 
     const interstitial = interstitialRef.current;
 
@@ -452,7 +456,9 @@ export default function AdSystem({ children }) {
 
     const unsubClosed = interstitial.addAdEventListener(AdEventType.CLOSED, () => {
       setInterstitialLoaded(false);
-      interstitial.load();
+      try {
+        interstitial.load();
+      } catch {}
     });
 
     const unsubError = interstitial.addAdEventListener(AdEventType.ERROR, (err) => {
@@ -461,14 +467,19 @@ export default function AdSystem({ children }) {
       if (adDebugEnabled) console.warn('[ADS] interstitial error', err);
     });
 
-    interstitial.load();
+    ensureMobileAdsInitialized().then((ok) => {
+      if (!ok) return;
+      try {
+        interstitial.load();
+      } catch {}
+    });
 
     return () => {
       unsubLoaded();
       unsubClosed();
       unsubError();
     };
-  }, [showAds, interstitialAdUnitId, requestNonPersonalizedAdsOnly, attReady]);
+  }, [showAds, interstitialAdUnitId, requestNonPersonalizedAdsOnly, attReady, ensureMobileAdsInitialized, adDebugEnabled]);
 
   const setupRewarded = useCallback(() => {
     if (!showAds) return null;
@@ -640,26 +651,27 @@ export default function AdSystem({ children }) {
       } catch {}
     });
     return rewarded;
-  }, [showAds, rewardedAdUnitId, credit, adDebugEnabled, requestNonPersonalizedAdsOnly, ensureMobileAdsInitialized, logAdEvent, rewardedLoaded, t, useTestAdUnits]);
+  }, [showAds, rewardedAdUnitId, credit, adDebugEnabled, requestNonPersonalizedAdsOnly, ensureMobileAdsInitialized, logAdEvent, t, useTestAdUnits, attReady]);
 
   useEffect(() => {
+    // Always reset existing subscriptions first when dependencies change
+    rewardedUnsubsRef.current.forEach((unsub) => {
+      try {
+        unsub();
+      } catch {}
+    });
+    rewardedUnsubsRef.current = [];
+    rewardedUnitIdRef.current = null;
+    rewardedRef.current = null;
+    setRewardedLoaded(false);
+    pendingShowRewardedRef.current = false;
+    rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
+
     if (!showAds) {
-      rewardedUnsubsRef.current.forEach((unsub) => {
-        try {
-          unsub();
-        } catch {}
-      });
-      rewardedUnsubsRef.current = [];
-      rewardedUnitIdRef.current = null;
-      rewardedRef.current = null;
-      setRewardedLoaded(false);
-      pendingShowRewardedRef.current = false;
-      rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
       return;
     }
     setupRewarded();
-    return () => {};
-  }, [showAds, setupRewarded]);
+  }, [showAds, setupRewarded, requestNonPersonalizedAdsOnly, attReady]);
 
   useEffect(() => {
     if (!showAds) {

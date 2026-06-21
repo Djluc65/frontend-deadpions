@@ -79,7 +79,7 @@ const HomeHeader = memo(({ user, navigation, onSearch, onSettings, onRewards, on
 
   return (
     <SafeAreaView edges={['top']} style={styles.safe}>
-      <View style={[styles.row, isDesktop && styles.rowDesktop]}>
+      <View style={[styles.row, isTablet && styles.rowTablet, isDesktop && styles.rowDesktop]}>
 
         {/* ── Pill avatar + pseudo + niveau ── */}
         <HeaderTouchable
@@ -87,7 +87,7 @@ const HomeHeader = memo(({ user, navigation, onSearch, onSettings, onRewards, on
           onPlaySound={onPlaySound}
           hitSlop={{ top: rs(12), bottom: rs(12), left: rs(12), right: rs(8) }}
         >
-          <View style={styles.userPill}>
+          <View style={[styles.userPill, isTablet && styles.userPillTablet]}>
             {/* Avatar */}
             <View style={[styles.avatarWrap, { width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }]}>
               {avatarSource ? (
@@ -96,18 +96,18 @@ const HomeHeader = memo(({ user, navigation, onSearch, onSettings, onRewards, on
                   style={{ width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }}
                 />
               ) : (
-                <Text style={[styles.avatarInitial, { fontSize: rs(isTablet ? 17 : 15) }]}>{initial}</Text>
+                <Text style={[styles.avatarInitial, { fontSize: rs(isTablet ? 19 : 15) }]}>{initial}</Text>
               )}
             </View>
             {/* Texte */}
-            <View style={styles.userTexts}>
+            <View style={[styles.userTexts, isTablet && styles.userTextsTablet]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: rs(4) }}>
-                <Text style={[styles.pseudo, isTablet && { fontSize: rs(14) }]} numberOfLines={1} ellipsizeMode="tail">
+                <Text style={[styles.pseudo, isTablet && styles.pseudoTablet]} numberOfLines={1} ellipsizeMode="tail">
                   {pseudo}
                 </Text>
                 <StreakBadge />
               </View>
-              <Text style={styles.levelText}>LV.{level}</Text>
+              <Text style={[styles.levelText, isTablet && styles.levelTextTablet]}>LV.{level}</Text>
             </View>
           </View>
         </HeaderTouchable>
@@ -116,40 +116,40 @@ const HomeHeader = memo(({ user, navigation, onSearch, onSettings, onRewards, on
         <View style={{ flex: 1 }} />
 
         {/* ── Pill coins ── */}
-        <View style={styles.coinsPill}>
-          <View style={styles.coinsDot} />
-          <Text style={styles.coinsNum}>{coinsText}</Text>
+        <View style={[styles.coinsPill, isTablet && styles.coinsPillTablet]}>
+          <View style={[styles.coinsDot, isTablet && styles.coinsDotTablet]} />
+          <Text style={[styles.coinsNum, isTablet && styles.coinsNumTablet]}>{coinsText}</Text>
         </View>
 
         {/* ── Boutons actions ── */}
-        <View style={styles.actions}>
+        <View style={[styles.actions, isTablet && styles.actionsTablet]}>
           <HeaderTouchable
             onPress={onRewards}
             onPlaySound={onPlaySound}
-            hitSlop={{ top: rs(18), bottom: rs(18), left: rs(10), right: rs(6) }}
+            hitSlop={{ top: rs(18), bottom: rs(18), left: rs(10), right: rs(8) }}
           >
-            <View style={styles.iconBtn}>
-              <Ionicons name="gift-outline" size={rs(isTablet ? 22 : 20)} color={CYBER.text} />
+            <View style={[styles.iconBtn, isTablet && styles.iconBtnTablet]}>
+              <Ionicons name="gift-outline" size={rs(isTablet ? 26 : 20)} color={CYBER.text} />
             </View>
           </HeaderTouchable>
 
           <HeaderTouchable
             onPress={onSearch}
             onPlaySound={onPlaySound}
-            hitSlop={{ top: rs(18), bottom: rs(18), left: rs(6), right: rs(6) }}
+            hitSlop={{ top: rs(18), bottom: rs(18), left: rs(8), right: rs(8) }}
           >
-            <View style={styles.iconBtn}>
-              <Ionicons name="search-outline" size={rs(isTablet ? 22 : 20)} color={CYBER.text} />
+            <View style={[styles.iconBtn, isTablet && styles.iconBtnTablet]}>
+              <Ionicons name="search-outline" size={rs(isTablet ? 26 : 20)} color={CYBER.text} />
             </View>
           </HeaderTouchable>
 
           <HeaderTouchable
             onPress={onSettings}
             onPlaySound={onPlaySound}
-            hitSlop={{ top: rs(18), bottom: rs(18), left: rs(6), right: rs(14) }}
+            hitSlop={{ top: rs(18), bottom: rs(18), left: rs(8), right: rs(14) }}
           >
-            <View style={styles.iconBtn}>
-              <Ionicons name="settings-outline" size={rs(isTablet ? 22 : 20)} color={CYBER.text} />
+            <View style={[styles.iconBtn, isTablet && styles.iconBtnTablet]}>
+              <Ionicons name="settings-outline" size={rs(isTablet ? 26 : 20)} color={CYBER.text} />
             </View>
           </HeaderTouchable>
         </View>
@@ -172,6 +172,11 @@ const styles = StyleSheet.create({
     paddingVertical: rs(8),
     gap: rs(8),
   },
+  rowTablet: {
+    paddingHorizontal: rs(20),
+    paddingVertical: rs(12),
+    gap: rs(12),
+  },
   rowDesktop: {
     maxWidth: 1100,
     alignSelf: 'center',
@@ -190,6 +195,13 @@ const styles = StyleSheet.create({
     paddingVertical: rs(5),
     gap: rs(8),
     maxWidth: rs(180),
+  },
+  userPillTablet: {
+    borderRadius: rs(30),
+    paddingHorizontal: rs(12),
+    paddingVertical: rs(8),
+    gap: rs(10),
+    maxWidth: rs(240),
   },
   avatarWrap: {
     backgroundColor: 'rgba(91, 210, 255, 0.18)',
@@ -210,6 +222,9 @@ const styles = StyleSheet.create({
     gap: rs(1),
     flexShrink: 1,
   },
+  userTextsTablet: {
+    gap: rs(2),
+  },
   pseudo: {
     color: CYBER.text,
     fontSize: rs(13),
@@ -217,11 +232,17 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
     textTransform: 'uppercase',
   },
+  pseudoTablet: {
+    fontSize: rs(15),
+  },
   levelText: {
     color: CYBER.cyan,
     fontSize: rs(10),
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  levelTextTablet: {
+    fontSize: rs(12),
   },
 
   // ── Pill coins ────────────────────────────────────────────────────────────
@@ -236,6 +257,12 @@ const styles = StyleSheet.create({
     paddingVertical: rs(5),
     gap: rs(5),
   },
+  coinsPillTablet: {
+    borderRadius: rs(26),
+    paddingHorizontal: rs(14),
+    paddingVertical: rs(8),
+    gap: rs(8),
+  },
   coinsDot: {
     width: rs(7),
     height: rs(7),
@@ -247,11 +274,19 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  coinsDotTablet: {
+    width: rs(9),
+    height: rs(9),
+    borderRadius: rs(5),
+  },
   coinsNum: {
     color: T.gold,
     fontSize: rs(13),
     fontWeight: '800',
     letterSpacing: 0.3,
+  },
+  coinsNumTablet: {
+    fontSize: rs(15),
   },
 
   // ── Boutons icône ─────────────────────────────────────────────────────────
@@ -259,6 +294,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: rs(6),
+  },
+  actionsTablet: {
+    gap: rs(10),
   },
   iconBtn: {
     width: rs(34),
@@ -269,6 +307,11 @@ const styles = StyleSheet.create({
     borderColor: CYBER.edge,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  iconBtnTablet: {
+    width: rs(44),
+    height: rs(44),
+    borderRadius: rs(14),
   },
 });
 

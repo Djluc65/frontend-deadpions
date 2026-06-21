@@ -147,10 +147,10 @@ const CustomTabIcon = ({ focused, iconName, label, cyberActive }) => {
   const isTablet = width >= 768;
   const activeColor = cyberActive || T.gold;
   return (
-    <View style={{ alignItems: 'center', justifyContent: 'center', width: isTablet ? 80 : 60 }}>
+    <View style={{ alignItems: 'center', justifyContent: 'center', width: isTablet ? 100 : 60 }}>
       <Ionicons
         name={iconName}
-        size={getResponsiveSize(isTablet ? 26 : 24)}
+        size={getResponsiveSize(isTablet ? 32 : 24)}
         color={focused ? activeColor : '#8090B5'}
       />
       <Text
@@ -159,9 +159,9 @@ const CustomTabIcon = ({ focused, iconName, label, cyberActive }) => {
         minimumFontScale={0.7}
         style={{
           color: focused ? activeColor : '#8090B5',
-          fontSize: getResponsiveSize(isTablet ? 10 : 11),
+          fontSize: getResponsiveSize(isTablet ? 12 : 11),
           fontWeight: '700',
-          marginTop: getResponsiveSize(2),
+          marginTop: getResponsiveSize(isTablet ? 4 : 2),
           letterSpacing: 0.3,
           textTransform: 'uppercase',
         }}
@@ -189,12 +189,14 @@ const MobileBottomNav = ({ state, navigation, notificationsCount, insets, width,
   const { t } = useTranslation();
   const isTablet = width >= 768;
 
-  const dockInner = isTablet ? 64 : 56;
+  const dockInner = isTablet ? 76 : 56;
   const bottomPad = Math.max(insets.bottom, 0);
-  const dockBottom = Math.max(bottomPad + 8, 20);
+  const dockBottom = Math.max(bottomPad + (isTablet ? 16 : 8), isTablet ? 30 : 20);
 
   // Position verticale du bouton central : centré sur le dock + élévation
-  const centerBtnBottom = dockInner / 2 - CENTER_BTN_SIZE / 2 + CENTER_BTN_LIFT;
+  const centerBtnSize = isTablet ? getResponsiveSize(64) : CENTER_BTN_SIZE;
+  const centerBtnLift = isTablet ? getResponsiveSize(20) : CENTER_BTN_LIFT;
+  const centerBtnBottom = dockInner / 2 - centerBtnSize / 2 + centerBtnLift;
 
   const [quickVisible, setQuickVisible] = useState(false);
   const sheetAnim = useRef(new Animated.Value(0)).current;
@@ -237,10 +239,10 @@ const MobileBottomNav = ({ state, navigation, notificationsCount, insets, width,
       pointerEvents="box-none"
       style={{
         position: 'absolute',
-        left: 14,
-        right: 14,
+        left: isTablet ? 40 : 14,
+        right: isTablet ? 40 : 14,
         bottom: dockBottom,
-        height: dockInner + CENTER_BTN_LIFT + CENTER_BTN_SIZE / 2,
+        height: dockInner + centerBtnLift + centerBtnSize / 2,
         zIndex: 1000,
       }}
     >
@@ -254,7 +256,7 @@ const MobileBottomNav = ({ state, navigation, notificationsCount, insets, width,
           height: dockInner,
           flexDirection: 'row',
           backgroundColor: NAV_CYBER.glass,
-          borderRadius: 22,
+          borderRadius: isTablet ? 30 : 22,
           borderWidth: 1,
           borderColor: NAV_CYBER.edge,
           shadowColor: '#000',
@@ -287,8 +289,8 @@ const MobileBottomNav = ({ state, navigation, notificationsCount, insets, width,
                     position: 'absolute',
                     top: 0,
                     width: '40%',
-                    height: 2,
-                    borderRadius: 2,
+                    height: isTablet ? 3 : 2,
+                    borderRadius: isTablet ? 3 : 2,
                     backgroundColor: NAV_CYBER.cyan,
                     shadowColor: NAV_CYBER.cyan,
                     shadowOffset: { width: 0, height: 0 },
@@ -300,12 +302,12 @@ const MobileBottomNav = ({ state, navigation, notificationsCount, insets, width,
                   {badge !== null && (
                     <View style={{
                       position: 'absolute', top: -4, right: -8,
-                      backgroundColor: '#e74c3c', borderRadius: 10,
-                      minWidth: 18, height: 18,
+                      backgroundColor: '#e74c3c', borderRadius: isTablet ? 12 : 10,
+                      minWidth: isTablet ? 22 : 18, height: isTablet ? 22 : 18,
                       alignItems: 'center', justifyContent: 'center',
                       paddingHorizontal: 3, zIndex: 1,
                     }}>
-                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{badge}</Text>
+                      <Text style={{ color: '#fff', fontSize: isTablet ? 12 : 10, fontWeight: '700' }}>{badge}</Text>
                     </View>
                   )}
                   <CustomTabIcon
@@ -327,12 +329,12 @@ const MobileBottomNav = ({ state, navigation, notificationsCount, insets, width,
         activeOpacity={0.82}
         style={{
           position: 'absolute',
-          width: CENTER_BTN_SIZE,
-          height: CENTER_BTN_SIZE,
+          width: centerBtnSize,
+          height: centerBtnSize,
           left: '50%',
-          marginLeft: -CENTER_BTN_SIZE / 2,
+          marginLeft: -centerBtnSize / 2,
           bottom: centerBtnBottom,
-          borderRadius: getResponsiveSize(14),
+          borderRadius: getResponsiveSize(isTablet ? 18 : 14),
           elevation: 28,
           shadowColor: '#5BD2FF',
           shadowOffset: { width: 0, height: 0 },
@@ -347,7 +349,7 @@ const MobileBottomNav = ({ state, navigation, notificationsCount, insets, width,
           end={{ x: 1, y: 1 }}
           style={{
             flex: 1,
-            borderRadius: getResponsiveSize(14),
+            borderRadius: getResponsiveSize(isTablet ? 18 : 14),
             alignItems: 'center',
             justifyContent: 'center',
             // Inner highlights (iOS)
@@ -359,7 +361,7 @@ const MobileBottomNav = ({ state, navigation, notificationsCount, insets, width,
         >
           <Ionicons
             name="game-controller"
-            size={getResponsiveSize(22)}
+            size={getResponsiveSize(isTablet ? 28 : 22)}
             color="#05060B"
           />
         </LinearGradient>

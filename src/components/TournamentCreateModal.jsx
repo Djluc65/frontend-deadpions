@@ -1,16 +1,18 @@
 // DeadPions — TournamentCreateModal.jsx — créé le 2026-06-08
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, Modal, TouchableOpacity, ScrollView } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { T, TY } from '../utils/theme';
 import { Ionicons } from '@expo/vector-icons';
 import Button from './common/Button';
 
-const SIZES = [2, 4, 8, 16, 32];
+const SIZES = [4, 8, 16, 32];
 const FEES = [50, 100, 200, 500, 1000];
 
 const TournamentCreateModal = ({ visible, onClose, onCreate }) => {
-  const [size, setSize] = useState(2);
+  const { t } = useTranslation();
+  const [size, setSize] = useState(4);
   const [fee, setFee] = useState(100);
   const user = useSelector(state => state.auth.user);
 
@@ -29,14 +31,14 @@ const TournamentCreateModal = ({ visible, onClose, onCreate }) => {
       <View style={styles.overlay}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.title}>Créer un tournoi</Text>
+            <Text style={styles.title}>{t('tournament.create_modal.title')}</Text>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={24} color={T.text} />
             </TouchableOpacity>
           </View>
 
           <ScrollView style={styles.content}>
-            <Text style={styles.label}>Taille du tournoi</Text>
+            <Text style={styles.label}>{t('tournament.create_modal.size_label')}</Text>
             <View style={styles.optionRow}>
               {SIZES.map(s => (
                 <TouchableOpacity 
@@ -44,12 +46,14 @@ const TournamentCreateModal = ({ visible, onClose, onCreate }) => {
                   style={[styles.option, size === s && styles.optionSelected]}
                   onPress={() => setSize(s)}
                 >
-                  <Text style={[styles.optionText, size === s && styles.optionTextSelected]}>{s} j.</Text>
+                  <Text style={[styles.optionText, size === s && styles.optionTextSelected]}>
+                    {t('tournament.create_modal.size_value', { size: s })}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={styles.label}>Mise par joueur (coins)</Text>
+            <Text style={styles.label}>{t('tournament.create_modal.entry_label')}</Text>
             <View style={styles.optionRow}>
               {FEES.map(f => (
                 <TouchableOpacity 
@@ -64,22 +68,26 @@ const TournamentCreateModal = ({ visible, onClose, onCreate }) => {
 
             <View style={styles.summary}>
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Pot total :</Text>
-                <Text style={styles.summaryValue}>{totalPot} coins</Text>
+                <Text style={styles.summaryLabel}>{t('tournament.create_modal.pot_label')}</Text>
+                <Text style={styles.summaryValue}>
+                  {t('tournament.create_modal.pot_value', { amount: totalPot })}
+                </Text>
               </View>
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Gain champion (95%) :</Text>
-                <Text style={[styles.summaryValue, { color: T.gold }]}>{winnerGain} coins</Text>
+                <Text style={styles.summaryLabel}>{t('tournament.create_modal.winner_label')}</Text>
+                <Text style={[styles.summaryValue, { color: T.gold }]}>
+                  {t('tournament.create_modal.winner_value', { amount: winnerGain })}
+                </Text>
               </View>
             </View>
 
             {!canAfford && (
-              <Text style={styles.errorText}>Solde insuffisant pour créer ce tournoi.</Text>
+              <Text style={styles.errorText}>{t('tournament.create_modal.error_insufficient')}</Text>
             )}
           </ScrollView>
 
           <Button 
-            title="Créer le tournoi" 
+            title={t('tournament.create_modal.btn_create')} 
             onPress={handleCreate} 
             disabled={!canAfford}
             style={styles.createButton}

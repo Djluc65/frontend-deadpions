@@ -1,6 +1,6 @@
 import { T } from './theme';
 
-export const TOURNAMENT_SIZE_OPTIONS = [2, 4, 8, 16, 32];
+export const TOURNAMENT_SIZE_OPTIONS = [4, 8, 16, 32];
 export const TOURNAMENT_ENTRY_FEE_OPTIONS = [500, 1000, 5000, 10000, 50000];
 export const TOURNAMENT_GAMES_PER_MATCH_OPTIONS = [2, 4, 6, 8, 10];
 export const TOURNAMENT_SCHEDULING_OPTIONS = [
@@ -73,7 +73,7 @@ export const DEFAULT_TOURNAMENT_CONFIG = {
   totalTimeLimit: 180,
   startingPlayer: 'random',
   pawnColorMode: 'random',
-  victoryRule: 'five_in_a_row',
+  victoryRule: 'exact_five',
   eliminationType: 'single_elimination',
   enableThirdPlaceMatch: false,
   visibility: 'public',
@@ -149,6 +149,7 @@ export const formatGamesPerMatchSummary = (gamesPerMatch) => {
   const maxLabel = Number(gamesPerMatch || 2) === 2 ? '3 parties max' : `${gamesPerMatch} parties maximum`;
   return `Premier a ${winsNeeded} victoire(s) - ${maxLabel} si ${drawThreshold}-${drawThreshold} match nul, a rejouer`;
 };
+export const formatGamesPerMatch = formatGamesPerMatchSummary;
 
 export const formatMinimumRanking = (value) => {
   switch (value) {

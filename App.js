@@ -158,9 +158,57 @@ function AppContent() {
           await AsyncStorage.removeItem('pendingInviteCode');
           navigationRef.navigate('InviteJoin', { code: pendingCode });
         }
+
+        const pendingTournament = await AsyncStorage.getItem('pendingTournamentJoin');
+        if (pendingTournament) {
+          await AsyncStorage.removeItem('pendingTournamentJoin');
+          try {
+            const { id, code } = JSON.parse(pendingTournament);
+            if (id && code) {
+              navigationRef.navigate('TournamentWaitingRoom', {
+                tournamentId: id,
+                inviteCode: code
+              });
+            }
+          } catch (_) {}
+        }
       };
       checkPendingInvite();
     }
+  }, [user, navigationRef]);
+
+  useEffect(() => {
+    const handleDeepLink = ({ url }) => {
+      if (!url) return;
+      try {
+        const parsed = Linking.parse(url);
+        const path = parsed.path || '';
+        if (path.includes('tournament/join')) {
+          const id = parsed.queryParams?.id;
+          const code = parsed.queryParams?.code;
+          if (id && code) {
+            const inviteCode = String(code).toUpperCase();
+            if (user && navigationRef.isReady()) {
+              navigationRef.navigate('TournamentWaitingRoom', {
+                tournamentId: id,
+                inviteCode
+              });
+            } else {
+              AsyncStorage.setItem('pendingTournamentJoin', JSON.stringify({ id, code: inviteCode }));
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[DeepLink]', err);
+      }
+    };
+
+    Linking.getInitialURL().then((url) => {
+      if (url) handleDeepLink({ url });
+    });
+
+    const sub = Linking.addEventListener('url', handleDeepLink);
+    return () => sub?.remove();
   }, [user, navigationRef]);
 
   // Push notifications are disabled for now (native module not available)

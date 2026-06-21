@@ -77,8 +77,9 @@ export const useTournamentSocket = () => {
       };
 
       const handlePlayerJoined = (payload = {}) => {
+        console.log("⚽ Player joined tournament!", payload);
         if (payload.tournament) {
-          dispatch(updateTournament(payload.tournament));
+          dispatch(setTournament(payload.tournament));
           return;
         }
         if (Array.isArray(payload.participants) && activeTournament) {
@@ -146,15 +147,15 @@ export const useTournamentSocket = () => {
   }, [dispatch, user, activeTournament]);
 
   return {
-    createTournament: (config) => {
+    createTournament: (config, callback) => {
       if (!socket.connected) socket.connect();
       if (userId) socket.emit('join_user_room', userId);
-      socket.emit('create_tournament', config);
+      socket.emit('create_tournament', config, callback);
     },
-    joinTournament: (tournamentId, invitationCode) => {
+    joinTournament: (tournamentId, invitationCode, callback) => {
       if (!socket.connected) socket.connect();
       if (userId) socket.emit('join_user_room', userId);
-      socket.emit('join_tournament', { tournamentId, invitationCode });
+      socket.emit('join_tournament', { tournamentId, invitationCode }, callback);
     },
     leaveTournament: (tournamentId) => {
       if (!socket.connected) socket.connect();

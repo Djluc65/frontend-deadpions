@@ -1162,8 +1162,19 @@ const GameScreen = ({ navigation, route }) => {
                 raisonDefaite: !isWinner && data.reason === 'timeout' ? 'timeout' : null,
                 timeouts: data.timeouts,
                 type: mode,
-                isTournament: !!currentParams.tournamentSettings,
-                reason: data.reason
+                isTournament: !!currentParams.tournamentSettings || !!data.isTournamentMatch || !!currentParams.tournamentId,
+                reason: data.reason,
+                isTournamentMatch: !!data.isTournamentMatch || !!currentParams.tournamentId,
+                tournamentId: data.tournamentId || currentParams.tournamentId,
+                matchId: data.matchId || currentParams.tournamentMatchId,
+                nextOpponent: data.nextOpponent || null,
+                nextMatchId: data.nextMatchId || null,
+                myNextRound: data.myNextRound || null,
+                tournamentFinished: !!data.tournamentFinished,
+                prize: data.prize || 0,
+                needsReplay: !!data.needsReplay,
+                replayReason: data.replayReason || null,
+                tournamentScore: data.score || currentParams.tournamentSettings?.score || tournamentScore
             });
         setShowResultModal(true);
       }, 1500);
@@ -1403,7 +1414,17 @@ const GameScreen = ({ navigation, route }) => {
                  isTournament: true,
                  tournamentScore: data.score,
                  reason: data.reason,
-                 type: mode
+                 type: mode,
+                 isTournamentMatch: !!data.isTournamentMatch || !!params.tournamentId,
+                 tournamentId: data.tournamentId || params.tournamentId,
+                 matchId: data.matchId || params.tournamentMatchId,
+                 nextOpponent: data.nextOpponent || null,
+                 nextMatchId: data.nextMatchId || null,
+                 myNextRound: data.myNextRound || null,
+                 tournamentFinished: !!data.tournamentFinished,
+                 prize: data.prize || 0,
+                 needsReplay: !!data.needsReplay,
+                 replayReason: data.replayReason || null
              });
              setShowResultModal(true);
         }, 1500);
@@ -4264,8 +4285,312 @@ const GameScreen = ({ navigation, route }) => {
     }
   };
 
+  const renderMiniBoardSVG = (isLiveResult = false) => {
+    const miniWidth = getResponsiveSize(isTablet ? 170 : (isLiveResult ? 122 : 135));
+    const cell = miniWidth / COLS;
+    const miniHeight = cell * ROWS;
+    const originX = cell / 2;
+    const originY = cell / 2;
+    const last = board.length > 0 ? board[board.length - 1] : null;
+
+    return (
+      <Svg width={miniWidth} height={miniHeight}>
+        <Rect x={0} y={0} width={miniWidth} height={miniHeight} fill="#0E1320" rx={getResponsiveSize(10)} />
+
+        {Array.from({ length: COLS }).map((_, col) => {
+          const x = originX + col * cell;
+          return (
+            <Line
+              key={`mini-v-${col}`}
+              x1={x}
+              y1={originY}
+              x2={x}
+              y2={originY + (ROWS - 1) * cell}
+              stroke="#1F2840"
+              strokeWidth="0.8"
+              opacity={0.85}
+            />
+          );
+        })}
+
+        {Array.from({ length: ROWS }).map((_, row) => {
+          const y = originY + row * cell;
+          return (
+            <Line
+              key={`mini-h-${row}`}
+              x1={originX}
+              y1={y}
+              x2={originX + (COLS - 1) * cell}
+              y2={y}
+              stroke="#1F2840"
+              strokeWidth="0.8"
+              opacity={0.85}
+            />
+          );
+        })}
+
+        {board.map((stone, index) => {
+          const cx = originX + stone.col * cell;
+          const cy = originY + stone.row * cell;
+          const r = cell * 0.35;
+          const isBlack = stone.player === 'black';
+          const fill = isBlack ? '#ff0808ff' : '#4dabf7';
+          const stroke = isBlack ? '#500000' : '#1e272fff';
+
+          return (
+            <Circle
+              key={`mini-stone-${stone.row}-${stone.col}-${index}`}
+              cx={cx}
+              cy={cy}
+              r={r}
+              fill={fill}
+              stroke={stroke}
+              strokeWidth={0.8}
+            />
+          );
+        })}
+
+        {last && (
+          <Circle
+            cx={originX + last.col * cell}
+            cy={originY + last.row * cell}
+            r={cell * 0.12}
+            fill="#E85D4A"
+            opacity={0.9}
+          />
+        )}
+      </Svg>
+    );
+  };
+
+  const renderTournamentResultModal = () => {
+    const {
+      victoire, reason, needsReplay,
+      adversaire, nextOpponent, myNextRound,
+      tournamentFinished, prize, tournamentScore: resultTournamentScore,
+      tournamentId: tId
+    } = resultData;
+
+    const isDraw = reason === 'draw' || needsReplay;
+    const isFinal = tournamentFinished;
+    const hasNextMatch = !!nextOpponent?.pseudo && !isFinal;
+
+    const emoji = isDraw ? '🤝' : (victoire ? '🏆' : '💀');
+    const titre = isDraw
+      ? 'MATCH NUL'
+      : (victoire
+          ? (isFinal ? 'CHAMPION !' : 'VICTOIRE !')
+          : 'ÉLIMINÉ');
+
+    const borderColor = isDraw
+      ? '#F4B41A'
+      : (victoire ? '#2ECC71' : '#E74C3C');
+
+    const scoreBlack = resultTournamentScore?.black ?? tournamentScore?.black ?? 0;
+    const scoreWhite = resultTournamentScore?.white ?? tournamentScore?.white ?? 0;
+
+    return (
+      <ImageBackground
+        source={require('../../assets/images/Background2-4.png')}
+        style={styles.resultOverlay}
+      >
+        <View style={styles.bgOverlay} pointerEvents="none" />
+        <View style={[
+          styles.resultCard,
+          {
+            borderColor,
+            borderWidth: 2,
+            maxHeight: Math.round(layoutHeight * 0.92),
+            padding: getResponsiveSize(isTablet ? 24 : 18)
+          }
+        ]}>
+          <Text style={styles.emojiResult}>{emoji}</Text>
+          <Text style={[styles.titreResult, {
+            color: isDraw ? '#F4B41A' : (victoire ? '#2ECC71' : '#E74C3C')
+          }]}>
+            {titre}
+          </Text>
+
+          {(scoreBlack > 0 || scoreWhite > 0) && (
+            <Text style={styles.scoreTournament}>
+              Score série : {scoreBlack} — {scoreWhite}
+            </Text>
+          )}
+
+          {adversaire?.pseudo && (
+            <Text style={styles.adversaireResult} numberOfLines={1}>
+              vs {adversaire.pseudo}
+            </Text>
+          )}
+
+          <ScrollView
+            style={{ maxHeight: Math.round(layoutHeight * 0.45) }}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.miniBoardWrapper}>
+              <Text style={styles.miniBoardLabel}>PLATEAU FINAL</Text>
+              <View style={styles.resultMiniBoard}>
+                {renderMiniBoardSVG(false)}
+              </View>
+            </View>
+
+            {isDraw && (
+              <View style={[styles.infoBlock, { borderColor: '#F4B41A' }]}>
+                <Text style={styles.infoBlockTitle}>🤝 Match nul</Text>
+                <Text style={styles.infoBlockText}>
+                  Aucun vainqueur — ce match sera rejoué automatiquement.
+                </Text>
+              </View>
+            )}
+
+            {victoire && !isFinal && hasNextMatch && (
+              <View style={[styles.infoBlock, { borderColor: '#2ECC71' }]}>
+                <Text style={styles.infoBlockTitle}>
+                  ⚔️ Prochain adversaire — Round {myNextRound}
+                </Text>
+                <View style={styles.nextOpponentRow}>
+                  <View style={styles.nextOpponentAvatar}>
+                    <Text style={styles.nextOpponentAvatarText}>
+                      {(nextOpponent.pseudo || '?')[0].toUpperCase()}
+                    </Text>
+                  </View>
+                  <View>
+                    <Text style={styles.nextOpponentName}>
+                      {nextOpponent.pseudo}
+                    </Text>
+                    <Text style={styles.nextOpponentRang}>
+                      {nextOpponent.rang || 'Bronze'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {victoire && !isFinal && !hasNextMatch && !isDraw && (
+              <View style={[styles.infoBlock, { borderColor: '#2ECC71' }]}>
+                <Text style={styles.infoBlockTitle}>⏳ Prochain match</Text>
+                <Text style={styles.infoBlockText}>
+                  En attente du résultat de l'autre match pour connaître votre adversaire.
+                </Text>
+              </View>
+            )}
+
+            {victoire && isFinal && (
+              <View style={[styles.infoBlock, { borderColor: '#F4B41A' }]}>
+                <Text style={styles.infoBlockTitle}>🏆 Champion du tournoi !</Text>
+                <Text style={styles.infoBlockGain}>
+                  + {prize} coins
+                </Text>
+                <Text style={styles.infoBlockText}>
+                  Félicitations ! Vous avez remporté le tournoi.
+                </Text>
+              </View>
+            )}
+
+            {!victoire && !isDraw && (
+              <View style={[styles.infoBlock, { borderColor: '#E74C3C' }]}>
+                <Text style={styles.infoBlockTitle}>💀 Vous êtes éliminé</Text>
+                <Text style={styles.infoBlockText}>
+                  {isFinal
+                    ? `Finaliste — belle performance !\nLe champion remporte ${prize} coins.`
+                    : 'Vous êtes éliminé du tournoi. Consultez le bracket pour suivre la suite.'}
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+
+          <View style={styles.resultButtons}>
+            {isDraw && (
+              <TouchableOpacity
+                style={[styles.btnResult, { backgroundColor: '#F4B41A' }]}
+                onPress={() => {
+                  playButtonSound();
+                  setShowResultModal(false);
+                  navigation.replace('TournamentBracket', { tournamentId: tId });
+                }}
+              >
+                <Text style={[styles.btnResultText, { color: '#060B17' }]}>🔄 RETOUR AU BRACKET</Text>
+              </TouchableOpacity>
+            )}
+
+            {victoire && !isDraw && !isFinal && (
+              <TouchableOpacity
+                style={[styles.btnResult, { backgroundColor: '#2ECC71' }]}
+                onPress={() => {
+                  playButtonSound();
+                  setShowResultModal(false);
+                  navigation.replace('TournamentBracket', { tournamentId: tId });
+                }}
+              >
+                <Text style={[styles.btnResultText, { color: '#060B17' }]}>
+                  ⚔️ VOIR LE BRACKET
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {victoire && isFinal && (
+              <TouchableOpacity
+                style={[styles.btnResult, { backgroundColor: '#F4B41A' }]}
+                onPress={() => {
+                  playButtonSound();
+                  setShowResultModal(false);
+                  navigation.replace('TournamentLobby');
+                }}
+              >
+                <Text style={[styles.btnResultText, { color: '#060B17' }]}>
+                  🏆 RETOUR AU LOBBY
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {!victoire && !isDraw && (
+              <>
+                <TouchableOpacity
+                  style={[styles.btnResult, {
+                    backgroundColor: '#0D1526',
+                    borderWidth: 1,
+                    borderColor: '#F4B41A'
+                  }]}
+                  onPress={() => {
+                    playButtonSound();
+                    setShowResultModal(false);
+                    navigation.replace('TournamentBracket', { tournamentId: tId });
+                  }}
+                >
+                  <Text style={styles.btnResultText}>📊 VOIR LE BRACKET</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.btnResult, {
+                    backgroundColor: '#1A1A2A',
+                    borderWidth: 1,
+                    borderColor: '#ECE6D640',
+                    marginTop: 8
+                  }]}
+                  onPress={() => {
+                    playButtonSound();
+                    setShowResultModal(false);
+                    navigation.replace('TournamentLobby');
+                  }}
+                >
+                  <Text style={[styles.btnResultText, { color: '#ECE6D680' }]}>
+                    🏠 QUITTER
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </ImageBackground>
+    );
+  };
+
   const renderResultModal = () => {
       if (!showResultModal || !resultData) return null;
+
+      if (resultData.isTournamentMatch) {
+        return renderTournamentResultModal();
+      }
 
       const { victoire, gains, montantPari, adversaire, raisonVictoire, raisonDefaite, timeouts, type, difficulte, reason, isTournament, tournamentOver } = resultData;
       const tauxVictoire = statsIA ? ((statsIA.gagnees / statsIA.jouees) * 100).toFixed(0) : 0;
@@ -4319,82 +4644,7 @@ const GameScreen = ({ navigation, route }) => {
                       <View style={styles.miniBoardWrapper}>
                           <Text style={styles.miniBoardLabel}>{t('game.final_board')}</Text>
                           <View style={styles.resultMiniBoard}>
-                              {(() => {
-                                  const miniWidth = getResponsiveSize(isTablet ? 170 : (isLiveResult ? 122 : 135));
-                                  const cell = miniWidth / COLS;
-                                  const miniHeight = cell * ROWS;
-                                  const originX = cell / 2;
-                                  const originY = cell / 2;
-                                  const last = board.length > 0 ? board[board.length - 1] : null;
-                                  return (
-                                      <Svg width={miniWidth} height={miniHeight}>
-                                          <Rect x={0} y={0} width={miniWidth} height={miniHeight} fill="#0E1320" rx={getResponsiveSize(10)} />
-
-                                          {Array.from({ length: COLS }).map((_, col) => {
-                                              const x = originX + col * cell;
-                                              return (
-                                                  <Line
-                                                      key={`mini-v-${col}`}
-                                                      x1={x}
-                                                      y1={originY}
-                                                      x2={x}
-                                                      y2={originY + (ROWS - 1) * cell}
-                                                      stroke="#1F2840"
-                                                      strokeWidth="0.8"
-                                                      opacity={0.85}
-                                                  />
-                                              );
-                                          })}
-
-                                          {Array.from({ length: ROWS }).map((_, row) => {
-                                              const y = originY + row * cell;
-                                              return (
-                                                  <Line
-                                                      key={`mini-h-${row}`}
-                                                      x1={originX}
-                                                      y1={y}
-                                                      x2={originX + (COLS - 1) * cell}
-                                                      y2={y}
-                                                      stroke="#1F2840"
-                                                      strokeWidth="0.8"
-                                                      opacity={0.85}
-                                                  />
-                                              );
-                                          })}
-
-                                          {board.map((stone, index) => {
-                                              const cx = originX + stone.col * cell;
-                                              const cy = originY + stone.row * cell;
-                                              const r = cell * 0.35;
-                                              const isBlack = stone.player === 'black';
-                                              const fill = isBlack ? '#ff0808ff' : '#4dabf7';
-                                              const stroke = isBlack ? '#500000' : '#1e272fff';
-
-                                              return (
-                                                  <Circle
-                                                      key={`mini-stone-${stone.row}-${stone.col}-${index}`}
-                                                      cx={cx}
-                                                      cy={cy}
-                                                      r={r}
-                                                      fill={fill}
-                                                      stroke={stroke}
-                                                      strokeWidth={0.8}
-                                                  />
-                                              );
-                                          })}
-
-                                          {last && (
-                                              <Circle
-                                                  cx={originX + last.col * cell}
-                                                  cy={originY + last.row * cell}
-                                                  r={cell * 0.12}
-                                                  fill="#E85D4A"
-                                                  opacity={0.9}
-                                              />
-                                          )}
-                                      </Svg>
-                                  );
-                              })()}
+                              {renderMiniBoardSVG(isLiveResult)}
                           </View>
                       </View>
 
@@ -6809,6 +7059,75 @@ const styles = StyleSheet.create({
    nextMatchButtonText: { 
      fontWeight: "bold", 
      color: "#000" 
+   },
+
+   infoBlock: {
+     borderWidth: 1,
+     borderRadius: 12,
+     padding: 14,
+     marginTop: 14,
+     backgroundColor: '#0D1526'
+   },
+   infoBlockTitle: {
+     fontSize: 16,
+     fontWeight: '700',
+     color: '#ECE6D6',
+     marginBottom: 6
+   },
+   infoBlockText: {
+     fontSize: 13,
+     color: '#ECE6D680',
+     lineHeight: 19
+   },
+   infoBlockGain: {
+     fontSize: 32,
+     fontWeight: '700',
+     color: '#F4B41A',
+     textAlign: 'center',
+     marginVertical: 8
+   },
+   nextOpponentRow: {
+     flexDirection: 'row',
+     alignItems: 'center',
+     gap: 12,
+     marginTop: 8
+   },
+   nextOpponentAvatar: {
+     width: 44,
+     height: 44,
+     borderRadius: 22,
+     backgroundColor: '#1E3A5F',
+     alignItems: 'center',
+     justifyContent: 'center'
+   },
+   nextOpponentAvatarText: {
+     fontSize: 20,
+     fontWeight: '700',
+     color: '#F4B41A'
+   },
+   nextOpponentName: {
+     fontSize: 17,
+     fontWeight: '700',
+     color: '#ECE6D6'
+   },
+   nextOpponentRang: {
+     fontSize: 12,
+     color: '#ECE6D660'
+   },
+   resultButtons: {
+     marginTop: 12
+   },
+   btnResult: {
+     borderRadius: 12,
+     paddingVertical: 14,
+     alignItems: 'center',
+     marginTop: 8
+   },
+   btnResultText: {
+     fontSize: 15,
+     fontWeight: '700',
+     color: '#ECE6D6',
+     letterSpacing: 0.5
    }
 });
 

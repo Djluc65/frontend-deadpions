@@ -14,7 +14,8 @@ import {
   formatMinimumRanking,
   isTournamentStartNowAvailable,
   getTournamentMatchStatusLabel,
-  getRoundLabel
+  getRoundLabel,
+  buildDefaultRoundSchedule
 } from '../src/utils/tournamentConfig';
 
 // ─── calculateTournamentPot ────────────────────────────────────────────────────
@@ -282,5 +283,32 @@ describe('getRoundLabel', () => {
   it('retourne Round X pour les autres cas', () => {
     expect(getRoundLabel(4, 1)).toBe('Round 1');
     expect(getRoundLabel(16, 1)).toBe('Round 1');
+  });
+});
+
+// ─── buildDefaultRoundSchedule ─────────────────────────────────────────────────
+describe('buildDefaultRoundSchedule', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('programme chaque round a partir de maintenant avec la duree estimee du round precedent', () => {
+    const baseNow = new Date('2026-06-21T10:00:00.000Z').getTime();
+    jest.spyOn(Date, 'now').mockReturnValue(baseNow);
+
+    const schedule = buildDefaultRoundSchedule({
+      size: 8,
+      gameMode: 'blitz',
+      totalTimeLimit: 180,
+      gamesPerMatch: 2,
+    });
+
+    expect(schedule).toHaveLength(3);
+    expect(schedule.map((item) => item.round)).toEqual([1, 2, 3]);
+    expect(schedule.map((item) => item.scheduledAt.toISOString())).toEqual([
+      '2026-06-21T10:15:00.000Z',
+      '2026-06-21T10:27:00.000Z',
+      '2026-06-21T10:39:00.000Z',
+    ]);
   });
 });
