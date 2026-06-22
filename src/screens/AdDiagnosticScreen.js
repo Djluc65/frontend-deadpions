@@ -2,12 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, RefreshControl, Platform } from 'react-native';
 import { useAdManager } from '../ads/AdSystem';
 import { T } from '../utils/theme';
-import { getResponsiveSize } from '../utils/responsive';
 import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../config';
 
 const AdDiagnosticScreen = ({ navigation }) => {
-  const { getAdDiagnostics, logAdEvent } = useAdManager();
+  const { getAdDiagnostics, logAdEvent, prepareRewarded, showRewarded } = useAdManager();
   const [diagnostics, setDiagnostics] = useState(getAdDiagnostics());
   const [recentEvents, setRecentEvents] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -53,6 +52,23 @@ const AdDiagnosticScreen = ({ navigation }) => {
     );
   };
 
+  const renderErrorCard = (title, error) => {
+    if (!error) return null;
+    return (
+      <View style={styles.errorCard}>
+        <Text style={styles.errorTitle}>{title}</Text>
+        <Text style={styles.errorLine}>Code: {error.code || 'N/A'}</Text>
+        <Text style={styles.errorLine}>Phase: {error.phase || 'N/A'}</Text>
+        <Text style={styles.errorLine}>Message: {error.message || 'N/A'}</Text>
+        {error.domain ? <Text style={styles.errorLine}>Domain: {error.domain}</Text> : null}
+        {error.rewardedAdUnitId ? <Text style={styles.errorLine}>Unit: {error.rewardedAdUnitId}</Text> : null}
+        {error.adUnitId ? <Text style={styles.errorLine}>Unit: {error.adUnitId}</Text> : null}
+        {error.screenKey ? <Text style={styles.errorLine}>Screen: {error.screenKey}</Text> : null}
+        {error.at ? <Text style={styles.errorLine}>At: {new Date(error.at).toLocaleString()}</Text> : null}
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -79,23 +95,56 @@ const AdDiagnosticScreen = ({ navigation }) => {
           {renderDiagnosticRow('Ad Debug Enabled', diagnostics.adDebugEnabled, true)}
           {renderDiagnosticRow('Use Test IDs', diagnostics.useTestAdUnits, true)}
           {renderDiagnosticRow('NPA Only', diagnostics.requestNonPersonalizedAdsOnly, true)}
+          {renderDiagnosticRow('Is Device', diagnostics.isDevice, true)}
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Config</Text>
           {renderDiagnosticRow('Platform', diagnostics.platform)}
+          {renderDiagnosticRow('Screen', diagnostics.screenKey)}
           {renderDiagnosticRow('Ad Unit ID', diagnostics.rewardedAdUnitId)}
           {renderDiagnosticRow('Action Count', diagnostics.actionCount)}
           {renderDiagnosticRow('Last Interstitial', diagnostics.lastInterstitialAt ? new Date(diagnostics.lastInterstitialAt).toLocaleTimeString() : 'Never')}
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Dernières Erreurs</Text>
+          {renderErrorCard('Rewarded', diagnostics.lastRewardedError)}
+          {renderErrorCard('Banner', diagnostics.lastBannerError)}
+          {renderErrorCard('Mobile Ads Init', diagnostics.lastMobileAdsInitError)}
+          {!diagnostics.lastRewardedError && !diagnostics.lastBannerError && !diagnostics.lastMobileAdsInitError ? (
+            <Text style={styles.noEvents}>Aucune erreur récente</Text>
+          ) : null}
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Actions de Test</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.testButton}
             onPress={() => logAdEvent('manual_diagnostic_ping', 'User clicked ping in diagnostic screen')}
           >
             <Text style={styles.testButtonText}>Envoyer Ping Télémétrie</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.testButton}
+            onPress={() => {
+              prepareRewarded();
+              logAdEvent('manual_rewarded_prepare', 'User triggered rewarded prepare from diagnostic screen');
+            }}
+          >
+            <Text style={styles.testButtonText}>Précharger Rewarded</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.testButton}
+            onPress={() => {
+              showRewarded({
+                reason: 'Diagnostic rewarded',
+                metadata: { source: 'ad_diagnostic_screen', reward: 'diagnostic' },
+                onEarned: async () => {}
+              });
+            }}
+          >
+            <Text style={styles.testButtonText}>Tester Rewarded</Text>
           </TouchableOpacity>
         </View>
 
@@ -183,10 +232,30 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
+    marginBottom: 10,
   },
   testButtonText: {
     color: 'white',
     fontWeight: 'bold',
+  },
+  errorCard: {
+    borderWidth: 1,
+    borderColor: T.border,
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+    backgroundColor: 'rgba(244,67,54,0.08)',
+  },
+  errorTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: T.text,
+    marginBottom: 6,
+  },
+  errorLine: {
+    fontSize: 12,
+    color: T.textSecondary,
+    marginBottom: 3,
   },
   eventItem: {
     paddingVertical: 10,

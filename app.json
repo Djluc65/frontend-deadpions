@@ -22,7 +22,7 @@
     ],
     "ios": {
       "bundleIdentifier": "com.deadpions.app",
-      "buildNumber": "128",
+      "buildNumber": "132",
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "DeadPions uses your camera to let you take a profile picture or video call with friends.",
@@ -36,7 +36,7 @@
     },
     "android": {
       "package": "com.deadpions.app",
-      "versionCode": 25,
+      "versionCode": 27,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -80,7 +80,45 @@
         {
           "androidAppId": "ca-app-pub-5628913012317818~7677374721",
           "iosAppId": "ca-app-pub-5628913012317818~7677374721",
-          "userTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you."
+          "userTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you.",
+          "skAdNetworkItems": [
+            "cstr6suwn9.skadnetwork",
+            "4fzdc2evr5.skadnetwork",
+            "2fnua5tdw4.skadnetwork",
+            "ydx93a7ass.skadnetwork",
+            "5a6flpkh6s.skadnetwork",
+            "p78axxw29g.skadnetwork",
+            "v72qych5uu.skadnetwork",
+            "c6k4g5qg8m.skadnetwork",
+            "s39g8k73mm.skadnetwork",
+            "3qy4746246.skadnetwork",
+            "3sh42y64q2.skadnetwork",
+            "f38h382jlk.skadnetwork",
+            "hs6bdukanm.skadnetwork",
+            "prcb7njmu6.skadnetwork",
+            "v4nxqhlyqp.skadnetwork",
+            "wzmmz9fp6w.skadnetwork",
+            "yclnxrljfl.skadnetwork",
+            "w9q455wk68.skadnetwork",
+            "4468km3ulz.skadnetwork",
+            "klf5c3l5u5.skadnetwork",
+            "ppxm28t8ap.skadnetwork",
+            "424m5254lk.skadnetwork",
+            "uw77j35cxp.skadnetwork",
+            "e5fvkxwrpn.skadnetwork",
+            "8c4e2ghe7u.skadnetwork",
+            "zq492l623r.skadnetwork",
+            "3rd42ekr43.skadnetwork",
+            "3qcr597p9p.skadnetwork",
+            "47vhws6wlr.skadnetwork",
+            "kbd757ywx3.skadnetwork",
+            "9t245vhmpl.skadnetwork",
+            "2u9pt9hc89.skadnetwork",
+            "8s468mfl3y.skadnetwork",
+            "av6w8kgt66.skadnetwork",
+            "atjkls5apf.skadnetwork",
+            "glqzh8vgby.skadnetwork"
+          ]
         }
       ],
       "expo-apple-authentication",

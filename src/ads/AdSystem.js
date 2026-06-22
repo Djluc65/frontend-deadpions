@@ -60,17 +60,20 @@ function getActiveRoutePath(state) {
   return childState ? [name, ...getActiveRoutePath(childState)] : [name];
 }
 
-function getBottomOffsetFromRoutePath(routePath) {
-  const isInTab = routePath.includes('Home') && (routePath.includes('MaisonTab') || routePath.includes('Social') || routePath.includes('Salle') || routePath.includes('Magasin'));
-  return isInTab ? 80 : 20;
-}
-
 const AdManagerContext = createContext(null);
 
 import { API_URL } from '../config';
 
 // #region debug-point A:reporter
 const AD_LOG_URL = `${API_URL}/ad-debug-events/log`;
+
+const buildAdErrorSnapshot = (err, extra = {}) => ({
+  ...extra,
+  code: err?.code ?? null,
+  domain: err?.domain ?? null,
+  message: typeof err?.message === 'string' ? err.message : String(err || ''),
+  at: Date.now()
+});
 
 const reportAdDebug = async (eventType, location, msg, extraData = {}, context = {}) => {
     try {
@@ -361,6 +364,9 @@ export default function AdSystem({ children }) {
   const [interstitialLoaded, setInterstitialLoaded] = useState(false);
   const [rewardedLoaded, setRewardedLoaded] = useState(false);
   const [rewardedLoading, setRewardedLoading] = useState(false);
+  const [lastRewardedError, setLastRewardedError] = useState(null);
+  const [lastBannerError, setLastBannerError] = useState(null);
+  const [lastMobileAdsInitError, setLastMobileAdsInitError] = useState(null);
 
   const lastScreenKeyRef = useRef(null);
   const interstitialRef = useRef(null);
@@ -405,12 +411,17 @@ export default function AdSystem({ children }) {
       .then(() => {
         mobileAdsInitRef.current.done = true;
         mobileAdsInitRef.current.promise = null;
+        setLastMobileAdsInitError(null);
         logAdEvent('mobile_ads_initialized', 'mobile ads initialized');
         return true;
       })
       .catch((err) => {
         mobileAdsInitRef.current.done = false;
         mobileAdsInitRef.current.promise = null;
+        setLastMobileAdsInitError(buildAdErrorSnapshot(err, {
+          phase: 'mobile_ads_initialize',
+          platform: Platform.OS
+        }));
         logAdEvent('mobile_ads_init_failed', 'mobile ads initialize failed', {
           errMessage: typeof err?.message === 'string' ? err.message : String(err || '')
         });
@@ -500,6 +511,7 @@ export default function AdSystem({ children }) {
 
     setRewardedLoaded(false);
     setRewardedLoading(true);
+    setLastRewardedError(null);
     pendingShowRewardedRef.current = false;
     rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
 
@@ -528,6 +540,7 @@ export default function AdSystem({ children }) {
       // #endregion
       setRewardedLoaded(true);
       setRewardedLoading(false);
+      setLastRewardedError(null);
       if (pendingShowRewardedRef.current) {
         pendingShowRewardedRef.current = false;
         if (rewardedPendingTimeoutRef.current) {
@@ -594,6 +607,14 @@ export default function AdSystem({ children }) {
     const unsubError = rewarded.addAdEventListener(AdEventType.ERROR, (err) => {
       const hadPendingShow = pendingShowRewardedRef.current;
       const errMessage = typeof err?.message === 'string' ? err.message : String(err || '');
+      const errorSnapshot = buildAdErrorSnapshot(err, {
+        phase: hadPendingShow ? 'rewarded_show' : 'rewarded_load',
+        platform: Platform.OS,
+        rewardedAdUnitId,
+        useTestAdUnits,
+        requestNonPersonalizedAdsOnly
+      });
+      setLastRewardedError(errorSnapshot);
       // #region debug-point C:rewarded-error
       logAdEvent('rewarded_error', 'rewarded error', {
         platform: Platform.OS,
@@ -664,6 +685,7 @@ export default function AdSystem({ children }) {
     rewardedUnitIdRef.current = null;
     rewardedRef.current = null;
     setRewardedLoaded(false);
+    setRewardedLoading(false);
     pendingShowRewardedRef.current = false;
     rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
 
@@ -749,6 +771,9 @@ export default function AdSystem({ children }) {
   }, [showAds, setupRewarded, ensureMobileAdsInitialized, attReady]);
 
   const showRewarded = useCallback((options = {}) => {
+    const unavailableTimeoutMessage = t('ads.unavailable_desc_timeout', {
+      defaultValue: t('ads.unavailable_desc_load')
+    });
     // #region debug-point B:show-rewarded-entry
     logAdEvent('rewarded_request_started', 'showRewarded called', {
       platform: Platform.OS,
@@ -793,10 +818,21 @@ export default function AdSystem({ children }) {
     }
     rewardedPendingTimeoutRef.current = setTimeout(() => {
       if (!pendingShowRewardedRef.current) return;
+      setLastRewardedError({
+        code: 'TIMEOUT',
+        domain: 'local',
+        message: 'Rewarded ad failed to load or present within 20 seconds',
+        at: Date.now(),
+        phase: 'rewarded_show_timeout',
+        platform: Platform.OS,
+        rewardedAdUnitId,
+        useTestAdUnits,
+        requestNonPersonalizedAdsOnly
+      });
       logAdEvent('rewarded_timeout', 'rewarded show timeout (20s)');
       pendingShowRewardedRef.current = false;
       rewardedRewardRef.current = { amount: null, reason: null, metadata: null, onEarned: null };
-      appAlert(t('ads.unavailable_title'), t('ads.unavailable_desc_timeout'));
+      appAlert(t('ads.unavailable_title'), unavailableTimeoutMessage);
       if (adDebugEnabled) console.warn('[ADS] rewarded timeout (no ad loaded to show)');
     }, 20000);
 
@@ -853,7 +889,7 @@ export default function AdSystem({ children }) {
         } catch {}
       }
     });
-  }, [showAds, rewardedAdUnitId, setupRewarded, attReady, t, logAdEvent, ensureMobileAdsInitialized, adDebugEnabled]);
+  }, [showAds, rewardedAdUnitId, setupRewarded, attReady, t, logAdEvent, ensureMobileAdsInitialized, adDebugEnabled, requestNonPersonalizedAdsOnly, useTestAdUnits]);
 
   const showPrivacyOptions = useCallback(async () => {
     if (Platform.OS !== 'android') return;
@@ -902,8 +938,13 @@ export default function AdSystem({ children }) {
       useTestAdUnits,
       requestNonPersonalizedAdsOnly,
       platform: Platform.OS,
+      isDevice: Constants.isDevice,
+      screenKey,
       lastInterstitialAt,
-      actionCount
+      actionCount,
+      lastRewardedError,
+      lastBannerError,
+      lastMobileAdsInitError
     };
   }, [
     showAds,
@@ -918,8 +959,12 @@ export default function AdSystem({ children }) {
     nativeAdsAvailable,
     useTestAdUnits,
     requestNonPersonalizedAdsOnly,
+    screenKey,
     lastInterstitialAt,
-    actionCount
+    actionCount,
+    lastRewardedError,
+    lastBannerError,
+    lastMobileAdsInitError
   ]);
 
   const value = useMemo(
@@ -959,10 +1004,18 @@ export default function AdSystem({ children }) {
             size={BannerAdSize.BANNER}
             requestOptions={{ requestNonPersonalizedAdsOnly }}
             onAdLoaded={() => {
+              setLastBannerError(null);
               if (!adDebugEnabled) return;
               console.warn('[ADS] banner loaded', { screenKey, unitId: bannerAdUnitId });
             }}
             onAdFailedToLoad={(err) => {
+              setLastBannerError(buildAdErrorSnapshot(err, {
+                phase: 'banner_load',
+                screenKey,
+                adUnitId: bannerAdUnitId,
+                useTestAdUnits,
+                requestNonPersonalizedAdsOnly
+              }));
               if (!adDebugEnabled) return;
               console.warn('[ADS] banner failed', { screenKey, unitId: bannerAdUnitId, err });
             }}
