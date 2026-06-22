@@ -37,11 +37,35 @@ try {
 }
 
 const AdProvider = {
-  appId: 'ca-app-pub-5628913012317818~7677374721',
+  appId: Platform.select({
+    ios: 'ca-app-pub-5628913012317818~7677374721',
+    android: 'ca-app-pub-5628913012317818~4403269691'
+  }),
   units: {
-    banner: { id: 'ca-app-pub-5628913012317818/5675925124', type: 'banner', size: '320x50' },
-    interstitial: { id: 'ca-app-pub-5628913012317818/6228028852', type: 'interstitial', cooldown: 120 },
-    rewarded: { id: 'ca-app-pub-5628913012317818/2671927229', type: 'rewarded', reward: { type: 'coins', amount: 10 } }
+    banner: { 
+      id: Platform.select({
+        ios: 'ca-app-pub-5628913012317818/5880002899',
+        android: 'ca-app-pub-5628913012317818/5749964780'
+      }), 
+      type: 'banner', 
+      size: '320x50' 
+    },
+    interstitial: { 
+      id: Platform.select({
+        ios: 'ca-app-pub-5628913012317818/7909224264',
+        android: 'ca-app-pub-5628913012317818/2159983808'
+      }), 
+      type: 'interstitial', 
+      cooldown: 120 
+    },
+    rewarded: { 
+      id: Platform.select({
+        ios: 'ca-app-pub-5628913012317818/9895003599',
+        android: 'ca-app-pub-5628913012317818/7063046455'
+      }), 
+      type: 'rewarded', 
+      reward: { type: 'coins', amount: 10 } 
+    }
   },
   targeting: {
     childDirected: false,

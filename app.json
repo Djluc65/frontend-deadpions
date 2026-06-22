@@ -22,7 +22,7 @@
     ],
     "ios": {
       "bundleIdentifier": "com.deadpions.app",
-      "buildNumber": "132",
+      "buildNumber": "134",
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "DeadPions uses your camera to let you take a profile picture or video call with friends.",
@@ -78,7 +78,7 @@
       [
         "react-native-google-mobile-ads",
         {
-          "androidAppId": "ca-app-pub-5628913012317818~7677374721",
+          "androidAppId": "ca-app-pub-5628913012317818~4403269691",
           "iosAppId": "ca-app-pub-5628913012317818~7677374721",
           "userTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you.",
           "skAdNetworkItems": [

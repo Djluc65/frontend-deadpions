@@ -37,7 +37,7 @@
       </dict>
     </array>
     <key>CFBundleVersion</key>
-    <string>132</string>
+    <string>134</string>
     <key>EXDefaultScreenOrientationMask</key>
     <string>UIInterfaceOrientationMaskPortrait</string>
     <key>GADApplicationIdentifier</key>
