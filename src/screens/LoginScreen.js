@@ -276,7 +276,7 @@ const LoginScreen = ({ navigation }) => {
               <Text style={[styles.title, isTablet && styles.titleTablet]}>{t('auth.login')}</Text>
 
               {showGoogleAuth && (
-                <View style={{ width: '100%', marginBottom: getResponsiveSize(10) }}>
+                <View style={{ width: '100%', marginBottom: getResponsiveSize(10), zIndex: 10 }}>
                   <Button
                     title={t('auth.login_with_google')}
                     onPress={async () => {
@@ -310,25 +310,27 @@ const LoginScreen = ({ navigation }) => {
                 </View>
               )}
 
-            <Input 
-              placeholder={t('auth.email')}
-              value={email} 
-              onChangeText={setEmail} 
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              textContentType="emailAddress"
-              innerStyle={{ backgroundColor: '#05060B' }}
-            />
-            <Input 
-              placeholder={t('auth.password')}
-              value={password} 
-              onChangeText={setPassword} 
-              secureTextEntry 
-              autoComplete="password"
-              textContentType="password"
-              innerStyle={{ backgroundColor: '#05060B' }}
-            />
+            <View style={{ width: '100%', zIndex: 20 }}>
+              <Input 
+                placeholder={t('auth.email')}
+                value={email} 
+                onChangeText={setEmail} 
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+                textContentType="emailAddress"
+                innerStyle={{ backgroundColor: '#05060B' }}
+              />
+              <Input 
+                placeholder={t('auth.password')}
+                value={password} 
+                onChangeText={setPassword} 
+                secureTextEntry 
+                autoComplete="password"
+                textContentType="password"
+                innerStyle={{ backgroundColor: '#05060B' }}
+              />
+            </View>
             
             <TouchableOpacity 
               onPress={() => navigation.navigate('ForgotPassword')}

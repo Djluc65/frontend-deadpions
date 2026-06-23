@@ -22,7 +22,7 @@
     ],
     "ios": {
       "bundleIdentifier": "com.deadpions.app",
-      "buildNumber": "134",
+      "buildNumber": "135",
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "DeadPions uses your camera to let you take a profile picture or video call with friends.",

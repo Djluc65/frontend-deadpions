@@ -51,7 +51,7 @@ const AnimatedSearchBar = ({
   return (
     <View style={[styles.outerContainer, outerStyle]}>
       {/* Animated Glowing Borders (Conic-like effect) */}
-      <Animated.View style={[styles.glowLayer, { transform: [{ rotate: spin }] }]}>
+      <Animated.View style={[styles.glowLayer, { transform: [{ rotate: spin }] }]} pointerEvents="none">
         <LinearGradient
           colors={['#402fb5', 'transparent', '#cf30aa', 'transparent', '#402fb5']}
           start={{ x: 0, y: 0 }}
