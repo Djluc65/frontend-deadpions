@@ -36,7 +36,7 @@
     },
     "android": {
       "package": "com.deadpions.app",
-      "versionCode": 38,
+      "versionCode": 39,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
