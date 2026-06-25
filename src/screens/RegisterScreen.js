@@ -4,8 +4,8 @@ import { AppTouchableOpacity as TouchableOpacity } from '../components/common/Ap
 import { useDispatch } from 'react-redux';
 import { AntDesign } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
 import Constants from 'expo-constants';
+import { useGoogleAuthRequest, isGoogleOAuthConfigError } from '../hooks/useGoogleAuthRequest';
 import { loginStart, loginSuccess, loginFailure } from '../redux/slices/authSlice';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
@@ -38,26 +38,20 @@ const RegisterScreen = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const dispatch = useDispatch();
 
-  const cleanEnv = (value) => (typeof value === 'string' ? value.trim() : undefined);
-  const googleWebClientId = cleanEnv(process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
-  const googleIosClientId = cleanEnv(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID);
-  const googleAndroidClientId = cleanEnv(process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID);
-
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    clientId: googleWebClientId,
-    iosClientId: googleIosClientId,
-    androidClientId: googleAndroidClientId,
-  });
+  const { response, promptAsync, googleConfigured } = useGoogleAuthRequest();
 
   const showGoogleAuth = Platform.OS === 'android';
-  const googleConfigured = Boolean(googleAndroidClientId);
 
   useEffect(() => {
     if (response?.type === 'success') {
       const { id_token } = response.params;
       handleGoogleLogin(id_token);
     } else if (response?.type === 'error') {
-      appAlert(t('common.error'), t('auth.google_login_failed'));
+      if (isGoogleOAuthConfigError(response)) {
+        appAlert(t('common.error'), t('auth.google_sha1_mismatch'));
+      } else {
+        appAlert(t('common.error'), t('auth.google_login_failed'));
+      }
     }
   }, [response]);
 

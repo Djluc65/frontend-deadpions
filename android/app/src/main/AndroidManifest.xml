@@ -11,6 +11,7 @@
   <uses-permission android:name="android.permission.WAKE_LOCK"/>
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
   <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
+  <uses-permission android:name="com.android.vending.BILLING"/>
   <queries>
     <intent>
       <action android:name="android.intent.action.VIEW"/>
@@ -38,6 +39,7 @@
         <data android:scheme="deadpions"/>
         <data android:scheme="exp+deadpions"/>
         <data android:scheme="com.googleusercontent.apps.982071763340-pte2blufa0q5q2q7imspvo6jnp9jjtrn"/>
+        <data android:scheme="com.googleusercontent.apps.982071763340-juep8lchntjqcbfi1jg7cq6i383a6esq"/>
         <data android:scheme="com.deadpions.app"/>
       </intent-filter>
     </activity>

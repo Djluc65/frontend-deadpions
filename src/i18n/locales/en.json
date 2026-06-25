@@ -97,6 +97,7 @@
       "google_not_configured_android": "Google Sign-In is not configured for Android.",
       "google_unavailable_dev": "Google Sign-In is not available in development mode (Expo Go). Use email/password or test via TestFlight.",
       "google_oauth_misconfigured": "Google OAuth is misconfigured (package/SHA-1/redirect).",
+      "google_sha1_mismatch": "Google sign-in blocked: your APK SHA-1 fingerprint is not registered in Google Cloud.\n\n1. Run in terminal: npm run android:sha1\n2. Google Cloud Console > Credentials > Android OAuth client\n3. Package: com.deadpions.app\n4. Add the displayed SHA-1 (keep the production one too)\n5. Wait 5–10 min, then try again",
       "apple_login_failed": "Unable to sign in with Apple",
       "apple_service_unavailable": "Apple sign-in is not yet available on the server.",
       "account_created_welcome": "Account created! Welcome {{pseudo}}",

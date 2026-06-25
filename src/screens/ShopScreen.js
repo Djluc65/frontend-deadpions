@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, View, Text, StyleSheet, ImageBackground, ScrollView, ActivityIndicator, Platform, useWindowDimensions } from 'react-native';
+import { AppState, View, Text, StyleSheet, ImageBackground, ScrollView, ActivityIndicator, Platform, useWindowDimensions, NativeModules } from 'react-native';
 import { T } from '../utils/theme';
 import { AppTouchableOpacity as TouchableOpacity } from '../components/common/AppTouchable';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,6 +18,21 @@ import { appAlert } from '../services/appAlert';
 import Constants from 'expo-constants';
 
 import * as IAP from 'react-native-iap';
+
+const isNativeIapModuleLinked = () => {
+  if (Platform.OS === 'ios') {
+    return !!(NativeModules.RNIapIos || NativeModules.RNIapIosSk2);
+  }
+  if (Platform.OS === 'android') {
+    return !!(NativeModules.RNIapModule || NativeModules.RNIapAmazonModule);
+  }
+  return false;
+};
+
+const isIapUnavailableError = (err) => {
+  const token = String(err?.code || err?.message || err || '');
+  return token.includes('E_IAP_NOT_AVAILABLE');
+};
 
 const IAP_SKUS = Platform.select({
   ios: {
@@ -65,12 +80,13 @@ const ShopScreen = () => {
 
   const { showAds, showRewarded } = useAdManager();
   const [loading, setLoading] = useState(false);
-  const [iapEnabled, setIapEnabled] = useState(!isProbablyEmulator);
+  const nativeIapLinked = isNativeIapModuleLinked();
+  const [iapEnabled, setIapEnabled] = useState(nativeIapLinked && !isProbablyEmulator);
+  const [iapUnavailable, setIapUnavailable] = useState(!nativeIapLinked);
   const iapReadyRef = useRef(false);
   const iapInitPromiseRef = useRef(null);
   const iapCatalogReadyRef = useRef(false);
   const iapCatalogPromiseRef = useRef(null);
-  const iapInitErrorShownRef = useRef(false);
   const subscriptionOfferTokenBySkuRef = useRef({});
   const purchaseTimeoutRef = useRef(null);
   const purchaseInFlightRef = useRef(false);
@@ -98,8 +114,16 @@ const ShopScreen = () => {
     }, 60000);
   }, [clearPurchaseTimeout]);
 
+  const markIapUnavailable = useCallback((err) => {
+    console.warn('IAP unavailable:', err);
+    iapReadyRef.current = false;
+    iapCatalogReadyRef.current = false;
+    setIapEnabled(false);
+    setIapUnavailable(true);
+  }, []);
+
   const ensureIapReady = useCallback(async () => {
-    if (!iapEnabled) return false;
+    if (!nativeIapLinked || !iapEnabled) return false;
     if (iapReadyRef.current) return true;
     if (iapInitPromiseRef.current) return await iapInitPromiseRef.current;
     try {
@@ -108,23 +132,18 @@ const ShopScreen = () => {
         const ready = ok === true || ok == null;
         iapReadyRef.current = ready;
         if (!ready) {
-          setIapEnabled(false);
+          markIapUnavailable(new Error('IAP initConnection returned false'));
         }
         return ready;
       })();
       return await iapInitPromiseRef.current;
     } catch (err) {
-      console.warn('IAP Init Error:', err);
-      setIapEnabled(false);
-      if (!isProbablyEmulator && !iapInitErrorShownRef.current) {
-        iapInitErrorShownRef.current = true;
-        appAlert(t('common.error'), t('shop.iap_init_error'));
-      }
+      markIapUnavailable(err);
       return false;
     } finally {
       iapInitPromiseRef.current = null;
     }
-  }, [iapEnabled, isProbablyEmulator, t]);
+  }, [iapEnabled, markIapUnavailable, nativeIapLinked]);
 
   const ensureIapCatalog = useCallback(async () => {
     if (iapCatalogReadyRef.current) return true;
@@ -178,78 +197,98 @@ const ShopScreen = () => {
     }
   }, [ensureIapReady, isAndroid]);
 
-  // Initialisation IAP
+  // Initialisation IAP — listeners uniquement après connexion native réussie
   useEffect(() => {
-    const initIAP = async () => {
+    let purchaseUpdateSubscription = null;
+    let purchaseErrorSubscription = null;
+    let mounted = true;
+
+    const setupIAP = async () => {
+      if (!nativeIapLinked || !iapEnabled) return;
+
       try {
-        if (!iapEnabled) return;
         const ready = await ensureIapReady();
-        if (!ready) return;
+        if (!ready || !mounted) return;
+
         await ensureIapCatalog();
+        if (!mounted) return;
+
+        purchaseUpdateSubscription = IAP.purchaseUpdatedListener(async (purchase) => {
+          clearPurchaseTimeout();
+          purchaseInFlightRef.current = false;
+
+          if (Platform.OS === 'ios') {
+            const receipt = purchase.transactionReceipt;
+            if (receipt) {
+              try {
+                await verifyApplePurchase(receipt, purchase.productId);
+                const nonConsumables = new Set([IAP_SKUS.pack_premium_unlock, IAP_SKUS.subscription_monthly, IAP_SKUS.subscription_yearly].filter(Boolean));
+                const isConsumable = !nonConsumables.has(purchase.productId);
+                await IAP.finishTransaction({ purchase, isConsumable });
+              } catch (ackErr) {
+                console.warn('IAP Ack Error:', ackErr);
+                setLoading(false);
+              }
+            } else {
+              setLoading(false);
+            }
+          }
+
+          if (Platform.OS === 'android') {
+            if (purchase.purchaseToken) {
+              try {
+                await verifyAndroidPurchase(purchase);
+                const nonConsumables = new Set([IAP_SKUS.pack_premium_unlock, IAP_SKUS.subscription_monthly, IAP_SKUS.subscription_yearly].filter(Boolean));
+                const isConsumable = !nonConsumables.has(purchase.productId);
+                await IAP.finishTransaction({ purchase, isConsumable });
+              } catch (ackErr) {
+                console.warn('IAP Ack Error:', ackErr);
+                setLoading(false);
+              }
+            } else {
+              setLoading(false);
+            }
+          }
+        });
+
+        purchaseErrorSubscription = IAP.purchaseErrorListener((error) => {
+          clearPurchaseTimeout();
+          purchaseInFlightRef.current = false;
+          if (error.code !== 'E_USER_CANCELLED') {
+            appAlert(t('common.error'), t('shop.purchase_failed_message', { message: error.message }));
+          }
+          setLoading(false);
+        });
       } catch (err) {
-        console.warn('IAP Init Error:', err);
+        if (mounted && (isIapUnavailableError(err) || !isNativeIapModuleLinked())) {
+          markIapUnavailable(err);
+        } else {
+          console.warn('IAP Setup Error:', err);
+        }
       }
     };
-    initIAP();
 
-    // Listener pour les achats terminés
-    const purchaseUpdateSubscription = IAP.purchaseUpdatedListener(async (purchase) => {
-      clearPurchaseTimeout();
-      purchaseInFlightRef.current = false;
-      
-      if (Platform.OS === 'ios') {
-        const receipt = purchase.transactionReceipt;
-        if (receipt) {
-          try {
-            await verifyApplePurchase(receipt, purchase.productId);
-            const nonConsumables = new Set([IAP_SKUS.pack_premium_unlock, IAP_SKUS.subscription_monthly, IAP_SKUS.subscription_yearly].filter(Boolean));
-            const isConsumable = !nonConsumables.has(purchase.productId);
-            await IAP.finishTransaction({ purchase, isConsumable });
-          } catch (ackErr) {
-            console.warn('IAP Ack Error:', ackErr);
-            setLoading(false);
-          }
-        } else {
-          setLoading(false);
-        }
-      }
-
-      if (Platform.OS === 'android') {
-        if (purchase.purchaseToken) {
-          try {
-            await verifyAndroidPurchase(purchase);
-            const nonConsumables = new Set([IAP_SKUS.pack_premium_unlock, IAP_SKUS.subscription_monthly, IAP_SKUS.subscription_yearly].filter(Boolean));
-            const isConsumable = !nonConsumables.has(purchase.productId);
-            await IAP.finishTransaction({ purchase, isConsumable });
-          } catch (ackErr) {
-            console.warn('IAP Ack Error:', ackErr);
-            setLoading(false);
-          }
-        } else {
-          setLoading(false);
-        }
-      }
-    });
-
-    const purchaseErrorSubscription = IAP.purchaseErrorListener((error) => {
-      clearPurchaseTimeout();
-      purchaseInFlightRef.current = false;
-      if (error.code !== 'E_USER_CANCELLED') {
-         appAlert(t('common.error'), t('shop.purchase_failed_message', { message: error.message }));
-      }
-      setLoading(false);
-    });
+    setupIAP();
 
     return () => {
+      mounted = false;
       clearPurchaseTimeout();
       purchaseInFlightRef.current = false;
-      iapReadyRef.current = false;
-      iapCatalogReadyRef.current = false;
-      purchaseUpdateSubscription.remove();
-      purchaseErrorSubscription.remove();
-      IAP.endConnection();
+      try {
+        purchaseUpdateSubscription?.remove();
+        purchaseErrorSubscription?.remove();
+      } catch (err) {
+        console.warn('IAP listener cleanup:', err);
+      }
+      if (iapReadyRef.current) {
+        iapReadyRef.current = false;
+        iapCatalogReadyRef.current = false;
+        IAP.endConnection().catch((err) => {
+          console.warn('IAP endConnection:', err);
+        });
+      }
     };
-  }, []);
+  }, [clearPurchaseTimeout, ensureIapCatalog, ensureIapReady, iapEnabled, markIapUnavailable, nativeIapLinked, t]);
 
   const verifyApplePurchase = async (receipt, productId) => {
     try {
@@ -770,6 +809,16 @@ const ShopScreen = () => {
           
           <Text style={styles.headerTitle}>{t('shop.title')}</Text>
 
+          {iapUnavailable && (isIOS || isAndroid) ? (
+            <View style={[styles.iapBanner, { maxWidth: sectionMaxWidth }]}>
+              <Text style={styles.iapBannerText}>
+                {isProbablyEmulator
+                  ? "Les achats intégrés ne sont pas disponibles sur l'émulateur Android. Teste sur un appareil avec le Play Store."
+                  : t('shop.iap_init_error')}
+              </Text>
+            </View>
+          ) : null}
+
           {isIOS && (
             <TouchableOpacity
               style={styles.restoreButton}
@@ -976,6 +1025,22 @@ const styles = StyleSheet.create({
     marginBottom: getResponsiveSize(10),
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  iapBanner: {
+    width: '100%',
+    alignSelf: 'center',
+    backgroundColor: 'rgba(231, 76, 60, 0.12)',
+    borderRadius: getResponsiveSize(T.radiusMd),
+    borderWidth: 1,
+    borderColor: 'rgba(231, 76, 60, 0.45)',
+    padding: getResponsiveSize(14),
+    marginBottom: getResponsiveSize(16),
+  },
+  iapBannerText: {
+    color: T.text,
+    fontSize: getResponsiveSize(13),
+    lineHeight: getResponsiveSize(19),
+    textAlign: 'center',
   },
   restoreButton: {
     backgroundColor: 'rgba(10, 14, 28, 0.92)',
