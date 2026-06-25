@@ -5,9 +5,9 @@ import { Image } from 'expo-image';
 import { useDispatch, useSelector } from 'react-redux';
 import { AntDesign } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-import * as AppleAuthentication from 'expo-apple-authentication';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { useGoogleAuthRequest, isGoogleOAuthConfigError } from '../hooks/useGoogleAuthRequest';
 import { loginStart, loginSuccess, loginFailure } from '../redux/slices/authSlice';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
@@ -40,41 +40,24 @@ const LoginScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const dispatch = useDispatch();
 
-  const cleanEnv = (value) => (typeof value === 'string' ? value.trim() : undefined);
-  const googleWebClientId = cleanEnv(process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
-  const googleIosClientId = cleanEnv(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID);
-  const googleAndroidClientId = cleanEnv(process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID);
-  const googleIosGuid = googleIosClientId?.split('.apps.googleusercontent.com')?.[0];
-  const googleRedirectNative = Platform.OS === 'ios' && googleIosGuid
-    ? `com.googleusercontent.apps.${googleIosGuid}:/oauthredirect`
-    : undefined;
-
-  // Configuration Google Auth
-  // IMPORTANT: Remplacez ces IDs par vos propres Client IDs depuis Google Cloud Console
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest(
-    {
-      clientId: googleWebClientId,
-      iosClientId: googleIosClientId,
-      androidClientId: googleAndroidClientId,
-    },
-    // Force le bon redirect URI natif iOS (expo-auth-session v6 génère sinon com.deadpions.app:/oauthredirect)
-    googleRedirectNative ? { native: googleRedirectNative } : {}
-  );
+  const { response, promptAsync, googleConfigured } = useGoogleAuthRequest();
 
   const showAppleAuth = Platform.OS === 'ios';
   const showGoogleAuth = Platform.OS === 'android' || Platform.OS === 'ios' || Platform.OS === 'web';
-  const googleConfigured = Platform.OS === 'android'
-    ? Boolean(googleAndroidClientId)
-    : Platform.OS === 'ios' 
-      ? Boolean(googleIosClientId)
-      : Boolean(googleWebClientId);
 
   useEffect(() => {
     if (response?.type === 'success') {
       const { id_token } = response.params;
       handleGoogleLogin(id_token);
     } else if (response?.type === 'error') {
-      appAlert(t('common.error'), t('auth.google_login_failed'));
+      if (isGoogleOAuthConfigError(response)) {
+        appAlert(
+          t('common.error'),
+          Platform.OS === 'android' ? t('auth.google_sha1_mismatch') : t('auth.google_oauth_misconfigured')
+        );
+      } else {
+        appAlert(t('common.error'), t('auth.google_login_failed'));
+      }
     }
   }, [response]);
 
@@ -296,9 +279,19 @@ const LoginScreen = ({ navigation }) => {
                       } catch (e) {
                         if (isUserCancelledAuth(e)) return;
                         console.error(e);
+                        if (isGoogleOAuthConfigError(e)) {
+                          appAlert(
+                            t('common.error'),
+                            Platform.OS === 'android' ? t('auth.google_sha1_mismatch') : t('auth.google_oauth_misconfigured')
+                          );
+                          return;
+                        }
                         const message = typeof e?.message === 'string' ? e.message : '';
                         if (message.toLowerCase().includes('redirect') || message.toLowerCase().includes('mismatch')) {
-                          appAlert(t('common.error'), t('auth.google_oauth_misconfigured'));
+                          appAlert(
+                            t('common.error'),
+                            Platform.OS === 'android' ? t('auth.google_sha1_mismatch') : t('auth.google_oauth_misconfigured')
+                          );
                           return;
                         }
                         appAlert(t('common.error'), e?.message || t('auth.google_login_failed'));
