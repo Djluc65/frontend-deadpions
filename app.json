@@ -8,7 +8,8 @@
       "deadpions",
       "exp+deadpions",
       "com.googleusercontent.apps.982071763340-pte2blufa0q5q2q7imspvo6jnp9jjtrn",
-      "com.googleusercontent.apps.982071763340-juep8lchntjqcbfi1jg7cq6i383a6esq"
+      "com.googleusercontent.apps.982071763340-juep8lchntjqcbfi1jg7cq6i383a6esq",
+      "fb1537072411427146"
     ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -23,7 +24,7 @@
     ],
     "ios": {
       "bundleIdentifier": "com.deadpions.app",
-      "buildNumber": "135",
+      "buildNumber": "136",
       "supportsTablet": true,
       "infoPlist": {
         "NSCameraUsageDescription": "DeadPions uses your camera to let you take a profile picture or video call with friends.",
@@ -31,13 +32,17 @@
         "NSPhotoLibraryUsageDescription": "DeadPions accesses your photo library to let you select and upload a profile picture.",
         "GADApplicationIdentifier": "ca-app-pub-5628913012317818~7677374721",
         "NSUserTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "FacebookAppID": "1537072411427146",
+        "FacebookDisplayName": "DeadPions",
+        "FacebookAdvertiserIDCollectionEnabled": true,
+        "FacebookAutoLogAppEventsEnabled": true
       },
       "bitcode": false
     },
     "android": {
       "package": "com.deadpions.app",
-      "versionCode": 41,
+      "versionCode": 42,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -118,8 +123,16 @@
             "8s468mfl3y.skadnetwork",
             "av6w8kgt66.skadnetwork",
             "atjkls5apf.skadnetwork",
-            "glqzh8vgby.skadnetwork"
+            "glqzh8vgby.skadnetwork",
+            "v9wttpbfv8.skadnetwork"
           ]
+        }
+      ],
+      [
+        "react-native-fbsdk-next",
+        {
+          "appID": "1537072411427146",
+          "clientToken": "1537072411427146|c5f2a9f0d9b8e7a6c5d4e3f2a1b0c9d8"
         }
       ],
       "expo-apple-authentication",

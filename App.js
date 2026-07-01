@@ -22,6 +22,30 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { API_URL } from './src/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Initialize Meta SDK
+let MetaSDKInitialized = false;
+const initializeMetaSDK = async () => {
+  if (MetaSDKInitialized) return;
+  if (Platform.OS !== 'ios') return;
+
+  try {
+    const { Settings, AppEventsLogger } = require('react-native-fbsdk-next');
+    
+    // Enable auto-logging of app installs and opens
+    await Settings.setAdvertiserTrackingEnabled(true);
+    await Settings.setAutoLogAppEventsEnabled(true);
+    await Settings.setAdvertiserIDCollectionEnabled(true);
+    
+    // Activate the app for tracking
+    await AppEventsLogger.activateApp();
+    
+    MetaSDKInitialized = true;
+    console.log('[MetaAnalytics] SDK initialized successfully');
+  } catch (error) {
+    console.warn('[MetaAnalytics] Failed to initialize SDK:', error);
+  }
+};
+
 const DEBUG_SERVER_URL = 'http://127.0.0.1:7777/event';
 const DEBUG_SESSION_ID = 'ios-splash-stuck';
 
@@ -135,6 +159,9 @@ function AppContent() {
     });
     // #endregion
     Alert.alert = appAlert;
+    
+    // Initialize Meta Analytics SDK
+    initializeMetaSDK();
   }, []);
 
   useEffect(() => {

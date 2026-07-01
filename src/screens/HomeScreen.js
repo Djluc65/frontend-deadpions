@@ -17,6 +17,7 @@ import { getResponsiveSize, DESKTOP_BREAKPOINT } from '../utils/responsive';
 import { appAlert } from '../services/appAlert';
 import { T } from '../utils/theme';
 import Constants from 'expo-constants';
+import { trackGameStarted } from '../services/MetaAnalytics';
 
 // Components
 import HomeHeader from '../components/home/HomeHeader';
@@ -454,6 +455,8 @@ const HomeScreen = ({ navigation, route }) => {
       ]);
       return;
     }
+    // Track game started event for Meta Analytics
+    trackGameStarted();
     requestAnimationFrame(() => setOnlineConfigVisible(true));
   }, [navigation, token, user]);
 
